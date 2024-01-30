@@ -1,9 +1,12 @@
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix API" align="right" height="60" />
+
 # Anker Solix API
 
-[![License](https://img.shields.io/pypi/l/python-eufy-security.svg)](https://github.com/thomluther/anker-solix-api/blob/main/LICENSE)
+[![github licence](https://img.shields.io/badge/Licence-MIT-orange)](https://github.com/thomluther/anker-solix-api/blob/main/LICENSE)
+![python badge](https://img.shields.io/badge/Made%20with-Python-orange)
 
 This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter etc).
-![](https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png)
+
 🚨 This is by no means an official Anker API. 🚨
 🚨 It can break at any time, or API request can be removed/added/changed and break some of the endpoint methods used in this API.🚨
 
@@ -101,6 +104,10 @@ The received daily values will be exported into a csv file.
 
 # Contributing
 
+![github contributors](https://img.shields.io/github/contributors/thomluther/anker-solix-api?color=orange)
+![last commit](https://img.shields.io/github/last-commit/thomluther/anker-solix-api?color=orange)
+[![Community Discussion](https://img.shields.io/badge/Home%20Assistant%20Community-Discussion-orange)](https://community.home-assistant.io/t/feature-request-integration-or-addon-for-anker-solix-e1600-solarbank/641086)
+
 1. [Check for open features/bugs](https://github.com/thomluther/anker-solix-api/issues)
   or [initiate a discussion on one](https://github.com/thomluther/anker-solix-api/issues/new).
 2. [Fork the repository](https://github.com/thomluther/anker-solix-api/fork).
@@ -119,3 +126,8 @@ The received daily values will be exported into a csv file.
 
 [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
 [solix2mqtt](https://github.com/tomquist/solix2mqtt)
+
+
+# Showing Your Appreciation
+
+If you like this project, please give it a star on [GitHub](https://github.com/thomluther/anker-solix-api) 
