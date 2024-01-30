@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "wifi_info_list": [
+      {
+        "wifi_name": "1und1-HomeServer",
+        "wifi_signal": "100"
+      }
+    ]
+  },
+  "trace_id": "1fb13293474e50d24c4d6d93bd6d2bbe"
+}
