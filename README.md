@@ -1,12 +1,11 @@
 # Anker Solix API
 
-[![License](https://img.shields.io/pypi/l/python-eufy-security.svg)](https://github.com/fuzzymistborn/python-eufy-security/blob/master/LICENSE)
-[![Code Coverage](https://codecov.io/gh/fuzzymistborn/python-eufy-security/branch/master/graph/badge.svg)](https://codecov.io/gh/fuzzymistborn/python-eufy-security)
-[![Say Thanks](https://img.shields.io/badge/SayThanks-!-1EAEDB.svg)](https://saythanks.io/to/fuzzymistborn)
+[![License](https://img.shields.io/pypi/l/python-eufy-security.svg)](https://github.com/thomluther/anker-solix-api/blob/main/LICENSE)
 
 This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter etc).
-🚨 This is by no means an official Anker API. It can break at any time, 
-or API request can be removed/added/changed and break some of the endpoint methods used in this API.🚨
+![](https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png)
+🚨 This is by no means an official Anker API. 🚨
+🚨 It can break at any time, or API request can be removed/added/changed and break some of the endpoint methods used in this API.🚨
 
 # Python Versions
 
@@ -102,9 +101,9 @@ The received daily values will be exported into a csv file.
 
 # Contributing
 
-1. [Check for open features/bugs](https://github.com/FuzzyMistborn/python-eufy-security/issues)
-  or [initiate a discussion on one](https://github.com/FuzzyMistborn/python-eufy-security/issues/new).
-2. [Fork the repository](https://github.com/FuzzyMistborn/python-eufy-security/fork).
+1. [Check for open features/bugs](https://github.com/thomluther/anker-solix-api/issues)
+  or [initiate a discussion on one](https://github.com/thomluther/anker-solix-api/issues/new).
+2. [Fork the repository](https://github.com/thomluther/anker-solix-api/fork).
 3. Install the dev environment: `make init`.
 4. Enter the virtual environment: `source ./venv/bin/activate`
 5. Code your new feature or bug fix.
@@ -116,7 +115,7 @@ The received daily values will be exported into a csv file.
 11. Submit a pull request!
 
 
-# Ackknowledgements
+# Acknowledgements / Credits
 
 [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
 [solix2mqtt](https://github.com/tomquist/solix2mqtt)
