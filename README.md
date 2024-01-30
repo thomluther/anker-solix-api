@@ -76,7 +76,8 @@ The API class provides 2 main methods:
   It currently is developped for Solarbank devices only, further device types such as Inverters or Power Stations could be added once example data is available.
 
 Check out `test_api.py` and other python executable tools that may help to leverage and explore the API for your Anker power system.
-The subfolder `examples` contains json files with anonymized responses of the `export_system.py` module giving you an idea of how various API responses look like.
+The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains json files with anonymized responses of the
+`export_system.py` module giving you an idea of how various API responses look like. (Note that the Solarbank was switched off when the data were pulled, so some fields may be empty)
 Those json files can also be used to develop/debug the API for system constellations not available to the developper.
 
 # API Tools
