@@ -1,4 +1,4 @@
-<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix API" align="right" height="60" />
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix API" align="right" height="100" />
 
 # Anker Solix API
 
@@ -8,6 +8,7 @@
 This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter etc).
 
 🚨 This is by no means an official Anker API. 🚨
+
 🚨 It can break at any time, or API request can be removed/added/changed and break some of the endpoint methods used in this API.🚨
 
 # Python Versions
@@ -26,11 +27,14 @@ pip install aiohttp
 
 # Anker Account Information
 
-Because of the way the Anker Solix API works, one account with email/password combo cannot be used for the Anker mobile App work and this API in parallel.
-The Anker Cloud allows only one account token at a time, each new authentication request will create a new token and drop a previous token.
-It is recommended to create a second Anker account and share your Power System(s) with the second account.
-Attention: A shared account is only a member of the shared site, and as such currently has no permissions to access or query device details. However, a shared account 
-can receive the data as provided in the scene/site details, which is equivalent to what is displayed in the mobile App on the Home screen for the selected system.
+Because of the way the Anker Solix API works, one account with email/password cannot be used for the Anker mobile App and this API in parallel.
+The Anker Cloud allows only one request token per account at any time. Each new authentication request by a client will create a new token and drop a previous token.
+Therefore usage of this API may kick out your account login in the mobile app.
+However, starting with Anker mobile app release 2.0, you can share your defined system(s) with 'family members'.
+Therefore it is recommended to create a second Anker account with a different email address and share your defined system(s) with the second account.
+Attention: A shared account is only a member of the shared system, and as such currently has no permissions to access or query device details of the shared system.
+Therefore an API homepage query will neither display any data for a shared account. However, a shared account can receive API scene/site details of shared systems (App system = API site),
+which is equivalent to what is displayed in the mobile app on the home screen for the selected system.
 
 # Usage
 
@@ -64,8 +68,15 @@ if __name__ == '__main__':
         print(f'{type(err)}: {err}')
 ```
 
-Check out `test_api.py` and other python executable tools that may help to leverage and explore the API.
-The subfolder examples contains json files with anonymized responses of the export_system.py module giving you an idea of how various API responses look like.
+The API class provides 2 main methods:
+- `API.update_sites()` to query overview data for all accessible sites and store data in API dictionaries `API.sites` and `API.devices` for quick access. 
+  This method could be run in regular intervals (30s or more) to fetch new data of the systems
+- `API.update_device_details()` to query further settings for the device serials as found in the sites query.
+  This method should be run less frequently since this will mostly fetch various device configuration settings and needs multiple queries. 
+  It currently is developped for Solarbank devices only, further device types such as Inverters or Power Stations could be added once example data is available.
+
+Check out `test_api.py` and other python executable tools that may help to leverage and explore the API for your Anker power system.
+The subfolder `examples` contains json files with anonymized responses of the `export_system.py` module giving you an idea of how various API responses look like.
 Those json files can also be used to develop/debug the API for system constellations not available to the developper.
 
 # API Tools
@@ -124,8 +135,8 @@ The received daily values will be exported into a csv file.
 
 # Acknowledgements / Credits
 
-[python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
-[solix2mqtt](https://github.com/tomquist/solix2mqtt)
+- [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
+- [solix2mqtt](https://github.com/tomquist/solix2mqtt)
 
 
 # Showing Your Appreciation
