@@ -1,7 +1,7 @@
 """
 Example exec module to use the Anker API for export of defined system data and device details.
 This module will prompt for the Anker account details if not pre-set in the header.
-Upon successfull authentication, you can specify a subfolder for the exported JSON files received as API query response, defaulting to your nick name
+Upon successfull authentication, you can specify a subfolder for the exported JSON files received as API query response, defaulting to your nick name.
 Optionally you can specify whether personalized information in the response data should be randomized in the files, like SNs, Site IDs, Trace IDs etc.
 You can review the response files afterwards. They can be used as examples for dedicated data extraction from the devices.
 Optionally the API class can use the json files for debugging and testing on various system outputs.
@@ -35,7 +35,7 @@ def randomize(val, key: str = "") -> str:
     if not RANDOMIZE:
         return str(val)
     randomstr = RANDOMDATA.get(val,"")
-    if not randomstr:
+    if not randomstr and val:
         if "_sn" in key:
             randomstr = "".join(random.choices(string.ascii_uppercase+string.digits, k=len(val)))
         elif "bt_ble_" in key:
@@ -53,6 +53,9 @@ def randomize(val, key: str = "") -> str:
                     randomstr = "-".join([randomstr,"".join(random.choices(string.hexdigits.lower(), k=len(part)))])
                 else:
                     randomstr = "".join(random.choices(string.hexdigits.lower(), k=len(part)))
+        elif "wifi_name" in key:
+            idx = sum(1 for s in RANDOMDATA.values() if 'wifi-network-' in s)
+            randomstr = f'wifi-network-{idx+1}'
         else:
             # default randomize format
             randomstr = "".join(random.choices(string.ascii_letters, k=len(val)))
@@ -70,7 +73,7 @@ def check_keys(data):
         if isinstance(v, list):
             v = [check_keys(i) for i in v]
         """Randomize value for certain keys"""
-        if any(x in k for x in ["_sn","site_id","trace_id","bt_ble_"]):
+        if any(x in k for x in ["_sn","site_id","trace_id","bt_ble_","wifi_name"]):
             data[k] = randomize(v,k)
     return data
 
@@ -92,7 +95,7 @@ def export(filename: str, d: dict = {}) -> None:
     return
 
 
-async def main() -> None:
+async def main() -> bool:
     global USER, PASSWORD, COUNTRY, RANDOMIZE
     print("Exporting found Anker Solix system data for all assigned sites:")
     if USER == "":
