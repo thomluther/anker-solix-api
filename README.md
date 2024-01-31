@@ -42,11 +42,13 @@ Everything starts with an:
 [aiohttp](https://aiohttp.readthedocs.io/en/stable/) `ClientSession`:
 
 ```python
+import logging, json
 import asyncio
 from aiohttp import ClientSession
-import logging, json
+from api import api, errors
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
+#_LOGGER.setLevel(logging.DEBUG)    # enable for detailed API output
 
 async def main() -> None:
     """Create the aiohttp session and run the example."""
