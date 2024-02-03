@@ -129,7 +129,7 @@ async def main() -> None:
                     print("")
                     #print(json.dumps(myapi.devices, indent=2))
                 for sec in range(0,REFRESH):
-                    now = datetime.now()
+                    now = datetime.now().astimezone()
                     if sys.stdin is sys.__stdin__:
                         print(f"Site refresh: {int((next_refr-now).total_seconds()):>3} sec,  Device details refresh: {int((next_dev_refr-now).total_seconds()):>3} sec  (CTRL-C to abort)", end = "\r", flush=True)
                     elif sec == 0:
