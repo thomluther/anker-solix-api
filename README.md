@@ -1,15 +1,15 @@
-<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix API" align="right" height="100" />
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix Api" align="right" height="100" />
 
-# Anker Solix API
+# Anker Solix Api
 
 [![github licence](https://img.shields.io/badge/Licence-MIT-orange)](https://github.com/thomluther/anker-solix-api/blob/main/LICENSE)
 ![python badge](https://img.shields.io/badge/Made%20with-Python-orange)
 
 This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter etc).
 
-🚨 This is by no means an official Anker API. 🚨
+🚨 This is by no means an official Anker Api. 🚨
 
-🚨 It can break at any time, or API request can be removed/added/changed and break some of the endpoint methods used in this API.🚨
+🚨 It can break at any time, or Api request can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
 
 # Python Versions
 
@@ -27,13 +27,13 @@ pip install aiohttp
 
 # Anker Account Information
 
-Because of the way the Anker Solix API works, one account with email/password cannot be used for the Anker mobile App and this API in parallel.
+Because of the way the Anker Solix Api works, one account with email/password cannot be used for the Anker mobile App and this Api in parallel.
 The Anker Cloud allows only one request token per account at any time. Each new authentication request by a client will create a new token and drop a previous token.
-Therefore usage of this API may kick out your account login in the mobile app.
+Therefore usage of this Api may kick out your account login in the mobile app.
 However, starting with Anker mobile app release 2.0, you can share your defined system(s) with 'family members'.
 Therefore it is recommended to create a second Anker account with a different email address and share your defined system(s) with the second account.
 Attention: A shared account is only a member of the shared system, and as such currently has no permissions to access or query device details of the shared system.
-Therefore an API homepage query will neither display any data for a shared account. However, a shared account can receive API scene/site details of shared systems (App system = API site),
+Therefore an Api homepage query will neither display any data for a shared account. However, a shared account can receive Api scene/site details of shared systems (App system = Api site),
 which is equivalent to what is displayed in the mobile app on the home screen for the selected system.
 
 # Usage
@@ -48,13 +48,13 @@ from aiohttp import ClientSession
 from api import api, errors
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-#_LOGGER.setLevel(logging.DEBUG)    # enable for detailed API output
+#_LOGGER.setLevel(logging.DEBUG)    # enable for detailed Api output
 
 async def main() -> None:
     """Create the aiohttp session and run the example."""
     async with ClientSession() as websession:
         """put your code here, example"""
-        myapi = api.API("username@domain.com","password","de",websession, _LOGGER)
+        myapi = api.AnkerSolixApi("username@domain.com","password","de",websession, _LOGGER)
         await myapi.update_sites()
         await myapi.update_device_details()
         print("System Overview:")
@@ -62,7 +62,7 @@ async def main() -> None:
         print("Device Overview:")
         print(json.dumps(myapi.devices, indent=2))
 
-"""run async main"""
+# run async main
 if __name__ == '__main__':
     try:
         asyncio.run(main())
@@ -70,36 +70,36 @@ if __name__ == '__main__':
         print(f'{type(err)}: {err}')
 ```
 
-The API class provides 2 main methods:
-- `API.update_sites()` to query overview data for all accessible sites and store data in API dictionaries `API.sites` and `API.devices` for quick access. 
-  This method could be run in regular intervals (30s or more) to fetch new data of the systems
-- `API.update_device_details()` to query further settings for the device serials as found in the sites query.
-  This method should be run less frequently since this will mostly fetch various device configuration settings and needs multiple queries. 
+The AnkerSolixApi class provides 2 main methods:
+- `AnkerSolixApi.update_sites()` to query overview data for all accessible sites and store data in dictionaries `AnkerSolixApi.sites` and `AnkerSolixApi.devices` for quick access.
+  This method could be run in regular intervals (30sec or more) to fetch new data of the systems
+- `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query.
+  This method should be run less frequently since this will mostly fetch various device configuration settings and needs multiple queries.
   It currently is developped for Solarbank devices only, further device types such as Inverters or Power Stations could be added once example data is available.
 
-Check out `test_api.py` and other python executable tools that may help to leverage and explore the API for your Anker power system.
+Check out `test_api.py` and other python executable tools that may help to leverage and explore the Api for your Anker power system.
 The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains json files with anonymized responses of the
-`export_system.py` module giving you an idea of how various API responses look like. (Note that the Solarbank was switched off when the data were pulled, so some fields may be empty)
-Those json files can also be used to develop/debug the API for system constellations not available to the developper.
+`export_system.py` module giving you an idea of how various Api responses look like. (Note that the Solarbank was switched off when the data were pulled, so some fields may be empty)
+Those json files can also be used to develop/debug the Api for system constellations not available to the developper.
 
-# API Tools
+# AnkerSolixApi Tools
 
 ## test_api.py
 
-Example exec module that can be used to explore and test API methods or direct enpoint requests with parameters.
+Example exec module that can be used to explore and test AnkerSolixApi methods or direct enpoint requests with parameters.
 
 ## export_system.py
 
-Example exec module to use the Anker API for export of defined system data and device details.
+Example exec module to use the Anker Api for export of defined system data and device details.
 This module will prompt for the Anker account details if not pre-set in the header.
-Upon successfull authentication, you can specify a subfolder for the exported JSON files received as API query response, defaulting to your nick name
+Upon successfull authentication, you can specify a subfolder for the exported JSON files received as Api query response, defaulting to your nick name
 Optionally you can specify whether personalized information in the response data should be randomized in the files, like SNs, Site IDs, Trace IDs etc.
 You can review the response files afterwards. They can be used as examples for dedicated data extraction from the devices.
-Optionally the API class can use the json files for debugging and testing on various system outputs.
+Optionally the AnkerSolixApi class can use the json files for debugging and testing on various system outputs.
 
 ## solarbank_monitor.py
 
-Example exec module to use the Anker API for continously querying and displaying important solarbank parameters
+Example exec module to use the Anker Api for continously querying and displaying important solarbank parameters
 This module will prompt for the Anker account details if not pre-set in the header.
 Upon successfull authentication, you will see the solarbank parameters displayed and refreshed at reqular interval.
 Note: When the system owning account is used, more details for the solarbank can be queried and displayed.
@@ -107,12 +107,12 @@ Attention: During executiion of this module, the used account cannot be used in 
 
 ## energy_csv.py
 
-Example exec module to use the Anker API for export of daily Solarbank Energy Data.
+Example exec module to use the Anker Api for export of daily Solarbank Energy Data.
 This method will prompt for the Anker account details if not pre-set in the header.
 Then you can specify a start day and the number of days for data extraction from the Anker Cloud.
 Note: The Solar production and Solarbank discharge can be queried across the full range. The solarbank
 charge however can be queried only as total for an interval (e.g. day). Therefore when solarbank charge
-data is also selected for export, an additional API query per day is required.
+data is also selected for export, an additional Api query per day is required.
 The received daily values will be exported into a csv file.
 
 
@@ -122,18 +122,17 @@ The received daily values will be exported into a csv file.
 ![last commit](https://img.shields.io/github/last-commit/thomluther/anker-solix-api?color=orange)
 [![Community Discussion](https://img.shields.io/badge/Home%20Assistant%20Community-Discussion-orange)](https://community.home-assistant.io/t/feature-request-integration-or-addon-for-anker-solix-e1600-solarbank/641086)
 
+Github is used to host code, to track issues and feature requests, as well as accept pull requests.
+
+Pull requests are the best way to propose changes to the codebase.
+
 1. [Check for open features/bugs](https://github.com/thomluther/anker-solix-api/issues)
   or [initiate a discussion on one](https://github.com/thomluther/anker-solix-api/issues/new).
-2. [Fork the repository](https://github.com/thomluther/anker-solix-api/fork).
-3. Install the dev environment: `make init`.
-4. Enter the virtual environment: `source ./venv/bin/activate`
-5. Code your new feature or bug fix.
-6. Write a test that covers your new functionality.
-7. Update `README.md` with any new documentation.
-8. Run tests and ensure 100% code coverage: `make coverage`
-9. Ensure you have no linting errors: `make lint`
-10. Ensure you have typed your code correctly: `make typing`
-11. Submit a pull request!
+1. [Fork the repository](https://github.com/thomluther/anker-solix-api/fork).
+1. Fork the repo and create your branch from `main`.
+1. If you've changed something, update the documentation.
+1. Test your contribution.
+1. Issue that pull request!
 
 
 # Acknowledgements / Credits
@@ -144,4 +143,4 @@ The received daily values will be exported into a csv file.
 
 # Showing Your Appreciation
 
-If you like this project, please give it a star on [GitHub](https://github.com/thomluther/anker-solix-api) 
+If you like this project, please give it a star on [GitHub](https://github.com/thomluther/anker-solix-api)
