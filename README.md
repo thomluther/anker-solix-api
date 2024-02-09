@@ -143,4 +143,6 @@ Pull requests are the best way to propose changes to the codebase.
 
 # Showing Your Appreciation
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/thomasluthe)
+
 If you like this project, please give it a star on [GitHub](https://github.com/thomluther/anker-solix-api)
