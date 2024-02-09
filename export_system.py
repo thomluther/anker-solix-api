@@ -19,7 +19,8 @@ import sys
 import time
 
 from aiohttp import ClientSession
-from api import api
+from aiohttp.client_exceptions import ClientError
+from api import api, errors
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -112,16 +113,16 @@ def export(filename: str, d: dict = None) -> None:
         d = {}
     time.sleep(1)  # central delay between multiple requests
     if len(d) == 0:
-        CONSOLE.info(f"WARNING: File {filename} not saved because JSON is empty")
+        CONSOLE.info("WARNING: File %s not saved because JSON is empty", filename)
         return
     elif RANDOMIZE:
         d = check_keys(d)
     try:
         with open(filename, "w", encoding="utf-8") as file:
             json.dump(d, file, indent=2)
-            CONSOLE.info(f"Saved JSON to file {filename}")
-    except Exception as err:
-        CONSOLE.error(f"ERROR: Failed to save JSON to file {filename}: {err}")
+            CONSOLE.info("Saved JSON to file %s", filename)
+    except OSError as err:
+        CONSOLE.error("ERROR: Failed to save JSON to file %s: %s", filename, err)
     return
 
 
@@ -169,7 +170,7 @@ async def main() -> bool:  # noqa: C901
             # first update sites in API object
             CONSOLE.info("\nQuerying site information...")
             await myapi.update_sites()
-            CONSOLE.info(f"Sites: {len(myapi.sites)}, Devices: {len(myapi.devices)}")
+            CONSOLE.info("Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices))
             _LOGGER.debug(json.dumps(myapi.devices, indent=2))
 
             # Query API using direct endpoints to save full response of each query in json files
@@ -212,7 +213,7 @@ async def main() -> bool:  # noqa: C901
                 ),
             )  # shows only owner devices
             for siteId, site in myapi.sites.items():
-                CONSOLE.info(f"\nExporting site specific data for site {siteId}...")
+                CONSOLE.info("\nExporting site specific data for site %s...", siteId)
                 CONSOLE.info("Exporting scene info...")
                 export(
                     os.path.join(folder, f"scene_{randomize(siteId,'site_id')}.json"),
@@ -247,7 +248,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId},
                         ),
                     )
-                except Exception:
+                except (ClientError,errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting wifi list...")
@@ -262,7 +263,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId},
                         ),
                     )  # works only for site owners
-                except Exception:
+                except (ClientError,errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting site price...")
@@ -277,14 +278,14 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId},
                         ),
                     )  # works only for site owners
-                except Exception:
+                except (ClientError,errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting device parameter settings...")
                 try:
                     export(
                         os.path.join(
-                            folder, "device_parm_{randomize(siteId,'site_id')}.json"
+                            folder, f"device_parm_{randomize(siteId,'site_id')}.json"
                         ),
                         await myapi.request(
                             "post",
@@ -292,12 +293,14 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId, "param_type": "4"},
                         ),
                     )  # works only for site owners
-                except Exception:
+                except (ClientError,errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
             for sn, device in myapi.devices.items():
                 CONSOLE.info(
-                    f"\nExporting device specific data for device {device.get('name','')} SN {sn}..."
+                    "\nExporting device specific data for device %s SN %s...",
+                    device.get("name", ""),
+                    sn,
                 )
                 siteId = device.get("site_id", "")
                 admin = site.get("is_admin")
@@ -313,7 +316,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
-                except Exception:
+                except (ClientError,errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting fittings...")
@@ -328,7 +331,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
-                except Exception:
+                except (ClientError,errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting load...")
@@ -341,16 +344,17 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
-                except Exception:
+                except (ClientError,errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
 
             CONSOLE.info(
-                f"\nCompleted export of Anker Solix system data for user {USER}"
+                "\nCompleted export of Anker Solix system data for user %s", USER
             )
             if RANDOMIZE:
                 CONSOLE.info(
-                    f"Folder {os.path.abspath(folder)} contains the randomized JSON files. Pls check and update fields that may contain unrecognized personalized data."
+                    "Folder %s contains the randomized JSON files. Pls check and update fields that may contain unrecognized personalized data.",
+                    os.path.abspath(folder),
                 )
                 CONSOLE.info(
                     "Following trace or site IDs, SNs and MAC addresses have been randomized in files (from -> to):"
@@ -358,12 +362,12 @@ async def main() -> bool:  # noqa: C901
                 CONSOLE.info(json.dumps(RANDOMDATA, indent=2))
             else:
                 CONSOLE.info(
-                    f"Folder {os.path.abspath(folder)} contains the JSON files."
+                    "Folder %s contains the JSON files.", os.path.abspath(folder)
                 )
             return True
 
-    except Exception as err:
-        CONSOLE.info(f"{type(err)}: {err}")
+    except (ClientError,errors.AnkerSolixError) as err:
+        CONSOLE.info("%s: %s", type(err), err)
         return False
 
 
@@ -375,4 +379,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         CONSOLE.info("Aborted!")
     except Exception as exception:
-        CONSOLE.info(f"{type(exception)}: {exception}")
+        CONSOLE.info("%s: %s", type(exception), exception)

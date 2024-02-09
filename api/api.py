@@ -15,7 +15,6 @@ import logging
 import os
 import sys
 import time
-from typing import Optional
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
@@ -29,7 +28,11 @@ from . import errors
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 """Default definitions required for the Anker Power/Solix Cloud API"""
-_API_BASE: str = "https://ankerpower-api-eu.anker.com"
+# API servers per region. Country assignment not clear, defaulting to EU server
+_API_SERVERS = {
+    "eu": "https://ankerpower-api-eu.anker.com",
+    "com": "https://ankerpower-api.anker.com",
+}
 _API_LOGIN = "passport/login"
 _API_HEADERS = {
     "Content-Type": "application/json",
@@ -37,6 +40,10 @@ _API_HEADERS = {
     "App-Name": "anker_power",
     "Os-Type": "android",
 }
+_API_COUNTRIES = {
+    "com": ["US", "CN"],
+    "eu": ["DE", "IT", "FR", "ES"],
+}  # TODO(2): Expand list once more ID assignments are known
 
 """Following are the Anker Power/Solix Cloud API endpoints known so far"""
 _API_ENDPOINTS = {
@@ -83,6 +90,8 @@ _API_ENDPOINTS = {
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
     'power_service/v1/app/compatible/save_compatible_solar',
+    'power_service/v1/app/compatible/get_confirm_permissions',
+    'power_service/v1/app/compatible/confirm_permissions_settings',
     'power_service/v1/app/after_sale/check_popup',
     'power_service/v1/app/after_sale/check_sn',
     'power_service/v1/app/after_sale/mark_sn',
@@ -95,8 +104,6 @@ _API_ENDPOINTS = {
     'power_service/v1/app/check_upgrade_record',
     'power_service/v1/app/get_upgrade_record',
     'power_service/v1/app/get_phonecode_list',
-    'power_service/v1/app/compatible/get_confirm_permissions',
-    'power_service/v1/app/compatible/confirm_permissions_settings',
     'power_service/v1/message_not_disturb',
     'power_service/v1/get_message_not_disturb',
     'power_service/v1/read_message',
@@ -104,6 +111,7 @@ _API_ENDPOINTS = {
     'power_service/v1/del_message',
     'power_service/v1/product_categories',
     'power_service/v1/product_accessories',
+
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -153,10 +161,16 @@ class AnkerSolixApi:
         logger=None,
     ) -> None:
         """Initialize."""
-        self._api_base: str = _API_BASE
+        self._countryId: str = countryId.upper()
+        self._api_base: str | None = None
+        for region, countries in _API_COUNTRIES.items():
+            if self._countryId in countries:
+                self._api_base = _API_SERVERS.get(region)
+        # default to EU server
+        if not self._api_base:
+            self._api_base = _API_SERVERS.get("eu")
         self._email: str = email
         self._password: str = password
-        self._countryId: str = countryId.upper()
         self._session: ClientSession = websession
         self._loggedIn: bool = False
         self._testdir: str = "test"
@@ -180,13 +194,14 @@ class AnkerSolixApi:
         self._timezone: str = (
             self._getTimezoneGMTString()
         )  # Timezone format: 'GMT+01:00'
-        self._gtoken: Optional[str] = None
-        self._token: Optional[str] = None
-        self._token_expiration: Optional[datetime] = None
-        self._login_response: Optional[LOGIN_RESPONSE] = {}
+        self._gtoken: str | None = None
+        self._token: str | None = None
+        self._token_expiration: datetime | None = None
+        self._login_response: LOGIN_RESPONSE = {}
 
         # Define Encryption for password, using ECDH assymetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
-        # uncompressed public key from Anker server in the format 04 [32 byte x vlaue] [32 byte y value]
+        # uncompressed public key from EU Anker server in the format 04 [32 byte x vlaue] [32 byte y value]
+        # TODO(2): COM Anker server public key usage to be validated
         self._api_public_key_hex = "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076"
         self._curve = (
             ec.SECP256R1()
@@ -430,8 +445,8 @@ class AnkerSolixApi:
         method: str,
         endpoint: str,
         *,
-        headers: Optional[dict] = None,
-        json: Optional[dict] = None, # lint W0621
+        headers: dict | None = None,
+        json: dict | None = None,
     ) -> dict:
         """Handle all requests to the API. This is also called recursively by login requests if necessary."""
         if not headers:
@@ -495,7 +510,7 @@ class AnkerSolixApi:
                     # Unauthorized or forbidden request
                     if self._retry_attempt:
                         raise errors.AuthorizationError(
-                            "Login failed for user %s" % self._email
+                            f"Login failed for user {self._email}"
                         ) from err
                     self._logger.warning("Login failed, retrying authentication...")
                     if await self.async_authenticate(restart=True):
@@ -504,7 +519,7 @@ class AnkerSolixApi:
                         )
                     self._logger.error("Login failed for user %s", self._email)
                     raise errors.AuthorizationError(
-                        "Login failed for user %s" % self._email
+                        f"Login failed for user {self._email}"
                     ) from err
                 raise ClientError(
                     f"There was an error while requesting {endpoint}: {err}"
@@ -525,7 +540,7 @@ class AnkerSolixApi:
                     )
                 self._logger.error("Login failed for user %s", self._email)
                 raise errors.AuthorizationError(
-                    "Login failed for user %s" % self._email
+                    f"Login failed for user {self._email}"
                 ) from err
             except errors.AnkerSolixError as err:  # Other Exception from API
                 self._logger.error("ANKER API ERROR: %s", err)
@@ -819,7 +834,7 @@ class AnkerSolixApi:
         if toFile:
             resp = self._saveToFile(
                 os.path.join(self._testdir, f"set_power_cutoff_{deviceSn}.json"),
-                json=data,
+                data=data,
             )
         else:
             resp = await self.request("post", _API_ENDPOINTS["set_cutoff"], json=data)
@@ -904,7 +919,7 @@ class AnkerSolixApi:
         }
         if toFile:
             resp = self._saveToFile(
-                os.path.join(self._testdir, f"set_device_parm_{siteId}.json"), json=data
+                os.path.join(self._testdir, f"set_device_parm_{siteId}.json"), data=data
             )
         else:
             resp = await self.request(
