@@ -106,7 +106,7 @@ async def main() -> None:
                     admin = dev.get('is_admin',False)
                     CONSOLE.info(f"{'Device':<{col1}}: {(dev.get('name','NoName')):<{col2}} (Admin: {'YES' if admin else 'NO'})")
                     CONSOLE.info(f"{'SN':<{col1}}: {sn}")
-                    CONSOLE.info(f"{'PN':<{col1}}: {dev.get('pn','')}")
+                    CONSOLE.info(f"{'PN':<{col1}}: {dev.get('^device_pn','')}")
                     CONSOLE.info(f"{'Type':<{col1}}: {devtype.capitalize()}")
                     if devtype == "solarbank":
                         siteid = dev.get('site_id','')
@@ -139,7 +139,7 @@ async def main() -> None:
                                 load = load[0] if len(load) > 0 else {}
                                 CONSOLE.info(f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}}")
                     else:
-                        sys.stdoutf("Not a Solarbank device, further details skipped")
+                        CONSOLE.warning("Not a Solarbank device, further details will be skipped")
                     CONSOLE.info("")
                     CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                 for sec in range(0,REFRESH):

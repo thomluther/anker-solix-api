@@ -300,7 +300,7 @@ class AnkerSolixApi:
         sn = devData.get("device_sn")
         if sn:
             device = self.devices.get(sn, {})  # lookup old device info if any
-            device.update({"sn": str(sn)})
+            device.update({"device_sn": str(sn)})
             if devType:
                 device.update({"type": devType.lower()})
             if siteId:
@@ -311,7 +311,7 @@ class AnkerSolixApi:
                 device.update({"is_admin": False})
             for key, value in devData.items():
                 if key in ["product_code", "device_pn"]:
-                    device.update({"pn": str(value)})
+                    device.update({"device_pn": str(value)})
                 elif key in ["device_name"]:
                     device.update({"name": str(value)})
                 elif key in ["device_sw_version"]:

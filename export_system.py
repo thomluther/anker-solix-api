@@ -48,7 +48,7 @@ def randomize(val, key: str = "") -> str:
         return str(val)
     randomstr = RANDOMDATA.get(val, "")
     if not randomstr and val:
-        if "_sn" in key:
+        if "_sn" in key or key in ["sn"]:
             randomstr = "".join(
                 random.choices(string.ascii_uppercase + string.digits, k=len(val))
             )
@@ -102,12 +102,14 @@ def check_keys(data):
         if isinstance(v, list):
             v = [check_keys(i) for i in v]
         # Randomize value for certain keys
-        if any(x in k for x in ["_sn", "site_id", "trace_id", "bt_ble_", "wifi_name"]):
+        if any(
+            x in k for x in ["_sn", "site_id", "trace_id", "bt_ble_", "wifi_name"]
+        ) or k in ["sn"]:
             data[k] = randomize(v, k)
     return data
 
 
-def export(filename: str, d: dict = None) -> None:
+def export(filename: str, d: dict = None, randomkeys: bool = False) -> None:
     """Save dict data to given file."""
     if not d:
         d = {}
@@ -117,6 +119,14 @@ def export(filename: str, d: dict = None) -> None:
         return
     elif RANDOMIZE:
         d = check_keys(d)
+        # Randomize also the keys for the api dictionary export
+        if randomkeys:
+            d_copy = d.copy()
+            for key in list(d):
+                if key in RANDOMDATA:
+                    d_copy[RANDOMDATA[key]] = d_copy.pop(key)
+            d = d_copy
+
     try:
         with open(filename, "w", encoding="utf-8") as file:
             json.dump(d, file, indent=2)
@@ -167,9 +177,10 @@ async def main() -> bool:  # noqa: C901
                 folder = nickname
             os.makedirs(folder, exist_ok=True)
 
-            # first update sites in API object
+            # first update sites and devices in API object
             CONSOLE.info("\nQuerying site information...")
             await myapi.update_sites()
+            await myapi.update_device_details()
             CONSOLE.info("Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices))
             _LOGGER.debug(json.dumps(myapi.devices, indent=2))
 
@@ -248,7 +259,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId},
                         ),
                     )
-                except (ClientError,errors.AnkerSolixError):
+                except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting wifi list...")
@@ -263,7 +274,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId},
                         ),
                     )  # works only for site owners
-                except (ClientError,errors.AnkerSolixError):
+                except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting site price...")
@@ -278,7 +289,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId},
                         ),
                     )  # works only for site owners
-                except (ClientError,errors.AnkerSolixError):
+                except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting device parameter settings...")
@@ -293,7 +304,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId, "param_type": "4"},
                         ),
                     )  # works only for site owners
-                except (ClientError,errors.AnkerSolixError):
+                except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
             for sn, device in myapi.devices.items():
@@ -316,7 +327,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
-                except (ClientError,errors.AnkerSolixError):
+                except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting fittings...")
@@ -331,7 +342,7 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
-                except (ClientError,errors.AnkerSolixError):
+                except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting load...")
@@ -344,9 +355,21 @@ async def main() -> bool:  # noqa: C901
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
-                except (ClientError,errors.AnkerSolixError):
+                except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("\nExporting Api Sites overview...")
+                export(
+                    os.path.join(folder, "api_sites.json"),
+                    myapi.sites,
+                    randomkeys=RANDOMIZE,
+                )
+                CONSOLE.info("Exporting Api Devices overview...")
+                export(
+                    os.path.join(folder, "api_devices.json"),
+                    myapi.devices,
+                    randomkeys=RANDOMIZE,
+                )
 
             CONSOLE.info(
                 "\nCompleted export of Anker Solix system data for user %s", USER
@@ -366,7 +389,7 @@ async def main() -> bool:  # noqa: C901
                 )
             return True
 
-    except (ClientError,errors.AnkerSolixError) as err:
+    except (ClientError, errors.AnkerSolixError) as err:
         CONSOLE.info("%s: %s", type(err), err)
         return False
 
