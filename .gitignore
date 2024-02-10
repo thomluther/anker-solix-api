@@ -13,5 +13,5 @@ coverage.xml
 
 # files potentially containing personal credentials
 **/authcache
-#credentials.py
-#test_api.py
+credentials.py
+test_api.py
