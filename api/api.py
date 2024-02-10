@@ -41,9 +41,17 @@ _API_HEADERS = {
     "Os-Type": "android",
 }
 _API_COUNTRIES = {
-    "com": ["US", "CN"],
-    "eu": ["DE", "IT", "FR", "ES"],
-}  # TODO(2): Expand list once more ID assignments are known
+    "com": [
+        "DZ","LB","SY","EG","LY","TN","IL","MA","JO","PS","AR","AU","BR",
+        "HK","IN","JP","MX","NG","NZ","RU","SG","ZA","KR","TW","US","CA",
+    ],
+    "eu": [
+        "BE","EL","LT","PT","BG","ES","LU","RO","CZ","FR","HU","SI","DK",
+        "HR","MT","SK","DE","IT","NL","FI","EE","CY","AT","SE","IE","LV",
+        "PL","UK","IS","NO","LI","CH","BA","ME","MD","MK","GE","AL","RS",
+        "TR","UA","XK","AM","BY","AZ",
+    ]
+}  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
 """Following are the Anker Power/Solix Cloud API endpoints known so far"""
 _API_ENDPOINTS = {
@@ -289,7 +297,7 @@ class AnkerSolixApi:
         This method is used to consolidate various device related key values from various requests under a common set of device keys.
         TODO: Add more relevent keys for Solarbank or other devices once known/required
         """
-        sn = devData.get("device_sn", None)
+        sn = devData.get("device_sn")
         if sn:
             device = self.devices.get(sn, {})  # lookup old device info if any
             device.update({"sn": str(sn)})
@@ -313,9 +321,8 @@ class AnkerSolixApi:
                 elif key in ["bt_ble_mac"]:
                     device.update({"bt_ble_mac": str(value)})
                 elif key in ["battery_power"]:
-                    device.update(
-                        {"battery_soc": str(value)}
-                    )  # This is a perventage value, not power
+                    # This is a percentage value for the battery state of charge, not power
+                    device.update({"battery_soc": str(value)})
                 elif key in ["charging_power"]:
                     device.update({"charging_power": str(value)})
                 elif key in ["photovoltaic_power"]:
@@ -328,6 +335,30 @@ class AnkerSolixApi:
                     device.update({"power_unit": str(value)})
                 elif key in ["charging_status"]:
                     device.update({"charging_status": str(value)})
+                    # decode the status into a description
+                    description = "unknown"
+                    match str(value):
+                        case "1":
+                            description = "charging"
+                        case "2":
+                            description = "discharging"
+                        case "3":
+                            description = "bypass"
+                            if charge := devData.get("charging_power"):
+                                with contextlib.suppress(ValueError):
+                                    charge = int(charge)
+                                    if charge > 0:
+                                        description = "bypass charging"
+                        case "4":
+                            description = "wakeup"
+                        case "5" | "6":
+                            # TODO(3): Add descriptions once status code usage is observed/known
+                            # There is also a deep standby / full bypass mode at cold temperatures when the battery cannot be loaded.
+                            # description = ""
+                            pass
+                        case "7":
+                            description = "standby"
+                    device.update({"status_description": description})
                 elif key in ["bws_surplus"]:
                     device.update({"bws_surplus": str(value)})
                 elif key in ["charge"]:
@@ -339,13 +370,13 @@ class AnkerSolixApi:
 
     def testDir(self, subfolder: str = None) -> str:
         """Get or set the subfolder for local API test files."""
-        if not subfolder:
+        if not subfolder or subfolder == self._testdir:
             return self._testdir
         if not os.path.isdir(subfolder):
             self._logger.error("Specified test folder does not exist: %s", subfolder)
         else:
             self._testdir = subfolder
-            self._logger.info("Set test folder to: %s", subfolder)
+            self._logger.info("Set Api test folder to: %s", subfolder)
         return self._testdir
 
     def logLevel(self, level: int = None) -> int:

@@ -8,6 +8,7 @@ Attention: During executiion of this module, the used account cannot be used in 
 import asyncio
 from datetime import datetime, timedelta
 from getpass import getpass
+import json
 import logging
 import os
 import sys
@@ -115,6 +116,7 @@ async def main() -> None:
                         upgrade = dev.get('auto_upgrade')
                         CONSOLE.info(f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} (Auto-Upgrade: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'})")
                         soc = f"{dev.get('battery_soc','---'):>3} %"
+                        CONSOLE.info(f"{'Status':<{col1}}: {dev.get('status_description','Unknown'):<{col2}} (Status code: {str(dev.get('charging_status','-'))})")
                         CONSOLE.info(f"{'State Of Charge':<{col1}}: {soc:<{col2}} (Min SOC: {str(dev.get('power_cutoff','--'))+' %'})")
                         unit = dev.get('power_unit','W')
                         CONSOLE.info(f"{'Input Power':<{col1}}: {dev.get('input_power',''):>3} {unit}")
@@ -139,7 +141,7 @@ async def main() -> None:
                     else:
                         sys.stdoutf("Not a Solarbank device, further details skipped")
                     CONSOLE.info("")
-                    #CONSOLE.info(json.dumps(myapi.devices, indent=2))
+                    CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                 for sec in range(0,REFRESH):
                     now = datetime.now().astimezone()
                     if sys.stdin is sys.__stdin__:
