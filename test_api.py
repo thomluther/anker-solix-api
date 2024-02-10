@@ -4,10 +4,11 @@ import asyncio
 from datetime import datetime
 import json
 import logging
+import os
 import sys
 
 from aiohttp import ClientSession
-from api import api
+from api import api, credentials
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -22,8 +23,10 @@ async def main() -> None:
     CONSOLE.info("Testing Solix API:")
     try:
         async with ClientSession() as websession:
+            # Update your account credentials in  api.credentials.py or directly in this file for testing
+            # Both files are added to .gitignore to avoid local changes being comitted to git
             myapi = api.AnkerSolixApi(
-                "username@domain.com", "password", "de", websession, _LOGGER
+                credentials.USERNAME, credentials.PASSWORD, credentials.COUNTRYID, websession, _LOGGER
             )
 
             # show login response
@@ -78,7 +81,7 @@ async def main() -> None:
             CONSOLE.info(json.dumps((await myapi.request("post", api._API_ENDPOINTS["site_detail"],json={"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c'})), indent=2))
             CONSOLE.info(json.dumps((await myapi.request("post", api._API_ENDPOINTS["wifi_list"],json={"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c'})), indent=2))
             CONSOLE.info(json.dumps((await myapi.request("post", api._API_ENDPOINTS["get_site_price"],json={"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c'})), indent=2))
-            CONSOLE.info(json.dumps((await myapi.request("post", api._API_ENDPOINTS["solar_info"],json={"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c'})), indent=2)) # json parameters unknown: site_id not sifficient, or works only with Anker Inverters?
+            CONSOLE.info(json.dumps((await myapi.request("post", api._API_ENDPOINTS["solar_info"],json={"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "device_sn": "9JVB42LJK8J0P5RY"})), indent=2)) # json parameters unknown: May need site_id and device_sn of inverter in system?
             CONSOLE.info(json.dumps((await myapi.request("post", api._API_ENDPOINTS["get_cutoff"],json={"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "device_sn": "9JVB42LJK8J0P5RY"})), indent=2))
             CONSOLE.info(json.dumps((await myapi.request("post", api._API_ENDPOINTS["get_device_fittings"],json={"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "device_sn": "9JVB42LJK8J0P5RY"})), indent=2))
             CONSOLE.info(json.dumps((await myapi.request("post", api._API_ENDPOINTS["get_device_load"],json={"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "device_sn": "9JVB42LJK8J0P5RY"})), indent=2))
@@ -89,7 +92,7 @@ async def main() -> None:
 
             # test api from json files
             """
-            myapi.testDir("examples")
+            myapi.testDir(os.path.join(os.path.dirname(__file__), "examples", "example1"))
             await myapi.update_sites(fromFile=True)
             await myapi.update_device_details(fromFile=True)
             CONSOLE.info(json.dumps(myapi.sites,indent=2))

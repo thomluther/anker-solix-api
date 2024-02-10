@@ -8,6 +8,7 @@ Attention: During executiion of this module, the used account cannot be used in 
 import asyncio
 from datetime import datetime, timedelta
 from getpass import getpass
+import json
 import logging
 import os
 import sys
@@ -105,7 +106,7 @@ async def main() -> None:
                     admin = dev.get('is_admin',False)
                     CONSOLE.info(f"{'Device':<{col1}}: {(dev.get('name','NoName')):<{col2}} (Admin: {'YES' if admin else 'NO'})")
                     CONSOLE.info(f"{'SN':<{col1}}: {sn}")
-                    CONSOLE.info(f"{'PN':<{col1}}: {dev.get('pn','')}")
+                    CONSOLE.info(f"{'PN':<{col1}}: {dev.get('^device_pn','')}")
                     CONSOLE.info(f"{'Type':<{col1}}: {devtype.capitalize()}")
                     if devtype == "solarbank":
                         siteid = dev.get('site_id','')
@@ -115,6 +116,7 @@ async def main() -> None:
                         upgrade = dev.get('auto_upgrade')
                         CONSOLE.info(f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} (Auto-Upgrade: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'})")
                         soc = f"{dev.get('battery_soc','---'):>3} %"
+                        CONSOLE.info(f"{'Status':<{col1}}: {dev.get('status_description','Unknown'):<{col2}} (Status code: {str(dev.get('charging_status','-'))})")
                         CONSOLE.info(f"{'State Of Charge':<{col1}}: {soc:<{col2}} (Min SOC: {str(dev.get('power_cutoff','--'))+' %'})")
                         unit = dev.get('power_unit','W')
                         CONSOLE.info(f"{'Input Power':<{col1}}: {dev.get('input_power',''):>3} {unit}")
@@ -137,9 +139,9 @@ async def main() -> None:
                                 load = load[0] if len(load) > 0 else {}
                                 CONSOLE.info(f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}}")
                     else:
-                        sys.stdoutf("Not a Solarbank device, further details skipped")
+                        CONSOLE.warning("Not a Solarbank device, further details will be skipped")
                     CONSOLE.info("")
-                    #CONSOLE.info(json.dumps(myapi.devices, indent=2))
+                    CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                 for sec in range(0,REFRESH):
                     now = datetime.now().astimezone()
                     if sys.stdin is sys.__stdin__:
