@@ -5,13 +5,12 @@
 */build/*
 */dist/*
 
-
 # misc
 .coverage
 .vscode
 coverage.xml
 
-# files potentially containing personal credentials
+# files potentially containing personal credentials or data
 **/authcache
-credentials.py
-test_api.py
+**/exports
+**/credentials*

@@ -1,0 +1,25 @@
+{
+  "N2D9F6VI0I9ANFJV": {
+    "device_sn": "N2D9F6VI0I9ANFJV",
+    "type": "solarbank",
+    "site_id": "7eff9a5a-5aee-e3ab-ae20-52e90a173059",
+    "is_admin": true,
+    "device_pn": "A17C0",
+    "name": "Solarbank E1600",
+    "battery_soc": "75",
+    "charging_power": "0",
+    "power_unit": "W",
+    "charging_status": "2",
+    "status_description": "discharging",
+    "input_power": "0",
+    "output_power": "0",
+    "set_output_power": "",
+    "bt_ble_mac": "4F1C8A436ADD",
+    "wifi_online": false,
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.4.4",
+    "auto_upgrade": true,
+    "power_cutoff": 10
+  }
+}

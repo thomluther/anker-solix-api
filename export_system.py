@@ -175,6 +175,8 @@ async def main() -> bool:  # noqa: C901
                 if nickname == "":
                     return False
                 folder = nickname
+            # Ensure to use local subfolder
+            folder = os.path.join(os.path.dirname(__file__), "exports", folder)
             os.makedirs(folder, exist_ok=True)
 
             # first update sites and devices in API object

@@ -4,10 +4,10 @@
   "data": {
     "wifi_info_list": [
       {
-        "wifi_name": "HomeNet",
+        "wifi_name": "wifi-network-1",
         "wifi_signal": "100"
       }
     ]
   },
-  "trace_id": "1fb13293474e50d24c4d6d93bd6d2bbe"
+  "trace_id": "e9fb5daffdec80e1bee55e3394fce4ff"
 }
