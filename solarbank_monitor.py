@@ -85,6 +85,8 @@ async def main() -> None:  # noqa: C901
         else:
             use_file = True
             testfolder = exampleslist[selection - 1]
+    else:
+        use_file = False
     try:
         async with ClientSession() as websession:
             myapi = api.AnkerSolixApi(USER, PASSWORD, COUNTRY, websession, _LOGGER)
@@ -263,4 +265,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         CONSOLE.info("\nAborted!")
     except Exception as exception:
-        CONSOLE.info("%s: %s", type(exception), exception)
+        CONSOLE.exception("%s: %s", type(exception), exception)
