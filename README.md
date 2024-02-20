@@ -75,11 +75,11 @@ The AnkerSolixApi class provides 2 main methods:
   This method could be run in regular intervals (30sec or more) to fetch new data of the systems
 - `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query.
   This method should be run less frequently since this will mostly fetch various device configuration settings and needs multiple queries.
-  It currently is developped for Solarbank devices only, further device types such as Inverters or Power Stations could be added once example data is available.
+  It currently is developped for Solarbank and Inverter devices only, further device types such as Portable Power Stations or Power Panels
+  could be added once example data is available.
 
 Check out `test_api.py` and other python executable tools that may help to leverage and explore the Api for your Anker power system.
-The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains json files with anonymized responses of the
-`export_system.py` module giving you an idea of how various Api responses look like. (Note that the Solarbank was switched off when the data were pulled, so some fields may be empty)
+The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains actual example exports with json files using  anonymized responses of the `export_system.py` module giving you an idea of how various Api responses look like. (Note that the Solarbank was switched off when the data were pulled, so some fields may be empty)
 Those json files can also be used to develop/debug the Api for system constellations not available to the developper.
 
 # AnkerSolixApi Tools
@@ -87,6 +87,8 @@ Those json files can also be used to develop/debug the Api for system constellat
 ## test_api.py
 
 Example exec module that can be used to explore and test AnkerSolixApi methods or direct enpoint requests with parameters.
+You can modify this module as required and hard code your credentials. Optionally you can put your credentials also in the api/credentials.py file.
+None of these is indexed and they are added to gitignore, so your local changes are not tracked for git updates/commits.
 
 ## export_system.py
 
@@ -99,11 +101,15 @@ Optionally the AnkerSolixApi class can use the json files for debugging and test
 
 ## solarbank_monitor.py
 
-Example exec module to use the Anker Api for continously querying and displaying important solarbank parameters
-This module will prompt for the Anker account details if not pre-set in the header.
+Example exec module to use the Anker Api for continously querying and displaying important solarbank parameters.
+This module will can use real time data from your Anker account, or optionally use json files from your local examples or export folder.
+When using the real time option, it will prompt for the Anker account details if not pre-set in the header.
 Upon successfull authentication, you will see the solarbank parameters displayed and refreshed at reqular interval.
+When using monitoring from local json file folder, they values will not change. But this option is useful to validate the api parsing with various system constellations.
+
 Note: When the system owning account is used, more details for the solarbank can be queried and displayed.
-Attention: During executiion of this module, the used account cannot be used in the Anker App since it will be kicked out on each refresh.
+
+**Attention: When executing this module with real time data from your Anker account, the used account cannot be used in the Anker App since it will be kicked out on each refresh.**
 
 ## energy_csv.py
 

@@ -1,8 +1,8 @@
 {
-  "N2D9F6VI0I9ANFJV": {
-    "device_sn": "N2D9F6VI0I9ANFJV",
+  "4AD5NI2AC8WL4CFI": {
+    "device_sn": "4AD5NI2AC8WL4CFI",
     "type": "solarbank",
-    "site_id": "7eff9a5a-5aee-e3ab-ae20-52e90a173059",
+    "site_id": "3df1aea0-4b7c-e0f8-7cc5-5ba5a4df5f7a",
     "is_admin": true,
     "device_pn": "A17C0",
     "name": "Solarbank E1600",
@@ -10,16 +10,83 @@
     "charging_power": "0",
     "power_unit": "W",
     "charging_status": "2",
-    "status_description": "discharging",
+    "charging_status_desc": "discharging",
+    "status": "0",
+    "status_desc": "off",
+    "wireless_type": "1",
     "input_power": "0",
     "output_power": "0",
     "set_output_power": "",
-    "bt_ble_mac": "4F1C8A436ADD",
+    "bt_ble_mac": "EC9E58A36A94",
+    "alias": "Solarbank E1600",
     "wifi_online": false,
     "charge": false,
     "bws_surplus": "0",
     "sw_version": "v1.4.4",
     "auto_upgrade": true,
-    "power_cutoff": 10
+    "wifi_name": "wifi-network-1",
+    "wifi_signal": "100",
+    "power_cutoff": 10,
+    "solar_info": {
+      "solar_brand": "ANKER",
+      "solar_model": "A5140",
+      "solar_sn": "",
+      "solar_model_name": "MI60 Microinverter"
+    },
+    "schedule": {
+      "ranges": [
+        {
+          "id": 0,
+          "start_time": "00:00",
+          "end_time": "08:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 300,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "08:00",
+          "end_time": "17:00",
+          "turn_on": false,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 100,
+              "number": 1
+            }
+          ],
+          "charge_priority": 80
+        },
+        {
+          "id": 0,
+          "start_time": "17:00",
+          "end_time": "24:00",
+          "turn_on": true,
+          "appliance_loads": [
+            {
+              "id": 0,
+              "name": "Benutzerdefiniert",
+              "power": 300,
+              "number": 1
+            }
+          ],
+          "charge_priority": 0
+        }
+      ],
+      "min_load": 100,
+      "max_load": 800,
+      "step": 0,
+      "is_charge_priority": 0,
+      "default_charge_priority": 0,
+      "is_zero_output_tips": 1
+    }
   }
 }
