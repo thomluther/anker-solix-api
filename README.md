@@ -15,8 +15,8 @@ This is an experimental Python library for Anker Solix Power devices (Solarbank,
 
 The library is currently supported on
 
-* Python 3.11
-* Python 3.12
+- Python 3.11
+- Python 3.12
 
 # Required libraries
 
@@ -71,6 +71,7 @@ if __name__ == '__main__':
 ```
 
 The AnkerSolixApi class provides 2 main methods:
+
 - `AnkerSolixApi.update_sites()` to query overview data for all accessible sites and store data in dictionaries `AnkerSolixApi.sites` and `AnkerSolixApi.devices` for quick access.
   This method could be run in regular intervals (30sec or more) to fetch new data of the systems
 - `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query.
@@ -79,7 +80,7 @@ The AnkerSolixApi class provides 2 main methods:
   could be added once example data is available.
 
 Check out `test_api.py` and other python executable tools that may help to leverage and explore the Api for your Anker power system.
-The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains actual example exports with json files using  anonymized responses of the `export_system.py` module giving you an idea of how various Api responses look like. (Note that the Solarbank was switched off when the data were pulled, so some fields may be empty)
+The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains actual example exports with json files using anonymized responses of the `export_system.py` module giving you an idea of how various Api responses look like. (Note that the Solarbank was switched off when the data were pulled, so some fields may be empty)
 Those json files can also be used to develop/debug the Api for system constellations not available to the developper.
 
 # AnkerSolixApi Tools
@@ -121,7 +122,6 @@ charge however can be queried only as total for an interval (e.g. day). Therefor
 data is also selected for export, an additional Api query per day is required.
 The received daily values will be exported into a csv file.
 
-
 # Contributing
 
 ![github contributors](https://img.shields.io/github/contributors/thomluther/anker-solix-api?color=orange)
@@ -133,19 +133,17 @@ Github is used to host code, to track issues and feature requests, as well as ac
 Pull requests are the best way to propose changes to the codebase.
 
 1. [Check for open features/bugs](https://github.com/thomluther/anker-solix-api/issues)
-  or [initiate a discussion on one](https://github.com/thomluther/anker-solix-api/issues/new).
+   or [initiate a discussion on one](https://github.com/thomluther/anker-solix-api/issues/new).
 1. [Fork the repository](https://github.com/thomluther/anker-solix-api/fork).
 1. Fork the repo and create your branch from `main`.
 1. If you've changed something, update the documentation.
 1. Test your contribution.
 1. Issue that pull request!
 
-
 # Acknowledgements / Credits
 
 - [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
 - [solix2mqtt](https://github.com/tomquist/solix2mqtt)
-
 
 # Showing Your Appreciation
 

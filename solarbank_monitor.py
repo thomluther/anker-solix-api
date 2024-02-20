@@ -6,16 +6,17 @@ Attention: During executiion of this module, the used account cannot be used in 
 """  # noqa: D205
 
 import asyncio
-from datetime import datetime, timedelta
-from getpass import getpass
 import json
 import logging
 import os
 import sys
 import time
+from datetime import datetime, timedelta
+from getpass import getpass
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
+
 from api import api, errors
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
