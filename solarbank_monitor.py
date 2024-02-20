@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Example exec module to use the Anker API for continously querying and displaying important solarbank parameters
 This module will prompt for the Anker account details if not pre-set in the header.
 Upon successfull authentication, you will see the solarbank parameters displayed and refreshed at reqular interval.
