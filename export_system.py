@@ -8,7 +8,6 @@ Optionally the API class can use the json files for debugging and testing on var
 """
 
 import asyncio
-from contextlib import suppress
 from getpass import getpass
 import json
 import logging
@@ -138,7 +137,7 @@ def export(filename: str, d: dict = None, randomkeys: bool = False) -> None:
 
 async def main() -> bool:  # noqa: C901
     """Run main function to export config."""
-    global USER, PASSWORD, COUNTRY, RANDOMIZE  # noqa: PLW0603
+    global USER, PASSWORD, COUNTRY, RANDOMIZE  # noqa: PLW0603, W0603
     CONSOLE.info("Exporting found Anker Solix system data for all assigned sites:")
     if USER == "":
         CONSOLE.info("\nEnter Anker Account credentials:")
@@ -236,18 +235,6 @@ async def main() -> bool:  # noqa: C901
                         json={"site_id": siteId},
                     ),
                 )
-                CONSOLE.info("Exporting solar info...")
-                with suppress(Exception):
-                    export(
-                        os.path.join(
-                            folder, f"solar_info_{randomize(siteId,'site_id')}.json"
-                        ),
-                        await myapi.request(
-                            "post",
-                            api._API_ENDPOINTS["solar_info"],
-                            json={"site_id": siteId},
-                        ),
-                    )  # PARAMETERS UNKNOWN, site id not sufficient
                 CONSOLE.info("Exporting site detail...")
                 admin = site.get("site_admin")
                 try:
@@ -316,7 +303,41 @@ async def main() -> bool:  # noqa: C901
                     sn,
                 )
                 siteId = device.get("site_id", "")
-                admin = site.get("is_admin")
+                admin = device.get("is_admin")
+
+                if device.get("type") == "solarbank":
+                    CONSOLE.info("Exporting solar info settings for solarbank...")
+                    try:
+                        export(
+                            os.path.join(
+                                folder, f"solar_info_{randomize(sn,'_sn')}.json"
+                            ),
+                            await myapi.request(
+                                "post",
+                                api._API_ENDPOINTS["solar_info"],
+                                json={"solarbank_sn" : sn},
+                            ),
+                        )
+                    except (ClientError, errors.AnkerSolixError):
+                        if not admin:
+                            CONSOLE.warning("Query requires account of site owner!")
+
+                    CONSOLE.info("Exporting compatible process info for solarbank...")
+                    try:
+                        export(
+                            os.path.join(
+                                folder, f"compatible_process_{randomize(sn,'_sn')}.json"
+                            ),
+                            await myapi.request(
+                                "post",
+                                api._API_ENDPOINTS["compatible_process"],
+                                json={"solarbank_sn" : sn},
+                            ),
+                        )
+                    except (ClientError, errors.AnkerSolixError):
+                        if not admin:
+                            CONSOLE.warning("Query requires account of site owner!")
+
                 CONSOLE.info("Exporting power cutoff settings...")
                 try:
                     export(

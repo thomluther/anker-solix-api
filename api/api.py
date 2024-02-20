@@ -10,6 +10,7 @@ from __future__ import annotations
 from base64 import b64encode
 import contextlib
 from datetime import datetime, timedelta
+from enum import Enum
 import json
 import logging
 import os
@@ -42,44 +43,111 @@ _API_HEADERS = {
 }
 _API_COUNTRIES = {
     "com": [
-        "DZ","LB","SY","EG","LY","TN","IL","MA","JO","PS","AR","AU","BR",
-        "HK","IN","JP","MX","NG","NZ","RU","SG","ZA","KR","TW","US","CA",
+        "DZ",
+        "LB",
+        "SY",
+        "EG",
+        "LY",
+        "TN",
+        "IL",
+        "MA",
+        "JO",
+        "PS",
+        "AR",
+        "AU",
+        "BR",
+        "HK",
+        "IN",
+        "JP",
+        "MX",
+        "NG",
+        "NZ",
+        "RU",
+        "SG",
+        "ZA",
+        "KR",
+        "TW",
+        "US",
+        "CA",
     ],
     "eu": [
-        "BE","EL","LT","PT","BG","ES","LU","RO","CZ","FR","HU","SI","DK",
-        "HR","MT","SK","DE","IT","NL","FI","EE","CY","AT","SE","IE","LV",
-        "PL","UK","IS","NO","LI","CH","BA","ME","MD","MK","GE","AL","RS",
-        "TR","UA","XK","AM","BY","AZ",
-    ]
+        "BE",
+        "EL",
+        "LT",
+        "PT",
+        "BG",
+        "ES",
+        "LU",
+        "RO",
+        "CZ",
+        "FR",
+        "HU",
+        "SI",
+        "DK",
+        "HR",
+        "MT",
+        "SK",
+        "DE",
+        "IT",
+        "NL",
+        "FI",
+        "EE",
+        "CY",
+        "AT",
+        "SE",
+        "IE",
+        "LV",
+        "PL",
+        "UK",
+        "IS",
+        "NO",
+        "LI",
+        "CH",
+        "BA",
+        "ME",
+        "MD",
+        "MK",
+        "GE",
+        "AL",
+        "RS",
+        "TR",
+        "UA",
+        "XK",
+        "AM",
+        "BY",
+        "AZ",
+    ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
 """Following are the Anker Power/Solix Cloud API endpoints known so far"""
 _API_ENDPOINTS = {
-    "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as preseneted on App Home Page (works only for site owners)
-    "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites user is only member of
-    "site_detail": "power_service/v1/site/get_site_detail",  # Information for given site_id, can also be used by site members
-    "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (does not contain all device details)
-    "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device information included
-    "charging_devices": "power_service/v1/site/get_charging_device",  # List of Power units?
+    "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as preseneted on App Home Page (mostly empty for shared accounts)
+    "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
+    "site_detail": "power_service/v1/site/get_site_detail",  # Information for given site_id, can also be used by shared accounts
+    "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
+    "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
+    "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
     "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules)
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules), NOT IMPLEMENTED YET
     "wifi_list": "power_service/v1/site/get_wifi_info_list",  # List of available networks for provided site id
-    "get_site_price": "power_service/v1/site/get_site_price",  # List defined power price and CO2 for given site, works only for site owners
+    "get_site_price": "power_service/v1/site/get_site_price",  # List defined power price and CO2 for given site, works only for site owner account
     "update_site_price": "power_service/v1/site/update_site_price",  # Update power price for given site, REQUIRED PARAMETERS UNKNOWN
-    "get_auto_upgrade": "power_service/v1/app/get_auto_upgrade",  # List of Auto-Upgrade configuration and enabled devices
+    "get_auto_upgrade": "power_service/v1/app/get_auto_upgrade",  # List of Auto-Upgrade configuration and enabled devices, onyl works for site owner accout
     "set_auto_upgrade": "power_service/v1/app/set_auto_upgrade",  # Set/Enable Auto-Upgrade configuration, not implemented yet, REQUIRED PARAMETERS UNKNOWN
-    "bind_devices": "power_service/v1/app/get_relate_and_bind_devices",  # List with details of locally connected/bound devices, includes firmware version
-    "get_device_load": "power_service/v1/app/device/get_device_home_load",  # Get defined device schedule (similar to data in device param)
-    "set_device_load": "power_service/v1/app/device/set_device_home_load",  # Set defined device schedule (Not implemented yet REQUIRED PARAMETERS UNKNOWN)
-    "get_ota_info": "power_service/v1/app/compatible/get_ota_info",  # Not implemented (List of available firmware updates?) REQUIRED PARAMETERS UNKNOWN
-    "get_ota_update": "power_service/v1/app/compatible/get_ota_update",  # Not implemented (Perform local firmware update?) REQUIRED PARAMETERS UNKNOWN
-    "solar_info": "power_service/v1/app/compatible/get_compatible_solar_info",  # Solar Panel details with Anker Inverters? REQUIRED PARAMETERS UNKNOWN
-    "get_cutoff": "power_service/v1/app/compatible/get_power_cutoff",  # Get Power Cutoff settings (Min SOC) for provided site id and device sn
+    "bind_devices": "power_service/v1/app/get_relate_and_bind_devices",  # List with details of locally connected/bound devices, includes firmware version, works only for owner account
+    "get_device_load": "power_service/v1/app/device/get_device_home_load",  # Get defined device schedule (same data as provided with device param query)
+    "set_device_load": "power_service/v1/app/device/set_device_home_load",  # Set defined device schedule (Not implemented yet, REQUIRED PARAMETERS UNKNOWN)
+    "get_ota_info": "power_service/v1/app/compatible/get_ota_info",  # Get OTA status for solarbank and/or inverter serials
+    "get_ota_update": "power_service/v1/app/compatible/get_ota_update",  # Not clear what this does, shows some OTA settings
+    "solar_info": "power_service/v1/app/compatible/get_compatible_solar_info",  # Solar inverter definition for solarbanks, works only with owner account
+    "get_cutoff": "power_service/v1/app/compatible/get_power_cutoff",  # Get Power Cutoff settings (Min SOC) for provided site id and device sn, works only with owner account
     "set_cutoff": "power_service/v1/app/compatible/set_power_cutoff",  # Set Min SOC for device, not implemented yet REQUIRED PARAMETERS UNKNOWN
-    "compatible_process": "power_service/v1/app/compatible/get_compatible_process",  # Not implemented (What is this used for?) REQUIRED PARAMETERS UNKNOWN
-    "get_device_fittings": "power_service/v1/app/get_relate_device_fittings",  # Device fittings for given site id and device sn. Solarbank response does not contain info
+    "compatible_process": "power_service/v1/app/compatible/get_compatible_process",  # contains solar_info plus OTA processing codes, works only with owner account
+    "get_device_fittings": "power_service/v1/app/get_relate_device_fittings",  # Device fittings for given site id and device sn. Solarbank/inverter responses do not contain info
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
     "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for given site_id and optional device SN (empty if solarbank not connected)
+    "check_upgrade_record": "power_service/v1/app/check_upgrade_record",  # show an upgrade record for the device, types 1-3 show different info, only works for owner account
+    "get_message": "power_service/v1/get_message",  # get list of max Messages from certain time, last_time format unknown
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -109,13 +177,11 @@ _API_ENDPOINTS = {
     'power_service/v1/app/share_site/get_invited_list',
     'power_service/v1/app/share_site/join_site',
     'power_service/v1/app/upgrade_event_report',
-    'power_service/v1/app/check_upgrade_record',
     'power_service/v1/app/get_upgrade_record',
     'power_service/v1/app/get_phonecode_list',
     'power_service/v1/message_not_disturb',
     'power_service/v1/get_message_not_disturb',
     'power_service/v1/read_message',
-    'power_service/v1/get_message',
     'power_service/v1/del_message',
     'power_service/v1/product_categories',
     'power_service/v1/product_accessories',
@@ -157,6 +223,30 @@ LOGIN_RESPONSE: dict = {
 }
 
 
+class SolixDeviceStatus(Enum):
+    """Enumuration for Anker Solix Device status."""
+
+    # TODO(3): Add descriptions once status code usage is observed/known
+    off = "0"
+    on = "1"
+    unknown = "unknown"
+
+
+class SolarbankStatus(Enum):
+    """Enumuration for Anker Solix Solarbank status."""
+
+    charging = "1"
+    discharging = "2"
+    bypass = "3"
+    bypass_charging = "35"  # pseudo state, the solarbank does not distinguish this
+    wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night as well
+    # TODO(3): Add descriptions once status code usage is observed/known
+    # There is also a deep standby / full bypass mode at cold temperatures when the battery cannot be loaded.
+    # full_bypass = "unknown"
+    standby = "7"
+    unknown = "unknown"
+
+
 class AnkerSolixApi:
     """Define the API class to handle Anker server authentication and API requests, along with the last state of queried site details and Device information."""
 
@@ -181,7 +271,9 @@ class AnkerSolixApi:
         self._password: str = password
         self._session: ClientSession = websession
         self._loggedIn: bool = False
-        self._testdir: str = "test"
+        self._testdir: str = os.path.join(
+            os.path.dirname(__file__), "..", "examples", "example1"
+        )
         self._retry_attempt: bool = False  # Flag for retry after any token error
         os.makedirs(
             os.path.join(os.path.dirname(__file__), "authcache"), exist_ok=True
@@ -205,7 +297,8 @@ class AnkerSolixApi:
         self._gtoken: str | None = None
         self._token: str | None = None
         self._token_expiration: datetime | None = None
-        self._login_response: LOGIN_RESPONSE = {}
+        self._login_response: dict = {}
+        self.mask_credentials: bool = True
 
         # Define Encryption for password, using ECDH assymetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
         # uncompressed public key from EU Anker server in the format 04 [32 byte x vlaue] [32 byte y value]
@@ -256,42 +349,83 @@ class AnkerSolixApi:
             "utf-8"
         )
 
+    def mask_values(self, data: dict | str, *args: str) -> dict | str:
+        """Mask values in dictionary for provided keys or the given string."""
+        if self.mask_credentials:
+            if isinstance(data, str):
+                datacopy: dict = {"text": data}
+                args: list = ["text"]
+            else:
+                datacopy = data.copy()
+            for key in args:
+                if old := datacopy.get(key):
+                    new = ""
+                    for idx in range(0, len(old), 16):
+                        new = new + (
+                            f"{old[idx:idx+2]}###masked###{old[idx+14:idx+16]}"
+                        )
+                    new = new[: len(old)]
+                    datacopy[key] = new
+            if isinstance(data, str):
+                return datacopy.get("text")
+            return datacopy
+        return data
+
     def _loadFromFile(self, filename: str) -> dict:
         """Load json data from given file for testing."""
+        if self.mask_credentials:
+            masked_filename = filename.replace(
+                self._email, self.mask_values(self._email)
+            )
+        else:
+            masked_filename = filename
         try:
             if os.path.isfile(filename):
                 with open(filename, encoding="utf-8") as file:
                     data = json.load(file)
-                    self._logger.debug("Loaded JSON from file %s:", filename)
-                    self._logger.debug("Data: %s", data)
+                    self._logger.debug("Loaded JSON from file %s:", masked_filename)
+                    self._logger.debug(
+                        "Data: %s",
+                        self.mask_values(
+                            data, "user_id", "auth_token", "email", "geo_key"
+                        ),
+                    )
                     return data
             return {}
         except OSError as err:
-            self._logger.error("ERROR: Failed to load JSON from file %s", filename)
+            self._logger.error(
+                "ERROR: Failed to load JSON from file %s", masked_filename
+            )
             self._logger.error(err)
             return {}
 
     def _saveToFile(self, filename: str, data: dict = None) -> bool:
         """Save json data to given file for testing."""
+        if self.mask_credentials:
+            masked_filename = filename.replace(
+                self._email, self.mask_values(self._email)
+            )
+        else:
+            masked_filename = filename
         if not data:
             data = {}
         try:
             with open(filename, "w", encoding="utf-8") as file:
                 json.dump(data, file, indent=2)
-                self._logger.debug("Saved JSON to file %s:", filename)
+                self._logger.debug("Saved JSON to file %s:", masked_filename)
                 return True
         except OSError as err:
-            self._logger.error("ERROR: Failed to save JSON to file %s", filename)
+            self._logger.error("ERROR: Failed to save JSON to file %s", masked_filename)
             self._logger.error(err)
             return False
 
-    def _update_dev(
+    def _update_dev(  # noqa: C901
         self,
         devData: dict,
         devType: str = None,
         siteId: str = None,
         isAdmin: bool = None,
-    ) -> None:
+    ) -> str | None:
         """Update the internal device details dictionary with the given data. The device_sn key must be set in the data dict for the update to be applied.
 
         This method is used to consolidate various device related key values from various requests under a common set of device keys.
@@ -310,15 +444,24 @@ class AnkerSolixApi:
             elif isAdmin is False and device.get("is_admin") is None:
                 device.update({"is_admin": False})
             for key, value in devData.items():
-                if key in ["product_code", "device_pn"]:
+                if key in ["product_code", "device_pn"] and value:
                     device.update({"device_pn": str(value)})
-                elif key in ["device_name"]:
+                elif key in ["device_name"] and value:
                     device.update({"name": str(value)})
-                elif key in ["device_sw_version"]:
+                elif key in ["alias_name"] and value:
+                    device.update({"alias": str(value)})
+                elif key in ["device_sw_version"] and value:
                     device.update({"sw_version": str(value)})
                 elif key in ["wifi_online"]:
                     device.update({"wifi_online": bool(value)})
-                elif key in ["bt_ble_mac"]:
+                elif key in ["wireless_type"]:
+                    device.update({"wireless_type": str(value)})
+                elif key in ["wifi_name"] and value:
+                    # wifi_name can be empty in details if device connected, avoid clearing name
+                    device.update({"wifi_name": str(value)})
+                elif key in ["wifi_signal"]:
+                    device.update({"wifi_signal": str(value)})
+                elif key in ["bt_ble_mac"] and value:
                     device.update({"bt_ble_mac": str(value)})
                 elif key in ["battery_power"]:
                     # This is a percentage value for the battery state of charge, not power
@@ -333,40 +476,58 @@ class AnkerSolixApi:
                     device.update({"set_output_power": str(value)})
                 elif key in ["power_unit"]:
                     device.update({"power_unit": str(value)})
+                elif key in ["status"]:
+                    device.update({"status": str(value)})
+                    # decode the status into a description
+                    description = SolixDeviceStatus.unknown.name
+                    for status in SolixDeviceStatus:
+                        if str(value) == status.value:
+                            description = status.name
+                            break
+                    device.update({"status_desc": description})
                 elif key in ["charging_status"]:
                     device.update({"charging_status": str(value)})
                     # decode the status into a description
-                    description = "unknown"
-                    match str(value):
-                        case "1":
-                            description = "charging"
-                        case "2":
-                            description = "discharging"
-                        case "3":
-                            description = "bypass"
-                            if charge := devData.get("charging_power"):
-                                with contextlib.suppress(ValueError):
-                                    charge = int(charge)
-                                    if charge > 0:
-                                        description = "bypass charging"
-                        case "4":
-                            description = "wakeup"
-                        case "5" | "6":
-                            # TODO(3): Add descriptions once status code usage is observed/known
-                            # There is also a deep standby / full bypass mode at cold temperatures when the battery cannot be loaded.
-                            # description = ""
-                            pass
-                        case "7":
-                            description = "standby"
-                    device.update({"status_description": description})
+                    description = SolarbankStatus.unknown.name
+                    for status in SolarbankStatus:
+                        if str(value) == status.value:
+                            description = status.name
+                            break
+                    # check if battery charging during bypass
+                    if description == SolarbankStatus.bypass.name and (
+                        charge := devData.get("charging_power")
+                    ):
+                        with contextlib.suppress(ValueError):
+                            charge = int(charge)
+                            if charge > 0:
+                                description = SolarbankStatus.bypass_charging.name
+                    device.update({"charging_status_desc": description})
                 elif key in ["bws_surplus"]:
                     device.update({"bws_surplus": str(value)})
                 elif key in ["charge"]:
                     device.update({"charge": bool(value)})
                 elif key in ["auto_upgrade"]:
                     device.update({"auto_upgrade": bool(value)})
+                elif key in ["power_cutoff"]:
+                    device.update({"power_cutoff": int(value)})
+                elif key in ["solar_info"] and isinstance(value, dict) and value:
+                    # remove unnecessary keys from solar_info
+                    keylist = value.keys()
+                    for key in [
+                        x
+                        for x in ("brand_id", "model_img", "version", "ota_status")
+                        if x in keylist
+                    ]:
+                        value.pop(key)
+                    device.update({"solar_info": dict(value)})
+                elif key in ["schedule"] and isinstance(value, dict) and value:
+                    device.update({"schedule": dict(value)})
+                # inverter specific keys
+                elif key in ["generate_power"]:
+                    device.update({"generate_power": str(value)})
 
             self.devices.update({str(sn): device})
+        return sn
 
     def testDir(self, subfolder: str = None) -> str:
         """Get or set the subfolder for local API test files."""
@@ -404,15 +565,18 @@ class AnkerSolixApi:
             self._authFileTime = os.path.getmtime(self._authFile)
             self._logger.debug(
                 "Cached Login for %s from %s:",
-                self._email,
+                self.mask_values(self._email),
                 datetime.fromtimestamp(self._authFileTime).isoformat(),
             )
-            self._logger.debug("%s", data)
+            self._logger.debug(
+                "%s",
+                self.mask_values(data, "user_id", "auth_token", "email", "geo_key"),
+            )
             self._retry_attempt = (
                 False  # clear retry attempt to allow retry for authentication refresh
             )
         else:
-            self._logger.debug("Fetching new Login credentials from server...")
+            self._logger.debug("Fetching new Login credentials from server")
             now = datetime.now().astimezone()
             self._retry_attempt = (
                 True  # set retry attempt to avoid retry on failed authentication
@@ -442,7 +606,10 @@ class AnkerSolixApi:
                 },
             )
             data = auth_resp.get("data", {})
-            self._logger.debug("Login Response: %s", data)
+            self._logger.debug(
+                "Login Response: %s",
+                self.mask_values(data, "user_id", "auth_token", "email", "geo_key"),
+            )
             self._loggedIn = True
             # Cache login response in file for reuse
             with open(self._authFile, "w", encoding="utf-8") as authfile:
@@ -477,7 +644,7 @@ class AnkerSolixApi:
         endpoint: str,
         *,
         headers: dict | None = None,
-        json: dict | None = None,
+        json: dict | None = None,  # noqa: W0621
     ) -> dict:
         """Handle all requests to the API. This is also called recursively by login requests if necessary."""
         if not headers:
@@ -488,7 +655,7 @@ class AnkerSolixApi:
             self._token_expiration
             and (self._token_expiration - datetime.now()).total_seconds() < 60
         ):
-            self._logger.warning("WARNING: Access token expired, fetching a new one...")
+            self._logger.warning("WARNING: Access token expired, fetching a new one")
             await self.async_authenticate(restart=True)
         # For non-Login requests, ensure authentication will be updated if not logged in yet or cached file was refreshed
         if endpoint != _API_LOGIN and (
@@ -512,18 +679,39 @@ class AnkerSolixApi:
             mergedHeaders.update({"gtoken": self._gtoken})
 
         self._logger.debug("Request Url: %s %s", method.upper(), url)
-        self._logger.debug("Request Headers: %s", mergedHeaders)
-        self._logger.debug("Request Body: %s", json)
+        self._logger.debug(
+            "Request Headers: %s",
+            self.mask_values(mergedHeaders, "x-auth-token", "gtoken"),
+        )
+        if endpoint == _API_LOGIN:
+            self._logger.debug(
+                "Request Body: %s",
+                self.mask_values(json, "user_id", "auth_token", "email", "geo_key"),
+            )
+        else:
+            self._logger.debug("Request Body: %s", json)
+        body_text = ""
         async with self._session.request(
             method, url, headers=mergedHeaders, json=json
         ) as resp:
             try:
+                # get first the body text for usage in error detail logging if necessary
+                body_text = await resp.text()
                 resp.raise_for_status()
                 data: dict = await resp.json(content_type=None)
-                self._logger.debug("Request Response: %s", data)
+                if endpoint == _API_LOGIN:
+                    self._logger.debug(
+                        "Request Response: %s",
+                        self.mask_values(
+                            data, "user_id", "auth_token", "email", "geo_key"
+                        ),
+                    )
+                else:
+                    self._logger.debug("Request Response: %s", data)
 
                 if not data:
-                    raise ClientError(f"No response while requesting {endpoint}")
+                    self._logger.error("Response Text: %s", body_text)
+                    raise ClientError(f"No data response while requesting {endpoint}")
 
                 errors.raise_error(data)  # check the response code in the data
                 if endpoint != _API_LOGIN:
@@ -537,13 +725,14 @@ class AnkerSolixApi:
                 ClientError
             ) as err:  # Exception from ClientSession based on standard response codes
                 self._logger.error("Request Error: %s", err)
+                self._logger.error("Response Text: %s", body_text)
                 if "401" in str(err) or "403" in str(err):
                     # Unauthorized or forbidden request
                     if self._retry_attempt:
                         raise errors.AuthorizationError(
                             f"Login failed for user {self._email}"
                         ) from err
-                    self._logger.warning("Login failed, retrying authentication...")
+                    self._logger.warning("Login failed, retrying authentication")
                     if await self.async_authenticate(restart=True):
                         return await self.request(
                             method, endpoint, headers=headers, json=json
@@ -560,11 +749,12 @@ class AnkerSolixApi:
                 errors.TokenKickedOutError,
             ) as err:  # Exception for API specific response codes
                 self._logger.error("API ERROR: %s", err)
+                self._logger.error("Response Text: %s", body_text)
                 if self._retry_attempt:
                     raise errors.AuthorizationError(
                         f"Login failed for user {self._email}"
                     ) from err
-                self._logger.warning("Login failed, retrying authentication...")
+                self._logger.warning("Login failed, retrying authentication")
                 if await self.async_authenticate(restart=True):
                     return await self.request(
                         method, endpoint, headers=headers, json=json
@@ -575,6 +765,7 @@ class AnkerSolixApi:
                 ) from err
             except errors.AnkerSolixError as err:  # Other Exception from API
                 self._logger.error("ANKER API ERROR: %s", err)
+                self._logger.error("Response Text: %s", body_text)
                 raise err
 
     async def update_sites(self, fromFile: bool = False) -> dict:
@@ -601,10 +792,11 @@ class AnkerSolixApi:
             'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c',
             'powerpanel_list': []}}
         """
-        self._logger.info("Updating Sites data...")
+        self._logger.debug("Updating Sites data")
         self.sites = {}
-        self._logger.debug("Getting site list...")
+        self._logger.debug("Getting site list")
         sites = await self.get_site_list(fromFile=fromFile)
+        act_devices = []
         for site in sites.get("site_list", []):
             if site.get("site_id"):
                 # Update site info
@@ -618,7 +810,7 @@ class AnkerSolixApi:
                 )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
                 mysite.update({"site_admin": admin})
                 # Update scene info for site
-                self._logger.debug("Getting scene info for site...")
+                self._logger.debug("Getting scene info for site")
                 scene = await self.get_scene_info(myid, fromFile=fromFile)
                 mysite.update(scene)
                 self.sites.update({myid: mysite})
@@ -626,17 +818,33 @@ class AnkerSolixApi:
                 for solarbank in (mysite.get("solarbank_info", {})).get(
                     "solarbank_list", []
                 ):
-                    self._update_dev(
+                    sn = self._update_dev(
                         solarbank, devType="solarbank", siteId=myid, isAdmin=admin
                     )
+                    if sn:
+                        act_devices.append(sn)
                 for pps in (mysite.get("pps_info", {})).get("pps_list", []):
-                    self._update_dev(pps, devType="pps", siteId=myid, isAdmin=admin)
+                    sn = self._update_dev(
+                        pps, devType="pps", siteId=myid, isAdmin=admin
+                    )
+                    if sn:
+                        act_devices.append(sn)
                 for solar in mysite.get("solar_list", []):
-                    self._update_dev(solar, devType="solar", siteId=myid, isAdmin=admin)
+                    sn = self._update_dev(
+                        solar, devType="inverter", siteId=myid, isAdmin=admin
+                    )
+                    if sn:
+                        act_devices.append(sn)
                 for powerpanel in mysite.get("powerpanel_list", []):
-                    self._update_dev(
+                    sn = self._update_dev(
                         powerpanel, devType="powerpanel", siteId=myid, isAdmin=admin
                     )
+                    if sn:
+                        act_devices.append(sn)
+        # recycle device list and remove devices no longer used in sites
+        rem_devices = [dev for dev in self.devices if dev not in act_devices]
+        for dev in rem_devices:
+            self.devices.pop(dev)
         return self.sites
 
     async def update_device_details(self, fromFile: bool = False) -> dict:
@@ -645,48 +853,61 @@ class AnkerSolixApi:
         Most of theses requests return data only when user has admin rights for sites owning the devices.
         To limit API requests, this update device details method should be called less frequently than update site method, which will also update most device details as found in the site data response.
         """
-        self._logger.info("Updating Device Details...")
+        self._logger.debug("Updating Device Details")
         # Fetch firmware version of device
-        self._logger.debug("Getting bind devices...")
-        data = await self.get_bind_devices(fromFile=fromFile)
-        for device in data.get("data", []):
-            self._update_dev(device)
+        self._logger.debug("Getting bind devices")
+        await self.get_bind_devices(fromFile=fromFile)
         # Get the setting for effective automated FW upgrades
-        self._logger.debug("Getting OTA settings...")
-        data = await self.get_auto_upgrade(fromFile=fromFile)
-        main = data.get("main_switch", None)
-        devicelist = data.get("device_list", [])  # could be null for non owning account
-        if not devicelist:
-            devicelist = []
-        for device in devicelist:
-            ota = device.get("auto_upgrade", None)
-            if isinstance(ota, bool):
-                # update device setting based on main setting if available
-                if isinstance(main, bool):
-                    device.update({"auto_upgrade": main and ota})
-                self._update_dev(device)
+        self._logger.debug("Getting OTA settings")
+        await self.get_auto_upgrade(fromFile=fromFile)
         # Fetch other relevant device information that requires site id and/or SN
+        site_wifi: dict[str, list[dict | None]] = {}
         for sn, device in self.devices.items():
-            # Fetch active Power Cutoff setting for solarbanks
-            if (
-                device.get("is_admin", False)
-                and device.get("site_id", "") != ""
-                and device.get("type", "") in ["solarbank"]
-            ):
-                self._logger.debug("Getting Power Cutoff settings for device...")
-                data = await self.get_power_cutoff(
-                    siteId=device.get("site_id"), deviceSn=sn, fromFile=fromFile
-                )
-                for setting in data.get("power_cutoff_data", []):
-                    if (
-                        int(setting.get("is_selected", 0)) > 0
-                        and int(setting.get("output_cutoff_data", 0)) > 0
-                    ):
-                        device.update(
-                            {"power_cutoff": int(setting.get("output_cutoff_data"))}
-                        )
+            site_id = device.get("site_id", "")
+            dev_Type = device.get("type", "")
+
+            # Fetch details that only work for site admins
+            if device.get("is_admin", False) and site_id:
+                # Fetch wifi networks and signal strength and map to usage of device
+                if wifi_index := device.get("wireless_type", ""):
+                    self._logger.debug(
+                        "Getting wifi list of site for mapping to device"
+                    )
+                    if str(wifi_index).isdigit():
+                        wifi_index = int(wifi_index)
+                    else:
+                        wifi_index = 0
+                    # fetch site wifi list if not queried yet
+                    if site_id not in site_wifi:
+                        site_wifi[site_id] = (
+                            await self.get_wifi_list(siteId=site_id, fromFile=fromFile)
+                        ).get("wifi_info_list") or []
+                    wifi_list = site_wifi.get(site_id, [{}])
+                    if 0 < wifi_index <= len(wifi_list):
+                        device.update(wifi_list[wifi_index - 1])
+
+                # Fetch device type specific details
+                if dev_Type in ["solarbank"]:
+                    # Fetch active Power Cutoff setting for solarbanks
+                    self._logger.debug("Getting Power Cutoff settings for device")
+                    await self.get_power_cutoff(
+                        siteId=site_id, deviceSn=sn, fromFile=fromFile
+                    )
+
+                    # Fetch defined inverter details for solarbanks
+                    self._logger.debug("Getting inverter settings for device")
+                    await self.get_solar_info(solarbankSn=sn, fromFile=fromFile)
+
+                    # Fetch schedule for device types supporting it
+                    self._logger.debug("Getting schedule details for device")
+                    await self.get_device_load(
+                        siteId=site_id, deviceSn=sn, fromFile=fromFile
+                    )
+                # update entry in devices
                 self.devices.update({sn: device})
-            # TODO(#1): Fetch other details of specific device types as known and relevant
+
+            # TODO(1): Fetch other details of specific device types as known and relevant
+
         return self.devices
 
     async def get_site_list(self, fromFile: bool = False) -> dict:
@@ -756,12 +977,15 @@ class AnkerSolixApi:
             resp = self._loadFromFile(os.path.join(self._testdir, "bind_devices.json"))
         else:
             resp = await self.request("post", _API_ENDPOINTS["bind_devices"])
-        return resp.get("data", {})
+        data = resp.get("data", {})
+        for device in data.get("data", []):
+            self._update_dev(device)
+        return data
 
     async def get_user_devices(self, fromFile: bool = False) -> dict:
         """Get device details of all devices owned by user.
 
-        Example data:
+        Example data: (Information is mostly empty when device is bound to site)
         {'solar_list': [], 'pps_list': [], 'solarbank_list': [{'device_pn': 'A17C0', 'device_sn': '9JVB42LJK8J0P5RY', 'device_name': 'Solarbank E1600',
         'device_img': 'https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png',
         'battery_power': '', 'bind_site_status': '1', 'charging_power': '', 'power_unit': '', 'charging_status': '', 'status': '', 'wireless_type': '1', 'main_version': '',
@@ -787,21 +1011,48 @@ class AnkerSolixApi:
             resp = await self.request("post", _API_ENDPOINTS["charging_devices"])
         return resp.get("data", {})
 
-    async def get_solar_info(self, siteId: str, fromFile: bool = False) -> dict:
-        """Get the solar info, likely requires also Anker Inverters attached).
+    async def get_solar_info(self, solarbankSn: str, fromFile: bool = False) -> dict:
+        """Get the solar info that is condigured for a solarbank.
 
-        TODO: Need example output
+        Example data:
+        {"brand_id": "3a9930f5-74ef-4e41-a797-04e6b33d3f0f","solar_brand": "ANKER","solar_model": "A5140","solar_sn": "","solar_model_name": "MI60 Microinverter"}
         """
-        data = {
-            "site_id": siteId
-        }  # TODO(#2): Required data parameters UNKNOWN, only site_id does not work, may need device SN for Anker Inverter?
+        data = {"solarbank_sn": solarbankSn}
         if fromFile:
             resp = self._loadFromFile(
-                os.path.join(self._testdir, f"solar_info_{siteId}.json")
+                os.path.join(self._testdir, f"solar_info_{solarbankSn}.json")
             )
         else:
             resp = await self.request("post", _API_ENDPOINTS["solar_info"], json=data)
-        return resp.get("data", {})
+        data = resp.get("data", {})
+        if data:
+            self._update_dev({"device_sn": solarbankSn, "solar_info": data})
+        return data
+
+    async def get_compatible_info(
+        self, solarbankSn: str, fromFile: bool = False
+    ) -> dict:
+        """Get the solar info and OTA processing info for a solarbank.
+
+        Example data:
+        {"ota_complete_status": 2,"process_skip_type": 1,"solar_info": {
+            "solar_sn": "","solar_brand": "ANKER","solar_model": "A5140","brand_id": "3a9930f5-74ef-4e41-a797-04e6b33d3f0f",
+            "model_img": "https://public-aiot-ore-qa.s3.us-west-2.amazonaws.com/product/870cd979-95d8-4cc1-89c4-04a26511c9b1/picl_A1771_normal.png",
+            "version": "","ota_status": 1,"solar_model_name": "MI60 Microinverter"}
+        """
+        data = {"solarbank_sn": solarbankSn}
+        if fromFile:
+            resp = self._loadFromFile(
+                os.path.join(self._testdir, f"compatible_process_{solarbankSn}.json")
+            )
+        else:
+            resp = await self.request(
+                "post", _API_ENDPOINTS["compatible_process"], json=data
+            )
+        data = resp.get("data", {})
+        if info := data.get("solar_info", {}):
+            self._update_dev({"device_sn": solarbankSn, "solar_info": info})
+        return data
 
     async def get_auto_upgrade(self, fromFile: bool = False) -> dict:
         """Get auto upgrade settings and devices enabled for auto upgrade.
@@ -814,13 +1065,25 @@ class AnkerSolixApi:
             resp = self._loadFromFile(os.path.join(self._testdir, "auto_upgrade.json"))
         else:
             resp = await self.request("post", _API_ENDPOINTS["get_auto_upgrade"])
-        return resp.get("data", {})
+        data = resp.get("data", {})
+        main = data.get("main_switch")
+        devicelist = data.get("device_list", [])  # could be null for non owning account
+        if not devicelist:
+            devicelist = []
+        for device in devicelist:
+            dev_ota = device.get("auto_upgrade")
+            if isinstance(dev_ota, bool):
+                # update device setting based on main setting if available
+                if isinstance(main, bool):
+                    device.update({"auto_upgrade": main and dev_ota})
+                self._update_dev(device)
+        return data
 
     async def get_wifi_list(self, siteId: str, fromFile: bool = False) -> dict:
         """Get the wifi list.
 
         Example data:
-        {'wifi_info_list': [{'wifi_name': '1und1-HomeServer', 'wifi_signal': '100'}]}
+        {'wifi_info_list': [{'wifi_name': 'wifi-network-1', 'wifi_signal': '100'}]}
         """
         data = {"site_id": siteId}
         if fromFile:
@@ -848,7 +1111,19 @@ class AnkerSolixApi:
             )
         else:
             resp = await self.request("post", _API_ENDPOINTS["get_cutoff"], json=data)
-        return resp.get("data", {})
+        data = resp.get("data", {})
+        for setting in data.get("power_cutoff_data", []):
+            if (
+                int(setting.get("is_selected", 0)) > 0
+                and int(setting.get("output_cutoff_data", 0)) > 0
+            ):
+                self._update_dev(
+                    {
+                        "device_sn": deviceSn,
+                        "power_cutoff": int(setting.get("output_cutoff_data")),
+                    }
+                )
+        return data
 
     async def set_power_cutoff(
         self, siteId: str, deviceSn: str, setId: int, toFile: bool = False
@@ -878,7 +1153,11 @@ class AnkerSolixApi:
 
         Example data:
         {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c",
-        "home_load_data": "{\"ranges\":[{\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},{\"id\":0,\"start_time\":\"08:30\",\"end_time\":\"17:00\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":100,\"number\":1}],\"charge_priority\":80},{\"id\":0,\"start_time\":\"17:00\",\"end_time\":\"24:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":0}],\"min_load\":100,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":1}",
+        "home_load_data": "{\"ranges\":[
+            {\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},
+            {\"id\":0,\"start_time\":\"08:30\",\"end_time\":\"17:00\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":100,\"number\":1}],\"charge_priority\":80},
+            {\"id\":0,\"start_time\":\"17:00\",\"end_time\":\"24:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":0}],
+            \"min_load\":100,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":1}",
         "current_home_load": "300W","parallel_home_load": "","parallel_display": false}
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
@@ -894,7 +1173,10 @@ class AnkerSolixApi:
         string_data = (resp.get("data", {})).get("home_load_data", {})
         if isinstance(string_data, str):
             resp["data"].update({"home_load_data": json.loads(string_data)})
-        return resp.get("data", {})
+        data = resp.get("data", {})
+        if (schedule := data.get("home_load_data", {})):
+            self._update_dev({"device_sn": deviceSn, "schedule": schedule})
+        return data
 
     async def get_device_parm(
         self, siteId: str, paramType: str = "4", fromFile: bool = False
@@ -955,6 +1237,65 @@ class AnkerSolixApi:
         else:
             resp = await self.request(
                 "post", _API_ENDPOINTS["set_device_parm"], json=data
+            )
+        return resp.get("data", {})
+
+    async def get_ota_info(
+        self, solarbankSn: str = "", inverterSn: str = "", fromFile: bool = False
+    ) -> dict:
+        """Get the solar info and OTA processing info for a solarbank.
+
+        Example data:
+        {"ota_status": 3,"current_version": "EZ1 2.0.5","timestamp": 1708277846,"version_type": 3}
+        """
+        data = {"solar_bank_sn": solarbankSn, "solar_sn": inverterSn}
+        if fromFile:
+            resp = self._loadFromFile(
+                os.path.join(
+                    self._testdir, f"ota_info_{solarbankSn or inverterSn}.json"
+                )
+            )
+        else:
+            resp = await self.request("post", _API_ENDPOINTS["get_ota_info"], json=data)
+        return resp.get("data", {})
+
+    async def get_ota_update(
+        self, deviceSn: str, insertSn: str = "", fromFile: bool = False
+    ) -> dict:
+        """Usage not Clear, process OTA update with confirmation in insertSn?.
+
+        Example data:
+        {"is_ota_update": true,"need_retry": true,"retry_interval": 2000,"device_list": null}
+        """
+        data = {"device_sn": deviceSn, "insert_sn": insertSn}
+        if fromFile:
+            resp = self._loadFromFile(
+                os.path.join(self._testdir, f"ota_update_{deviceSn}.json")
+            )
+        else:
+            resp = await self.request(
+                "post", _API_ENDPOINTS["get_ota_update"], json=data
+            )
+        return resp.get("data", {})
+
+    async def get_upgrade_record(
+        self, recordType: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get upgrade record, shows device updates with their last version. Type 0-3 work.
+
+        Example data:
+        {"is_record": true,"device_list": [{
+            "device_sn": "9JVB42LJK8J0P5RY","device_name": "","icon": "","last_version": "v1.4.4","device_pn": ""}
+        ]}
+        """
+        data = {"type": recordType}
+        if fromFile:
+            resp = self._loadFromFile(
+                os.path.join(self._testdir, f"upgrade_record_{recordType}.json")
+            )
+        else:
+            resp = await self.request(
+                "post", _API_ENDPOINTS["check_upgrade_record"], json=data
             )
         return resp.get("data", {})
 

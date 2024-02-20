@@ -5,7 +5,7 @@
     "main_switch": true,
     "device_list": [
       {
-        "device_sn": "N2D9F6VI0I9ANFJV",
+        "device_sn": "4AD5NI2AC8WL4CFI",
         "device_name": "Solarbank E1600",
         "auto_upgrade": true,
         "alias_name": "Solarbank E1600",
@@ -13,5 +13,5 @@
       }
     ]
   },
-  "trace_id": "da38b25e6da0135f76bccb6dccdefbc0"
+  "trace_id": "cd0b5b19d1ee5958cc4ecfdd66a90910"
 }
