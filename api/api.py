@@ -5,6 +5,8 @@ pip install cryptography
 pip install aiohttp
 """
 
+# pylint: disable=too-many-lines,too-many-arguments,too-many-branches,too-many-statements,too-many-public-methods
+
 from __future__ import annotations
 
 import contextlib
@@ -247,7 +249,7 @@ class SolarbankStatus(Enum):
     unknown = "unknown"
 
 
-class AnkerSolixApi:
+class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
     """Define the API class to handle Anker server authentication and API requests, along with the last state of queried site details and Device information."""
 
     def __init__(
@@ -644,7 +646,7 @@ class AnkerSolixApi:
         endpoint: str,
         *,
         headers: dict | None = None,
-        json: dict | None = None,  # noqa: W0621
+        json: dict | None = None,  # noqa: W0621 # pylint: disable=redefined-outer-name
     ) -> dict:
         """Handle all requests to the API. This is also called recursively by login requests if necessary."""
         if not headers:
@@ -768,7 +770,9 @@ class AnkerSolixApi:
                 self._logger.error("Response Text: %s", body_text)
                 raise err
 
-    async def update_sites(self, fromFile: bool = False) -> dict:
+    async def update_sites(  # pylint: disable=too-many-locals
+        self, fromFile: bool = False
+    ) -> dict:
         """Get the latest info for all accessible sites and update class site and device variables.
 
         Example data:
