@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Example exec module to test the Anker API for various methods or direct endpoint requests with various parameters."""
 
 import asyncio

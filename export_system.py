@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Example exec module to use the Anker API for export of defined system data and device details.
 
 This module will prompt for the Anker account details if not pre-set in the header.
