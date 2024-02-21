@@ -8,7 +8,6 @@ Optionally the API class can use the json files for debugging and testing on var
 """
 
 import asyncio
-from getpass import getpass
 import json
 import logging
 import os
@@ -16,9 +15,11 @@ import random
 import string
 import sys
 import time
+from getpass import getpass
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
+
 from api import api, errors
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -315,7 +316,7 @@ async def main() -> bool:  # noqa: C901
                             await myapi.request(
                                 "post",
                                 api._API_ENDPOINTS["solar_info"],
-                                json={"solarbank_sn" : sn},
+                                json={"solarbank_sn": sn},
                             ),
                         )
                     except (ClientError, errors.AnkerSolixError):
@@ -331,7 +332,7 @@ async def main() -> bool:  # noqa: C901
                             await myapi.request(
                                 "post",
                                 api._API_ENDPOINTS["compatible_process"],
-                                json={"solarbank_sn" : sn},
+                                json={"solarbank_sn": sn},
                             ),
                         )
                     except (ClientError, errors.AnkerSolixError):

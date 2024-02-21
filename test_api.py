@@ -1,13 +1,14 @@
 """Example exec module to test the Anker API for various methods or direct endpoint requests with various parameters."""
 
 import asyncio
-from datetime import datetime
 import json
 import logging
 import os
 import sys
+from datetime import datetime
 
 from aiohttp import ClientSession
+
 from api import api, credentials
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -26,7 +27,11 @@ async def main() -> None:
             # Update your account credentials in  api.credentials.py or directly in this file for testing
             # Both files are added to .gitignore to avoid local changes being comitted to git
             myapi = api.AnkerSolixApi(
-                credentials.USERNAME, credentials.PASSWORD, credentials.COUNTRYID, websession, _LOGGER
+                credentials.USERNAME,
+                credentials.PASSWORD,
+                credentials.COUNTRYID,
+                websession,
+                _LOGGER,
             )
 
             # show login response

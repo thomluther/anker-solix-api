@@ -14,10 +14,7 @@
         "link_time": 1695392302068,
         "wifi_online": false,
         "wifi_name": "",
-        "relate_type": [
-          "ble",
-          "wifi"
-        ],
+        "relate_type": ["ble", "wifi"],
         "charge": false,
         "bws_surplus": 0,
         "device_sw_version": "v1.4.4",

@@ -10,13 +10,14 @@ The received daily values will be exported into a csv file.
 
 import asyncio
 import csv
-from datetime import datetime
-from getpass import getpass
 import json
 import logging
 import sys
+from datetime import datetime
+from getpass import getpass
 
 from aiohttp import ClientSession
+
 from api import api
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)

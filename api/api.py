@@ -7,15 +7,15 @@ pip install aiohttp
 
 from __future__ import annotations
 
-from base64 import b64encode
 import contextlib
-from datetime import datetime, timedelta
-from enum import Enum
 import json
 import logging
 import os
 import sys
 import time
+from base64 import b64encode
+from datetime import datetime, timedelta
+from enum import Enum
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
@@ -805,9 +805,10 @@ class AnkerSolixApi:
                 siteInfo = mysite.get("site_info", {})
                 siteInfo.update(site)
                 mysite.update({"site_info": siteInfo})
-                admin = (
-                    siteInfo.get("ms_type", 0) in [0, 1]
-                )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
+                admin = siteInfo.get("ms_type", 0) in [
+                    0,
+                    1,
+                ]  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
                 mysite.update({"site_admin": admin})
                 # Update scene info for site
                 self._logger.debug("Getting scene info for site")
@@ -1174,7 +1175,7 @@ class AnkerSolixApi:
         if isinstance(string_data, str):
             resp["data"].update({"home_load_data": json.loads(string_data)})
         data = resp.get("data", {})
-        if (schedule := data.get("home_load_data", {})):
+        if schedule := data.get("home_load_data", {}):
             self._update_dev({"device_sn": deviceSn, "schedule": schedule})
         return data
 
@@ -1326,12 +1327,16 @@ class AnkerSolixApi:
             "site_id": siteId,
             "device_sn": deviceSn,
             "type": rangeType if rangeType in ["day", "week", "year"] else "day",
-            "start_time": startDay.strftime("%Y-%m-%d")
-            if startDay
-            else datetime.today().strftime("%Y-%m-%d"),
-            "device_type": devType
-            if devType in ["solar_production", "solarbank"]
-            else "solar_production",
+            "start_time": (
+                startDay.strftime("%Y-%m-%d")
+                if startDay
+                else datetime.today().strftime("%Y-%m-%d")
+            ),
+            "device_type": (
+                devType
+                if devType in ["solar_production", "solarbank"]
+                else "solar_production"
+            ),
             "end_time": endDay.strftime("%Y-%m-%d") if endDay else "",
         }
         resp = await self.request("post", _API_ENDPOINTS["energy_analysis"], json=data)
