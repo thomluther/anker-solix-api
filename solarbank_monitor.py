@@ -1,16 +1,9 @@
 #!/usr/bin/env python
-"""Example exec module to use the Anker API for continously querying and
-displaying important solarbank parameters This module will prompt for the Anker
-account details if not pre-set in the header.  Upon successfull authentication,
-you will see the solarbank parameters displayed and refreshed at reqular
-interval.
-
-Note: When the system owning account is used, more details for the solarbank
-can be queried and displayed.
-
-Attention: During executiion of this module, the used account cannot be used in
-the Anker App since it will be kicked out on each refresh.
-
+"""Example exec module to use the Anker API for continously querying and displaying important solarbank parameters
+This module will prompt for the Anker account details if not pre-set in the header.
+Upon successfull authentication, you will see the solarbank parameters displayed and refreshed at reqular interval.
+Note: When the system owning account is used, more details for the solarbank can be queried and displayed.
+Attention: During executiion of this module, the used account cannot be used in the Anker App since it will be kicked out on each refresh.
 """  # noqa: D205
 
 import asyncio
@@ -20,11 +13,11 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta
+from getpass import getpass
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 
-import common
 from api import api, errors
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -34,8 +27,11 @@ CONSOLE: logging.Logger = logging.getLogger("console")
 CONSOLE.addHandler(logging.StreamHandler(sys.stdout))
 CONSOLE.setLevel(logging.INFO)
 
+# Optional default Anker Account credentials to be used
+USER = ""
+PASSWORD = ""
+COUNTRY = ""
 REFRESH = 30  # default refresh interval in seconds
-INTERACTIVE = True
 
 
 def clearscreen():
@@ -55,17 +51,15 @@ def get_subfolders(folder: str) -> list:
     return []
 
 
-async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-    None
-):
+async def main() -> None:  # noqa: C901
     """Run Main routine to start Solarbank monitor in a loop."""
-    global REFRESH  # pylint: disable=global-statement
+    global USER, PASSWORD, COUNTRY, REFRESH  # noqa: W0603, PLW0603
     CONSOLE.info("Solarbank Monitor:")
     # get list of possible example and export folders to test the monitor against
     exampleslist = get_subfolders(
         os.path.join(os.path.dirname(__file__), "examples")
     ) + get_subfolders(os.path.join(os.path.dirname(__file__), "exports"))
-    if INTERACTIVE:
+    if USER == "":
         if exampleslist:
             CONSOLE.info("\nSelect the input source for the monitor:")
             CONSOLE.info("(0) Real time from Anker cloud")
@@ -80,6 +74,16 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             return False
         if (selection := int(selection)) == 0:
             use_file = False
+            CONSOLE.info("\nEnter Anker Account credentials:")
+            USER = input("Username (email): ")
+            if USER == "":
+                return False
+            PASSWORD = getpass("Password: ")
+            if PASSWORD == "":
+                return False
+            COUNTRY = input("Country ID (e.g. DE): ")
+            if COUNTRY == "":
+                return False
         else:
             use_file = True
             testfolder = exampleslist[selection - 1]
@@ -87,9 +91,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
         use_file = False
     try:
         async with ClientSession() as websession:
-            myapi = api.AnkerSolixApi(
-                common.user(), common.password(), common.country(), websession, _LOGGER
-            )
+            myapi = api.AnkerSolixApi(USER, PASSWORD, COUNTRY, websession, _LOGGER)
             if use_file:
                 # set the correct test folder for Api
                 myapi.testDir(testfolder)
@@ -105,7 +107,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 )
                 if not resp:
                     break
-                if resp.isdigit() and 10 <= int(resp) <= 600:
+                elif resp.isdigit() and 10 <= int(resp) <= 600:
                     REFRESH = int(resp)
                     break
 
@@ -135,16 +137,13 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     # schedules = {}
                 clearscreen()
                 CONSOLE.info(
-                    "Solarbank Monitor (refresh %s s, details refresh %s s):",
-                    REFRESH,
-                    10 * REFRESH,
+                    f"Solarbank Monitor (refresh {REFRESH} s, details refresh {10*REFRESH} s):"
                 )
                 if use_file:
-                    CONSOLE.info("Using input source folder: %s", myapi.testDir())
+                    CONSOLE.info(f"Using input source folder: {myapi.testDir()}")
                 CONSOLE.info(
-                    "Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices)
+                    f"Sites: {len(myapi.sites)}, Devices: {len(myapi.devices)}"
                 )
-                # pylint: disable=logging-fstring-interpolation
                 for sn, dev in myapi.devices.items():
                     devtype = dev.get("type", "Unknown")
                     admin = dev.get("is_admin", False)
@@ -256,7 +255,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             return False
 
     except (ClientError, errors.AnkerSolixError) as err:
-        CONSOLE.error("%s: %s", type(err), err)
+        CONSOLE.info("%s: %s", type(err), err)
         return False
 
 
@@ -264,8 +263,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
 if __name__ == "__main__":
     try:
         if not asyncio.run(main()):
-            CONSOLE.warning("\nAborted!")
+            CONSOLE.info("\nAborted!")
     except KeyboardInterrupt:
-        CONSOLE.warning("\nAborted!")
-    except Exception as exception:  # pylint: disable=broad-exception-caught
+        CONSOLE.info("\nAborted!")
+    except Exception as exception:
         CONSOLE.exception("%s: %s", type(exception), exception)
