@@ -1,12 +1,22 @@
 #!/usr/bin/env python
-"""Example exec module to use the Anker API for export of defined system data and device details.
+"""Example exec module to use the Anker API for export of defined system data
+and device details.
 
 This module will prompt for the Anker account details if not pre-set in the header.
-Upon successfull authentication, you can specify a subfolder for the exported JSON files received as API query response, defaulting to your nick name.
-Optionally you can specify whether personalized information in the response data should be randomized in the files, like SNs, Site IDs, Trace IDs etc.
-You can review the response files afterwards. They can be used as examples for dedicated data extraction from the devices.
-Optionally the API class can use the json files for debugging and testing on various system outputs.
+
+Upon successfull authentication, you can specify a subfolder for the exported
+JSON files received as API query response, defaulting to your nick name.
+
+Optionally you can specify whether personalized information in the response
+data should be randomized in the files, like SNs, Site IDs, Trace IDs etc.  You
+can review the response files afterwards. They can be used as examples for
+dedicated data extraction from the devices.
+
+Optionally the API class can use the json files for debugging and testing on
+various system outputs.
+
 """
+# pylint: disable=duplicate-code
 
 import asyncio
 import json
@@ -16,11 +26,11 @@ import random
 import string
 import sys
 import time
-from getpass import getpass
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 
+import common
 from api import api, errors
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -29,11 +39,6 @@ _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 CONSOLE: logging.Logger = logging.getLogger("console")
 CONSOLE.addHandler(logging.StreamHandler(sys.stdout))
 CONSOLE.setLevel(logging.INFO)
-
-# Optional default Anker Account credentials to be used
-USER = ""
-PASSWORD = ""
-COUNTRY = ""
 
 RANDOMIZE = True  # Global flag to save randomize decission
 RANDOMDATA = {}  # Global dict for randomized data, printed at the end
@@ -44,7 +49,6 @@ def randomize(val, key: str = "") -> str:
 
     Reuse same randomization if value was already randomized
     """
-    global RANDOMDATA  # noqa: PLW0602
     if not RANDOMIZE:
         return str(val)
     randomstr = RANDOMDATA.get(val, "")
@@ -118,7 +122,7 @@ def export(filename: str, d: dict = None, randomkeys: bool = False) -> None:
     if len(d) == 0:
         CONSOLE.info("WARNING: File %s not saved because JSON is empty", filename)
         return
-    elif RANDOMIZE:
+    if RANDOMIZE:
         d = check_keys(d)
         # Randomize also the keys for the api dictionary export
         if randomkeys:
@@ -137,25 +141,19 @@ def export(filename: str, d: dict = None, randomkeys: bool = False) -> None:
     return
 
 
-async def main() -> bool:  # noqa: C901
+async def main() -> (
+    bool
+):  # noqa: C901 # pylint: disable=too-many-branches,too-many-statements
     """Run main function to export config."""
-    global USER, PASSWORD, COUNTRY, RANDOMIZE  # noqa: PLW0603, W0603
+    global RANDOMIZE  # noqa: PLW0603, W0603 # pylint: disable=global-statement
     CONSOLE.info("Exporting found Anker Solix system data for all assigned sites:")
-    if USER == "":
-        CONSOLE.info("\nEnter Anker Account credentials:")
-        USER = input("Username (email): ")
-        if USER == "":
-            return False
-        PASSWORD = getpass("Password: ")
-        if PASSWORD == "":
-            return False
-        COUNTRY = input("Country ID (e.g. DE): ")
-        if COUNTRY == "":
-            return False
     try:
+        user = common.user()
         async with ClientSession() as websession:
             CONSOLE.info("\nTrying authentication...")
-            myapi = api.AnkerSolixApi(USER, PASSWORD, COUNTRY, websession, _LOGGER)
+            myapi = api.AnkerSolixApi(
+                user, common.password(), common.country(), websession, _LOGGER
+            )
             if await myapi.async_authenticate():
                 CONSOLE.info("OK")
             else:
@@ -187,6 +185,7 @@ async def main() -> bool:  # noqa: C901
             CONSOLE.info("Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices))
             _LOGGER.debug(json.dumps(myapi.devices, indent=2))
 
+            # pylint: disable=protected-access
             # Query API using direct endpoints to save full response of each query in json files
             CONSOLE.info("\nExporting homepage...")
             export(
@@ -397,7 +396,7 @@ async def main() -> bool:  # noqa: C901
                 )
 
             CONSOLE.info(
-                "\nCompleted export of Anker Solix system data for user %s", USER
+                "\nCompleted export of Anker Solix system data for user %s", user
             )
             if RANDOMIZE:
                 CONSOLE.info(
@@ -415,7 +414,7 @@ async def main() -> bool:  # noqa: C901
             return True
 
     except (ClientError, errors.AnkerSolixError) as err:
-        CONSOLE.info("%s: %s", type(err), err)
+        CONSOLE.error("%s: %s", type(err), err)
         return False
 
 
@@ -425,6 +424,6 @@ if __name__ == "__main__":
         if not asyncio.run(main()):
             CONSOLE.info("Aborted!")
     except KeyboardInterrupt:
-        CONSOLE.info("Aborted!")
-    except Exception as exception:
-        CONSOLE.info("%s: %s", type(exception), exception)
+        CONSOLE.warning("Aborted!")
+    except Exception as exception:  # pylint: disable=broad-exception-caught
+        CONSOLE.exception("%s: %s", type(exception), exception)

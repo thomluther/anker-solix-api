@@ -16,3 +16,4 @@ coverage.xml
 **/credentials*
 /node_modules/
 /client.py
+/daily_energy_*.csv

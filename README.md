@@ -48,13 +48,16 @@ from aiohttp import ClientSession
 from api import api, errors
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-#_LOGGER.setLevel(logging.DEBUG)    # enable for detailed Api output
+# _LOGGER.setLevel(logging.DEBUG)    # enable for detailed Api output
+
 
 async def main() -> None:
     """Create the aiohttp session and run the example."""
     async with ClientSession() as websession:
         """put your code here, example"""
-        myapi = api.AnkerSolixApi("username@domain.com","password","de",websession, _LOGGER)
+        myapi = api.AnkerSolixApi(
+            "username@domain.com", "password", "de", websession, _LOGGER
+        )
         await myapi.update_sites()
         await myapi.update_device_details()
         print("System Overview:")
@@ -62,12 +65,13 @@ async def main() -> None:
         print("Device Overview:")
         print(json.dumps(myapi.devices, indent=2))
 
+
 # run async main
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         asyncio.run(main())
     except Exception as err:
-        print(f'{type(err)}: {err}')
+        print(f"{type(err)}: {err}")
 ```
 
 The AnkerSolixApi class provides 2 main methods:
