@@ -7,7 +7,9 @@
         "site_id": "3df1aea0-4b7c-e0f8-7cc5-5ba5a4df5f7a",
         "site_name": "BKW",
         "site_img": "",
-        "device_type_list": [3],
+        "device_type_list": [
+          3
+        ],
         "ms_type": 1,
         "power_site_type": 2,
         "is_allow_delete": true
