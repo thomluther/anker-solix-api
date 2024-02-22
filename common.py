@@ -10,9 +10,9 @@ CONSOLE: logging.Logger = logging.getLogger("console")
 
 # Optional default Anker Account credentials to be used
 _CREDENTIALS = {
-    "USER": os.getenv("USER"),
-    "PASSWORD": os.getenv("PASSWORD"),
-    "COUNTRY": os.getenv("COUNTRY"),
+    "USER": os.getenv("ANKERUSER"),
+    "PASSWORD": os.getenv("ANKERPASSWORD"),
+    "COUNTRY": os.getenv("ANKERCOUNTRY"),
 }
 
 
