@@ -20,9 +20,12 @@ The library is currently supported on
 
 # Required libraries
 
+This project uses `pipenv` for Python dependency management
+
 ```bash
-pip install cryptography
-pip install aiohttp
+pip install pipenv
+pipenv sync -d
+pipenv run python [...]
 ```
 
 # Anker Account Information
@@ -46,6 +49,7 @@ import logging, json
 import asyncio
 from aiohttp import ClientSession
 from api import api, errors
+import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 # _LOGGER.setLevel(logging.DEBUG)    # enable for detailed Api output
@@ -56,7 +60,7 @@ async def main() -> None:
     async with ClientSession() as websession:
         """put your code here, example"""
         myapi = api.AnkerSolixApi(
-            "username@domain.com", "password", "de", websession, _LOGGER
+            common.user(), common.password(), common.country(), websession, _LOGGER
         )
         await myapi.update_sites()
         await myapi.update_device_details()
@@ -91,11 +95,19 @@ Those json files can also be used to develop/debug the Api for system constellat
 
 ## test_api.py
 
+```
+> pipenv run ./test_api.py
+```
+
 Example exec module that can be used to explore and test AnkerSolixApi methods or direct enpoint requests with parameters.
 You can modify this module as required and hard code your credentials. Optionally you can put your credentials also in the api/credentials.py file.
 None of these is indexed and they are added to gitignore, so your local changes are not tracked for git updates/commits.
 
 ## export_system.py
+
+```
+> pipenv run ./export_system.py
+```
 
 Example exec module to use the Anker Api for export of defined system data and device details.
 This module will prompt for the Anker account details if not pre-set in the header.
@@ -105,6 +117,10 @@ You can review the response files afterwards. They can be used as examples for d
 Optionally the AnkerSolixApi class can use the json files for debugging and testing on various system outputs.
 
 ## solarbank_monitor.py
+
+```
+> pipenv run ./solarbank_monitor.py
+```
 
 Example exec module to use the Anker Api for continously querying and displaying important solarbank parameters.
 This module will can use real time data from your Anker account, or optionally use json files from your local examples or export folder.
@@ -117,6 +133,10 @@ Note: When the system owning account is used, more details for the solarbank can
 **Attention: When executing this module with real time data from your Anker account, the used account cannot be used in the Anker App since it will be kicked out on each refresh.**
 
 ## energy_csv.py
+
+```
+> pipenv run ./energy_csv.py
+```
 
 Example exec module to use the Anker Api for export of daily Solarbank Energy Data.
 This method will prompt for the Anker account details if not pre-set in the header.

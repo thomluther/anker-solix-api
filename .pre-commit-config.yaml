@@ -28,6 +28,6 @@ repos:
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
-        exclude: (examples\/.*\.json*)
+        exclude: (examples\/.*\.json*|Pipfile.lock)
 default_language_version:
   python: python3
