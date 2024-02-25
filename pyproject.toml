@@ -1,5 +1,5 @@
 [project]
-name = "Anker Solix Api"
+name = "Anker-Solix-Api"
 version = "1.4.0"
 description = "Python library for Anker Solix Power devices (Solarbank, Inverter etc)"
 readme = "README.md"
@@ -12,6 +12,7 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/thomluther/anker-solix-api"
 "Bug Tracker" = "https://github.com/thomluther/anker-solix-api/issues"
+"Discussions" = "https://github.com/thomluther/anker-solix-api/discussions"
 
 [tool.isort]
 profile="black"
