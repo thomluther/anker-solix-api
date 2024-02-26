@@ -4,8 +4,8 @@
   "data": {
     "site_list": [
       {
-        "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
-        "site_name": "BKW",
+        "site_id": "5c345692-b73f-8ce8-a9fd-b7928c5fa51d",
+        "site_name": "Anker Solix E1600",
         "site_img": "",
         "device_type_list": [
           3
@@ -16,5 +16,5 @@
       }
     ]
   },
-  "trace_id": "cda3bbcc760a9239d38076efacfefaea"
+  "trace_id": "10cdf7797cbb2e7c17b3bdd5306dfb2f"
 }

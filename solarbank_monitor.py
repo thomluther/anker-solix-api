@@ -14,18 +14,17 @@ the Anker App since it will be kicked out on each refresh.
 """  # noqa: D205
 
 import asyncio
+from datetime import datetime, timedelta
 import json
 import logging
 import os
 import sys
 import time
-from datetime import datetime, timedelta
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-
-import common
 from api import api, errors
+import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -59,7 +58,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
     None
 ):
     """Run Main routine to start Solarbank monitor in a loop."""
-    global REFRESH  # pylint: disable=global-statement
+    global REFRESH  # pylint: disable=global-statement  # noqa: PLW0603
     CONSOLE.info("Solarbank Monitor:")
     # get list of possible example and export folders to test the monitor against
     exampleslist = get_subfolders(
@@ -186,6 +185,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'Solar Power':<{col1}}: {dev.get('input_power',''):>3} {unit:<{col2-4}} Charge Power: {dev.get('charging_power',''):>3} {unit}"
                         )
                         preset = dev.get("set_output_power") or "---"
+                        site_preset = dev.get("set_system_output_power") or "---"
                         CONSOLE.info(
                             f"{'Output Power':<{col1}}: {dev.get('output_power',''):>3} {unit:<{col2-4}} (Output Preset: {preset:>3} {unit})"
                         )
@@ -197,7 +197,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             # data = schedules.get(sn,{})
                             data = dev.get("schedule", {})
                             CONSOLE.info(
-                                f"{'Schedule':<{col1}}: {now.strftime('%H:%M UTC %z'):<{col2}} (Current Preset: {(data.get('current_home_load','---')).replace('W','')} W)"
+                                f"{'Schedule':<{col1}}: {now.strftime('%H:%M UTC %z'):<{col2}} (Current Preset: {str(site_preset).replace('W','')} W)"
                             )
                             CONSOLE.info(
                                 f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Discharge':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}}"

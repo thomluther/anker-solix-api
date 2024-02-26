@@ -1,18 +1,7 @@
 {
-  "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff": {
-    "type": "system",
-    "site_info": {
-      "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
-      "site_name": "BKW",
-      "site_img": "",
-      "device_type_list": [
-        3
-      ],
-      "ms_type": 1,
-      "power_site_type": 2,
-      "is_allow_delete": true
-    },
-    "site_admin": true,
+  "code": 0,
+  "msg": "success!",
+  "data": {
     "home_info": {
       "home_name": "Home",
       "home_img": "",
@@ -55,7 +44,7 @@
           "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
           "battery_power": "75",
           "bind_site_status": "",
-          "charging_power": 0,
+          "charging_power": "0",
           "power_unit": "W",
           "charging_status": "2",
           "status": "0",
@@ -81,5 +70,6 @@
     "power_site_type": 2,
     "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
     "powerpanel_list": []
-  }
+  },
+  "trace_id": "ed1cf05df2ee38fe9cface257d7e0e35"
 }

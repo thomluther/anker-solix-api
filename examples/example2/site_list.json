@@ -4,11 +4,12 @@
   "data": {
     "site_list": [
       {
-        "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
-        "site_name": "BKW",
+        "site_id": "beddfef9-acaa-89de-f6c9-31fc9a499c65",
+        "site_name": "AnkerPrime",
         "site_img": "",
         "device_type_list": [
-          3
+          3,
+          1
         ],
         "ms_type": 1,
         "power_site_type": 2,
@@ -16,5 +17,5 @@
       }
     ]
   },
-  "trace_id": "cda3bbcc760a9239d38076efacfefaea"
+  "trace_id": "68740a3b7bf3df0fc3d2fa6b5fe2ae8b"
 }
