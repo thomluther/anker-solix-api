@@ -5,19 +5,17 @@ pip install cryptography
 pip install aiohttp
 """
 
-# pylint: disable=too-many-lines,too-many-arguments,too-many-branches,too-many-statements,too-many-public-methods
-
 from __future__ import annotations
 
+from base64 import b64encode
 import contextlib
+from datetime import datetime, timedelta
+from enum import Enum
 import json
 import logging
 import os
 import sys
 import time
-from base64 import b64encode
-from datetime import datetime, timedelta
-from enum import Enum
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
@@ -225,6 +223,22 @@ LOGIN_RESPONSE: dict = {
 }
 
 
+class SolixDeviceType(Enum):
+    """Enumuration for Anker Solix device types."""
+
+    SYSTEM = "system"
+    SOLARBANK = "solarbank"
+    INVERTER = "inverter"
+    PPS = "pps"
+    POWERPANEL = "powerpanel"
+
+
+class SolixParmType(Enum):
+    """Enumuration for Anker Solix Parameter types."""
+
+    SOLARBANK_SCHEDULE = "4"
+
+
 class SolixDeviceStatus(Enum):
     """Enumuration for Anker Solix Device status."""
 
@@ -241,6 +255,7 @@ class SolarbankStatus(Enum):
     discharging = "2"
     bypass = "3"
     bypass_charging = "35"  # pseudo state, the solarbank does not distinguish this
+    charge_priority = "37"  # pseudo state, the solarbank does not distinguish this but reports 3 as seen so far
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night as well
     # TODO(3): Add descriptions once status code usage is observed/known
     # There is also a deep standby / full bypass mode at cold temperatures when the battery cannot be loaded.
@@ -249,7 +264,7 @@ class SolarbankStatus(Enum):
     unknown = "unknown"
 
 
-class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
+class AnkerSolixApi:
     """Define the API class to handle Anker server authentication and API requests, along with the last state of queried site details and Device information."""
 
     def __init__(
@@ -304,7 +319,7 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
 
         # Define Encryption for password, using ECDH assymetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
         # uncompressed public key from EU Anker server in the format 04 [32 byte x vlaue] [32 byte y value]
-        # TODO(2): COM Anker server public key usage to be validated
+        # TODO(2): COM Anker server public key usage must still be validated
         self._api_public_key_hex = "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076"
         self._curve = (
             ec.SECP256R1()
@@ -431,7 +446,6 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
         """Update the internal device details dictionary with the given data. The device_sn key must be set in the data dict for the update to be applied.
 
         This method is used to consolidate various device related key values from various requests under a common set of device keys.
-        TODO: Add more relevent keys for Solarbank or other devices once known/required
         """
         sn = devData.get("device_sn")
         if sn:
@@ -465,17 +479,42 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                     device.update({"wifi_signal": str(value)})
                 elif key in ["bt_ble_mac"] and value:
                     device.update({"bt_ble_mac": str(value)})
-                elif key in ["battery_power"]:
+                elif key in ["battery_power"] and value:
                     # This is a percentage value for the battery state of charge, not power
                     device.update({"battery_soc": str(value)})
+                    cap = ""
+                    # Derive battery capacity in Wh from solarbank name
+                    if device.get("type") == SolixDeviceType.SOLARBANK.value:
+                        cap = device.get("name", "").replace("Solarbank E", "")
+                    # Add capacity and calculate remaining energy in Wh
+                    if cap and str(cap).isdigit() and str(value).isdigit:
+                        device.update(
+                            {
+                                "battery_capacity": str(cap),
+                                "battery_energy": str(
+                                    int(int(cap) * int(value) / 100)
+                                ),
+                            }
+                        )
                 elif key in ["charging_power"]:
                     device.update({"charging_power": str(value)})
                 elif key in ["photovoltaic_power"]:
                     device.update({"input_power": str(value)})
                 elif key in ["output_power"]:
                     device.update({"output_power": str(value)})
-                elif key in ["set_load_power"]:
-                    device.update({"set_output_power": str(value)})
+                # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
+                elif key in ["set_load_power", "parallel_home_load"] and value:
+                    # Value may include unit, remove unit to have content consistent
+                    device.update({"set_output_power": str(value).replace("W", "")})
+                # The current_home_load from get_device_load always shows the system wide settings made via the schedule
+                elif key in ["current_home_load"] and value:
+                    # Value may include unit, remove unit to have content consistent
+                    device.update(
+                        {"set_system_output_power": str(value).replace("W", "")}
+                    )
+                    # Value for device home load may be empty for single solarbank, use this setting also for device preset in this case
+                    if not device.get("set_output_power"):
+                        device.update({"set_output_power": str(value).replace("W", "")})
                 elif key in ["power_unit"]:
                     device.update({"power_unit": str(value)})
                 elif key in ["status"]:
@@ -495,13 +534,20 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                         if str(value) == status.value:
                             description = status.name
                             break
-                    # check if battery charging during bypass
-                    if description == SolarbankStatus.bypass.name and (
-                        charge := devData.get("charging_power")
+                    # check if battery charging during bypass and if output during bypass
+                    # NOTE: charging power may be updated after initial device details update
+                    # NOTE: If status is 3=Bypass but nothing goes out, the charge priority is active (e.g. 0 Watt switch)
+                    if (
+                        description == SolarbankStatus.bypass.name
+                        and (charge := devData.get("charging_power"))
+                        and (out := devData.get("output_power"))
                     ):
                         with contextlib.suppress(ValueError):
-                            charge = int(charge)
-                            if charge > 0:
+                            if int(out) == 0:
+                                # Bypass but 0 W output must be active charge priority
+                                description = SolarbankStatus.charge_priority.name
+                            elif int(charge) > 0:
+                                # Bypass with output and charge must be bypass charging
                                 description = SolarbankStatus.bypass_charging.name
                     device.update({"charging_status_desc": description})
                 elif key in ["bws_surplus"]:
@@ -512,6 +558,12 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                     device.update({"auto_upgrade": bool(value)})
                 elif key in ["power_cutoff"]:
                     device.update({"power_cutoff": int(value)})
+                elif key in ["fittings"]:
+                    # update nested dictionary
+                    if "fittings" in device:
+                        device["fittings"].update(dict(value))
+                    else:
+                        device["fittings"] = dict(value)
                 elif key in ["solar_info"] and isinstance(value, dict) and value:
                     # remove unnecessary keys from solar_info
                     keylist = value.keys()
@@ -522,8 +574,11 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                     ]:
                         value.pop(key)
                     device.update({"solar_info": dict(value)})
+                # schedule is currently a site wide setting. However, we save this with device details to retain info across site updates
+                # When individual device schedules are support in future, this info is needed per device anyway
                 elif key in ["schedule"] and isinstance(value, dict) and value:
                     device.update({"schedule": dict(value)})
+
                 # inverter specific keys
                 elif key in ["generate_power"]:
                     device.update({"generate_power": str(value)})
@@ -646,7 +701,7 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
         endpoint: str,
         *,
         headers: dict | None = None,
-        json: dict | None = None,  # noqa: W0621 # pylint: disable=redefined-outer-name
+        json: dict | None = None,  # pylint: disable=redefined-outer-name
     ) -> dict:
         """Handle all requests to the API. This is also called recursively by login requests if necessary."""
         if not headers:
@@ -770,9 +825,7 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                 self._logger.error("Response Text: %s", body_text)
                 raise err
 
-    async def update_sites(  # pylint: disable=too-many-locals
-        self, fromFile: bool = False
-    ) -> dict:
+    async def update_sites(self, fromFile: bool = False) -> dict:
         """Get the latest info for all accessible sites and update class site and device variables.
 
         Example data:
@@ -808,11 +861,12 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                 mysite = self.sites.get(myid, {})
                 siteInfo = mysite.get("site_info", {})
                 siteInfo.update(site)
-                mysite.update({"site_info": siteInfo})
-                admin = siteInfo.get("ms_type", 0) in [
-                    0,
-                    1,
-                ]  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
+                mysite.update(
+                    {"type": SolixDeviceType.SYSTEM.value, "site_info": siteInfo}
+                )
+                admin = (
+                    siteInfo.get("ms_type", 0) in [0, 1]
+                )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
                 mysite.update({"site_admin": admin})
                 # Update scene info for site
                 self._logger.debug("Getting scene info for site")
@@ -820,29 +874,77 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                 mysite.update(scene)
                 self.sites.update({myid: mysite})
                 # Update device details from scene info
-                for solarbank in (mysite.get("solarbank_info", {})).get(
-                    "solarbank_list", []
-                ):
+                sb_total_charge = (mysite.get("solarbank_info", {})).get(
+                    "total_charging_power", ""
+                )
+                sb_total_charge_calc = 0
+                sb_charges = {}
+                sb_list = (mysite.get("solarbank_info", {})).get("solarbank_list", [])
+                for solarbank in sb_list:
+                    # work around for incorrect charging power value per solarbank, only solarbank total_charging_power is correct
+                    # calculate estimate based on total for proportional split across available solarbanks and their calculated charge power
+                    with contextlib.suppress(ValueError):
+                        charge_calc = 0
+                        power_in = int(solarbank.get("photovoltaic_power", ""))
+                        power_out = int(solarbank.get("output_power", ""))
+                        power_charge = int(solarbank.get("charging_power", ""))
+                        charge_calc = abs(power_in - power_out)
+                        if power_charge == 0:
+                            solarbank["charging_power"] = charge_calc
+                            sb_total_charge_calc += charge_calc
                     sn = self._update_dev(
-                        solarbank, devType="solarbank", siteId=myid, isAdmin=admin
+                        solarbank,
+                        devType=SolixDeviceType.SOLARBANK.value,
+                        siteId=myid,
+                        isAdmin=admin,
                     )
                     if sn:
                         act_devices.append(sn)
+                        sb_charges[sn] = charge_calc
+                # adjust calculated SB charge to match total
+                if (
+                    len(sb_charges) == len(sb_list)
+                    and str(sb_total_charge).isdigit()
+                    and sb_total_charge_calc > 0
+                ):
+                    sb_total_charge = int(sb_total_charge)
+                    for sn, charge in sb_charges.items():
+                        self.devices[sn]["charging_power"] = int(
+                            sb_total_charge / sb_total_charge_calc * charge
+                        )
+                        # Update also the charge status description which may change after charging power correction
+                        charge_status = self.devices[sn].get("charging_status")
+                        if charge_status == SolarbankStatus.bypass:
+                            self._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "charging_status": charge_status,
+                                }
+                            )
                 for pps in (mysite.get("pps_info", {})).get("pps_list", []):
                     sn = self._update_dev(
-                        pps, devType="pps", siteId=myid, isAdmin=admin
+                        pps,
+                        devType=SolixDeviceType.PPS.value,
+                        siteId=myid,
+                        isAdmin=admin,
                     )
                     if sn:
                         act_devices.append(sn)
                 for solar in mysite.get("solar_list", []):
                     sn = self._update_dev(
-                        solar, devType="inverter", siteId=myid, isAdmin=admin
+                        solar,
+                        devType=SolixDeviceType.INVERTER.value,
+                        siteId=myid,
+                        isAdmin=admin,
                     )
                     if sn:
                         act_devices.append(sn)
                 for powerpanel in mysite.get("powerpanel_list", []):
                     sn = self._update_dev(
-                        powerpanel, devType="powerpanel", siteId=myid, isAdmin=admin
+                        powerpanel,
+                        devType=SolixDeviceType.POWERPANEL.value,
+                        siteId=myid,
+                        isAdmin=admin,
                     )
                     if sn:
                         act_devices.append(sn)
@@ -892,7 +994,7 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                         device.update(wifi_list[wifi_index - 1])
 
                 # Fetch device type specific details
-                if dev_Type in ["solarbank"]:
+                if dev_Type in [SolixDeviceType.SOLARBANK.value]:
                     # Fetch active Power Cutoff setting for solarbanks
                     self._logger.debug("Getting Power Cutoff settings for device")
                     await self.get_power_cutoff(
@@ -908,10 +1010,17 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                     await self.get_device_load(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
+
+                    # Fetch device fittings for device types supporting it
+                    self._logger.debug("Getting fittings for device")
+                    await self.get_device_fittings(
+                        siteId=site_id, deviceSn=sn, fromFile=fromFile
+                    )
+
                 # update entry in devices
                 self.devices.update({sn: device})
 
-            # TODO(1): Fetch other details of specific device types as known and relevant
+            # TODO(#0): Fetch other details of specific device types as known and relevant
 
         return self.devices
 
@@ -1084,6 +1193,56 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                 self._update_dev(device)
         return data
 
+    async def set_auto_upgrade(self, devices: dict[str, bool]) -> bool:
+        """Set auto upgrade switches for given device dictonary.
+
+        Example input:
+        devices = {'9JVB42LJK8J0P5RY': True}
+        The main switch must be set True if any device switch is set True. The main switch does not need to be changed to False if no device is True.
+        But if main switch is set to False, all devices will automatically be set to False and individual setting is ignored by Api.
+        """
+        # get actual settings
+        settings = await self.get_auto_upgrade()
+        if (main_switch := settings.get("main_switch")) is None:
+            return False
+        dev_switches = {}
+        main = None
+        change_list = []
+        for dev_setting in settings.get("device_list") or []:
+            if (
+                isinstance(dev_setting, dict)
+                and (device_sn := dev_setting.get("device_sn"))
+                and (dev_upgrade := dev_setting.get("auto_upgrade")) is not None
+            ):
+                dev_switches[device_sn] = dev_upgrade
+        # Loop through provided device list and compose the request data device list that needs to be send
+        for sn, upgrade in devices.items():
+            if sn in dev_switches:
+                if upgrade != dev_switches[sn]:
+                    change_list.append({"device_sn": sn, "auto_upgrade": upgrade})
+                    if upgrade:
+                        main = True
+
+        if change_list:
+            # json example for endpoint
+            # {"main_switch": False, "device_list": [{"device_sn": "9JVB42LJK8J0P5RY","auto_upgrade": True}]}
+            data = {
+                "main_switch": main if main is not None else main_switch,
+                "device_list": change_list,
+            }
+            # Make the Api call and check for return code
+            code = (
+                await self.request(
+                    "post", _API_ENDPOINTS["set_auto_upgrade"], json=data
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return False
+            # update the data in api dict
+            await self.get_auto_upgrade()
+
+        return True
+
     async def get_wifi_list(self, siteId: str, fromFile: bool = False) -> dict:
         """Get the wifi list.
 
@@ -1175,16 +1334,26 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                 "post", _API_ENDPOINTS["get_device_load"], json=data
             )
         # API Bug? home_load_data provided as string instead of object...Convert into object for proper handling
-        string_data = (resp.get("data", {})).get("home_load_data", {})
+        string_data = (resp.get("data") or {}).get("home_load_data") or {}
         if isinstance(string_data, str):
             resp["data"].update({"home_load_data": json.loads(string_data)})
-        data = resp.get("data", {})
-        if schedule := data.get("home_load_data", {}):
-            self._update_dev({"device_sn": deviceSn, "schedule": schedule})
+        data = resp.get("data") or {}
+        if schedule := data.get("home_load_data") or {}:
+            self._update_dev(
+                {
+                    "device_sn": deviceSn,
+                    "schedule": schedule,
+                    "current_home_load": data.get("current_home_load") or "",
+                    "parallel_home_load": data.get("parallel_home_load") or "",
+                }
+            )
         return data
 
     async def get_device_parm(
-        self, siteId: str, paramType: str = "4", fromFile: bool = False
+        self,
+        siteId: str,
+        paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
+        fromFile: bool = False,
     ) -> dict:
         r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId listed in the homepage info site_list. The paramType is always 4, but can be modified if necessary.
 
@@ -1214,7 +1383,7 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
         self,
         siteId: str,
         paramData: dict,
-        paramType: str = "4",
+        paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
         command: int = 17,
         toFile: bool = False,
     ) -> dict:
@@ -1244,6 +1413,45 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
                 "post", _API_ENDPOINTS["set_device_parm"], json=data
             )
         return resp.get("data", {})
+
+    async def get_device_fittings(
+        self, siteId: str, deviceSn: str, fromFile: bool = False
+    ) -> dict:
+        r"""Get device fittings.
+
+        Example data:
+        {"data": [{
+            "device_sn": "ZDL32D6A3HKXUTN1","product_code": "A17Y0","device_name": "E1600 0W Output Switch","alias_name": "E1600 0W Output Switch",
+            "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/01/10/iot-admin/EPBsJ3a5JyMGqA1j/picl_A17Y0_normal.png",
+            "bt_ble_id": "","bt_ble_mac": "FC1CEA253CDB","link_time": 1707127936
+        }]}
+        """
+        data = {"site_id": siteId, "device_sn": deviceSn}
+        if fromFile:
+            resp = self._loadFromFile(
+                os.path.join(self._testdir, f"device_fittings_{deviceSn}.json")
+            )
+        else:
+            resp = await self.request(
+                "post", _API_ENDPOINTS["get_device_fittings"], json=data
+            )
+        data = resp.get("data") or {}
+        # update devices dict with new fittings data
+        fittings = {}
+        for fitting in [
+            x
+            for x in data.get("data") or []
+            if isinstance(x, dict) and x.get("device_sn")
+        ]:
+            # remove unnecessary keys from fitting device
+            keylist = fitting.keys()
+            for key in [
+                x for x in ("img_url", "bt_ble_id", "link_time") if x in keylist
+            ]:
+                fitting.pop(key)
+            fittings[fitting.get("device_sn")] = fitting
+        self._update_dev({"device_sn": deviceSn, "fittings": fittings})
+        return data
 
     async def get_ota_info(
         self, solarbankSn: str = "", inverterSn: str = "", fromFile: bool = False
@@ -1331,16 +1539,12 @@ class AnkerSolixApi:  # pylint: disable=too-many-instance-attributes
             "site_id": siteId,
             "device_sn": deviceSn,
             "type": rangeType if rangeType in ["day", "week", "year"] else "day",
-            "start_time": (
-                startDay.strftime("%Y-%m-%d")
-                if startDay
-                else datetime.today().strftime("%Y-%m-%d")
-            ),
-            "device_type": (
-                devType
-                if devType in ["solar_production", "solarbank"]
-                else "solar_production"
-            ),
+            "start_time": startDay.strftime("%Y-%m-%d")
+            if startDay
+            else datetime.today().strftime("%Y-%m-%d"),
+            "device_type": devType
+            if devType in ["solar_production", "solarbank"]
+            else "solar_production",
             "end_time": endDay.strftime("%Y-%m-%d") if endDay else "",
         }
         resp = await self.request("post", _API_ENDPOINTS["energy_analysis"], json=data)
