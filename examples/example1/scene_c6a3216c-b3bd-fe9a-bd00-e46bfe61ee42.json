@@ -39,7 +39,7 @@
       "solarbank_list": [
         {
           "device_pn": "A17C0",
-          "device_sn": "4AD5NI2AC8WL4CFI",
+          "device_sn": "S8S4GS0KZKLP0BH8",
           "device_name": "Solarbank E1600",
           "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
           "battery_power": "75",
@@ -53,23 +53,24 @@
           "photovoltaic_power": "0",
           "output_power": "0",
           "create_time": 1695392386,
-          "set_load_power": ""
+          "set_load_power": "",
+          "output_cutoff_data": 10
         }
       ],
       "total_charging_power": "0",
       "power_unit": "W",
       "charging_status": "0",
       "total_battery_power": "0.00",
-      "updated_time": "2023-12-28 18:53:27",
+      "updated_time": "2024-02-22 01:16:32",
       "total_photovoltaic_power": "0",
       "total_output_power": "0.00",
       "display_set_power": false
     },
-    "retain_load": "300W",
+    "retain_load": "0W",
     "updated_time": "01-01-0001 00:00:00",
     "power_site_type": 2,
-    "site_id": "3df1aea0-4b7c-e0f8-7cc5-5ba5a4df5f7a",
+    "site_id": "c6a3216c-b3bd-fe9a-bd00-e46bfe61ee42",
     "powerpanel_list": []
   },
-  "trace_id": "82aa6e7e4db47cbbe7b2ed355b751beb"
+  "trace_id": "be165dce6edbfda3eef203e9f8cd3cfb"
 }

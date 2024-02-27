@@ -1,8 +1,8 @@
 {
-  "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff": {
+  "c6a3216c-b3bd-fe9a-bd00-e46bfe61ee42": {
     "type": "system",
     "site_info": {
-      "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
+      "site_id": "c6a3216c-b3bd-fe9a-bd00-e46bfe61ee42",
       "site_name": "BKW",
       "site_img": "",
       "device_type_list": [
@@ -10,7 +10,12 @@
       ],
       "ms_type": 1,
       "power_site_type": 2,
-      "is_allow_delete": true
+      "is_allow_delete": true,
+      "support_device_models": [
+        "A17C0",
+        "A5143",
+        "A1771"
+      ]
     },
     "site_admin": true,
     "home_info": {
@@ -50,12 +55,12 @@
       "solarbank_list": [
         {
           "device_pn": "A17C0",
-          "device_sn": "J19P1918S0BKY4EP",
+          "device_sn": "S8S4GS0KZKLP0BH8",
           "device_name": "Solarbank E1600",
           "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
           "battery_power": "75",
           "bind_site_status": "",
-          "charging_power": 0,
+          "charging_power": "0",
           "power_unit": "W",
           "charging_status": "2",
           "status": "0",
@@ -64,7 +69,8 @@
           "photovoltaic_power": "0",
           "output_power": "0",
           "create_time": 1695392386,
-          "set_load_power": ""
+          "set_load_power": "",
+          "output_cutoff_data": 10
         }
       ],
       "total_charging_power": "0",
@@ -76,10 +82,10 @@
       "total_output_power": "0.00",
       "display_set_power": false
     },
-    "retain_load": "300W",
+    "retain_load": "0W",
     "updated_time": "01-01-0001 00:00:00",
     "power_site_type": 2,
-    "site_id": "b8b1aaa6-ff7c-f1d3-9faa-c5e1648091ff",
+    "site_id": "c6a3216c-b3bd-fe9a-bd00-e46bfe61ee42",
     "powerpanel_list": []
   }
 }

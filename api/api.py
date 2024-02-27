@@ -459,10 +459,12 @@ class AnkerSolixApi:
                 device.update({"is_admin": True})
             elif isAdmin is False and device.get("is_admin") is None:
                 device.update({"is_admin": False})
+            calc_capacity = False   # Flag whether capacity may need recalculation
             for key, value in devData.items():
                 if key in ["product_code", "device_pn"] and value:
                     device.update({"device_pn": str(value)})
                 elif key in ["device_name"] and value:
+                    calc_capacity = value != device.get("name","")
                     device.update({"name": str(value)})
                 elif key in ["alias_name"] and value:
                     device.update({"alias": str(value)})
@@ -482,20 +484,6 @@ class AnkerSolixApi:
                 elif key in ["battery_power"] and value:
                     # This is a percentage value for the battery state of charge, not power
                     device.update({"battery_soc": str(value)})
-                    cap = ""
-                    # Derive battery capacity in Wh from solarbank name
-                    if device.get("type") == SolixDeviceType.SOLARBANK.value:
-                        cap = device.get("name", "").replace("Solarbank E", "")
-                    # Add capacity and calculate remaining energy in Wh
-                    if cap and str(cap).isdigit() and str(value).isdigit:
-                        device.update(
-                            {
-                                "battery_capacity": str(cap),
-                                "battery_energy": str(
-                                    int(int(cap) * int(value) / 100)
-                                ),
-                            }
-                        )
                 elif key in ["charging_power"]:
                     device.update({"charging_power": str(value)})
                 elif key in ["photovoltaic_power"]:
@@ -582,6 +570,24 @@ class AnkerSolixApi:
                 # inverter specific keys
                 elif key in ["generate_power"]:
                     device.update({"generate_power": str(value)})
+
+                # generate extra values when certain conditions are met
+                if (key in ["battery_power"] or calc_capacity) and device.get("type") == SolixDeviceType.SOLARBANK.value:
+                    # generate battery values when soc updated or device name changed
+                    # Derive battery capacity in Wh from latest solarbank name and soc
+                    cap = (device.get("name", "") or devData.get("device_name","")).replace("Solarbank E", "")
+                    soc = device.get("battery_soc", "") or devData.get("battery_power","")
+                    # Calculate remaining energy in Wh and add values
+                    if cap and soc and str(cap).isdigit() and str(soc).isdigit:
+                        device.update(
+                            {
+                                "battery_capacity": str(cap),
+                                "battery_energy": str(
+                                    int(int(cap) * int(soc) / 100)
+                                ),
+                            }
+                        )
+
 
             self.devices.update({str(sn): device})
         return sn
@@ -881,6 +887,11 @@ class AnkerSolixApi:
                 sb_charges = {}
                 sb_list = (mysite.get("solarbank_info", {})).get("solarbank_list", [])
                 for solarbank in sb_list:
+                    # work around for device_name which is actually the device_alias in scene info
+                    if "device_name" in solarbank:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        solarbank = dict(solarbank).copy()
+                        solarbank.update({"alias_name": solarbank.pop("device_name")})
                     # work around for incorrect charging power value per solarbank, only solarbank total_charging_power is correct
                     # calculate estimate based on total for proportional split across available solarbanks and their calculated charge power
                     with contextlib.suppress(ValueError):
@@ -922,6 +933,11 @@ class AnkerSolixApi:
                                 }
                             )
                 for pps in (mysite.get("pps_info", {})).get("pps_list", []):
+                    # work around for device_name which is actually the device_alias in scene info
+                    if "device_name" in pps:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        pps = dict(pps).copy()
+                        pps.update({"alias_name": pps.pop("device_name")})
                     sn = self._update_dev(
                         pps,
                         devType=SolixDeviceType.PPS.value,
@@ -931,6 +947,11 @@ class AnkerSolixApi:
                     if sn:
                         act_devices.append(sn)
                 for solar in mysite.get("solar_list", []):
+                    # work around for device_name which is actually the device_alias in scene info
+                    if "device_name" in solar:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        solar = dict(solar).copy()
+                        solar.update({"alias_name": solar.pop("device_name")})
                     sn = self._update_dev(
                         solar,
                         devType=SolixDeviceType.INVERTER.value,
@@ -940,6 +961,11 @@ class AnkerSolixApi:
                     if sn:
                         act_devices.append(sn)
                 for powerpanel in mysite.get("powerpanel_list", []):
+                    # work around for device_name which is actually the device_alias in scene info
+                    if "device_name" in powerpanel:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        powerpanel = dict(powerpanel).copy()
+                        powerpanel.update({"alias_name": powerpanel.pop("device_name")})
                     sn = self._update_dev(
                         powerpanel,
                         devType=SolixDeviceType.POWERPANEL.value,

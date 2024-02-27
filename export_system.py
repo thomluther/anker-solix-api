@@ -15,7 +15,7 @@ dedicated data extraction from the devices.
 Optionally the API class can use the json files for debugging and testing on
 various system outputs.
 
-"""
+"""  # noqa: D205
 # pylint: disable=duplicate-code
 
 import asyncio
@@ -29,9 +29,8 @@ import time
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-
-import common
 from api import api, errors
+import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -90,6 +89,14 @@ def randomize(val, key: str = "") -> str:
         elif "wifi_name" in key:
             idx = sum(1 for s in RANDOMDATA.values() if "wifi-network-" in s)
             randomstr = f"wifi-network-{idx+1}"
+        elif key in ["home_load_data", "param_data"]:
+            # these keys may contain schedule dict encoded as string, ensure contained serials are replaced in string
+            # replace all mappings from randomdata, but skip trace ids
+            randomstr = val
+            for k, v in ((old,new) for old,new in RANDOMDATA.items() if len(old) != 32):
+                randomstr = randomstr.replace(k,v)
+            # leave without saving randomized string in RANDOMDATA
+            return randomstr
         else:
             # default randomize format
             randomstr = "".join(random.choices(string.ascii_letters, k=len(val)))
@@ -108,13 +115,13 @@ def check_keys(data):
             v = [check_keys(i) for i in v]
         # Randomize value for certain keys
         if any(
-            x in k for x in ["_sn", "site_id", "trace_id", "bt_ble_", "wifi_name"]
+            x in k for x in ["_sn", "site_id", "trace_id", "bt_ble_", "wifi_name", "home_load_data", "param_data"]
         ) or k in ["sn"]:
             data[k] = randomize(v, k)
     return data
 
 
-def export(filename: str, d: dict = None, randomkeys: bool = False) -> None:
+def export(filename: str, d: dict = None, skip_randomize: bool = False, randomkeys: bool = False) -> None:
     """Save dict data to given file."""
     if not d:
         d = {}
@@ -122,12 +129,22 @@ def export(filename: str, d: dict = None, randomkeys: bool = False) -> None:
     if len(d) == 0:
         CONSOLE.info("WARNING: File %s not saved because JSON is empty", filename)
         return
-    if RANDOMIZE:
+    if RANDOMIZE and not skip_randomize:
         d = check_keys(d)
-        # Randomize also the keys for the api dictionary export
+        # Randomize also the (nested) keys for dictionary export if required
         if randomkeys:
             d_copy = d.copy()
-            for key in list(d):
+            for key, val in d.items():
+                # check first nested keys in dict values
+                for nested_key, nested_val in dict(val).items():
+                    if isinstance(nested_val, dict):
+                        for k in [text for text in nested_val if isinstance(text,str)]:
+                            # check nested dict keys
+                            if k in RANDOMDATA:
+                                d_copy[key][nested_key][RANDOMDATA[k]] = d_copy[key][
+                                    nested_key
+                                ].pop(k)
+                # check root keys
                 if key in RANDOMDATA:
                     d_copy[RANDOMDATA[key]] = d_copy.pop(key)
             d = d_copy
@@ -141,9 +158,7 @@ def export(filename: str, d: dict = None, randomkeys: bool = False) -> None:
     return
 
 
-async def main() -> (
-    bool
-):  # noqa: C901 # pylint: disable=too-many-branches,too-many-statements
+async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-many-statements
     """Run main function to export config."""
     global RANDOMIZE  # noqa: PLW0603, W0603 # pylint: disable=global-statement
     CONSOLE.info("Exporting found Anker Solix system data for all assigned sites:")
@@ -181,7 +196,8 @@ async def main() -> (
             # first update sites and devices in API object
             CONSOLE.info("\nQuerying site information...")
             await myapi.update_sites()
-            await myapi.update_device_details()
+            # Skip device detail queries, the defined serials are provided with the sites update
+            #await myapi.update_device_details()
             CONSOLE.info("Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices))
             _LOGGER.debug(json.dumps(myapi.devices, indent=2))
 
@@ -382,18 +398,25 @@ async def main() -> (
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
-                CONSOLE.info("\nExporting Api Sites overview...")
-                export(
-                    os.path.join(folder, "api_sites.json"),
-                    myapi.sites,
-                    randomkeys=RANDOMIZE,
-                )
-                CONSOLE.info("Exporting Api Devices overview...")
-                export(
-                    os.path.join(folder, "api_devices.json"),
-                    myapi.devices,
-                    randomkeys=RANDOMIZE,
-                )
+
+            # update the api dictionaries from exported files to use randomized input data
+            # this is more efficient and allows validation of randomized data in export files
+            myapi.testDir(folder)
+            await myapi.update_sites(fromFile=True)
+            await myapi.update_device_details(fromFile=True)
+            # avoid randomizing dictionary export twice when imported from randomized files already
+            CONSOLE.info("\nExporting Api Sites overview...")
+            export(
+                os.path.join(folder, "api_sites.json"),
+                myapi.sites,
+                skip_randomize=True,
+            )
+            CONSOLE.info("Exporting Api Devices overview...")
+            export(
+                os.path.join(folder, "api_devices.json"),
+                myapi.devices,
+                skip_randomize=True,
+            )
 
             CONSOLE.info(
                 "\nCompleted export of Anker Solix system data for user %s", user

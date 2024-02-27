@@ -113,7 +113,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             next_refr = now
             next_dev_refr = now
             col1 = 15
-            col2 = 20
+            col2 = 23
+            col3 = 14
             t1 = 2
             t2 = 5
             t3 = 5
@@ -148,56 +149,57 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     devtype = dev.get("type", "Unknown")
                     admin = dev.get("is_admin", False)
                     CONSOLE.info(
-                        f"{'Device':<{col1}}: {(dev.get('name','NoName')):<{col2}} (Alias: {dev.get('alias','Unknown')})"
+                        f"{'Device':<{col1}}: {(dev.get('name','NoName')):<{col2}} {'Alias':<{col3}}: {dev.get('alias','Unknown')}"
                     )
                     CONSOLE.info(
-                        f"{'SN':<{col1}}: {sn:<{col2}} (Admin: {'YES' if admin else 'NO'})"
+                        f"{'Serialnumber':<{col1}}: {sn:<{col2}} {'Admin':<{col3}}: {'YES' if admin else 'NO'}"
                     )
+                    siteid = dev.get("site_id", "")
+                    CONSOLE.info(f"{'Site ID':<{col1}}: {siteid}")
+                    for fsn, fitting in dev.get('fittings',{}).items():
+                        CONSOLE.info(
+                            f"{'Fitting':<{col1}}: {fitting.get('device_name',''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
+                        )
                     CONSOLE.info(
-                        f"{'PN':<{col1}}: {dev.get('device_pn',''):<{col2}} (Type: {devtype.capitalize()})"
+                        f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name',''):<{col2}}"
+                    )
+                    online = dev.get("wifi_online")
+                    CONSOLE.info(
+                        f"{'Wifi state':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} {'Signal':<{col3}}: {dev.get('wifi_signal','---'):>4} %"
                     )
                     if devtype == "solarbank":
-                        siteid = dev.get("site_id", "")
-                        CONSOLE.info(f"{'Site ID':<{col1}}: {siteid}")
-                        CONSOLE.info(
-                            f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name',''):<{col2}}"
-                        )
-                        online = dev.get("wifi_online")
-                        CONSOLE.info(
-                            f"{'Wifi state':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} (Signal: {dev.get('wifi_signal','---')} %)"
-                        )
                         upgrade = dev.get("auto_upgrade")
                         CONSOLE.info(
-                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} (Auto-Upgrade: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'})"
-                        )
-                        soc = f"{dev.get('battery_soc','---'):>3} %"
-                        CONSOLE.info(
-                            f"{'Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} (Status code: {str(dev.get('status','-'))})"
+                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
                         )
                         CONSOLE.info(
-                            f"{'Charge Status':<{col1}}: {dev.get('charging_status_desc','Unknown'):<{col2}} (Status code: {str(dev.get('charging_status','-'))})"
+                            f"{'Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {str(dev.get('status','-'))}"
                         )
                         CONSOLE.info(
-                            f"{'State Of Charge':<{col1}}: {soc:<{col2}} (Min SOC: {str(dev.get('power_cutoff','--'))+' %'})"
+                            f"{'Charge Status':<{col1}}: {dev.get('charging_status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {str(dev.get('charging_status','-'))}"
+                        )
+                        soc = f"{dev.get('battery_soc','---'):>4} %"
+                        CONSOLE.info(
+                            f"{'State Of Charge':<{col1}}: {soc:<{col2}} {'Min SOC':<{col3}}: {str(dev.get('power_cutoff','--')):>4} %"
+                        )
+                        energy = f"{dev.get('battery_energy','----'):>4} Wh"
+                        CONSOLE.info(
+                            f"{'Battery Energy':<{col1}}: {energy:<{col2}} {'Capacity':<{col3}}: {str(dev.get('battery_capacity','----')):>4} Wh"
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(
-                            f"{'Solar Power':<{col1}}: {dev.get('input_power',''):>3} {unit:<{col2-4}} Charge Power: {dev.get('charging_power',''):>3} {unit}"
+                            f"{'Solar Power':<{col1}}: {dev.get('input_power',''):>4} {unit:<{col2-5}} {'Output Power':<{col3}}: {dev.get('output_power',''):>4} {unit}"
                         )
                         preset = dev.get("set_output_power") or "---"
                         site_preset = dev.get("set_system_output_power") or "---"
                         CONSOLE.info(
-                            f"{'Output Power':<{col1}}: {dev.get('output_power',''):>3} {unit:<{col2-4}} (Output Preset: {preset:>3} {unit})"
+                            f"{'Charge Power':<{col1}}: {dev.get('charging_power',''):>4} {unit:<{col2-5}} {'Device Preset':<{col3}}: {preset:>4} {unit}"
                         )
                         # update schedule with device details refresh and print it
                         if admin:
-                            # Schedule is now included in the device details
-                            # if not schedules.get(sn) and siteid:
-                            #     schedules.update({sn: await myapi.get_device_load(siteId=siteid,deviceSn=sn,fromFile=use_file)})
-                            # data = schedules.get(sn,{})
                             data = dev.get("schedule", {})
                             CONSOLE.info(
-                                f"{'Schedule':<{col1}}: {now.strftime('%H:%M UTC %z'):<{col2}} (Current Preset: {str(site_preset).replace('W','')} W)"
+                                f"{'Schedule':<{col1}}: {now.strftime('%H:%M UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
                             )
                             CONSOLE.info(
                                 f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Discharge':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}}"
@@ -211,21 +213,12 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}}"
                                 )
                     elif devtype == "inverter":
-                        siteid = dev.get("site_id", "")
-                        CONSOLE.info(f"{'Site ID':<{col1}}: {siteid}")
-                        CONSOLE.info(
-                            f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name',''):<{col2}}"
-                        )
-                        online = dev.get("wifi_online")
-                        CONSOLE.info(
-                            f"{'Wifi state':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} (Signal: {dev.get('wifi_signal','---')} %)"
-                        )
                         upgrade = dev.get("auto_upgrade")
                         CONSOLE.info(
-                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} (Auto-Upgrade: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'})"
+                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
                         )
                         CONSOLE.info(
-                            f"{'Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} (Status code: {str(dev.get('status','-'))})"
+                            f"{'Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {str(dev.get('status','-'))}"
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(
