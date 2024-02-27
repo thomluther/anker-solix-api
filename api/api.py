@@ -141,13 +141,14 @@ _API_ENDPOINTS = {
     "get_ota_update": "power_service/v1/app/compatible/get_ota_update",  # Not clear what this does, shows some OTA settings
     "solar_info": "power_service/v1/app/compatible/get_compatible_solar_info",  # Solar inverter definition for solarbanks, works only with owner account
     "get_cutoff": "power_service/v1/app/compatible/get_power_cutoff",  # Get Power Cutoff settings (Min SOC) for provided site id and device sn, works only with owner account
-    "set_cutoff": "power_service/v1/app/compatible/set_power_cutoff",  # Set Min SOC for device, not implemented yet REQUIRED PARAMETERS UNKNOWN
+    "set_cutoff": "power_service/v1/app/compatible/set_power_cutoff",  # Set Min SOC for device, only works for onwer accounts
     "compatible_process": "power_service/v1/app/compatible/get_compatible_process",  # contains solar_info plus OTA processing codes, works only with owner account
     "get_device_fittings": "power_service/v1/app/get_relate_device_fittings",  # Device fittings for given site id and device sn. Solarbank/inverter responses do not contain info
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
     "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for given site_id and optional device SN (empty if solarbank not connected)
     "check_upgrade_record": "power_service/v1/app/check_upgrade_record",  # show an upgrade record for the device, types 1-3 show different info, only works for owner account
     "get_message": "power_service/v1/get_message",  # get list of max Messages from certain time, last_time format unknown
+    "get_upgrade_record": "power_service/v1/app/get_upgrade_record",  # get list of firmware update history
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -177,7 +178,6 @@ _API_ENDPOINTS = {
     'power_service/v1/app/share_site/get_invited_list',
     'power_service/v1/app/share_site/join_site',
     'power_service/v1/app/upgrade_event_report',
-    'power_service/v1/app/get_upgrade_record',
     'power_service/v1/app/get_phonecode_list',
     'power_service/v1/message_not_disturb',
     'power_service/v1/get_message_not_disturb',
@@ -237,6 +237,7 @@ class SolixParmType(Enum):
     """Enumuration for Anker Solix Parameter types."""
 
     SOLARBANK_SCHEDULE = "4"
+
 
 class SolixDeviceCapacity(Enum):
     """Enumuration for Anker Solix device capacities in Wh by Part Number."""
@@ -464,12 +465,12 @@ class AnkerSolixApi:
                 device.update({"is_admin": True})
             elif isAdmin is False and device.get("is_admin") is None:
                 device.update({"is_admin": False})
-            calc_capacity = False   # Flag whether capacity may need recalculation
+            calc_capacity = False  # Flag whether capacity may need recalculation
             for key, value in devData.items():
                 if key in ["product_code", "device_pn"] and value:
                     device.update({"device_pn": str(value)})
                 elif key in ["device_name"] and value:
-                    calc_capacity = value != device.get("name","")
+                    calc_capacity = value != device.get("name", "")
                     device.update({"name": str(value)})
                 elif key in ["alias_name"] and value:
                     device.update({"alias": str(value)})
@@ -577,27 +578,30 @@ class AnkerSolixApi:
                     device.update({"generate_power": str(value)})
 
                 # generate extra values when certain conditions are met
-                if (key in ["battery_power"] or calc_capacity):
+                if key in ["battery_power"] or calc_capacity:
                     # generate battery values when soc updated or device name changed or PN is known
                     if not (cap := device.get("battery_capacity")):
-                        if getattr(SolixDeviceCapacity, device.get("device_pn","")):
+                        if getattr(SolixDeviceCapacity, device.get("device_pn", "")):
                             # get battery capacity from known PNs
-                            cap = SolixDeviceCapacity[device.get("device_pn","")].value
+                            cap = SolixDeviceCapacity[device.get("device_pn", "")].value
                         elif device.get("type") == SolixDeviceType.SOLARBANK.value:
                             # Derive battery capacity in Wh from latest solarbank name or alias if available
-                            cap = (device.get("name", "") or devData.get("device_name","") or device.get("alias", "")).replace("Solarbank E", "")
-                    soc = device.get("battery_soc", "") or devData.get("battery_power","")
+                            cap = (
+                                device.get("name", "")
+                                or devData.get("device_name", "")
+                                or device.get("alias", "")
+                            ).replace("Solarbank E", "")
+                    soc = device.get("battery_soc", "") or devData.get(
+                        "battery_power", ""
+                    )
                     # Calculate remaining energy in Wh and add values
                     if cap and soc and str(cap).isdigit() and str(soc).isdigit:
                         device.update(
                             {
                                 "battery_capacity": str(cap),
-                                "battery_energy": str(
-                                    int(int(cap) * int(soc) / 100)
-                                ),
+                                "battery_energy": str(int(int(cap) * int(soc) / 100)),
                             }
                         )
-
 
             self.devices.update({str(sn): device})
         return sn
@@ -1295,7 +1299,7 @@ class AnkerSolixApi:
         return resp.get("data", {})
 
     async def get_power_cutoff(
-        self, siteId: str, deviceSn: str, fromFile: bool = False
+        self, deviceSn: str, siteId: str = "", fromFile: bool = False
     ) -> dict:
         """Get power cut off settings.
 
@@ -1325,26 +1329,28 @@ class AnkerSolixApi:
                 )
         return data
 
-    async def set_power_cutoff(
-        self, siteId: str, deviceSn: str, setId: int, toFile: bool = False
-    ) -> dict:
+    async def set_power_cutoff(self, deviceSn: str, setId: int) -> bool:
         """Set power cut off settings.
 
-        TODO: This still must be validated.
+        Example input:
+        {'device_sn': '9JVB42LJK8J0P5RY', 'cutoff_data_id': 1}
+        The id must be one of the ids listed with the get_power_cutoff endpoint
         """
         data = {
-            "site_id": siteId,
             "device_sn": deviceSn,
-            "id": setId,
-        }  # TODO(#3): No idea which parameters to pass to select or pass whole list?
-        if toFile:
-            resp = self._saveToFile(
-                os.path.join(self._testdir, f"set_power_cutoff_{deviceSn}.json"),
-                data=data,
+            "cutoff_data_id": setId,
+        }
+        # Make the Api call and check for return code
+        code = (
+            await self.request(
+                "post", _API_ENDPOINTS["set_cutoff"], json=data
             )
-        else:
-            resp = await self.request("post", _API_ENDPOINTS["set_cutoff"], json=data)
-        return resp.get("data", {})
+        ).get("code")
+        if not isinstance(code, int) or int(code) != 0:
+            return False
+        # update the data in api dict
+        await self.get_power_cutoff(deviceSn=deviceSn)
+        return True
 
     async def get_device_load(
         self, siteId: str, deviceSn: str, fromFile: bool = False
