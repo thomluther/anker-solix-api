@@ -238,6 +238,11 @@ class SolixParmType(Enum):
 
     SOLARBANK_SCHEDULE = "4"
 
+class SolixDeviceCapacity(Enum):
+    """Enumuration for Anker Solix device capacities in Wh by Part Number."""
+
+    A17C0 = 1600
+
 
 class SolixDeviceStatus(Enum):
     """Enumuration for Anker Solix Device status."""
@@ -572,10 +577,15 @@ class AnkerSolixApi:
                     device.update({"generate_power": str(value)})
 
                 # generate extra values when certain conditions are met
-                if (key in ["battery_power"] or calc_capacity) and device.get("type") == SolixDeviceType.SOLARBANK.value:
-                    # generate battery values when soc updated or device name changed
-                    # Derive battery capacity in Wh from latest solarbank name and soc
-                    cap = (device.get("name", "") or devData.get("device_name","")).replace("Solarbank E", "")
+                if (key in ["battery_power"] or calc_capacity):
+                    # generate battery values when soc updated or device name changed or PN is known
+                    if not (cap := device.get("battery_capacity")):
+                        if getattr(SolixDeviceCapacity, device.get("device_pn","")):
+                            # get battery capacity from known PNs
+                            cap = SolixDeviceCapacity[device.get("device_pn","")].value
+                        elif device.get("type") == SolixDeviceType.SOLARBANK.value:
+                            # Derive battery capacity in Wh from latest solarbank name or alias if available
+                            cap = (device.get("name", "") or devData.get("device_name","") or device.get("alias", "")).replace("Solarbank E", "")
                     soc = device.get("battery_soc", "") or devData.get("battery_power","")
                     # Calculate remaining energy in Wh and add values
                     if cap and soc and str(cap).isdigit() and str(soc).isdigit:
