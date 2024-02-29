@@ -552,6 +552,8 @@ class AnkerSolixApi:
                     device.update({"auto_upgrade": bool(value)})
                 elif key in ["power_cutoff"]:
                     device.update({"power_cutoff": int(value)})
+                elif key in ["power_cutoff_data"] and value:
+                    device.update({"power_cutoff_data": list(value)})
                 elif key in ["fittings"]:
                     # update nested dictionary
                     if "fittings" in device:
@@ -906,17 +908,21 @@ class AnkerSolixApi:
                         # modify only a copy of the device dict to prevent changing the scene info dict
                         solarbank = dict(solarbank).copy()
                         solarbank.update({"alias_name": solarbank.pop("device_name")})
+                    # work around for system and device output presets, which are not set correctly and cannot be queried with load schedule for shared accounts
+                    if not solarbank.get("set_load_power"):
+                        total_preset = str(mysite.get("retain_load","")).replace("W","")
+                        if total_preset.isdigit():
+                            solarbank.update({"set_load_power": f"{(int(total_preset)/len(sb_list)):.0f}", "current_home_load": total_preset})
                     # work around for incorrect charging power value per solarbank, only solarbank total_charging_power is correct
                     # calculate estimate based on total for proportional split across available solarbanks and their calculated charge power
                     with contextlib.suppress(ValueError):
                         charge_calc = 0
                         power_in = int(solarbank.get("photovoltaic_power", ""))
                         power_out = int(solarbank.get("output_power", ""))
-                        power_charge = int(solarbank.get("charging_power", ""))
+                        # power_charge = int(solarbank.get("charging_power", "")) # This value is wrong, can be 0 or show output value sometimes
                         charge_calc = abs(power_in - power_out)
-                        if power_charge == 0:
-                            solarbank["charging_power"] = charge_calc
-                            sb_total_charge_calc += charge_calc
+                        solarbank["charging_power"] = str(charge_calc)
+                        sb_total_charge_calc += charge_calc
                     sn = self._update_dev(
                         solarbank,
                         devType=SolixDeviceType.SOLARBANK.value,
@@ -927,15 +933,11 @@ class AnkerSolixApi:
                         act_devices.append(sn)
                         sb_charges[sn] = charge_calc
                 # adjust calculated SB charge to match total
-                if (
-                    len(sb_charges) == len(sb_list)
-                    and str(sb_total_charge).isdigit()
-                    and sb_total_charge_calc > 0
-                ):
+                if len(sb_charges) == len(sb_list) and str(sb_total_charge).isdigit():
                     sb_total_charge = int(sb_total_charge)
                     for sn, charge in sb_charges.items():
-                        self.devices[sn]["charging_power"] = int(
-                            sb_total_charge / sb_total_charge_calc * charge
+                        self.devices[sn]["charging_power"] = str(
+                            0 if sb_total_charge_calc == 0 else int(sb_total_charge / sb_total_charge_calc * charge)
                         )
                         # Update also the charge status description which may change after charging power correction
                         charge_status = self.devices[sn].get("charging_status")
@@ -1316,17 +1318,22 @@ class AnkerSolixApi:
         else:
             resp = await self.request("post", _API_ENDPOINTS["get_cutoff"], json=data)
         data = resp.get("data", {})
-        for setting in data.get("power_cutoff_data", []):
+        # add whole list to device details to provide option selection capabilities
+        details = {
+            "device_sn": deviceSn,
+            "power_cutoff_data": data.get("power_cutoff_data") or [],
+        }
+        for setting in data.get("power_cutoff_data") or []:
             if (
                 int(setting.get("is_selected", 0)) > 0
                 and int(setting.get("output_cutoff_data", 0)) > 0
             ):
-                self._update_dev(
+                details.update(
                     {
-                        "device_sn": deviceSn,
                         "power_cutoff": int(setting.get("output_cutoff_data")),
                     }
                 )
+        self._update_dev(details)
         return data
 
     async def set_power_cutoff(self, deviceSn: str, setId: int) -> bool:
@@ -1342,9 +1349,7 @@ class AnkerSolixApi:
         }
         # Make the Api call and check for return code
         code = (
-            await self.request(
-                "post", _API_ENDPOINTS["set_cutoff"], json=data
-            )
+            await self.request("post", _API_ENDPOINTS["set_cutoff"], json=data)
         ).get("code")
         if not isinstance(code, int) or int(code) != 0:
             return False
@@ -1605,7 +1610,7 @@ class AnkerSolixApi:
         Example:
         {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21", "solarbank_discharge": "0.47", "solarbank_charge": "0.56"},
          "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "solarbank_discharge": "1.06", "solarbank_charge": "1.39"}}
-        """
+        """  # noqa: D413
         table = {}
         today = datetime.today()
         # check daily range and limit to 1 year max and avoid future days

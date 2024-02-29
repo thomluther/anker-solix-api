@@ -156,7 +156,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     )
                     siteid = dev.get("site_id", "")
                     CONSOLE.info(f"{'Site ID':<{col1}}: {siteid}")
-                    for fsn, fitting in dev.get('fittings',{}).items():
+                    for fsn, fitting in (dev.get('fittings') or {}).items():
                         CONSOLE.info(
                             f"{'Fitting':<{col1}}: {fitting.get('device_name',''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
                         )
