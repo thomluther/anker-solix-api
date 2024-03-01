@@ -470,7 +470,8 @@ class AnkerSolixApi:
                 if key in ["product_code", "device_pn"] and value:
                     device.update({"device_pn": str(value)})
                 elif key in ["device_name"] and value:
-                    calc_capacity = value != device.get("name", "")
+                    if value != device.get("name", ""):
+                        calc_capacity = True
                     device.update({"name": str(value)})
                 elif key in ["alias_name"] and value:
                     device.update({"alias": str(value)})
@@ -593,18 +594,17 @@ class AnkerSolixApi:
                                 or devData.get("device_name", "")
                                 or device.get("alias", "")
                             ).replace("Solarbank E", "")
-                    soc = device.get("battery_soc", "") or devData.get(
-                        "battery_power", ""
+                    soc = devData.get("battery_power", "") or device.get(
+                        "battery_soc", ""
                     )
                     # Calculate remaining energy in Wh and add values
-                    if cap and soc and str(cap).isdigit() and str(soc).isdigit:
+                    if cap and soc and str(cap).isdigit() and str(soc).isdigit():
                         device.update(
                             {
                                 "battery_capacity": str(cap),
                                 "battery_energy": str(int(int(cap) * int(soc) / 100)),
                             }
                         )
-
             self.devices.update({str(sn): device})
         return sn
 
@@ -899,10 +899,16 @@ class AnkerSolixApi:
                 sb_total_charge = (mysite.get("solarbank_info", {})).get(
                     "total_charging_power", ""
                 )
+                sb_total_output = (mysite.get("solarbank_info", {})).get(
+                    "total_output_power", ""
+                )
+                sb_total_solar = (mysite.get("solarbank_info", {})).get(
+                    "total_photovoltaic_power", ""
+                )
                 sb_total_charge_calc = 0
                 sb_charges = {}
                 sb_list = (mysite.get("solarbank_info", {})).get("solarbank_list", [])
-                for solarbank in sb_list:
+                for index, solarbank in enumerate(sb_list):
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in solarbank:
                         # modify only a copy of the device dict to prevent changing the scene info dict
@@ -910,19 +916,33 @@ class AnkerSolixApi:
                         solarbank.update({"alias_name": solarbank.pop("device_name")})
                     # work around for system and device output presets, which are not set correctly and cannot be queried with load schedule for shared accounts
                     if not solarbank.get("set_load_power"):
-                        total_preset = str(mysite.get("retain_load","")).replace("W","")
+                        total_preset = str(mysite.get("retain_load", "")).replace(
+                            "W", ""
+                        )
                         if total_preset.isdigit():
-                            solarbank.update({"set_load_power": f"{(int(total_preset)/len(sb_list)):.0f}", "current_home_load": total_preset})
-                    # work around for incorrect charging power value per solarbank, only solarbank total_charging_power is correct
+                            solarbank.update(
+                                {
+                                    "set_load_power": f"{(int(total_preset)/len(sb_list)):.0f}",
+                                    "current_home_load": total_preset,
+                                }
+                            )
+                    # Work around for weird charging power fields in SB totals and device list: They have same names, but completely different usage
+                    # SB total charging power shows only power into the battery. At this time, charging power in device list seems to reflect the output power. This is seen for status 3
+                    # SB total charging power show 0 when discharging, but then device charging power shows correct value. This is seen for status 2
+                    # Conclusion: SB total charging power is correct total power INTO the batteries. When discharging it is 0
+                    # Device list charging power is ONLY correct power OUT of the batteries. When charging it is 0 or shows the output power.
+                    # Need to simplify this per device details and SB totals, will use positive value on both for charging power and negative for discharging power
                     # calculate estimate based on total for proportional split across available solarbanks and their calculated charge power
                     with contextlib.suppress(ValueError):
                         charge_calc = 0
                         power_in = int(solarbank.get("photovoltaic_power", ""))
                         power_out = int(solarbank.get("output_power", ""))
-                        # power_charge = int(solarbank.get("charging_power", "")) # This value is wrong, can be 0 or show output value sometimes
-                        charge_calc = abs(power_in - power_out)
-                        solarbank["charging_power"] = str(charge_calc)
+                        # power_charge = int(solarbank.get("charging_power", "")) # This value seems to reflect the output power, which is corect for status 2, but may be wrong for other states
+                        charge_calc = power_in - power_out
+                        solarbank["charging_power"] = str(charge_calc)  # allow negative values
                         sb_total_charge_calc += charge_calc
+                    mysite["solarbank_info"]["solarbank_list"][index] = solarbank
+                    self.sites.update({myid: mysite})
                     sn = self._update_dev(
                         solarbank,
                         devType=SolixDeviceType.SOLARBANK.value,
@@ -935,9 +955,16 @@ class AnkerSolixApi:
                 # adjust calculated SB charge to match total
                 if len(sb_charges) == len(sb_list) and str(sb_total_charge).isdigit():
                     sb_total_charge = int(sb_total_charge)
+                    if sb_total_charge_calc < 0:
+                        with contextlib.suppress(ValueError):
+                            # discharging, adjust sb total charge value in scene info and allow negativ value to indicate discharge
+                            sb_total_charge = float(sb_total_solar) - float(sb_total_output)
+                            mysite["solarbank_info"]["total_charging_power"] = str(sb_total_charge)
                     for sn, charge in sb_charges.items():
                         self.devices[sn]["charging_power"] = str(
-                            0 if sb_total_charge_calc == 0 else int(sb_total_charge / sb_total_charge_calc * charge)
+                            0
+                            if sb_total_charge_calc == 0
+                            else int(sb_total_charge / sb_total_charge_calc * charge)
                         )
                         # Update also the charge status description which may change after charging power correction
                         charge_status = self.devices[sn].get("charging_status")
@@ -948,6 +975,9 @@ class AnkerSolixApi:
                                     "charging_status": charge_status,
                                 }
                             )
+                # make sure to write back any changes to the solarbank info in sites dict
+                self.sites.update({myid: mysite})
+
                 for pps in (mysite.get("pps_info", {})).get("pps_list", []):
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in pps:
