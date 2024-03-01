@@ -466,145 +466,149 @@ class AnkerSolixApi:
             elif isAdmin is False and device.get("is_admin") is None:
                 device.update({"is_admin": False})
             calc_capacity = False  # Flag whether capacity may need recalculation
-            for key, value in devData.items():
-                if key in ["product_code", "device_pn"] and value:
-                    device.update({"device_pn": str(value)})
-                elif key in ["device_name"] and value:
-                    if value != device.get("name", ""):
-                        calc_capacity = True
-                    device.update({"name": str(value)})
-                elif key in ["alias_name"] and value:
-                    device.update({"alias": str(value)})
-                elif key in ["device_sw_version"] and value:
-                    device.update({"sw_version": str(value)})
-                elif key in ["wifi_online"]:
-                    device.update({"wifi_online": bool(value)})
-                elif key in ["wireless_type"]:
-                    device.update({"wireless_type": str(value)})
-                elif key in ["wifi_name"] and value:
-                    # wifi_name can be empty in details if device connected, avoid clearing name
-                    device.update({"wifi_name": str(value)})
-                elif key in ["wifi_signal"]:
-                    device.update({"wifi_signal": str(value)})
-                elif key in ["bt_ble_mac"] and value:
-                    device.update({"bt_ble_mac": str(value)})
-                elif key in ["battery_power"] and value:
-                    # This is a percentage value for the battery state of charge, not power
-                    device.update({"battery_soc": str(value)})
-                elif key in ["charging_power"]:
-                    device.update({"charging_power": str(value)})
-                elif key in ["photovoltaic_power"]:
-                    device.update({"input_power": str(value)})
-                elif key in ["output_power"]:
-                    device.update({"output_power": str(value)})
-                # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
-                elif key in ["set_load_power", "parallel_home_load"] and value:
-                    # Value may include unit, remove unit to have content consistent
-                    device.update({"set_output_power": str(value).replace("W", "")})
-                # The current_home_load from get_device_load always shows the system wide settings made via the schedule
-                elif key in ["current_home_load"] and value:
-                    # Value may include unit, remove unit to have content consistent
-                    device.update(
-                        {"set_system_output_power": str(value).replace("W", "")}
-                    )
-                    # Value for device home load may be empty for single solarbank, use this setting also for device preset in this case
-                    if not device.get("set_output_power"):
+            try:
+                for key, value in devData.items():
+                    if key in ["product_code", "device_pn"] and value:
+                        device.update({"device_pn": str(value)})
+                    elif key in ["device_name"] and value:
+                        if value != device.get("name", ""):
+                            calc_capacity = True
+                        device.update({"name": str(value)})
+                    elif key in ["alias_name"] and value:
+                        device.update({"alias": str(value)})
+                    elif key in ["device_sw_version"] and value:
+                        device.update({"sw_version": str(value)})
+                    elif key in ["wifi_online"]:
+                        device.update({"wifi_online": bool(value)})
+                    elif key in ["wireless_type"]:
+                        device.update({"wireless_type": str(value)})
+                    elif key in ["wifi_name"] and value:
+                        # wifi_name can be empty in details if device connected, avoid clearing name
+                        device.update({"wifi_name": str(value)})
+                    elif key in ["wifi_signal"]:
+                        device.update({"wifi_signal": str(value)})
+                    elif key in ["bt_ble_mac"] and value:
+                        device.update({"bt_ble_mac": str(value)})
+                    elif key in ["battery_power"] and value:
+                        # This is a percentage value for the battery state of charge, not power
+                        device.update({"battery_soc": str(value)})
+                    elif key in ["charging_power"]:
+                        device.update({"charging_power": str(value)})
+                    elif key in ["photovoltaic_power"]:
+                        device.update({"input_power": str(value)})
+                    elif key in ["output_power"]:
+                        device.update({"output_power": str(value)})
+                    # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
+                    elif key in ["set_load_power", "parallel_home_load"] and value:
+                        # Value may include unit, remove unit to have content consistent
                         device.update({"set_output_power": str(value).replace("W", "")})
-                elif key in ["power_unit"]:
-                    device.update({"power_unit": str(value)})
-                elif key in ["status"]:
-                    device.update({"status": str(value)})
-                    # decode the status into a description
-                    description = SolixDeviceStatus.unknown.name
-                    for status in SolixDeviceStatus:
-                        if str(value) == status.value:
-                            description = status.name
-                            break
-                    device.update({"status_desc": description})
-                elif key in ["charging_status"]:
-                    device.update({"charging_status": str(value)})
-                    # decode the status into a description
-                    description = SolarbankStatus.unknown.name
-                    for status in SolarbankStatus:
-                        if str(value) == status.value:
-                            description = status.name
-                            break
-                    # check if battery charging during bypass and if output during bypass
-                    # NOTE: charging power may be updated after initial device details update
-                    # NOTE: If status is 3=Bypass but nothing goes out, the charge priority is active (e.g. 0 Watt switch)
-                    if (
-                        description == SolarbankStatus.bypass.name
-                        and (charge := devData.get("charging_power"))
-                        and (out := devData.get("output_power"))
-                    ):
-                        with contextlib.suppress(ValueError):
-                            if int(out) == 0:
-                                # Bypass but 0 W output must be active charge priority
-                                description = SolarbankStatus.charge_priority.name
-                            elif int(charge) > 0:
-                                # Bypass with output and charge must be bypass charging
-                                description = SolarbankStatus.bypass_charging.name
-                    device.update({"charging_status_desc": description})
-                elif key in ["bws_surplus"]:
-                    device.update({"bws_surplus": str(value)})
-                elif key in ["charge"]:
-                    device.update({"charge": bool(value)})
-                elif key in ["auto_upgrade"]:
-                    device.update({"auto_upgrade": bool(value)})
-                elif key in ["power_cutoff"]:
-                    device.update({"power_cutoff": int(value)})
-                elif key in ["power_cutoff_data"] and value:
-                    device.update({"power_cutoff_data": list(value)})
-                elif key in ["fittings"]:
-                    # update nested dictionary
-                    if "fittings" in device:
-                        device["fittings"].update(dict(value))
-                    else:
-                        device["fittings"] = dict(value)
-                elif key in ["solar_info"] and isinstance(value, dict) and value:
-                    # remove unnecessary keys from solar_info
-                    keylist = value.keys()
-                    for key in [
-                        x
-                        for x in ("brand_id", "model_img", "version", "ota_status")
-                        if x in keylist
-                    ]:
-                        value.pop(key)
-                    device.update({"solar_info": dict(value)})
-                # schedule is currently a site wide setting. However, we save this with device details to retain info across site updates
-                # When individual device schedules are support in future, this info is needed per device anyway
-                elif key in ["schedule"] and isinstance(value, dict) and value:
-                    device.update({"schedule": dict(value)})
-
-                # inverter specific keys
-                elif key in ["generate_power"]:
-                    device.update({"generate_power": str(value)})
-
-                # generate extra values when certain conditions are met
-                if key in ["battery_power"] or calc_capacity:
-                    # generate battery values when soc updated or device name changed or PN is known
-                    if not (cap := device.get("battery_capacity")):
-                        if getattr(SolixDeviceCapacity, device.get("device_pn", "")):
-                            # get battery capacity from known PNs
-                            cap = SolixDeviceCapacity[device.get("device_pn", "")].value
-                        elif device.get("type") == SolixDeviceType.SOLARBANK.value:
-                            # Derive battery capacity in Wh from latest solarbank name or alias if available
-                            cap = (
-                                device.get("name", "")
-                                or devData.get("device_name", "")
-                                or device.get("alias", "")
-                            ).replace("Solarbank E", "")
-                    soc = devData.get("battery_power", "") or device.get(
-                        "battery_soc", ""
-                    )
-                    # Calculate remaining energy in Wh and add values
-                    if cap and soc and str(cap).isdigit() and str(soc).isdigit():
+                    # The current_home_load from get_device_load always shows the system wide settings made via the schedule
+                    elif key in ["current_home_load"] and value:
+                        # Value may include unit, remove unit to have content consistent
                         device.update(
-                            {
-                                "battery_capacity": str(cap),
-                                "battery_energy": str(int(int(cap) * int(soc) / 100)),
-                            }
+                            {"set_system_output_power": str(value).replace("W", "")}
                         )
+                        # Value for device home load may be empty for single solarbank, use this setting also for device preset in this case
+                        if not device.get("set_output_power"):
+                            device.update({"set_output_power": str(value).replace("W", "")})
+                    elif key in ["power_unit"]:
+                        device.update({"power_unit": str(value)})
+                    elif key in ["status"]:
+                        device.update({"status": str(value)})
+                        # decode the status into a description
+                        description = SolixDeviceStatus.unknown.name
+                        for status in SolixDeviceStatus:
+                            if str(value) == status.value:
+                                description = status.name
+                                break
+                        device.update({"status_desc": description})
+                    elif key in ["charging_status"]:
+                        device.update({"charging_status": str(value)})
+                        # decode the status into a description
+                        description = SolarbankStatus.unknown.name
+                        for status in SolarbankStatus:
+                            if str(value) == status.value:
+                                description = status.name
+                                break
+                        # check if battery charging during bypass and if output during bypass
+                        # NOTE: charging power may be updated after initial device details update
+                        # NOTE: If status is 3=Bypass but nothing goes out, the charge priority is active (e.g. 0 Watt switch)
+                        if (
+                            description == SolarbankStatus.bypass.name
+                            and (charge := devData.get("charging_power"))
+                            and (out := devData.get("output_power"))
+                        ):
+                            with contextlib.suppress(ValueError):
+                                if int(out) == 0:
+                                    # Bypass but 0 W output must be active charge priority
+                                    description = SolarbankStatus.charge_priority.name
+                                elif int(charge) > 0:
+                                    # Bypass with output and charge must be bypass charging
+                                    description = SolarbankStatus.bypass_charging.name
+                        device.update({"charging_status_desc": description})
+                    elif key in ["bws_surplus"]:
+                        device.update({"bws_surplus": str(value)})
+                    elif key in ["charge"]:
+                        device.update({"charge": bool(value)})
+                    elif key in ["auto_upgrade"]:
+                        device.update({"auto_upgrade": bool(value)})
+                    elif key in ["power_cutoff"]:
+                        device.update({"power_cutoff": int(value)})
+                    elif key in ["power_cutoff_data"] and value:
+                        device.update({"power_cutoff_data": list(value)})
+                    elif key in ["fittings"]:
+                        # update nested dictionary
+                        if "fittings" in device:
+                            device["fittings"].update(dict(value))
+                        else:
+                            device["fittings"] = dict(value)
+                    elif key in ["solar_info"] and isinstance(value, dict) and value:
+                        # remove unnecessary keys from solar_info
+                        keylist = value.keys()
+                        for key in [
+                            x
+                            for x in ("brand_id", "model_img", "version", "ota_status")
+                            if x in keylist
+                        ]:
+                            value.pop(key)
+                        device.update({"solar_info": dict(value)})
+                    # schedule is currently a site wide setting. However, we save this with device details to retain info across site updates
+                    # When individual device schedules are support in future, this info is needed per device anyway
+                    elif key in ["schedule"] and isinstance(value, dict) and value:
+                        device.update({"schedule": dict(value)})
+
+                    # inverter specific keys
+                    elif key in ["generate_power"]:
+                        device.update({"generate_power": str(value)})
+
+                    # generate extra values when certain conditions are met
+                    if key in ["battery_power"] or calc_capacity:
+                        # generate battery values when soc updated or device name changed or PN is known
+                        if not (cap := device.get("battery_capacity")):
+                            if hasattr(SolixDeviceCapacity, device.get("device_pn", "")):
+                                # get battery capacity from known PNs
+                                cap = SolixDeviceCapacity[device.get("device_pn", "")].value
+                            elif device.get("type") == SolixDeviceType.SOLARBANK.value:
+                                # Derive battery capacity in Wh from latest solarbank name or alias if available
+                                cap = (
+                                    device.get("name", "")
+                                    or devData.get("device_name", "")
+                                    or device.get("alias", "")
+                                ).replace("Solarbank E", "")
+                        soc = devData.get("battery_power", "") or device.get(
+                            "battery_soc", ""
+                        )
+                        # Calculate remaining energy in Wh and add values
+                        if cap and soc and str(cap).isdigit() and str(soc).isdigit():
+                            device.update(
+                                {
+                                    "battery_capacity": str(cap),
+                                    "battery_energy": str(int(int(cap) * int(soc) / 100)),
+                                }
+                            )
+            except Exception as err: #pylint: disable=broad-exception-caught
+                self._logger.error("%s occured when updating device details for key %s with value %s: %s", type(err), key, value, err)
+
             self.devices.update({str(sn): device})
         return sn
 
