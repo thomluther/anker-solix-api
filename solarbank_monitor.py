@@ -141,8 +141,12 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 )
                 if use_file:
                     CONSOLE.info("Using input source folder: %s", myapi.testDir())
+                if len(myapi.sites) > 0:
+                    update_time = ((next(iter(myapi.sites.values()))).get("solarbank_info") or {}).get("updated_time") or "Unknown"
+                else:
+                    update_time = "Unknown"
                 CONSOLE.info(
-                    "Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices)
+                    f"Sites: {len(myapi.sites)}, Devices: {len(myapi.sites)},           Data-Updated: {update_time}"
                 )
                 # pylint: disable=logging-fstring-interpolation
                 for sn, dev in myapi.devices.items():
@@ -158,7 +162,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     CONSOLE.info(f"{'Site ID':<{col1}}: {siteid}")
                     for fsn, fitting in (dev.get('fittings') or {}).items():
                         CONSOLE.info(
-                            f"{'Fitting':<{col1}}: {fitting.get('device_name',''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
+                            f"{'Accessory':<{col1}}: {fitting.get('device_name',''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
                         )
                     CONSOLE.info(
                         f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name',''):<{col2}}"
@@ -199,7 +203,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if admin:
                             data = dev.get("schedule", {})
                             CONSOLE.info(
-                                f"{'Schedule':<{col1}}: {now.strftime('%H:%M UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
+                                f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
                             )
                             CONSOLE.info(
                                 f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Discharge':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}}"
