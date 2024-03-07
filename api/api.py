@@ -1091,10 +1091,10 @@ class AnkerSolixApi:
         and it updates just the nested site_details dictionary in the sites dictionary.
         """
         self._logger.debug("Updating Sites Details")
-        for site_id, data in self.sites.items():
+        for site_id in self.sites:
             # Fetch site price and CO2 settings
             self._logger.debug("Getting price and CO2 settings for site")
-            await self.get_site_price(siteId=site_id,fromFile=fromFile)
+            await self.get_site_price(siteId=site_id, fromFile=fromFile)
         return self.sites
 
     async def update_device_details(self, fromFile: bool = False) -> dict:
