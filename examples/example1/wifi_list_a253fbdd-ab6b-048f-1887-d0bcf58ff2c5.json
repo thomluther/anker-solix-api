@@ -5,9 +5,9 @@
     "wifi_info_list": [
       {
         "wifi_name": "wifi-network-1",
-        "wifi_signal": "100"
+        "wifi_signal": "48"
       }
     ]
   },
-  "trace_id": "0a0d59c1b266de112d9028dfcfcf5ffe"
+  "trace_id": "a12c7ddfdc319ffa7ca7ae9187ecfa8d"
 }

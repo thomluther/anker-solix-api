@@ -403,6 +403,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
             # this is more efficient and allows validation of randomized data in export files
             myapi.testDir(folder)
             await myapi.update_sites(fromFile=True)
+            await myapi.update_site_details(fromFile=True)
             await myapi.update_device_details(fromFile=True)
             # avoid randomizing dictionary export twice when imported from randomized files already
             CONSOLE.info("\nExporting Api Sites overview...")

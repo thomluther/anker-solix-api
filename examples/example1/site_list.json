@@ -4,7 +4,7 @@
   "data": {
     "site_list": [
       {
-        "site_id": "c6a3216c-b3bd-fe9a-bd00-e46bfe61ee42",
+        "site_id": "a253fbdd-ab6b-048f-1887-d0bcf58ff2c5",
         "site_name": "BKW",
         "site_img": "",
         "device_type_list": [
@@ -21,5 +21,5 @@
       }
     ]
   },
-  "trace_id": "f4a07b0fc7eda9aac8a047bfe3ce0881"
+  "trace_id": "5de5a4ec2ebc9f2cff1fa10f1ae98ac3"
 }

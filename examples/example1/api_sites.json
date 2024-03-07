@@ -1,8 +1,8 @@
 {
-  "c6a3216c-b3bd-fe9a-bd00-e46bfe61ee42": {
+  "a253fbdd-ab6b-048f-1887-d0bcf58ff2c5": {
     "type": "system",
     "site_info": {
-      "site_id": "c6a3216c-b3bd-fe9a-bd00-e46bfe61ee42",
+      "site_id": "a253fbdd-ab6b-048f-1887-d0bcf58ff2c5",
       "site_name": "BKW",
       "site_img": "",
       "device_type_list": [
@@ -36,17 +36,17 @@
     "statistics": [
       {
         "type": "1",
-        "total": "89.75",
+        "total": "100.99",
         "unit": "kwh"
       },
       {
         "type": "2",
-        "total": "89.48",
+        "total": "100.69",
         "unit": "kg"
       },
       {
         "type": "3",
-        "total": "35.90",
+        "total": "33.33",
         "unit": "\u20ac"
       }
     ],
@@ -55,37 +55,45 @@
       "solarbank_list": [
         {
           "device_pn": "A17C0",
-          "device_sn": "S8S4GS0KZKLP0BH8",
-          "device_name": "Solarbank E1600",
+          "device_sn": "AN7ZOO7INFLCIMD9",
           "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
-          "battery_power": "75",
+          "battery_power": "65",
           "bind_site_status": "",
           "charging_power": "0",
           "power_unit": "W",
-          "charging_status": "2",
-          "status": "0",
+          "charging_status": "0",
+          "status": "1",
           "wireless_type": "1",
           "main_version": "",
           "photovoltaic_power": "0",
           "output_power": "0",
           "create_time": 1695392386,
-          "set_load_power": "",
-          "output_cutoff_data": 10
+          "set_load_power": "0",
+          "output_cutoff_data": 10,
+          "is_display": true,
+          "alias_name": "SB E1600",
+          "current_home_load": "0"
         }
       ],
       "total_charging_power": "0",
       "power_unit": "W",
       "charging_status": "0",
-      "total_battery_power": "0.00",
-      "updated_time": "2024-02-22 01:16:32",
+      "total_battery_power": "0.65",
+      "updated_time": "2024-03-07 16:10:47",
       "total_photovoltaic_power": "0",
       "total_output_power": "0.00",
-      "display_set_power": false
+      "display_set_power": false,
+      "is_display_data": true
     },
     "retain_load": "0W",
     "updated_time": "01-01-0001 00:00:00",
     "power_site_type": 2,
-    "site_id": "c6a3216c-b3bd-fe9a-bd00-e46bfe61ee42",
-    "powerpanel_list": []
+    "site_id": "a253fbdd-ab6b-048f-1887-d0bcf58ff2c5",
+    "powerpanel_list": [],
+    "site_details": {
+      "price": 0.33,
+      "site_co2": 0,
+      "site_price_unit": "\u20ac"
+    }
   }
 }
