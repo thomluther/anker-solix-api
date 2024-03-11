@@ -93,8 +93,10 @@ def randomize(val, key: str = "") -> str:
             # these keys may contain schedule dict encoded as string, ensure contained serials are replaced in string
             # replace all mappings from randomdata, but skip trace ids
             randomstr = val
-            for k, v in ((old,new) for old,new in RANDOMDATA.items() if len(old) != 32):
-                randomstr = randomstr.replace(k,v)
+            for k, v in (
+                (old, new) for old, new in RANDOMDATA.items() if len(old) != 32
+            ):
+                randomstr = randomstr.replace(k, v)
             # leave without saving randomized string in RANDOMDATA
             return randomstr
         else:
@@ -115,13 +117,27 @@ def check_keys(data):
             v = [check_keys(i) for i in v]
         # Randomize value for certain keys
         if any(
-            x in k for x in ["_sn", "site_id", "trace_id", "bt_ble_", "wifi_name", "home_load_data", "param_data"]
+            x in k
+            for x in [
+                "_sn",
+                "site_id",
+                "trace_id",
+                "bt_ble_",
+                "wifi_name",
+                "home_load_data",
+                "param_data",
+            ]
         ) or k in ["sn"]:
             data[k] = randomize(v, k)
     return data
 
 
-def export(filename: str, d: dict = None, skip_randomize: bool = False, randomkeys: bool = False) -> None:
+def export(
+    filename: str,
+    d: dict = None,
+    skip_randomize: bool = False,
+    randomkeys: bool = False,
+) -> None:
     """Save dict data to given file."""
     if not d:
         d = {}
@@ -138,7 +154,7 @@ def export(filename: str, d: dict = None, skip_randomize: bool = False, randomke
                 # check first nested keys in dict values
                 for nested_key, nested_val in dict(val).items():
                     if isinstance(nested_val, dict):
-                        for k in [text for text in nested_val if isinstance(text,str)]:
+                        for k in [text for text in nested_val if isinstance(text, str)]:
                             # check nested dict keys
                             if k in RANDOMDATA:
                                 d_copy[key][nested_key][RANDOMDATA[k]] = d_copy[key][
@@ -197,7 +213,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
             CONSOLE.info("\nQuerying site information...")
             await myapi.update_sites()
             # Skip device detail queries, the defined serials are provided with the sites update
-            #await myapi.update_device_details()
+            # await myapi.update_device_details()
             CONSOLE.info("Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices))
             _LOGGER.debug(json.dumps(myapi.devices, indent=2))
 
@@ -398,6 +414,19 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
+
+
+            CONSOLE.info("\nExporting site rules...")
+            export(
+                os.path.join(folder, "site_rules.json"),
+                await myapi.request("post", api._API_ENDPOINTS["site_rules"], json={}),
+            )
+            CONSOLE.info("Exporting message unread status...")
+            export(
+                os.path.join(folder, "message_unread.json"),
+                await myapi.request("get", api._API_ENDPOINTS["get_message_unread"], json={}),
+            )
+
 
             # update the api dictionaries from exported files to use randomized input data
             # this is more efficient and allows validation of randomized data in export files
