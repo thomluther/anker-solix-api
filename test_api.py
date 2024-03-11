@@ -1,8 +1,5 @@
 #!/usr/bin/env python
-"""
-Example exec module to test the Anker API for various methods or direct
-endpoint requests with various parameters.
-"""
+"""Example exec module to test the Anker API for various methods or direct endpoint requests with various parameters."""  # noqa: D205
 # pylint: disable=duplicate-code
 
 import asyncio
@@ -13,9 +10,8 @@ import os
 import sys
 
 from aiohttp import ClientSession
-
-import common
 from api import api
+import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -34,7 +30,7 @@ def _out(jsondata):
     CONSOLE.info(json.dumps(jsondata, indent=2))
 
 
-async def test_api_methods(myapi) -> None:
+async def test_api_methods(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _system = list(myapi.sites.values())[0]
     siteid = _system["site_info"]["site_id"]
     devicesn = _system["solarbank_info"]["solarbank_list"][0]["device_sn"]
@@ -44,10 +40,14 @@ async def test_api_methods(myapi) -> None:
     _out(await myapi.get_user_devices())
     _out(await myapi.get_charging_devices())
     _out(await myapi.get_auto_upgrade())
+    _out(await myapi.get_upgrade_record())
+    _out(await myapi.get_ota_update(deviceSn=devicesn))
+    _out(await myapi.get_ota_info(solarbankSn=devicesn))
     _out(await myapi.get_scene_info(siteId=siteid))
     _out(await myapi.get_wifi_list(siteId=siteid))
     _out(await myapi.get_solar_info(solarbankSn=devicesn))
     _out(await myapi.get_device_parm(siteId=siteid, paramType="4"))
+
     _out(
         await myapi.get_power_cutoff(
             siteId=siteid,
@@ -90,128 +90,112 @@ async def test_api_methods(myapi) -> None:
         )
     )
     _out(await myapi.home_load_chart(siteId=siteid))
+    _out(await myapi.get_site_price(siteId=siteid))
+    _out(await myapi.get_message_unread())
+    _out(await myapi.get_site_rules())
 
 
-async def test_api_endpoints(myapi) -> None:
+async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _system = list(myapi.sites.values())[0]
     siteid = _system["site_info"]["site_id"]
     devicesn = _system["solarbank_info"]["solarbank_list"][0]["device_sn"]
-    _out((await myapi.request("post", api._API_ENDPOINTS["homepage"], json={})))
-    _out((await myapi.request("post", api._API_ENDPOINTS["site_list"], json={})))
-    _out((await myapi.request("post", api._API_ENDPOINTS["bind_devices"], json={})))
-    _out((await myapi.request("post", api._API_ENDPOINTS["user_devices"], json={})))
-    _out((await myapi.request("post", api._API_ENDPOINTS["charging_devices"], json={})))
-    _out((await myapi.request("post", api._API_ENDPOINTS["get_auto_upgrade"], json={})))
+    _out(await myapi.request("post", api._API_ENDPOINTS["homepage"], json={}))  # pylint: disable=protected-access
+    _out(await myapi.request("post", api._API_ENDPOINTS["site_list"], json={}))  # pylint: disable=protected-access
+    _out(await myapi.request("post", api._API_ENDPOINTS["bind_devices"], json={}))  # pylint: disable=protected-access
+    _out(await myapi.request("post", api._API_ENDPOINTS["user_devices"], json={}))  # pylint: disable=protected-access
+    _out(await myapi.request("post", api._API_ENDPOINTS["charging_devices"], json={}))  # pylint: disable=protected-access
+    _out(await myapi.request("post", api._API_ENDPOINTS["get_auto_upgrade"], json={}))  # pylint: disable=protected-access
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["site_detail"],
-                json={"site_id": siteid},
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["site_detail"],  # pylint: disable=protected-access
+            json={"site_id": siteid},
         )
     )
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["wifi_list"],
-                json={"site_id": siteid},
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["wifi_list"],  # pylint: disable=protected-access
+            json={"site_id": siteid},
         )
     )
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["get_site_price"],
-                json={"site_id": siteid},
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["get_site_price"],  # pylint: disable=protected-access
+            json={"site_id": siteid},
         )
     )
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["solar_info"],
-                json={
-                    "site_id": siteid,
-                    "solarbank_sn": devicesn,
-                },
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["solar_info"],  # pylint: disable=protected-access
+            json={
+                "site_id": siteid,
+                "solarbank_sn": devicesn,
+            },
         )
     )
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["get_cutoff"],
-                json={
-                    "site_id": siteid,
-                    "device_sn": devicesn,
-                },
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["get_cutoff"],  # pylint: disable=protected-access
+            json={
+                "site_id": siteid,
+                "device_sn": devicesn,
+            },
         )
     )
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["get_device_fittings"],
-                json={
-                    "site_id": siteid,
-                    "device_sn": devicesn,
-                },
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["get_device_fittings"],  # pylint: disable=protected-access
+            json={
+                "site_id": siteid,
+                "device_sn": devicesn,
+            },
         )
     )
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["get_device_load"],
-                json={
-                    "site_id": siteid,
-                    "device_sn": devicesn,
-                },
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["get_device_load"],  # pylint: disable=protected-access
+            json={
+                "site_id": siteid,
+                "device_sn": devicesn,
+            },
         )
     )
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["get_device_parm"],
-                json={
-                    "site_id": siteid,
-                    "param_type": "4",
-                },
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["get_device_parm"],  # pylint: disable=protected-access
+            json={
+                "site_id": siteid,
+                "param_type": "4",
+            },
         )
     )
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["compatible_process"],
-                json={"solarbank_sn": devicesn},
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["compatible_process"],  # pylint: disable=protected-access
+            json={"solarbank_sn": devicesn},
         )
     )
     _out(
-        (
-            await myapi.request(
-                "post",
-                api._API_ENDPOINTS["home_load_chart"],
-                json={"site_id": siteid},
-            )
+        await myapi.request(
+            "post",
+            api._API_ENDPOINTS["home_load_chart"],  # pylint: disable=protected-access
+            json={"site_id": siteid},
         )
     )
 
 
-async def test_api_from_json_files(myapi) -> None:
+async def test_api_from_json_files(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     myapi.testDir(os.path.join(os.path.dirname(__file__), "examples", "example1"))
     await myapi.update_sites(fromFile=True)
+    await myapi.update_site_details(fromFile=True)
     await myapi.update_device_details(fromFile=True)
     _out(myapi.sites)
     _out(myapi.devices)
@@ -241,11 +225,15 @@ async def main() -> None:
                 CONSOLE.info("Received Login response:")
             else:
                 CONSOLE.info("Cached Login response:")
-            _out(myapi._login_response)  # show used login response for API reqests
+            _out(
+                myapi._login_response  # pylint: disable=protected-access
+            )  # show used login response for API reqests
 
         # test site api methods
         await myapi.update_sites()
+        await myapi.update_site_details()
         await myapi.update_device_details()
+        await myapi.update_device_energy(devtypes={api.SolixDeviceType.SOLARBANK.value})
         CONSOLE.info("System Overview:")
         _out(myapi.sites)
         CONSOLE.info("Device Overview:")
