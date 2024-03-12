@@ -245,7 +245,19 @@ class SolixParmType(Enum):
 class SolixDeviceCapacity(Enum):
     """Enumuration for Anker Solix device capacities in Wh by Part Number."""
 
-    A17C0 = 1600
+    A17C0 = 1600  # SOLIX E1600 Solarbank
+    A1720 = 256   # Anker PowerHouse 521 Portable Power Station
+    A1751 = 512   # Anker PowerHouse 535 Portable Power Station
+    A1760 = 1024  # Anker PowerHouse 555 Portable Power Station
+    A1770 = 1229  # Anker PowerHouse 757 Portable Power Station
+    A1771 = 1229  # SOLIX F1200 Portable Power Station
+    A1780 = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767)
+    A1780_1 = 2048  # Expansion Battery for F2000
+    A1790 = 3840  # SOLIX F3800 Portable Power Station
+    A1790_1 = 3840  # SOLIX BP3800 Expansion Battery for F3800
+    A1753 = 768   # SOLIX C800 Portable Power Station
+    A1761 = 1056  # SOLIX C1000 Portable Power Station
+    A17C1 = 1056  # SOLIX C1000 Expansion Battery
 
 
 class SolixDefaults(Enum):
@@ -1104,6 +1116,9 @@ class AnkerSolixApi:
         and it updates just the nested site_details dictionary in the sites dictionary.
         """
         self._logger.debug("Updating Sites Details")
+        # Fetch unread account messages once and put in site details for all sites
+        self._logger.debug("Getting unread messages indicator")
+        await self.get_message_unread(fromFile=fromFile)
         for site_id, site in self.sites.items():
             # Fetch details that only work for site admins
             if site.get("site_admin", False):
@@ -2163,4 +2178,8 @@ class AnkerSolixApi:
             )
         else:
             resp = await self.request("get", _API_ENDPOINTS["get_message_unread"])
-        return resp.get("data", {})
+        # save unread msg flag in each known site
+        data = resp.get("data", {})
+        for siteId in self.sites:
+            self._update_site(siteId, data)
+        return data
