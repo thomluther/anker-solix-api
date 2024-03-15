@@ -151,6 +151,7 @@ _API_ENDPOINTS = {
     "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
     "get_message": "power_service/v1/get_message",  # get list of max Messages from certain time, last_time format unknown
     "get_upgrade_record": "power_service/v1/app/get_upgrade_record",  # get list of firmware update history
+    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # get mqtt server and certificates, not explored or used
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -188,6 +189,15 @@ _API_ENDPOINTS = {
     'power_service/v1/del_message',
     'power_service/v1/product_categories',  # GET method to list all supported products with details and web picture links
     'power_service/v1/product_accessories',  # GET method to list all supported products accessories with details and web picture links
+    'app/devicemanage/update_relate_device_info',
+    'app/cloudstor/get_app_up_token_general',
+    'app/logging/get_device_logging',
+    'app/devicerelation/up_alias_name',  # Update Alias name of device? Fails with (10003) Failed to request
+    'app/devicerelation/un_relate_and_unbind_device',
+    'app/devicerelation/relate_device',
+
+
+
 
 
 Structure of the JSON response for an API Login Request:
@@ -246,8 +256,8 @@ class SolixDeviceCapacity(Enum):
     """Enumuration for Anker Solix device capacities in Wh by Part Number."""
 
     A17C0 = 1600  # SOLIX E1600 Solarbank
-    A1720 = 256   # Anker PowerHouse 521 Portable Power Station
-    A1751 = 512   # Anker PowerHouse 535 Portable Power Station
+    A1720 = 256  # Anker PowerHouse 521 Portable Power Station
+    A1751 = 512  # Anker PowerHouse 535 Portable Power Station
     A1760 = 1024  # Anker PowerHouse 555 Portable Power Station
     A1770 = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771 = 1229  # SOLIX F1200 Portable Power Station
@@ -255,7 +265,7 @@ class SolixDeviceCapacity(Enum):
     A1780_1 = 2048  # Expansion Battery for F2000
     A1790 = 3840  # SOLIX F3800 Portable Power Station
     A1790_1 = 3840  # SOLIX BP3800 Expansion Battery for F3800
-    A1753 = 768   # SOLIX C800 Portable Power Station
+    A1753 = 768  # SOLIX C800 Portable Power Station
     A1761 = 1056  # SOLIX C1000 Portable Power Station
     A17C1 = 1056  # SOLIX C1000 Expansion Battery
 
@@ -263,11 +273,13 @@ class SolixDeviceCapacity(Enum):
 class SolixDefaults(Enum):
     """Enumuration for Anker Solix defaults to be used."""
 
-    MIN_PRESET = 50
-    DEF_PRESET = 100
-    MAX_PRESET = 800
+    PRESET_MIN = 50
+    PRESET_MAX = 800
+    PRESET_DEF = 100
     ALLOW_DISCHARGE = True
-    CHARGE_PRIORITY = 80
+    CHARGE_PRIORITY_MIN = 0
+    CHARGE_PRIORITY_MAX = 100
+    CHARGE_PRIORITY_DEF = 80
 
 
 class SolixDeviceStatus(Enum):
@@ -628,12 +640,50 @@ class AnkerSolixApi:
                             for x in ("brand_id", "model_img", "version", "ota_status")
                             if x in keylist
                         ]:
-                            value.pop(key)
+                            value.pop(key,None)
                         device.update({"solar_info": dict(value)})
                     # schedule is currently a site wide setting. However, we save this with device details to retain info across site updates
                     # When individual device schedules are support in future, this info is needed per device anyway
                     elif key in ["schedule"] and isinstance(value, dict) and value:
                         device.update({"schedule": dict(value)})
+                        # default active presets to None
+                        device.pop("preset_system_output_power",None)
+                        device.pop("preset_allow_discharge",None)
+                        device.pop("preset_charge_priority",None)
+                        # get actual presets from current slot
+                        now = datetime.now().time().replace(microsecond=0)
+                        # set now to new daytime if close to end of day
+                        if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
+                            now = datetime.strptime("00:00", "%H:%M").time()
+                        for slot in value.get("ranges") or []:
+                            with contextlib.suppress(ValueError):
+                                start_time = datetime.strptime(
+                                    slot.get("start_time") or "00:00", "%H:%M"
+                                ).time()
+                                end_time = slot.get("end_time") or "00:00"
+                                # "24:00" format not supported in strptime
+                                if end_time == "24:00":
+                                    end_time = datetime.strptime(
+                                        "23:59:59", "%H:%M:%S"
+                                    ).time()
+                                else:
+                                    end_time = datetime.strptime(
+                                        end_time, "%H:%M"
+                                    ).time()
+                                if start_time <= now < end_time:
+                                    device.update(
+                                        {
+                                            "preset_system_output_power": (
+                                                slot.get("appliance_loads") or [{}]
+                                            )[0].get("power"),
+                                            "preset_allow_discharge": slot.get(
+                                                "turn_on"
+                                            ),
+                                            "preset_charge_priority": slot.get(
+                                                "charge_priority"
+                                            ),
+                                        }
+                                    )
 
                     # inverter specific keys
                     elif key in ["generate_power"]:
@@ -1105,7 +1155,7 @@ class AnkerSolixApi:
         # recycle device list and remove devices no longer used in sites
         rem_devices = [dev for dev in self.devices if dev not in act_devices]
         for dev in rem_devices:
-            self.devices.pop(dev)
+            self.devices.pop(dev,None)
         return self.sites
 
     async def update_site_details(self, fromFile: bool = False) -> dict:
@@ -1828,6 +1878,10 @@ class AnkerSolixApi:
                 await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
             ).get("home_load_data") or {}
         # fast quit if nothing to change
+        if not str(charge_prio).isdigit():
+            charge_prio = None
+        if not str(preset).isdigit():
+            preset = None
         if preset is None and discharge is None and charge_prio is None:
             return True
         now = datetime.now().time().replace(microsecond=0)
@@ -1839,11 +1893,11 @@ class AnkerSolixApi:
         if (min_load := str(schedule.get("min_load"))).isdigit():
             min_load = int(min_load)
         else:
-            min_load = SolixDefaults.MIN_PRESET.value
+            min_load = SolixDefaults.PRESET_MIN.value
         if (max_load := str(schedule.get("max_load"))).isdigit():
             max_load = int(max_load)
         else:
-            max_load = SolixDefaults.MAX_PRESET.value
+            max_load = SolixDefaults.PRESET_MAX.value
         for slot in schedule.get("ranges") or []:
             with contextlib.suppress(ValueError):
                 start_time = datetime.strptime(
@@ -1858,13 +1912,26 @@ class AnkerSolixApi:
                 if all_day or start_time <= now < end_time:
                     if preset is not None:
                         (slot.get("appliance_loads") or [{}])[0].update(
-                            {"power": int(preset)}
+                            {
+                                "power": min(
+                                    max(int(preset), min_load),
+                                    max_load,
+                                )
+                            }
                         )
                     if discharge is not None:
                         slot.update({"turn_on": discharge})
                     if charge_prio is not None:
                         slot.update(
-                            {"charge_priority": min(max(int(charge_prio), 0), 100)}
+                            {
+                                "charge_priority": min(
+                                    max(
+                                        int(charge_prio),
+                                        SolixDefaults.CHARGE_PRIORITY_MIN.value,
+                                    ),
+                                    SolixDefaults.CHARGE_PRIORITY_MAX.value,
+                                )
+                            }
                         )
             # loookup additional device SNs in schedule for device schedule update later in device details dict
             if len(new_ranges) == 0:
@@ -1879,11 +1946,11 @@ class AnkerSolixApi:
         # If no slot defined, set defaults for new all day slot
         if len(new_ranges) == 0:
             if preset is None:
-                preset = SolixDefaults.DEF_PRESET.value
+                preset = SolixDefaults.PRESET_DEF.value
             if discharge is None:
                 discharge = SolixDefaults.ALLOW_DISCHARGE.value
             if charge_prio is None:
-                charge_prio = SolixDefaults.CHARGE_PRIORITY.value
+                charge_prio = SolixDefaults.CHARGE_PRIORITY_DEF.value
             slot = {
                 "start_time": "00:00",
                 "end_time": "24:00",
@@ -1891,30 +1958,32 @@ class AnkerSolixApi:
                 "appliance_loads": [
                     {
                         "power": min(
-                            max(int(preset), SolixDefaults.MIN_PRESET.value),
-                            SolixDefaults.MAX_PRESET.value,
+                            max(int(preset), min_load),
+                            max_load,
                         ),
                     }
                 ],
-                "charge_priority": min(max(int(charge_prio), 0), 100),
+                "charge_priority": min(
+                    max(
+                        int(charge_prio),
+                        SolixDefaults.CHARGE_PRIORITY_MIN.value,
+                    ),
+                    SolixDefaults.CHARGE_PRIORITY_MAX.value,
+                ),
             }
             new_ranges.append(slot)
         self._logger.debug(
             "Ranges to apply: %s",
             new_ranges,
         )
-        # Make the Api call and check for return code
+        # Make the Api call and check for return code, the set call will also update api dict
         # NOTE: set_device_load does not seem to be usable yet for changing the home load
         schedule.update({"ranges": new_ranges})
-        if not await self.set_device_parm(
+        return await self.set_device_parm(
             siteId=siteId,
             paramData=schedule,
             deviceSn=deviceSn,
-        ):
-            return False
-        # update the data in api dict
-        await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
-        return True
+        )
 
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False
@@ -1950,7 +2019,7 @@ class AnkerSolixApi:
             for key in [
                 x for x in ("img_url", "bt_ble_id", "link_time") if x in keylist
             ]:
-                fitting.pop(key)
+                fitting.pop(key,None)
             fittings[fitting.get("device_sn")] = fitting
         self._update_dev({"device_sn": deviceSn, "fittings": fittings})
         return data
