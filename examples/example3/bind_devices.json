@@ -4,10 +4,10 @@
   "data": {
     "data": [
       {
-        "device_sn": "Y2T19B29T9HQT209",
+        "device_sn": "SE0QPSV3WXDDXN8G",
         "product_code": "A17C0",
-        "bt_ble_id": "E1:FC:F9:AF:B3:6D",
-        "bt_ble_mac": "E1FCF9AFB36D",
+        "bt_ble_id": "EA:7A:AD:9B:60:BD",
+        "bt_ble_mac": "EA7AAD9B60BD",
         "device_name": "Solarbank E1600",
         "alias_name": "Solarbank E1600",
         "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
@@ -23,8 +23,29 @@
         "device_sw_version": "v1.5.6",
         "has_manual": false,
         "hes_data": null
+      },
+      {
+        "device_sn": "1OVQCE1LTA8QITV5",
+        "product_code": "A1761",
+        "bt_ble_id": "95:F7:0F:1F:CE:E2",
+        "bt_ble_mac": "95F70F1FCEE2",
+        "device_name": "SOLIX C1000(X)",
+        "alias_name": "SOLIX C1000(X)",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/01/17/iot-admin/b4VVnVyVA7KkQTQR/picl_A1761_normal.png",
+        "link_time": 1709980538,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.3.2",
+        "has_manual": true,
+        "hes_data": null
       }
     ]
   },
-  "trace_id": "c1cd9aea0c0e387feb0dccaf4858f85d"
+  "trace_id": "a1a461ed0ea2bb9ec79ecab2347e97f9"
 }
