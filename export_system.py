@@ -415,7 +415,6 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
 
-
             CONSOLE.info("\nExporting site rules...")
             export(
                 os.path.join(folder, "site_rules.json"),
@@ -424,9 +423,10 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
             CONSOLE.info("Exporting message unread status...")
             export(
                 os.path.join(folder, "message_unread.json"),
-                await myapi.request("get", api._API_ENDPOINTS["get_message_unread"], json={}),
+                await myapi.request(
+                    "get", api._API_ENDPOINTS["get_message_unread"], json={}
+                ),
             )
-
 
             # update the api dictionaries from exported files to use randomized input data
             # this is more efficient and allows validation of randomized data in export files

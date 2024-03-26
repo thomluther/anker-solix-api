@@ -46,7 +46,7 @@ async def test_api_methods(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(await myapi.get_scene_info(siteId=siteid))
     _out(await myapi.get_wifi_list(siteId=siteid))
     _out(await myapi.get_solar_info(solarbankSn=devicesn))
-    _out(await myapi.get_device_parm(siteId=siteid, paramType="4"))
+    _out(await myapi.get_device_parm(siteId=siteid))
 
     _out(
         await myapi.get_power_cutoff(

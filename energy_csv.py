@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""Example exec module to use the Anker API for export of daily Solarbank
-Energy Data.
+"""Example exec module to use the Anker API for export of daily Solarbank Energy Data.
 
 This method will prompt for the Anker account details if not pre-set in the
 header.  Then you can specify a start day and the number of days for data
@@ -17,15 +16,14 @@ will be exported into a csv file.
 
 import asyncio
 import csv
+from datetime import datetime
 import json
 import logging
 import sys
-from datetime import datetime
 
 from aiohttp import ClientSession
-
-import common
 from api import api
+import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))

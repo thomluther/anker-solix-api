@@ -1,7 +1,4 @@
-# -*- mode: python: coding: utf-8 -*-
-"""
-a collection of helper functions for pyscripts
-"""
+"""A collection of helper functions for pyscripts."""
 import getpass
 import logging
 import os
@@ -17,9 +14,7 @@ _CREDENTIALS = {
 
 
 def user():
-    """
-    Get anker account user
-    """
+    """Get anker account user."""
     if _CREDENTIALS.get("USER"):
         return _CREDENTIALS["USER"]
     CONSOLE.info("\nEnter Anker Account credentials:")
@@ -30,9 +25,7 @@ def user():
 
 
 def password():
-    """
-    Get anker account password
-    """
+    """Get anker account password."""
     if _CREDENTIALS.get("PASSWORD"):
         return _CREDENTIALS["PASSWORD"]
     pwd = getpass.getpass("Password: ")
@@ -42,9 +35,7 @@ def password():
 
 
 def country():
-    """
-    Get anker account country
-    """
+    """Get anker account country."""
     if _CREDENTIALS.get("COUNTRY"):
         return _CREDENTIALS["COUNTRY"]
     countrycode = input("Country ID (e.g. DE): ")

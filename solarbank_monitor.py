@@ -121,6 +121,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             t4 = 9
             t5 = 6
             t6 = 10
+            t7 = 6
+            t8 = 6
             while True:
                 CONSOLE.info("\n")
                 now = datetime.now().astimezone()
@@ -142,7 +144,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if use_file:
                     CONSOLE.info("Using input source folder: %s", myapi.testDir())
                 if len(myapi.sites) > 0:
-                    update_time = ((next(iter(myapi.sites.values()))).get("solarbank_info") or {}).get("updated_time") or "Unknown"
+                    update_time = (
+                        (next(iter(myapi.sites.values()))).get("solarbank_info") or {}
+                    ).get("updated_time") or "Unknown"
                 else:
                     update_time = "Unknown"
                 CONSOLE.info(
@@ -160,7 +164,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     )
                     siteid = dev.get("site_id", "")
                     CONSOLE.info(f"{'Site ID':<{col1}}: {siteid}")
-                    for fsn, fitting in (dev.get('fittings') or {}).items():
+                    for fsn, fitting in (dev.get("fittings") or {}).items():
                         CONSOLE.info(
                             f"{'Accessory':<{col1}}: {fitting.get('device_name',''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
                         )
@@ -206,15 +210,26 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
                             )
                             CONSOLE.info(
-                                f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Discharge':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}}"
+                                f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Discharge':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}}  Name"
                             )
                             # for slot in (data.get("home_load_data",{})).get("ranges",[]):
                             for slot in data.get("ranges", []):
                                 enabled = slot.get("turn_on")
                                 load = slot.get("appliance_loads", [])
                                 load = load[0] if len(load) > 0 else {}
+                                solarbanks = slot.get("device_power_loads", [])
+                                sb1 = str(
+                                    solarbanks[0].get("power")
+                                    if len(solarbanks) > 0
+                                    else "---"
+                                )
+                                sb2 = str(
+                                    solarbanks[1].get("power")
+                                    if len(solarbanks) > 1
+                                    else "---"
+                                )
                                 CONSOLE.info(
-                                    f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}}"
+                                    f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}}  {str(load.get('name',''))}"
                                 )
                     elif devtype == "inverter":
                         upgrade = dev.get("auto_upgrade")
@@ -234,7 +249,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                     CONSOLE.info("")
                     CONSOLE.debug(json.dumps(myapi.devices, indent=2))
-                for sec in range(0, REFRESH):
+                for sec in range(REFRESH):
                     now = datetime.now().astimezone()
                     if sys.stdin is sys.__stdin__:
                         print(  # noqa: T201
