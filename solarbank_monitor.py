@@ -118,7 +118,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             t1 = 2
             t2 = 5
             t3 = 5
-            t4 = 9
+            t4 = 6
             t5 = 6
             t6 = 10
             t7 = 6
@@ -210,7 +210,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
                             )
                             CONSOLE.info(
-                                f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Discharge':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}}  Name"
+                                f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}}  Name"
                             )
                             # for slot in (data.get("home_load_data",{})).get("ranges",[]):
                             for slot in data.get("ranges", []):
