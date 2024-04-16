@@ -894,7 +894,7 @@ class AnkerSolixApi:
 
     async def _wait_delay(self, delay: float = None) -> None:
         """Wait at least for the defined Api request delay or for the provided delay in seconds since the last request occured."""
-        if delay is not None and isinstance(delay, float):
+        if delay is not None and isinstance(delay, (float,int)):
             delay = min(
                 SolixDefaults.REQUEST_DELAY_MAX,
                 max(SolixDefaults.REQUEST_DELAY_MIN, delay),
