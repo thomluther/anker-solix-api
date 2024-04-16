@@ -82,9 +82,14 @@ async def main() -> None:
                             filename = f"daily_energy_{daystr}.csv"
                     except ValueError:
                         return False
+                    # delay requests, limit appears to be around 25 per minute
+                    if numdays > 25:
+                        myapi.requestDelay(2.5)
+                    else:
+                        myapi.requestDelay(.3)
                     CONSOLE.info(
-                        "Queries may take up to %s seconds...please wait...",
-                        numdays * daytotals + 2,
+                        "Queries may take up to %s seconds with %.3f seconds delay...please wait...",
+                        round((numdays * daytotals + 1) * myapi.requestDelay()),myapi.requestDelay()
                     )
                     data = await myapi.energy_daily(
                         siteId=device.get("site_id"),

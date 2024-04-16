@@ -27,6 +27,10 @@ class RequestError(AnkerSolixError):
     """Request error."""
 
 
+class RequestLimitError(AnkerSolixError):
+    """Request Limit exceeded error."""
+
+
 class VerifyCodeError(AnkerSolixError):
     """Verify code error."""
 
@@ -70,6 +74,7 @@ class RetryExceeded(AnkerSolixError):
 ERRORS: dict[int, type[AnkerSolixError]] = {
     401: AuthorizationError,
     403: AuthorizationError,
+    429: RequestLimitError,
     997: ConnectError,
     998: NetworkError,
     999: ServerError,
@@ -86,14 +91,17 @@ ERRORS: dict[int, type[AnkerSolixError]] = {
     26084: TokenKickedOutError,
     26108: InvalidCredentialsError,
     26156: InvalidCredentialsError,
+    26161: RequestError,
     100053: RetryExceeded,
 }
 
 
-def raise_error(data: dict) -> None:
-    """Raise the appropriate error based upon a response code."""
-    code = data.get("code", -1)
-    if code in [0]:
+def raise_error(data: dict, prefix: str = "Anker Api Error") -> None:
+    """Raise the appropriate Api error based upon a response code in json data."""
+    if isinstance(data, dict) and "code" in data:
+        # json dict, get code for server response
+        code = int(data.get("code"))
+    else:
         return
-    cls = ERRORS.get(code, AnkerSolixError)
-    raise cls(f'({code}) {data.get("msg","Error msg not found")}')
+    if error := ERRORS.get(code) or (AnkerSolixError if code >= 10000 else None):
+        raise error(f'({code}) {prefix}: {data.get("msg","Error msg not found")}')

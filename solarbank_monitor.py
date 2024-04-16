@@ -248,6 +248,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             "Neither Solarbank nor Inverter device, further details will be skipped"
                         )
                     CONSOLE.info("")
+                    CONSOLE.info("Api Requests: %s", myapi.request_count)
                     CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                 for sec in range(REFRESH):
                     now = datetime.now().astimezone()

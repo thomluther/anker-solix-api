@@ -1,6 +1,6 @@
 [project]
 name = "Anker-Solix-Api"
-version = "1.5.0"
+version = "1.8.0"
 description = "Python library for Anker Solix Power devices (Solarbank, Inverter etc)"
 readme = "README.md"
 requires-python = ">=3.11"

@@ -25,7 +25,6 @@ import os
 import random
 import string
 import sys
-import time
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
@@ -141,7 +140,6 @@ def export(
     """Save dict data to given file."""
     if not d:
         d = {}
-    time.sleep(1)  # central delay between multiple requests
     if len(d) == 0:
         CONSOLE.info("WARNING: File %s not saved because JSON is empty", filename)
         return
@@ -208,6 +206,8 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
             # Ensure to use local subfolder
             folder = os.path.join(os.path.dirname(__file__), "exports", folder)
             os.makedirs(folder, exist_ok=True)
+            # define minimum delay in seconds between requests
+            myapi.requestDelay(0.5)
 
             # first update sites and devices in API object
             CONSOLE.info("\nQuerying site information...")

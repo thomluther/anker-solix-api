@@ -7,6 +7,7 @@ pip install aiohttp
 
 from __future__ import annotations
 
+from asyncio import sleep
 from base64 import b64encode
 import contextlib
 import copy
@@ -256,6 +257,18 @@ class SolixParmType(Enum):
 
 
 @dataclass(frozen=True)
+class ApiCategories:
+    """Dataclass to specify supported Api categorties for regular Api cache refresh cycles."""
+
+    site_price: str = "site_price"
+    device_auto_upgrade: str = "device_auto_upgrade"
+    solarbank_energy: str = "solarbank_energy"
+    solarbank_fittings: str = "solarbank_fittings"
+    solarbank_cutoff: str = "solarbank_cutoff"
+    solarbank_solar_info: str = "solarbank_solar_info"
+
+
+@dataclass(frozen=True)
 class SolixDeviceCapacity:
     """Dataclass for Anker Solix device capacities in Wh by Part Number."""
 
@@ -282,11 +295,12 @@ class SolixDeviceCapacity:
 class SolixDeviceCategory:
     """Dataclass for Anker Solix device types by Part Number to be used for standalone/unbound device categorization."""
 
+    # Solarbanks
     A17C0: str = SolixDeviceType.SOLARBANK.value  # SOLIX E1600 Solarbank
-
+    # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
-
+    # Portable Power Stations (PPS)
     A1720: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 521 Portable Power Station
@@ -310,9 +324,9 @@ class SolixDeviceCategory:
     )  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
-
+    # Home Power Panels
     A17B1: str = SolixDeviceType.POWERPANEL.value  # SOLIX Home Power Panel
-
+    # Power Cooler
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
     A17A2: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 50
@@ -322,13 +336,20 @@ class SolixDeviceCategory:
 class SolixDefaults:
     """Dataclass for Anker Solix defaults to be used."""
 
+    # Output Power presets for Solarbank schedule timeslot settings
     PRESET_MIN: int = 0
     PRESET_MAX: int = 800
     PRESET_DEF: int = 100
+    # Export Switch preset for Solarbank schedule timeslot settings
     ALLOW_EXPORT: bool = True
+    # Charge Priority limit preset for Solarbank schedule timeslot settings
     CHARGE_PRIORITY_MIN: int = 0
     CHARGE_PRIORITY_MAX: int = 100
     CHARGE_PRIORITY_DEF: int = 80
+    # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
+    REQUEST_DELAY_MIN: float = 0.0
+    REQUEST_DELAY_MAX: float = 5.0
+    REQUEST_DELAY_DEF: float = 0.3
 
 
 class SolixDeviceStatus(Enum):
@@ -363,9 +384,45 @@ class SolarbankTimeslot:
 
     start_time: datetime
     end_time: datetime
-    appliance_load: int | None = None  # mapped to appliance_loads setting using a default 50% share for dual solarbank setups
+    appliance_load: int | None = (
+        None  # mapped to appliance_loads setting using a default 50% share for dual solarbank setups
+    )
     allow_export: bool | None = None  # mapped to the turn_on boolean
     charge_priority_limit: int | None = None  # mapped to charge_priority setting
+
+
+class RequestCounter:
+    """Counter for datetime entries in last minute and last hour."""
+
+    def __init__(
+        self,
+    ) -> None:
+        """Initialize."""
+        self.elements: list = []
+
+    def __str__(self) -> str:
+        """Print the counters."""
+        return f"{self.last_hour()} last hour, {self.last_minute()} last minute"
+
+    def add(self, request_time: datetime = datetime.now()) -> None:
+        """Add new timestamp to end of counter."""
+        self.elements.append(request_time)
+        # limit the counter entries to 1 hour when adding new
+        self.recycle()
+
+    def recycle(self, last_time: datetime = datetime.now() - timedelta(hours=1)) -> None:
+        """Remove oldest timestamps from beginning of counter until last_time is reached, default is 1 hour ago."""
+        self.elements = [x for x in self.elements if x > last_time]
+
+    def last_minute(self) -> int:
+        """Get numnber of timestamps for last minute."""
+        last_time = datetime.now() - timedelta(minutes=1)
+        return len([x for x in self.elements if x > last_time])
+
+    def last_hour(self) -> int:
+        """Get numnber of timestamps for last minute."""
+        last_time = datetime.now() - timedelta(hours=1)
+        return len([x for x in self.elements if x > last_time])
 
 
 class AnkerSolixApi:
@@ -420,10 +477,15 @@ class AnkerSolixApi:
         self._token_expiration: datetime | None = None
         self._login_response: dict = {}
         self.mask_credentials: bool = True
+        self.encrypt_body: bool = False
+        self.request_count: RequestCounter = RequestCounter()
+        self._request_delay: float = SolixDefaults.REQUEST_DELAY_DEF
+        self._last_request_time: datetime | None = None
 
         # Define Encryption for password, using ECDH assymetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
         # uncompressed public key from EU Anker server in the format 04 [32 byte x vlaue] [32 byte y value]
-        # TODO(2): COM Anker server public key usage must still be validated
+        # Both, the EU and COM Anker server public key is the same and login response is provided for both upon an authentication request
+        # However, if country ID assignment is to wrong server, no sites or devices will be listed for the authenticated account.
         self._api_public_key_hex = "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076"
         self._curve = (
             ec.SECP256R1()
@@ -515,13 +577,12 @@ class AnkerSolixApi:
                         ),
                     )
                     return data
-            return {}
         except OSError as err:
             self._logger.error(
                 "ERROR: Failed to load JSON from file %s", masked_filename
             )
             self._logger.error(err)
-            return {}
+        return {}
 
     def _saveToFile(self, filename: str, data: dict = None) -> bool:
         """Save json data to given file for testing."""
@@ -810,10 +871,43 @@ class AnkerSolixApi:
 
     def logLevel(self, level: int = None) -> int:
         """Get or set the logger log level."""
-        if level:
+        if level is not None and isinstance(level, int):
             self._logger.setLevel(level)
             self._logger.info("Set log level to: %s", level)
         return self._logger.getEffectiveLevel()
+
+    def requestDelay(self, delay: float = None) -> float:
+        """Get or set the api request delay in seconds."""
+        if (
+            delay is not None
+            and isinstance(delay, (float,int))
+            and delay != self._request_delay
+        ):
+            self._request_delay = min(
+                SolixDefaults.REQUEST_DELAY_MAX,
+                max(SolixDefaults.REQUEST_DELAY_MIN, delay),
+            )
+            self._logger.info(
+                "Set api request delay to %.3f seconds", self._request_delay
+            )
+        return self._request_delay
+
+    async def _wait_delay(self, delay: float = None) -> None:
+        """Wait at least for the defined Api request delay or for the provided delay in seconds since the last request occured."""
+        if delay is not None and isinstance(delay, float):
+            delay = min(
+                SolixDefaults.REQUEST_DELAY_MAX,
+                max(SolixDefaults.REQUEST_DELAY_MIN, delay),
+            )
+        else:
+            delay = self._request_delay
+        if isinstance(self._last_request_time, datetime):
+            await sleep(
+                max(
+                    0,
+                    delay - (datetime.now() - self._last_request_time).total_seconds(),
+                )
+            )
 
     async def async_authenticate(self, restart: bool = False) -> bool:
         """Authenticate with server and get an access token. If restart is not enforced, cached login data may be used to obtain previous token."""
@@ -945,6 +1039,26 @@ class AnkerSolixApi:
         if self._token:
             mergedHeaders.update({"x-auth-token": self._token})
             mergedHeaders.update({"gtoken": self._gtoken})
+        if self.encrypt_body:
+            # TODO(#70): Test and Support optional encryption for body
+            # Unknowns: Which string is signed? Method + Request?
+            # How does the signing work?
+            # What is the key-ident? Ident of the shared secret?
+            # What is request-once?
+            # Is the separate timestamp relevant for encryption?
+            pass
+            # Extra Api header arguments used by the mobile App for request encryption
+            # Response will return encrypted boy and a signature
+            # mergedHeaders.update({
+            #     "x-replay-info": "replay",
+            #     "x-encryption-info": "algo_ecdh",
+            #     "x-signature": "",  # 32 Bit hex
+            #     "x-request-once": "",  # 16 Bit hex
+            #     "x-key-ident": "",  # 16 Bit hex
+            #     "x-request-ts": str(
+            #         int(systime.mktime(datetime.now().timetuple()) * 1000)
+            #     ),  # Unix Timestamp in ms as string
+            # })
 
         self._logger.debug("Request Url: %s %s", method.upper(), url)
         self._logger.debug(
@@ -959,44 +1073,67 @@ class AnkerSolixApi:
         else:
             self._logger.debug("Request Body: %s", json)
         body_text = ""
+        # enforce configured delay between any subsequent request
+        await self._wait_delay()
         async with self._session.request(
             method, url, headers=mergedHeaders, json=json
         ) as resp:
             try:
+                self._last_request_time = datetime.now()
+                self.request_count.add(self._last_request_time)
+                self._logger.debug(
+                    "%s request %s %s response received", self.nickname, method, url
+                )
+                # print response headers
+                self._logger.debug("Response Headers: %s", resp.headers)
                 # get first the body text for usage in error detail logging if necessary
                 body_text = await resp.text()
-                resp.raise_for_status()
-                data: dict = await resp.json(content_type=None)
+                data = {}
+                resp.raise_for_status() # any response status >= 400
+                if (data := await resp.json(content_type=None)) and self.encrypt_body:
+                    # TODO(#70): Test and Support optional encryption for body
+                    # data dict has to be decoded when encrypted
+                    # if signature := data.get("signature"):
+                    #     pass
+                    pass
+                if not data:
+                    self._logger.error("Response Text: %s", body_text)
+                    raise ClientError(f"No data response while requesting {endpoint}")
+
                 if endpoint == _API_LOGIN:
                     self._logger.debug(
-                        "Request Response: %s",
+                        "Response Data: %s",
                         self.mask_values(
                             data, "user_id", "auth_token", "email", "geo_key"
                         ),
                     )
                 else:
-                    self._logger.debug("Request Response: %s", data)
-
-                if not data:
-                    self._logger.error("Response Text: %s", body_text)
-                    raise ClientError(f"No data response while requesting {endpoint}")
-
-                errors.raise_error(data)  # check the response code in the data
-                if endpoint != _API_LOGIN:
+                    self._logger.debug("Response Data: %s", data)
                     self._retry_attempt = False  # reset retry flag only when valid token received and not another login request
+
+                errors.raise_error(data)  # check the Api response status code in the data
 
                 # valid response at this point, mark login and return data
                 self._loggedIn = True
-                return data
+                return data  # noqa: TRY300
 
             except (
                 ClientError
-            ) as err:  # Exception from ClientSession based on standard response codes
-                self._logger.error("Request Error: %s", err)
+            ) as err:  # Exception from ClientSession based on standard response status codes
+                self._logger.error("Api Request Error: %s", err)
                 self._logger.error("Response Text: %s", body_text)
-                if "401" in str(err) or "403" in str(err):
+                # Prepare data dict for Api error lookup
+                if not data:
+                    data = {}
+                if not hasattr(data,"code"):
+                    data["code"] = resp.status
+                if not hasattr(data,"msg"):
+                    data["msg"] = body_text
+                if resp.status in [401,403]:
                     # Unauthorized or forbidden request
                     if self._retry_attempt:
+                        errors.raise_error(data, prefix=f"Login failed for user {self._email}")
+                        # catch error if Api code not defined
                         raise errors.AuthorizationError(
                             f"Login failed for user {self._email}"
                         ) from err
@@ -1005,36 +1142,21 @@ class AnkerSolixApi:
                         return await self.request(
                             method, endpoint, headers=headers, json=json
                         )
-                    self._logger.error("Login failed for user %s", self._email)
-                    raise errors.AuthorizationError(
-                        f"Login failed for user {self._email}"
-                    ) from err
+                    self._logger.error("Re-Login failed for user %s", self._email)
+                elif resp.status in [429]:
+                    # Too Many Requests, add stats to message
+                    errors.raise_error(data, prefix=f"Too Many Requests: {self.request_count}")
+                else:
+                    # raise Anker Solix error if code is known
+                    errors.raise_error(data)
+                # raise Client error otherwise
                 raise ClientError(
-                    f"There was an error while requesting {endpoint}: {err}"
-                ) from err
-            except (
-                errors.InvalidCredentialsError,
-                errors.TokenKickedOutError,
-            ) as err:  # Exception for API specific response codes
-                self._logger.error("API ERROR: %s", err)
-                self._logger.error("Response Text: %s", body_text)
-                if self._retry_attempt:
-                    raise errors.AuthorizationError(
-                        f"Login failed for user {self._email}"
-                    ) from err
-                self._logger.warning("Login failed, retrying authentication")
-                if await self.async_authenticate(restart=True):
-                    return await self.request(
-                        method, endpoint, headers=headers, json=json
-                    )
-                self._logger.error("Login failed for user %s", self._email)
-                raise errors.AuthorizationError(
-                    f"Login failed for user {self._email}"
+                    f"Api Request Error: {err}", f"response={body_text}"
                 ) from err
             except errors.AnkerSolixError as err:  # Other Exception from API
-                self._logger.error("ANKER API ERROR: %s", err)
+                self._logger.error("%s", err)
                 self._logger.error("Response Text: %s", body_text)
-                raise err
+                raise
 
     async def update_sites(self, fromFile: bool = False) -> dict:
         """Get the latest info for all accessible sites and update class site and device variables.
@@ -1066,9 +1188,8 @@ class AnkerSolixApi:
         sites = await self.get_site_list(fromFile=fromFile)
         self._site_devices = set()
         for site in sites.get("site_list", []):
-            if site.get("site_id"):
+            if myid := site.get("site_id"):
                 # Update site info
-                myid = site.get("site_id")
                 mysite = self.sites.get(myid, {})
                 siteInfo = mysite.get("site_info", {})
                 siteInfo.update(site)
@@ -1104,7 +1225,7 @@ class AnkerSolixApi:
                         solarbank = dict(solarbank).copy()
                         solarbank.update({"alias_name": solarbank.pop("device_name")})
                     # work around for system and device output presets, which are not set correctly and cannot be queried with load schedule for shared accounts
-                    if not solarbank.get("set_load_power"):
+                    if not str(solarbank.get("set_load_power")).isdigit():
                         total_preset = str(mysite.get("retain_load", "")).replace(
                             "W", ""
                         )
@@ -1143,6 +1264,14 @@ class AnkerSolixApi:
                     if sn:
                         self._site_devices.add(sn)
                         sb_charges[sn] = charge_calc
+                        # as time progressed, update actual schedule slot presets from a cached schedule if available
+                        if schedule := (self.devices.get(sn, {})).get("schedule"):
+                            self._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "schedule": schedule,
+                                }
+                            )
                 # adjust calculated SB charge to match total
                 if len(sb_charges) == len(sb_list) and str(sb_total_charge).isdigit():
                     sb_total_charge = int(sb_total_charge)
@@ -1219,13 +1348,18 @@ class AnkerSolixApi:
         self.sites = new_sites
         return self.sites
 
-    async def update_site_details(self, fromFile: bool = False) -> dict:
+    async def update_site_details(
+        self, fromFile: bool = False, exclude: set = None
+    ) -> dict:
         """Get the latest updates for additional site related details updated less frequently.
 
         Most of theses requests return data only when user has admin rights for sites owning the devices.
         To limit API requests, this update site details method should be called less frequently than update site method,
         and it updates just the nested site_details dictionary in the sites dictionary.
         """
+        # define excluded categories to skip for queries
+        if not exclude:
+            exclude = set()
         self._logger.debug("Updating Sites Details")
         # Fetch unread account messages once and put in site details for all sites
         self._logger.debug("Getting unread messages indicator")
@@ -1234,12 +1368,13 @@ class AnkerSolixApi:
             # Fetch details that only work for site admins
             if site.get("site_admin", False):
                 # Fetch site price and CO2 settings
-                self._logger.debug("Getting price and CO2 settings for site")
-                await self.get_site_price(siteId=site_id, fromFile=fromFile)
+                if {ApiCategories.site_price} - exclude:
+                    self._logger.debug("Getting price and CO2 settings for site")
+                    await self.get_site_price(siteId=site_id, fromFile=fromFile)
         return self.sites
 
     async def update_device_details(
-        self, fromFile: bool = False, devtypes: set = None
+        self, fromFile: bool = False, exclude: set = None
     ) -> dict:
         """Get the latest updates for additional device info updated less frequently.
 
@@ -1247,17 +1382,18 @@ class AnkerSolixApi:
         To limit API requests, this update device details method should be called less frequently than update site method,
         which will also update most device details as found in the site data response.
         """
-        # define allowed device types to query, default to all
-        if not devtypes:
-            devtypes = {d.value for d in SolixDeviceType}
+        # define excluded device types or categories to skip for queries
+        if not exclude:
+            exclude = set()
         self._logger.debug("Updating Device Details")
         # Fetch firmware version of device
         # This response will also contain unbound / standalone devices not added to a site
         self._logger.debug("Getting bind devices")
         await self.get_bind_devices(fromFile=fromFile)
         # Get the setting for effective automated FW upgrades
-        self._logger.debug("Getting OTA settings")
-        await self.get_auto_upgrade(fromFile=fromFile)
+        if {ApiCategories.device_auto_upgrade} - exclude:
+            self._logger.debug("Getting OTA settings")
+            await self.get_auto_upgrade(fromFile=fromFile)
         # Fetch other relevant device information that requires site id and/or SN
         site_wifi: dict[str, list[dict | None]] = {}
         for sn, device in self.devices.items():
@@ -1284,18 +1420,20 @@ class AnkerSolixApi:
                     if 0 < wifi_index <= len(wifi_list):
                         device.update(wifi_list[wifi_index - 1])
 
-                # Fetch device type specific details, if device type should be queried
+                # Fetch device type specific details, if device type not excluded
 
-                if dev_Type in ({SolixDeviceType.SOLARBANK.value} & devtypes):
+                if dev_Type in ({SolixDeviceType.SOLARBANK.value} - exclude):
                     # Fetch active Power Cutoff setting for solarbanks
-                    self._logger.debug("Getting Power Cutoff settings for device")
-                    await self.get_power_cutoff(
-                        siteId=site_id, deviceSn=sn, fromFile=fromFile
-                    )
+                    if {ApiCategories.solarbank_cutoff} - exclude:
+                        self._logger.debug("Getting Power Cutoff settings for device")
+                        await self.get_power_cutoff(
+                            siteId=site_id, deviceSn=sn, fromFile=fromFile
+                        )
 
                     # Fetch defined inverter details for solarbanks
-                    self._logger.debug("Getting inverter settings for device")
-                    await self.get_solar_info(solarbankSn=sn, fromFile=fromFile)
+                    if {ApiCategories.solarbank_solar_info} - exclude:
+                        self._logger.debug("Getting inverter settings for device")
+                        await self.get_solar_info(solarbankSn=sn, fromFile=fromFile)
 
                     # Fetch schedule for device types supporting it
                     self._logger.debug("Getting schedule details for device")
@@ -1304,10 +1442,11 @@ class AnkerSolixApi:
                     )
 
                     # Fetch device fittings for device types supporting it
-                    self._logger.debug("Getting fittings for device")
-                    await self.get_device_fittings(
-                        siteId=site_id, deviceSn=sn, fromFile=fromFile
-                    )
+                    if {ApiCategories.solarbank_fittings} - exclude:
+                        self._logger.debug("Getting fittings for device")
+                        await self.get_device_fittings(
+                            siteId=site_id, deviceSn=sn, fromFile=fromFile
+                        )
 
                 # update entry in devices
                 self.devices.update({sn: device})
@@ -1316,19 +1455,22 @@ class AnkerSolixApi:
 
         return self.devices
 
-    async def update_device_energy(self, devtypes: set = None) -> dict:
+    async def update_device_energy(self, exclude: set = None) -> dict:
         """Get the energy statistics for given device types from today and yesterday.
 
         Yesterday energy will be queried only once if not available yet, but not updated in subsequent refreshes.
         Energy data can also be fetched by shared accounts.
         """
         # define allowed device types to query, default to no energy data
-        if not devtypes:
-            devtypes = set()
+        if not exclude:
+            exclude = set()
         for sn, device in self.devices.items():
             site_id = device.get("site_id", "")
             dev_Type = device.get("type", "")
-            if dev_Type in ({SolixDeviceType.SOLARBANK.value} & devtypes):
+            if (
+                dev_Type in ({SolixDeviceType.SOLARBANK.value} - exclude)
+                and {ApiCategories.solarbank_energy} - exclude
+            ):
                 self._logger.debug("Getting Energy details for device")
                 energy = device.get("energy_details") or {}
                 today = datetime.today().strftime("%Y-%m-%d")
@@ -2607,8 +2749,6 @@ class AnkerSolixApi:
                 daylist = [startDay + timedelta(days=x) for x in range(numDays)]
                 for day in daylist:
                     daystr = day.strftime("%Y-%m-%d")
-                    if day != daylist[0]:
-                        systime.sleep(1)  # delay to avoid hammering API
                     resp = await self.energy_analysis(
                         siteId=siteId,
                         deviceSn=deviceSn,

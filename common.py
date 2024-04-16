@@ -1,4 +1,4 @@
-"""A collection of helper functions for pyscripts."""
+"""A collection of helper functions for pyscripts."""  # noqa: INP001
 import getpass
 import logging
 import os
