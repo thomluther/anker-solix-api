@@ -63,7 +63,9 @@ async def main() -> None:
             common.user(), common.password(), common.country(), websession, _LOGGER
         )
         await myapi.update_sites()
+        await myapi.update_site_details()
         await myapi.update_device_details()
+        await myapi.update_device_energy()
         print("System Overview:")
         print(json.dumps(myapi.sites, indent=2))
         print("Device Overview:")
@@ -78,14 +80,18 @@ if __name__ == "__main__":
         print(f"{type(err)}: {err}")
 ```
 
-The AnkerSolixApi class provides 2 main methods:
+The AnkerSolixApi class provides 4 main methods to query data and cache them into internal dictionaries:
 
 - `AnkerSolixApi.update_sites()` to query overview data for all accessible sites and store data in dictionaries `AnkerSolixApi.sites` and `AnkerSolixApi.devices` for quick access.
-  This method could be run in regular intervals (30sec or more) to fetch new data of the systems
-- `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query.
+  This method could be run in regular intervals (60sec or more) to fetch new data of the systems. Note that the system devices update the cloud data only once per minute, therefore less than 60 second intervals do not provide much benefit
+- `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query or for stand alone devices and store data in dictionary `AnkerSolixApi.devices`
   This method should be run less frequently since this will mostly fetch various device configuration settings and needs multiple queries.
   It currently is developped for Solarbank and Inverter devices only, further device types such as Portable Power Stations or Power Panels
   could be added once example data is available.
+- `AnkerSolixApi.update_site_details()` to query further settings for the defined site (power system) and store data in dictionary `AnkerSolixApi.sites` for quick access.
+  This method should be run less frequently since this will mostly fetch various site configuration settings and needs multiple queries.
+- `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices and store data in dictionary `AnkerSolixApi.devices` for quick access.
+  This method should be run less frequently since this will fetch 2-4 queries per device. Currently only solarbank devices are supported, but it was noticed, that the energy statistics endpoint (maybe each endpoint) is limited to 25-30 queries per minute.
 
 Check out `test_api.py` and other python executable tools that may help to leverage and explore the Api for your Anker power system.
 The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains actual example exports with json files using anonymized responses of the `export_system.py` module giving you an idea of how various Api responses look like. (Note that the Solarbank was switched off when the data were pulled, so some fields may be empty)
@@ -115,6 +121,10 @@ Upon successfull authentication, you can specify a subfolder for the exported JS
 Optionally you can specify whether personalized information in the response data should be randomized in the files, like SNs, Site IDs, Trace IDs etc.
 You can review the response files afterwards. They can be used as examples for dedicated data extraction from the devices.
 Optionally the AnkerSolixApi class can use the json files for debugging and testing on various system outputs.
+
+**Note**:
+
+You should preferrably run the export_system with the owner account of the site. Otherwise only limited information can be exported by shared accounts due to access permissions.
 
 ## solarbank_monitor.py
 
