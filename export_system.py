@@ -50,7 +50,8 @@ def randomize(val, key: str = "") -> str:
     if not RANDOMIZE:
         return str(val)
     randomstr = RANDOMDATA.get(val, "")
-    if not randomstr and val:
+    # generate new random string
+    if not randomstr and val and key not in ["device_name"]:
         if "_sn" in key or key in ["sn"]:
             randomstr = "".join(
                 random.choices(string.ascii_uppercase + string.digits, k=len(val))
@@ -68,7 +69,7 @@ def randomize(val, key: str = "") -> str:
             if ":" in val:
                 RANDOMDATA.update({temp: randomstr})  # save also key value without :
                 randomstr = ":".join(
-                    a + b for a, b in zip(randomstr[::2], randomstr[1::2])
+                    a + b for a, b in zip(randomstr[::2], randomstr[1::2], strict=False)
                 )
         elif "_id" in key:
             for part in val.split("-"):
@@ -102,7 +103,7 @@ def randomize(val, key: str = "") -> str:
             # default randomize format
             randomstr = "".join(random.choices(string.ascii_letters, k=len(val)))
         RANDOMDATA.update({val: randomstr})
-    return randomstr
+    return randomstr or str(val)
 
 
 def check_keys(data):
@@ -125,6 +126,7 @@ def check_keys(data):
                 "wifi_name",
                 "home_load_data",
                 "param_data",
+                "device_name"
             ]
         ) or k in ["sn"]:
             data[k] = randomize(v, k)
@@ -133,7 +135,7 @@ def check_keys(data):
 
 def export(
     filename: str,
-    d: dict = None,
+    d: dict | None = None,
     skip_randomize: bool = False,
     randomkeys: bool = False,
 ) -> None:
@@ -329,6 +331,22 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting site upgrade record...")
+                try:
+                    export(
+                        os.path.join(
+                            folder,
+                            f"get_upgrade_record_{randomize(siteId,'site_id')}.json",
+                        ),
+                        await myapi.request(
+                            "post",
+                            api._API_ENDPOINTS["get_upgrade_record"],
+                            json={"site_id": siteId, "type": 2},
+                        ),
+                    )  # works only for site owners
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
             for sn, device in myapi.devices.items():
                 CONSOLE.info(
                     "\nExporting device specific data for device %s SN %s...",
@@ -409,6 +427,19 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                             "post",
                             api._API_ENDPOINTS["get_device_load"],
                             json={"site_id": siteId, "device_sn": sn},
+                        ),
+                    )  # works only for site owners
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting OTA update info...")
+                try:
+                    export(
+                        os.path.join(folder, f"ota_update_{randomize(sn,'_sn')}.json"),
+                        await myapi.request(
+                            "post",
+                            api._API_ENDPOINTS["get_ota_update"],
+                            json={"device_sn": sn, "insert_sn": ""},
                         ),
                     )  # works only for site owners
                 except (ClientError, errors.AnkerSolixError):
