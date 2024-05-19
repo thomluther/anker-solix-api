@@ -280,5 +280,5 @@ if __name__ == "__main__":
             CONSOLE.warning("\nAborted!")
     except KeyboardInterrupt:
         CONSOLE.warning("\nAborted!")
-    except Exception as exception:  # pylint: disable=broad-exception-caught
+    except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(exception), exception)
