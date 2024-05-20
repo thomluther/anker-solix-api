@@ -2019,7 +2019,7 @@ class AnkerSolixApi:
         siteId: str,
         deviceSn: str,
         loadData: dict,
-    ) -> dict:
+    ) -> bool:
         """Set device home load (e.g. solarbank schedule).
 
         Example input for system with single solarbank:
@@ -2111,7 +2111,7 @@ class AnkerSolixApi:
         paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
         command: int = 17,
         deviceSn: str | None = None,
-    ) -> dict:
+    ) -> bool:
         """Set device parameters (e.g. solarbank schedule).
 
         command: Must be 17 for solarbank schedule.
@@ -2268,6 +2268,16 @@ class AnkerSolixApi:
                 power_mode = None
         else:
             power_mode = None
+            # For single solarbank systems, use a given device load as appliance load if no appliance load provided. Ignore device loads otherwise
+            if dev_preset is not None:
+                preset = dev_preset if preset is None else preset
+                dev_preset = None
+            if insert_slot and insert_slot.device_load is not None:
+                insert_slot.appliance_load = insert_slot.device_load if insert_slot.appliance_load is None else insert_slot.appliance_load
+                insert_slot.device_load = None
+            if set_slot and set_slot.device_load is not None:
+                set_slot.appliance_load = set_slot.device_load if set_slot.appliance_load is None else set_slot.appliance_load
+                set_slot.device_load = None
         # Adjust provided appliance limits
         # appliance limits depend on device load setting and other device setting. Must be reduced for individual slots if necessary
         if preset is not None:

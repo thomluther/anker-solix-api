@@ -123,6 +123,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             t6 = 10
             t7 = 6
             t8 = 6
+            t9 = 5
             while True:
                 CONSOLE.info("\n")
                 now = datetime.now().astimezone()
@@ -210,7 +211,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
                             )
                             CONSOLE.info(
-                                f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}}  Name"
+                                f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}} {'Mode':>{t9}} Name"
                             )
                             # for slot in (data.get("home_load_data",{})).get("ranges",[]):
                             for slot in data.get("ranges", []):
@@ -229,7 +230,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     else "---"
                                 )
                                 CONSOLE.info(
-                                    f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}}  {str(load.get('name',''))}"
+                                    f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {str(slot.get('power_setting_mode','-')):^{t9}} {str(load.get('name',''))}"
                                 )
                     elif devtype == "inverter":
                         upgrade = dev.get("auto_upgrade")

@@ -119,7 +119,7 @@ async def main() -> None:
             CONSOLE.info("No accepted Solarbank device found.")
             return False
 
-    except Exception as err:  # pylint: disable=broad-exception-caught
+    except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.error("%s: %s", type(err), err)
         return False
 
@@ -129,5 +129,5 @@ if __name__ == "__main__":
     try:
         if not asyncio.run(main()):
             CONSOLE.warning("Aborted!")
-    except Exception as exception:  # pylint: disable=broad-exception-caught
+    except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(exception), exception)

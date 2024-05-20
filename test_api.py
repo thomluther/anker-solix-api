@@ -99,37 +99,37 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _system = list(myapi.sites.values())[0]
     siteid = _system["site_info"]["site_id"]
     devicesn = _system["solarbank_info"]["solarbank_list"][0]["device_sn"]
-    _out(await myapi.request("post", api._API_ENDPOINTS["homepage"], json={}))  # pylint: disable=protected-access
-    _out(await myapi.request("post", api._API_ENDPOINTS["site_list"], json={}))  # pylint: disable=protected-access
-    _out(await myapi.request("post", api._API_ENDPOINTS["bind_devices"], json={}))  # pylint: disable=protected-access
-    _out(await myapi.request("post", api._API_ENDPOINTS["user_devices"], json={}))  # pylint: disable=protected-access
-    _out(await myapi.request("post", api._API_ENDPOINTS["charging_devices"], json={}))  # pylint: disable=protected-access
-    _out(await myapi.request("post", api._API_ENDPOINTS["get_auto_upgrade"], json={}))  # pylint: disable=protected-access
+    _out(await myapi.request("post", api._API_ENDPOINTS["homepage"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api._API_ENDPOINTS["site_list"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api._API_ENDPOINTS["bind_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api._API_ENDPOINTS["user_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api._API_ENDPOINTS["charging_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api._API_ENDPOINTS["get_auto_upgrade"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["site_detail"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["site_detail"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["wifi_list"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["wifi_list"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_site_price"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["get_site_price"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["solar_info"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["solar_info"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "solarbank_sn": devicesn,
@@ -139,7 +139,7 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_cutoff"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["get_cutoff"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -149,7 +149,7 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_device_fittings"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["get_device_fittings"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -159,7 +159,7 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_device_load"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["get_device_load"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -169,7 +169,7 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_device_parm"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["get_device_parm"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "param_type": "4",
@@ -179,14 +179,14 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["compatible_process"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["compatible_process"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"solarbank_sn": devicesn},
         )
     )
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["home_load_chart"],  # pylint: disable=protected-access
+            api._API_ENDPOINTS["home_load_chart"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"site_id": siteid},
         )
     )
@@ -226,7 +226,7 @@ async def main() -> None:
             else:
                 CONSOLE.info("Cached Login response:")
             _out(
-                myapi._login_response  # pylint: disable=protected-access
+                myapi._login_response  # pylint: disable=protected-access  # noqa: SLF001
             )  # show used login response for API reqests
 
         # test site api methods
@@ -253,5 +253,5 @@ async def main() -> None:
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except Exception as err:  # pylint: disable=broad-exception-caught
+    except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(err), err)
