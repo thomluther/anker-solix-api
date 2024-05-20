@@ -397,7 +397,9 @@ class SolarbankTimeslot:
     appliance_load: int | None = (
         None  # mapped to appliance_loads setting using a default 50% share for dual solarbank setups
     )
-    device_load: int | None = None
+    device_load: int | None = (
+        None  # mapped to device load setting of provided solarbank serial
+    )
     allow_export: bool | None = None  # mapped to the turn_on boolean
     charge_priority_limit: int | None = None  # mapped to charge_priority setting
 
@@ -1495,9 +1497,7 @@ class AnkerSolixApi:
                         )
                     # Fetch available OTA update for solarbanks
                     self._logger.debug("Getting OTA update info for device")
-                    await self.get_ota_update(
-                        deviceSn=sn, fromFile=fromFile
-                    )
+                    await self.get_ota_update(deviceSn=sn, fromFile=fromFile)
                     # Fetch defined inverter details for solarbanks
                     if {ApiCategories.solarbank_solar_info} - exclude:
                         self._logger.debug("Getting inverter settings for device")
@@ -2168,12 +2168,21 @@ class AnkerSolixApi:
         "min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}}
         """
         # fast quit if nothing to change
-        if not str(charge_prio).isdigit():
-            charge_prio = None
-        if not str(preset).isdigit():
-            preset = None
-        if not str(dev_preset).isdigit():
-            dev_preset = None
+        charge_prio = (
+            int(charge_prio)
+            if str(charge_prio).isdigit() or isinstance(charge_prio, int | float)
+            else None
+        )
+        preset = (
+            int(preset)
+            if str(preset).isdigit() or isinstance(preset, int | float)
+            else None
+        )
+        dev_preset = (
+            int(dev_preset)
+            if str(dev_preset).isdigit() or isinstance(dev_preset, int | float)
+            else None
+        )
         if (
             preset is None
             and dev_preset is None
@@ -2273,10 +2282,18 @@ class AnkerSolixApi:
                 preset = dev_preset if preset is None else preset
                 dev_preset = None
             if insert_slot and insert_slot.device_load is not None:
-                insert_slot.appliance_load = insert_slot.device_load if insert_slot.appliance_load is None else insert_slot.appliance_load
+                insert_slot.appliance_load = (
+                    insert_slot.device_load
+                    if insert_slot.appliance_load is None
+                    else insert_slot.appliance_load
+                )
                 insert_slot.device_load = None
             if set_slot and set_slot.device_load is not None:
-                set_slot.appliance_load = set_slot.device_load if set_slot.appliance_load is None else set_slot.appliance_load
+                set_slot.appliance_load = (
+                    set_slot.device_load
+                    if set_slot.appliance_load is None
+                    else set_slot.appliance_load
+                )
                 set_slot.device_load = None
         # Adjust provided appliance limits
         # appliance limits depend on device load setting and other device setting. Must be reduced for individual slots if necessary
@@ -3029,7 +3046,9 @@ class AnkerSolixApi:
             )
         data = resp.get("data") or {}
         # update devices dict with new ota data
-        self._update_dev({"device_sn": deviceSn, "is_ota_update": data.get("is_ota_update")})
+        self._update_dev(
+            {"device_sn": deviceSn, "is_ota_update": data.get("is_ota_update")}
+        )
         return data
 
     async def check_upgrade_record(
