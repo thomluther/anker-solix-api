@@ -834,18 +834,17 @@ class AnkerSolixApi:
                                         end_time, "%H:%M"
                                     ).time()
                                 if start_time <= now < end_time:
+                                    preset_power = (slot.get("appliance_loads") or [{}])[0].get("power")
                                     device.update(
                                         {
-                                            "preset_system_output_power": (
-                                                slot.get("appliance_loads") or [{}]
-                                            )[0].get("power"),
+                                            "preset_system_output_power": preset_power,
                                             "preset_allow_export": slot.get("turn_on"),
                                             "preset_charge_priority": slot.get(
                                                 "charge_priority"
                                             ),
                                         }
                                     )
-                                    # add presets for advanced power mode
+                                    # add presets for dual solarbank setups, default to None if schedule does not support new keys yet
                                     power_mode = slot.get("power_setting_mode")
                                     dev_presets = slot.get("device_power_loads") or [{}]
                                     dev_power = next(
@@ -856,12 +855,9 @@ class AnkerSolixApi:
                                                 if d.get("device_sn") == sn
                                             ]
                                         ),
-                                        "",
+                                        None,
                                     )
-                                    if (
-                                        isinstance(dev_power, int | float)
-                                        and len(dev_presets) > 1
-                                    ):
+                                    if cnt > 1:
                                         # adjust device power value for default share which is always using 50%, also for single solarbank setups
                                         device.update(
                                             {
