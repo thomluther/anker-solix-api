@@ -29,9 +29,7 @@ import common
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 # _LOGGER.setLevel(logging.DEBUG)    # enable for debug output
-CONSOLE: logging.Logger = logging.getLogger("console")
-CONSOLE.addHandler(logging.StreamHandler(sys.stdout))
-CONSOLE.setLevel(logging.INFO)
+CONSOLE: logging.Logger = common.CONSOLE
 
 REFRESH = 30  # default refresh interval in seconds
 INTERACTIVE = True
@@ -230,7 +228,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     else "---"
                                 )
                                 CONSOLE.info(
-                                    f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {str(slot.get('power_setting_mode','-')):^{t9}} {str(load.get('name',''))}"
+                                    f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {str(slot.get('power_setting_mode') or '-'):^{t9}} {str(load.get('name',''))}"
                                 )
                     elif devtype == "inverter":
                         upgrade = dev.get("auto_upgrade")

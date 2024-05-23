@@ -1,0 +1,71 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "DQTGB647Q061",
+        "product_code": "A5143",
+        "bt_ble_id": "A7DF7F67F01B",
+        "bt_ble_mac": "A7DF7F67F01B",
+        "device_name": "MI80 Microinverter(BLE)",
+        "alias_name": "Microlino",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png",
+        "link_time": 1707581381737,
+        "wifi_online": false,
+        "wifi_name": "wifi-network-1",
+        "relate_type": [
+          "ble"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v0.0.1",
+        "has_manual": false,
+        "hes_data": null
+      },
+      {
+        "device_sn": "M4HZ9WIT677F634H",
+        "product_code": "A17C0",
+        "bt_ble_id": "492326389903A28C1BBFBA754B7C1D11",
+        "bt_ble_mac": "9DACB2D2BC48",
+        "device_name": "Solarbank E1600",
+        "alias_name": "SB1",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+        "link_time": 1707039543652,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.5.6",
+        "has_manual": false,
+        "hes_data": null
+      },
+      {
+        "device_sn": "F5AAWDBMU83C3TWF",
+        "product_code": "A17C0",
+        "bt_ble_id": "E2D6EF3D7CEB24FD53A5EE3598BE0DB7",
+        "bt_ble_mac": "AAB7E04E2CF9",
+        "device_name": "Solarbank E1600",
+        "alias_name": "SB2",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+        "link_time": 1707039423762,
+        "wifi_online": true,
+        "wifi_name": "",
+        "relate_type": [
+          "ble",
+          "wifi"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v1.5.6",
+        "has_manual": false,
+        "hes_data": null
+      }
+    ]
+  },
+  "trace_id": "47bffdb0a0ea02cefde34dafad0a9c59"
+}

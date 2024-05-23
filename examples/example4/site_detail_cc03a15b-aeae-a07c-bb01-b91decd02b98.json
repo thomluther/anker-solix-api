@@ -1,0 +1,69 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_info": {
+      "site_id": "cc03a15b-aeae-a07c-bb01-b91decd02b98",
+      "site_name": "Home",
+      "site_img": "",
+      "device_type_list": [
+        3
+      ],
+      "ms_type": 0,
+      "power_site_type": 2,
+      "is_allow_delete": false,
+      "support_device_models": [
+        "A17C0",
+        "A5143",
+        "A1771"
+      ],
+      "current_site_device_models": null
+    },
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [
+      {
+        "device_pn": "A17C0",
+        "device_sn": "W8Z0AY4TF8L03KMS",
+        "device_name": "PV Right",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+        "battery_power": "",
+        "bind_site_status": "",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "",
+        "wireless_type": "",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 1712077664,
+        "set_load_power": "",
+        "output_cutoff_data": 0,
+        "is_display": false
+      },
+      {
+        "device_pn": "A17C0",
+        "device_sn": "XGR9TZEI1N9OO8BN",
+        "device_name": "PV Left",
+        "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+        "battery_power": "",
+        "bind_site_status": "",
+        "charging_power": "",
+        "power_unit": "",
+        "charging_status": "",
+        "status": "",
+        "wireless_type": "",
+        "main_version": "",
+        "photovoltaic_power": "",
+        "output_power": "",
+        "create_time": 1712077664,
+        "set_load_power": "",
+        "output_cutoff_data": 0,
+        "is_display": false
+      }
+    ],
+    "powerpanel_list": []
+  },
+  "trace_id": "cc9cccc62ffe9ef407a23f9ccb6204c3"
+}

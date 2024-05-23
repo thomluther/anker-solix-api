@@ -153,8 +153,10 @@ _API_ENDPOINTS = {
     "get_upgrade_record": "power_service/v1/app/get_upgrade_record",  # get list of firmware update history
     "check_upgrade_record": "power_service/v1/app/check_upgrade_record",  # show an upgrade record for the device, types 1-3 show different info, only works for owner account
     "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
-    "get_message": "power_service/v1/get_message",  # get list of max Messages from certain time, last_time format unknown
-    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # get mqtt server and certificates, not explored or used
+    "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
+    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
+    "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
+    "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -169,7 +171,7 @@ _API_ENDPOINTS = {
     'power_service/v1/site/add_site_devices',
     'power_service/v1/site/delete_site_devices',
     'power_service/v1/site/update_site_devices',
-    'power_service/v1/site/get_addable_site_list,   # show to which defined site a given model type can be added
+    'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
@@ -190,8 +192,6 @@ _API_ENDPOINTS = {
     'power_service/v1/message_not_disturb',  # change do not disurb messages settings
     'power_service/v1/read_message',
     'power_service/v1/del_message',
-    'power_service/v1/product_categories',  # GET method to list all supported products with details and web picture links
-    'power_service/v1/product_accessories',  # GET method to list all supported products accessories with details and web picture links
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
     'app/logging/get_device_logging',
@@ -245,6 +245,7 @@ class SolixDeviceType(Enum):
     SYSTEM = "system"
     SOLARBANK = "solarbank"
     INVERTER = "inverter"
+    SMARTREADER = "smartreader"
     PPS = "pps"
     POWERPANEL = "powerpanel"
     POWERCOOLER = "powercooler"
@@ -280,6 +281,9 @@ class SolixDeviceCapacity:
     """Dataclass for Anker Solix device capacities in Wh by Part Number."""
 
     A17C0: int = 1600  # SOLIX E1600 Solarbank
+    A17C1: int = 1600  # SOLIX E1600 Solarbank 2 Pro
+    A17C1321: int = 1600  # SOLIX E1600 Solarbank 2 Expansion battery
+    A17C3: int = 1600  # SOLIX E1600 Solarbank 2 Plus
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1751: int = 512  # Anker PowerHouse 535 Portable Power Station
     A1753: int = 768  # SOLIX C800 Portable Power Station
@@ -287,12 +291,13 @@ class SolixDeviceCapacity:
     A1755: int = 768  # SOLIX C800X Portable Power Station
     A1760: int = 1024  # Anker PowerHouse 555 Portable Power Station
     A1761: int = 1056  # SOLIX C1000(X) Portable Power Station
-    A17C1: int = 1056  # SOLIX C1000 Expansion Battery
+    #A17C1: int = 1056  # SOLIX C1000 Expansion Battery # same PN as Solarbank 2?
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
     A1780: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1780_1: int = 2048  # Expansion Battery for F2000
+    A1780P: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767) with WLAN
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
@@ -304,9 +309,13 @@ class SolixDeviceCategory:
 
     # Solarbanks
     A17C0: str = SolixDeviceType.SOLARBANK.value  # SOLIX E1600 Solarbank
+    A17C1: str = SolixDeviceType.SOLARBANK.value  # SOLIX E1600 Solarbank 2 Pro
+    A17C3: str = SolixDeviceType.SOLARBANK.value  # SOLIX E1600 Solarbank 2 Plus
     # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
+    # Smart Reader
+    A17X7: str = SolixDeviceType.SMARTREADER.value  # SOLIX Smart Reader
     # Portable Power Stations (PPS)
     A1720: str = (
         SolixDeviceType.PPS.value
