@@ -198,10 +198,10 @@ _API_ENDPOINTS = {
     'app/devicerelation/up_alias_name',  # Update Alias name of device? Fails with (10003) Failed to request
     'app/devicerelation/un_relate_and_unbind_device',
     'app/devicerelation/relate_device',
-
-
-
-
+    'power_service/v1/app/device/get_device_attrs', # not found yet on server
+    'power_service/v1/app/device/set_device_attrs', # not found yet on server
+    'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
+    'power_service/v1/app/device/get_relate_belong' # shows belonging of given device
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -245,7 +245,7 @@ class SolixDeviceType(Enum):
     SYSTEM = "system"
     SOLARBANK = "solarbank"
     INVERTER = "inverter"
-    SMARTREADER = "smartreader"
+    SMARTMETER = "smartmeter"
     PPS = "pps"
     POWERPANEL = "powerpanel"
     POWERCOOLER = "powercooler"
@@ -278,7 +278,7 @@ class ApiCategories:
 
 @dataclass(frozen=True)
 class SolixDeviceCapacity:
-    """Dataclass for Anker Solix device capacities in Wh by Part Number."""
+    """Dataclass for Anker Solix device battery capacities in Wh by Part Number."""
 
     A17C0: int = 1600  # SOLIX E1600 Solarbank
     A17C1: int = 1600  # SOLIX E1600 Solarbank 2 Pro
@@ -314,8 +314,8 @@ class SolixDeviceCategory:
     # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
-    # Smart Reader
-    A17X7: str = SolixDeviceType.SMARTREADER.value  # SOLIX Smart Reader
+    # Smart Meter
+    A17X7: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter
     # Portable Power Stations (PPS)
     A1720: str = (
         SolixDeviceType.PPS.value
@@ -507,33 +507,34 @@ class AnkerSolixApi:
         self._last_request_time: datetime | None = None
 
         # Define Encryption for password, using ECDH assymetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
-        # uncompressed public key from EU Anker server in the format 04 [32 byte x vlaue] [32 byte y value]
+        # uncompressed public key from EU Anker server in the format 04 [32 byte x value] [32 byte y value]
         # Both, the EU and COM Anker server public key is the same and login response is provided for both upon an authentication request
         # However, if country ID assignment is to wrong server, no sites or devices will be listed for the authenticated account.
         self._api_public_key_hex = "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076"
-        self._curve = (
-            ec.SECP256R1()
-        )  # Encryption curve SECP256R1 (identical to prime256v1)
-        self._ecdh = ec.generate_private_key(
-            self._curve, default_backend()
-        )  # returns EllipticCurvePrivateKey
-        self._public_key = self._ecdh.public_key()  # returns EllipticCurvePublicKey
+        # Encryption curve SECP256R1 (identical to prime256v1)
+        self._curve = ec.SECP256R1()
+        # get EllipticCurvePrivateKey
+        self._ecdh = ec.generate_private_key(self._curve, default_backend())
+        # get EllipticCurvePublicKey
+        self._public_key = self._ecdh.public_key()
+        # get bytes of shared secret
         self._shared_key = self._ecdh.exchange(
             ec.ECDH(),
             ec.EllipticCurvePublicKey.from_encoded_point(
                 self._curve, bytes.fromhex(self._api_public_key_hex)
             ),
-        )  # returns bytes of shared secret
+        )
 
         # track active devices bound to any site
         self._site_devices: set = set()
 
-        # Define class variables saving the most recent site and device data
+        # reset class variables for saving the most recent site and device data (Api cache)
         self.nickname: str = ""
         self.sites: dict = {}
         self.devices: dict = {}
 
     def _md5(self, text: str) -> str:
+        """Return MD5 hash in hex for given string."""
         h = hashes.Hash(hashes.MD5())
         h.update(text.encode("utf-8"))
         return h.finalize().hex()
@@ -1111,7 +1112,7 @@ class AnkerSolixApi:
             # Is the separate timestamp relevant for encryption?
             pass
             # Extra Api header arguments used by the mobile App for request encryption
-            # Response will return encrypted boy and a signature
+            # Response will return encrypted body and a signature field
             # mergedHeaders.update({
             #     "x-replay-info": "replay",
             #     "x-encryption-info": "algo_ecdh",
@@ -2038,7 +2039,8 @@ class AnkerSolixApi:
             '"charge_priority":0,"power_setting_mode":1,"device_power_loads":[{"device_sn":"9JVB42LJK8J0P5RY","power":150}]}],'
             '"min_load":100,"max_load":800,"step":0,"is_charge_priority":0,"default_charge_priority":0,"is_zero_output_tips":1,"display_advanced_mode":0,"advanced_mode_min_load":0}'
         }
-        Attention: This method and endpoint actually accepts the inputs, but does not change anything. The set_device_parm endpoint may have to be used
+        Attention: This method and endpoint actually accepts the input data, but does not change anything on the solarbank.
+        The set_device_parm endpoint may have to be used. Eventually this method is used for Solarbank 2 since that will use a different schedule structure?
         """
         data = {
             "site_id": siteId,
@@ -2165,12 +2167,20 @@ class AnkerSolixApi:
         Optionally when set_slot SolarbankTimeslot is provided, the given slot will replace the existing schedule completely.
         When insert_slot SolarbankTimeslot is provided, the given slot will be incoorporated into existing schedule. Adjacent overlapping slot times will be updated and overlayed slots will be replaced.
 
-        Example schedule as provided via Api:
-        {{"ranges":[
+        Example schedules for Solarbank as provided via Api:
+        {"ranges":[
             {"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},
             {"id":0,"start_time":"08:30","end_time":"17:00","turn_on":false,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":100,"number":1}],"charge_priority":80},
             {"id":0,"start_time":"17:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":0}],
-        "min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}}
+        "min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}
+
+        Newer ranges structure with individual device power loads:
+        {"ranges":[
+            {"id":0,"start_time":"00:00","end_time":"08:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Custom","power":270,"number":1}],"charge_priority":10,
+                "power_setting_mode":1,"device_power_loads":[{"device_sn":"W8Z0AY4TF8L03KMS","power":135},{"device_sn":"XGR9TZEI1N9OO8BN","power":135}]},
+            {"id":0,"start_time":"08:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Custom","power":300,"number":1}],"charge_priority":10,
+                "power_setting_mode":2,"device_power_loads":[{"device_sn":"W8Z0AY4TF8L03KMS","power":100},{"device_sn":"XGR9TZEI1N9OO8BN","power":200}]}],
+        "min_load":100,"max_load":800,"step":0,"is_charge_priority":1,"default_charge_priority":80,"is_zero_output_tips":0,"display_advanced_mode":1,"advanced_mode_min_load":50}
         """
         # fast quit if nothing to change
         charge_prio = (
