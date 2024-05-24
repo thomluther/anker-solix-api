@@ -28,9 +28,7 @@ import common
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 # _LOGGER.setLevel(logging.DEBUG)    # enable for debug output
-CONSOLE: logging.Logger = logging.getLogger("console")
-CONSOLE.addHandler(logging.StreamHandler(sys.stdout))
-CONSOLE.setLevel(logging.INFO)
+CONSOLE: logging.Logger = common.CONSOLE
 
 
 async def main() -> None:
@@ -119,7 +117,7 @@ async def main() -> None:
             CONSOLE.info("No accepted Solarbank device found.")
             return False
 
-    except Exception as err:  # pylint: disable=broad-exception-caught
+    except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.error("%s: %s", type(err), err)
         return False
 
@@ -129,5 +127,5 @@ if __name__ == "__main__":
     try:
         if not asyncio.run(main()):
             CONSOLE.warning("Aborted!")
-    except Exception as exception:  # pylint: disable=broad-exception-caught
+    except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(exception), exception)

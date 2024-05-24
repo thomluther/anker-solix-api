@@ -34,9 +34,7 @@ import common
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 # _LOGGER.setLevel(logging.DEBUG)    # enable for debug output
-CONSOLE: logging.Logger = logging.getLogger("console")
-CONSOLE.addHandler(logging.StreamHandler(sys.stdout))
-CONSOLE.setLevel(logging.INFO)
+CONSOLE: logging.Logger = common.CONSOLE
 
 RANDOMIZE = True  # Global flag to save randomize decission
 RANDOMDATA = {}  # Global dict for randomized data, printed at the end
@@ -224,39 +222,39 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
             CONSOLE.info("\nExporting homepage...")
             export(
                 os.path.join(folder, "homepage.json"),
-                await myapi.request("post", api._API_ENDPOINTS["homepage"], json={}),
+                await myapi.request("post", api._API_ENDPOINTS["homepage"], json={}),  # noqa: SLF001
             )
             CONSOLE.info("Exporting site list...")
             export(
                 os.path.join(folder, "site_list.json"),
-                await myapi.request("post", api._API_ENDPOINTS["site_list"], json={}),
+                await myapi.request("post", api._API_ENDPOINTS["site_list"], json={}),  # noqa: SLF001
             )
             CONSOLE.info("Exporting bind devices...")
             export(
                 os.path.join(folder, "bind_devices.json"),
                 await myapi.request(
-                    "post", api._API_ENDPOINTS["bind_devices"], json={}
+                    "post", api._API_ENDPOINTS["bind_devices"], json={}  # noqa: SLF001
                 ),
             )  # shows only owner devices
             CONSOLE.info("Exporting user devices...")
             export(
                 os.path.join(folder, "user_devices.json"),
                 await myapi.request(
-                    "post", api._API_ENDPOINTS["user_devices"], json={}
+                    "post", api._API_ENDPOINTS["user_devices"], json={}  # noqa: SLF001
                 ),
             )  # shows only owner devices
             CONSOLE.info("Exporting charging devices...")
             export(
                 os.path.join(folder, "charging_devices.json"),
                 await myapi.request(
-                    "post", api._API_ENDPOINTS["charging_devices"], json={}
+                    "post", api._API_ENDPOINTS["charging_devices"], json={}  # noqa: SLF001
                 ),
             )  # shows only owner devices
             CONSOLE.info("Exporting auto upgrade settings...")
             export(
                 os.path.join(folder, "auto_upgrade.json"),
                 await myapi.request(
-                    "post", api._API_ENDPOINTS["get_auto_upgrade"], json={}
+                    "post", api._API_ENDPOINTS["get_auto_upgrade"], json={}  # noqa: SLF001
                 ),
             )  # shows only owner devices
             for siteId, site in myapi.sites.items():
@@ -266,7 +264,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                     os.path.join(folder, f"scene_{randomize(siteId,'site_id')}.json"),
                     await myapi.request(
                         "post",
-                        api._API_ENDPOINTS["scene_info"],
+                        api._API_ENDPOINTS["scene_info"],  # noqa: SLF001
                         json={"site_id": siteId},
                     ),
                 )
@@ -279,7 +277,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["site_detail"],
+                            api._API_ENDPOINTS["site_detail"],  # noqa: SLF001
                             json={"site_id": siteId},
                         ),
                     )
@@ -294,7 +292,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["wifi_list"],
+                            api._API_ENDPOINTS["wifi_list"],  # noqa: SLF001
                             json={"site_id": siteId},
                         ),
                     )  # works only for site owners
@@ -309,7 +307,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_site_price"],
+                            api._API_ENDPOINTS["get_site_price"],  # noqa: SLF001
                             json={"site_id": siteId},
                         ),
                     )  # works only for site owners
@@ -324,7 +322,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_device_parm"],
+                            api._API_ENDPOINTS["get_device_parm"],  # noqa: SLF001
                             json={"site_id": siteId, "param_type": "4"},
                         ),
                     )  # works only for site owners
@@ -340,7 +338,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_upgrade_record"],
+                            api._API_ENDPOINTS["get_upgrade_record"],  # noqa: SLF001
                             json={"site_id": siteId, "type": 2},
                         ),
                     )  # works only for site owners
@@ -365,7 +363,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                             ),
                             await myapi.request(
                                 "post",
-                                api._API_ENDPOINTS["solar_info"],
+                                api._API_ENDPOINTS["solar_info"],  # noqa: SLF001
                                 json={"solarbank_sn": sn},
                             ),
                         )
@@ -381,7 +379,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                             ),
                             await myapi.request(
                                 "post",
-                                api._API_ENDPOINTS["compatible_process"],
+                                api._API_ENDPOINTS["compatible_process"],  # noqa: SLF001
                                 json={"solarbank_sn": sn},
                             ),
                         )
@@ -397,7 +395,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_cutoff"],
+                            api._API_ENDPOINTS["get_cutoff"],  # noqa: SLF001
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
@@ -412,7 +410,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_device_fittings"],
+                            api._API_ENDPOINTS["get_device_fittings"],  # noqa: SLF001
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
@@ -425,7 +423,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         os.path.join(folder, f"device_load_{randomize(sn,'_sn')}.json"),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_device_load"],
+                            api._API_ENDPOINTS["get_device_load"],  # noqa: SLF001
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
@@ -438,7 +436,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         os.path.join(folder, f"ota_update_{randomize(sn,'_sn')}.json"),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_ota_update"],
+                            api._API_ENDPOINTS["get_ota_update"],  # noqa: SLF001
                             json={"device_sn": sn, "insert_sn": ""},
                         ),
                     )  # works only for site owners
@@ -449,13 +447,13 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
             CONSOLE.info("\nExporting site rules...")
             export(
                 os.path.join(folder, "site_rules.json"),
-                await myapi.request("post", api._API_ENDPOINTS["site_rules"], json={}),
+                await myapi.request("post", api._API_ENDPOINTS["site_rules"], json={}),  # noqa: SLF001
             )
             CONSOLE.info("Exporting message unread status...")
             export(
                 os.path.join(folder, "message_unread.json"),
                 await myapi.request(
-                    "get", api._API_ENDPOINTS["get_message_unread"], json={}
+                    "get", api._API_ENDPOINTS["get_message_unread"], json={}  # noqa: SLF001
                 ),
             )
 
@@ -509,5 +507,5 @@ if __name__ == "__main__":
             CONSOLE.info("Aborted!")
     except KeyboardInterrupt:
         CONSOLE.warning("Aborted!")
-    except Exception as exception:  # pylint: disable=broad-exception-caught
+    except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(exception), exception)
