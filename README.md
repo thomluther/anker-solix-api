@@ -94,7 +94,7 @@ The AnkerSolixApi class provides 4 main methods to query data and cache them int
   This method should be run less frequently since this will fetch 2-4 queries per device. Currently only solarbank devices are supported, but it was noticed, that the energy statistics endpoint (maybe each endpoint) is limited to 25-30 queries per minute.
 
 Check out `test_api.py` and other python executable tools that may help to leverage and explore the Api for your Anker power system.
-The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains actual example exports with json files using anonymized responses of the `export_system.py` module giving you an idea of how various Api responses look like. (Note that the Solarbank was switched off when the data were pulled, so some fields may be empty)
+The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains actual example exports with json files using anonymized responses of the `export_system.py` module giving you an idea of how various Api responses look like.
 Those json files can also be used to develop/debug the Api for system constellations not available to the developper.
 
 # AnkerSolixApi Tools
@@ -105,9 +105,15 @@ Those json files can also be used to develop/debug the Api for system constellat
 > pipenv run ./test_api.py
 ```
 
-Example exec module that can be used to explore and test AnkerSolixApi methods or direct enpoint requests with parameters.
-You can modify this module as required and hard code your credentials. Optionally you can put your credentials also in the api/credentials.py file.
-None of these is indexed and they are added to gitignore, so your local changes are not tracked for git updates/commits.
+Example exec module that can be used to explore and test AnkerSolixApi methods or direct enpoint requests with parameters. You can modify this module as required. Optionally you can create your own test file called `client.py` which is not indexed and added to gitignore, so your local changes are not tracked for git updates/commits.
+This allows you to code your credentials in the local file if you do not want to utilize the environment variables:
+```python
+_CREDENTIALS = {
+    "USER": os.getenv("ANKERUSER"),
+    "PASSWORD": os.getenv("ANKERPASSWORD"),
+    "COUNTRY": os.getenv("ANKERCOUNTRY"),
+}
+```
 
 ## export_system.py
 
@@ -116,7 +122,7 @@ None of these is indexed and they are added to gitignore, so your local changes 
 ```
 
 Example exec module to use the Anker Api for export of defined system data and device details.
-This module will prompt for the Anker account details if not pre-set in the header.
+This module will prompt for the Anker account details if not pre-set in the header or defined in environment variables.
 Upon successfull authentication, you can specify a subfolder for the exported JSON files received as Api query response, defaulting to your nick name
 Optionally you can specify whether personalized information in the response data should be randomized in the files, like SNs, Site IDs, Trace IDs etc.
 You can review the response files afterwards. They can be used as examples for dedicated data extraction from the devices.
@@ -134,7 +140,7 @@ You should preferrably run the export_system with the owner account of the site.
 
 Example exec module to use the Anker Api for continously querying and displaying important solarbank parameters.
 This module will can use real time data from your Anker account, or optionally use json files from your local examples or export folder.
-When using the real time option, it will prompt for the Anker account details if not pre-set in the header.
+When using the real time option, it will prompt for the Anker account details if not pre-set in the header or defined in environment variables.
 Upon successfull authentication, you will see the solarbank parameters displayed and refreshed at reqular interval.
 When using monitoring from local json file folder, they values will not change. But this option is useful to validate the api parsing with various system constellations.
 
