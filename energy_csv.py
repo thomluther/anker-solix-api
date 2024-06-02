@@ -31,7 +31,7 @@ _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 CONSOLE: logging.Logger = common.CONSOLE
 
 
-async def main() -> None:
+async def main() -> bool:
     """Run main to export energy history from cloud."""
     CONSOLE.info("Exporting daily Energy data for Anker Solarbank:")
     try:
@@ -55,16 +55,20 @@ async def main() -> None:
             CONSOLE.info("\nDevices: %s", len(myapi.devices))
             _LOGGER.debug(json.dumps(myapi.devices, indent=2))
 
+
+            queried_sites = set()
             for sn, device in myapi.devices.items():
-                if device.get("type") == "solarbank":
-                    CONSOLE.info("Found %s SN: %s", device.get("name"), sn)
+                if (site_id := device.get("site_id")) and site_id not in queried_sites and device.get("type") in ["solarbank","smartreader"]:
+                    queried_sites.add(site_id)
+                    site_name = (myapi.sites[site_id].get("site_info") or {}).get("site_name") or ""
+                    CONSOLE.info("Found valid device for site %s ID %s", site_name, site_id)
                     try:
                         daystr = input(
                             "\nEnter start day for daily energy data (yyyy-mm-dd) or enter to skip: "
                         )
                         if daystr == "":
                             CONSOLE.info(
-                                "Skipped SN: %s, checking for next Solarbank...", sn
+                                "Skipped site %s, checking for next site...", site_name
                             )
                             continue
                         startday = datetime.fromisoformat(daystr)
@@ -73,11 +77,12 @@ async def main() -> None:
                             "Do you want to include daily total data (e.g. solarbank charge) which require API query per day? (Y/N): "
                         )
                         daytotals = daytotals.upper() in ["Y", "YES", "TRUE", 1]
-                        filename = input(
-                            f"CSV filename for export (daily_energy_{daystr}.csv): "
+                        prefix = input(
+                            f"CSV filename prefix for export (daily_energy_{daystr}): "
                         )
-                        if filename == "":
-                            filename = f"daily_energy_{daystr}.csv"
+                        if prefix == "":
+                            prefix = f"daily_energy_{daystr}"
+                        filename = f"{prefix}_{site_name}.csv"
                     except ValueError:
                         return False
                     # delay requests, limit appears to be around 25 per minute
@@ -95,6 +100,7 @@ async def main() -> None:
                         startDay=startday,
                         numDays=numdays,
                         dayTotals=daytotals,
+                        devTypes={"solarbank","smartreader"}    # include all possible energy stats per site
                     )
                     _LOGGER.debug(json.dumps(data, indent=2))
                     # Write csv file
@@ -110,12 +116,10 @@ async def main() -> None:
                                 "\nCompleted: Successfully exported data to %s",
                                 filename,
                             )
-                        return True
-
-                    CONSOLE.info("No data received for device")
-                    return False
-            CONSOLE.info("No accepted Solarbank device found.")
-            return False
+                    else:
+                        CONSOLE.info("No data received for site %s ID %s", site_name, site_id)
+                        return False
+            return True
 
     except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.error("%s: %s", type(err), err)

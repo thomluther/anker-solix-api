@@ -443,6 +443,19 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting device attributes...")
+                try:
+                    export(
+                        os.path.join(folder, f"device_attrs_{randomize(sn,'_sn')}.json"),
+                        await myapi.request(
+                            "post",
+                            api._API_ENDPOINTS["get_device_attributes"],  # noqa: SLF001
+                            json={"device_sn": sn, "attributes": []}, # Not clear if empty attributes list will list all attributes if there are any
+                        ),
+                    )  # works only for site owners
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
 
             CONSOLE.info("\nExporting site rules...")
             export(
