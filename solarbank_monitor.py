@@ -23,8 +23,8 @@ import time
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api, errors
-import common
+from api import api, errors  # type: ignore  # noqa: PGH003
+import common  # type: ignore  # noqa: PGH003
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -64,6 +64,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
     ) + get_subfolders(os.path.join(os.path.dirname(__file__), "exports"))
     if INTERACTIVE:
         if exampleslist:
+            exampleslist.sort()
             CONSOLE.info("\nSelect the input source for the monitor:")
             CONSOLE.info("(0) Real time from Anker cloud")
             for idx, filename in enumerate(exampleslist, start=1):
@@ -85,7 +86,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
     try:
         async with ClientSession() as websession:
             myapi = api.AnkerSolixApi(
-                common.user(), common.password(), common.country(), websession, _LOGGER
+                "" if use_file else common.user(), "" if use_file else common.password(), "" if use_file else common.country(), websession, _LOGGER
             )
             if use_file:
                 # set the correct test folder for Api
@@ -180,23 +181,32 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
                         )
                         CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {str(dev.get('status','-'))}"
+                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
                         )
                         CONSOLE.info(
-                            f"{'Charge Status':<{col1}}: {dev.get('charging_status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {str(dev.get('charging_status','-'))}"
+                            f"{'Charge Status':<{col1}}: {dev.get('charging_status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('charging_status','-')!s}"
                         )
                         soc = f"{dev.get('battery_soc','---'):>4} %"
                         CONSOLE.info(
-                            f"{'State Of Charge':<{col1}}: {soc:<{col2}} {'Min SOC':<{col3}}: {str(dev.get('power_cutoff','--')):>4} %"
+                            f"{'State Of Charge':<{col1}}: {soc:<{col2}} {'Min SOC':<{col3}}: {dev.get('power_cutoff','--')!s:>4} %"
                         )
                         energy = f"{dev.get('battery_energy','----'):>4} Wh"
                         CONSOLE.info(
-                            f"{'Battery Energy':<{col1}}: {energy:<{col2}} {'Capacity':<{col3}}: {str(dev.get('battery_capacity','----')):>4} Wh"
+                            f"{'Battery Energy':<{col1}}: {energy:<{col2}} {'Capacity':<{col3}}: {dev.get('battery_capacity','----')!s:>4} Wh"
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(
                             f"{'Solar Power':<{col1}}: {dev.get('input_power',''):>4} {unit:<{col2-5}} {'Output Power':<{col3}}: {dev.get('output_power',''):>4} {unit}"
                         )
+                        # show each MPPT for Solarbank 2
+                        if "solar_power_1" in dev:
+                            CONSOLE.info(
+                                f"{'Solar Ch_1':<{col1}}: {dev.get('solar_power_1',''):>4} {unit:<{col2-5}} {'Solar Ch_2':<{col3}}: {dev.get('solar_power_2',''):>4} {unit}"
+                            )
+                            if "solar_power_3" in dev:
+                                CONSOLE.info(
+                                    f"{'Solar Ch_3':<{col1}}: {dev.get('solar_power_3',''):>4} {unit:<{col2-5}} {'Solar Ch_4':<{col3}}: {dev.get('solar_power_4',''):>4} {unit}"
+                                )
                         preset = dev.get("set_output_power") or "---"
                         site_preset = dev.get("set_system_output_power") or "---"
                         CONSOLE.info(
@@ -204,19 +214,18 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                         # update schedule with device details refresh and print it
                         if admin:
-                            data = dev.get("schedule", {})
+                            data = dev.get("schedule") or {}
                             CONSOLE.info(
                                 f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
                             )
                             CONSOLE.info(
                                 f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}} {'Mode':>{t9}} Name"
                             )
-                            # for slot in (data.get("home_load_data",{})).get("ranges",[]):
-                            for slot in data.get("ranges", []):
+                            for slot in data.get("ranges") or []:
                                 enabled = slot.get("turn_on")
-                                load = slot.get("appliance_loads", [])
+                                load = slot.get("appliance_loads") or []
                                 load = load[0] if len(load) > 0 else {}
-                                solarbanks = slot.get("device_power_loads", [])
+                                solarbanks = slot.get("device_power_loads") or []
                                 sb1 = str(
                                     solarbanks[0].get("power")
                                     if len(solarbanks) > 0
@@ -228,7 +237,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     else "---"
                                 )
                                 CONSOLE.info(
-                                    f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {str(slot.get('power_setting_mode') or '-'):^{t9}} {str(load.get('name',''))}"
+                                    f"{slot.get('id','')!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {slot.get('power_setting_mode') or '-'!s:^{t9}} {load.get('name','')!s}"
                                 )
                     elif devtype == "inverter":
                         upgrade = dev.get("auto_upgrade")
@@ -236,7 +245,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
                         )
                         CONSOLE.info(
-                            f"{'Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {str(dev.get('status','-'))}"
+                            f"{'Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(

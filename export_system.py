@@ -19,6 +19,7 @@ various system outputs.
 # pylint: disable=duplicate-code
 
 import asyncio
+from datetime import datetime, timedelta
 import json
 import logging
 import os
@@ -28,8 +29,8 @@ import sys
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api, errors
-import common
+from api import api, errors  # type: ignore  # noqa: PGH003
+import common  # type: ignore  # noqa: PGH003
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -345,6 +346,71 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting site energy data for solarbank...")
+                try:
+                    export(
+                        os.path.join(
+                            folder,
+                            f"energy_solarbank_{randomize(siteId,'site_id')}.json",
+                        ),
+                        await myapi.request(
+                            "post",
+                            api._API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                            json={"site_id": siteId, "device_sn": "", "type": "week", "device_type": "solarbank", "start_time": (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d"), "end_time": datetime.today().strftime("%Y-%m-%d")},
+                        ),
+                    )  # works also for site members
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting site energy data for solar_production...")
+                try:
+                    export(
+                        os.path.join(
+                            folder,
+                            f"energy_solar_production_{randomize(siteId,'site_id')}.json",
+                        ),
+                        await myapi.request(
+                            "post",
+                            api._API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                            json={"site_id": siteId, "device_sn": "", "type": "week", "device_type": "solar_production", "start_time": (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d"), "end_time": datetime.today().strftime("%Y-%m-%d")},
+                        ),
+                    )  # works also for site members
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting site energy data for home_usage...")
+                try:
+                    export(
+                        os.path.join(
+                            folder,
+                            f"energy_home_usage_{randomize(siteId,'site_id')}.json",
+                        ),
+                        await myapi.request(
+                            "post",
+                            api._API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                            json={"site_id": siteId, "device_sn": "", "type": "week", "device_type": "home_usage", "start_time": (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d"), "end_time": datetime.today().strftime("%Y-%m-%d")},
+                        ),
+                    )  # works also for site members
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting site energy data for grid...")
+                try:
+                    export(
+                        os.path.join(
+                            folder,
+                            f"energy_grid_{randomize(siteId,'site_id')}.json",
+                        ),
+                        await myapi.request(
+                            "post",
+                            api._API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                            json={"site_id": siteId, "device_sn": "", "type": "week", "device_type": "grid", "start_time": (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d"), "end_time": datetime.today().strftime("%Y-%m-%d")},
+                        ),
+                    )  # works also for site members
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
+
             for sn, device in myapi.devices.items():
                 CONSOLE.info(
                     "\nExporting device specific data for device %s SN %s...",
