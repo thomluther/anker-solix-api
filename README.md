@@ -90,11 +90,11 @@ The AnkerSolixApi class provides 4 main methods to query data and cache them int
   could be added once example data is available.
 - `AnkerSolixApi.update_site_details()` to query further settings for the defined site (power system) and store data in dictionary `AnkerSolixApi.sites` for quick access.
   This method should be run less frequently since this will mostly fetch various site configuration settings and needs multiple queries.
-- `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices and store data in dictionary `AnkerSolixApi.devices` for quick access.
-  This method should be run less frequently since this will fetch 2-4 queries per device. Currently only solarbank devices are supported, but it was noticed, that the energy statistics endpoint (maybe each endpoint) is limited to 25-30 queries per minute.
+- `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices from each site and store data in dictionary `AnkerSolixApi.sites` for quick access.
+  This method should be run less frequently since this will fetch 4-6 queries per site depending on found device types. With version 2.0.0 solar, solarbank and smartmeter devices are supported. However it was noticed, that the energy statistics endpoint (maybe each endpoint) is limited to 25-30 queries per minute.
 
 Check out `test_api.py` and other python executable tools that may help to leverage and explore the Api for your Anker power system.
-The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains actual example exports with json files using anonymized responses of the `export_system.py` module giving you an idea of how various Api responses look like.
+The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains actual or older example exports with json files using anonymized responses of the `export_system.py` module giving you an idea of how various Api responses look like.
 Those json files can also be used to develop/debug the Api for system constellations not available to the developper.
 
 # AnkerSolixApi Tools
@@ -154,12 +154,12 @@ Note: When the system owning account is used, more details for the solarbank can
 > pipenv run ./energy_csv.py
 ```
 
-Example exec module to use the Anker Api for export of daily Solarbank Energy Data.
+Example exec module to use the Anker Api for export of daily Energy Data.
 This method will prompt for the Anker account details if not pre-set in the header.
 Then you can specify a start day and the number of days for data extraction from the Anker Cloud.
-Note: The Solar production and Solarbank discharge can be queried across the full range. The solarbank
-charge however can be queried only as total for an interval (e.g. day). Therefore when solarbank charge
-data is also selected for export, an additional Api query per day is required.
+Note: The Solar production, Solarbank discharge, Smartmeter and Home usage can be queried across the full range each. The solarbank
+charge as well as smartmeter totals however can be queried only as total for an interval (e.g. day). Therefore when daily total
+data is also selected for export, 1-2 additional Api queries per day are required.
 The received daily values will be exported into a csv file.
 
 # Contributing
