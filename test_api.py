@@ -16,9 +16,7 @@ import common
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 # _LOGGER.setLevel(logging.DEBUG)    # enable for detailed API output
-CONSOLE: logging.Logger = logging.getLogger("console")
-CONSOLE.addHandler(logging.StreamHandler(sys.stdout))
-CONSOLE.setLevel(logging.INFO)
+CONSOLE: logging.Logger = common.CONSOLE
 
 TESTAUTHENTICATE = False
 TESTAPIMETHODS = False

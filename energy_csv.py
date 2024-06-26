@@ -19,11 +19,12 @@ import csv
 from datetime import datetime
 import json
 import logging
+import os
 import sys
 
 from aiohttp import ClientSession
-from api import api
-import common
+from api import api  # type: ignore  # noqa: PGH003
+import common  # type: ignore  # noqa: PGH003
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -31,7 +32,7 @@ _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 CONSOLE: logging.Logger = common.CONSOLE
 
 
-async def main() -> None:
+async def main() -> bool:
     """Run main to export energy history from cloud."""
     CONSOLE.info("Exporting daily Energy data for Anker Solarbank:")
     try:
@@ -52,70 +53,70 @@ async def main() -> None:
                 CONSOLE.info("NO INFO")
                 return False
             CONSOLE.info("OK")
-            CONSOLE.info("\nDevices: %s", len(myapi.devices))
-            _LOGGER.debug(json.dumps(myapi.devices, indent=2))
+            CONSOLE.info("\nSites: %s", len(myapi.sites))
+            _LOGGER.debug(json.dumps(myapi.sites, indent=2))
 
-            for sn, device in myapi.devices.items():
-                if device.get("type") == "solarbank":
-                    CONSOLE.info("Found %s SN: %s", device.get("name"), sn)
-                    try:
-                        daystr = input(
-                            "\nEnter start day for daily energy data (yyyy-mm-dd) or enter to skip: "
-                        )
-                        if daystr == "":
-                            CONSOLE.info(
-                                "Skipped SN: %s, checking for next Solarbank...", sn
-                            )
-                            continue
-                        startday = datetime.fromisoformat(daystr)
-                        numdays = int(input("How many days to query (1-366): "))
-                        daytotals = input(
-                            "Do you want to include daily total data (e.g. solarbank charge) which require API query per day? (Y/N): "
-                        )
-                        daytotals = daytotals.upper() in ["Y", "YES", "TRUE", 1]
-                        filename = input(
-                            f"CSV filename for export (daily_energy_{daystr}.csv): "
-                        )
-                        if filename == "":
-                            filename = f"daily_energy_{daystr}.csv"
-                    except ValueError:
-                        return False
-                    # delay requests, limit appears to be around 25 per minute
-                    if numdays > 25:
-                        myapi.requestDelay(2.5)
-                    else:
-                        myapi.requestDelay(.3)
-                    CONSOLE.info(
-                        "Queries may take up to %s seconds with %.3f seconds delay...please wait...",
-                        round((numdays * daytotals + 1) * myapi.requestDelay()),myapi.requestDelay()
+            for site_id, site in myapi.sites.items():
+                site_name = (site.get("site_info") or {}).get("site_name") or ""
+                CONSOLE.info("Found site %s ID %s", site_name, site_id)
+                try:
+                    daystr = input(
+                        "\nEnter start day for daily energy data (yyyy-mm-dd) or enter to skip site: "
                     )
-                    data = await myapi.energy_daily(
-                        siteId=device.get("site_id"),
-                        deviceSn=sn,
-                        startDay=startday,
-                        numDays=numdays,
-                        dayTotals=daytotals,
+                    if daystr == "":
+                        CONSOLE.info(
+                            "Skipped site %s, checking for next site...", site_name
+                        )
+                        continue
+                    startday = datetime.fromisoformat(daystr)
+                    numdays = int(input("How many days to query (1-366): "))
+                    daytotals = input(
+                        "Do you want to include daily total data (e.g. solarbank charge) which require API query per day? (Y/N): "
                     )
-                    _LOGGER.debug(json.dumps(data, indent=2))
-                    # Write csv file
-                    if len(data) > 0:
-                        with open(
-                            filename, "w", newline="", encoding="utf-8"
-                        ) as csvfile:
-                            fieldnames = (next(iter(data.values()))).keys()
-                            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                            writer.writeheader()
-                            writer.writerows(data.values())
-                            CONSOLE.info(
-                                "\nCompleted: Successfully exported data to %s",
-                                filename,
-                            )
-                        return True
-
-                    CONSOLE.info("No data received for device")
+                    daytotals = daytotals.upper() in ["Y", "YES", "TRUE", 1]
+                    prefix = input(
+                        f"CSV filename prefix for export (daily_energy_{daystr}): "
+                    )
+                    if prefix == "":
+                        prefix = f"daily_energy_{daystr}"
+                    filename = f"{prefix}_{site_name}.csv"
+                except ValueError:
                     return False
-            CONSOLE.info("No accepted Solarbank device found.")
-            return False
+                # delay requests, limit appears to be around 25 per minute
+                if numdays > 10:
+                    myapi.requestDelay(2.5)
+                else:
+                    myapi.requestDelay(.3)
+                CONSOLE.info(
+                    "Queries may take up to %s seconds with %.1f seconds delay...please wait...",
+                    round((2 * numdays * daytotals + 2) * myapi.requestDelay()),myapi.requestDelay()
+                )
+                data = await myapi.energy_daily(
+                    siteId=site_id,
+                    deviceSn="",    # mandatory parameter but can be empty since not distinguished for site energy stats
+                    startDay=startday,
+                    numDays=numdays,
+                    dayTotals=daytotals,
+                    devTypes={api.SolixDeviceType.SOLARBANK.value,api.SolixDeviceType.SMARTMETER.value}    # include all possible energy stats per site
+                )
+                _LOGGER.debug(json.dumps(data, indent=2))
+                # Write csv file
+                if len(data) > 0:
+                    with open(
+                        filename, "w", newline="", encoding="utf-8"
+                    ) as csvfile:
+                        fieldnames = (next(iter(data.values()))).keys()
+                        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                        writer.writeheader()
+                        writer.writerows(data.values())
+                        CONSOLE.info(
+                            "\nCompleted: Successfully exported data to %s",
+                            os.path.abspath(filename),
+                        )
+                else:
+                    CONSOLE.info("No data received for site %s ID %s", site_name, site_id)
+                    return False
+            return True
 
     except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.error("%s: %s", type(err), err)
