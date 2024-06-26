@@ -15,6 +15,7 @@ import copy
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import ClassVar
 import json
 import logging
 import os
@@ -364,6 +365,28 @@ class SolixDeviceCategory:
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
     A17A2: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 50
+
+
+@dataclass(frozen=True)
+class SolarbankDeviceMetrics:
+    """Dataclass for Anker Solarbank metrics which should be tracked in device details cache depending on model type."""
+
+    A17C0: ClassVar[set[str]] = set()  # SOLIX E1600 Solarbank, single MPPT without channel reporting
+    A17C1: ClassVar[set[str]] = {
+        "solar_power_1",
+        "solar_power_2",
+        "solar_power_3",
+        "solar_power_4",
+        "ac_power",
+        "to_home_load",
+    }  # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting
+    A17C2: ClassVar[set[str]] = set()  # SOLIX E1600 Solarbank 2,  without MPPT
+    A17C3: ClassVar[set[str]] = {
+        "solar_power_1",
+        "solar_power_2",
+        "ac_power",
+        "to_home_load",
+    }  # SOLIX E1600 Solarbank 2 Plus, with 2 MPPT
 
 
 @dataclass(frozen=True)
@@ -740,14 +763,19 @@ class AnkerSolixApi:
                         device.update({"charging_power": str(value)})
                     elif key in ["photovoltaic_power"]:
                         device.update({"input_power": str(value)})
-                    elif key in ["solar_power_1"]:
-                        device.update({"solar_power_1": str(value)})
-                    elif key in ["solar_power_2"]:
-                        device.update({"solar_power_2": str(value)})
-                    elif key in ["solar_power_3"]:
-                        device.update({"solar_power_3": str(value)})
-                    elif key in ["solar_power_4"]:
-                        device.update({"solar_power_4": str(value)})
+                    elif key in [
+                        "solar_power_1",
+                        "solar_power_2",
+                        "solar_power_3",
+                        "solar_power_4",
+                        "ac_power",
+                        "to_home_load",
+                    ] and value:
+                        # Add solarbank metrics depending on device type
+                        if key in getattr(
+                            SolarbankDeviceMetrics, device.get("device_pn") or "", {}
+                        ):
+                            device.update({key: str(value)})
                     elif key in ["output_power"]:
                         device.update({"output_power": str(value)})
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
@@ -1384,9 +1412,19 @@ class AnkerSolixApi:
                         sb_total_charge_calc += charge_calc
                     mysite["solarbank_info"]["solarbank_list"][index] = solarbank
                     new_sites.update({myid: mysite})
-                    # add count of solarbanks to device details
+                    # add count of solarbanks to device details and other metrics that might be device related
+                    sb_info = mysite.get("solarbank_info") or {}
                     sn = self._update_dev(
-                        solarbank | {"solarbank_count": len(sb_list)},
+                        solarbank
+                        | {
+                            "solarbank_count": len(sb_list),
+                            "solar_power_1": sb_info.get("solar_power_1"),
+                            "solar_power_2": sb_info.get("solar_power_2"),
+                            "solar_power_3": sb_info.get("solar_power_3"),
+                            "solar_power_4": sb_info.get("solar_power_4"),
+                            "ac_power": sb_info.get("ac_power"),
+                            "to_home_load": sb_info.get("to_home_load"),
+                        },
                         devType=SolixDeviceType.SOLARBANK.value,
                         siteId=myid,
                         isAdmin=admin,
@@ -1603,17 +1641,34 @@ class AnkerSolixApi:
             # build device types set for daily energy query, depending on device types found for site
             # solarinfo will always be queried by daily energy and required if solarbank or inverters are in the system
             # However, daily energy should not be queried for solarbank or smartmeter devices when they or their energy category is explicetly excluded
-            if (dev_list := site.get("solar_list") or []) and isinstance(dev_list,list) and (sn := dev_list[0].get("device_sn")):
+            if (
+                (dev_list := site.get("solar_list") or [])
+                and isinstance(dev_list, list)
+                and (sn := dev_list[0].get("device_sn"))
+            ):
                 query_types |= {SolixDeviceType.INVERTER.value}
                 query_sn = sn
-            if (sn := (site.get("grid_info") or {}).get("device_sn")):
+            if sn := (site.get("grid_info") or {}).get("device_sn"):
                 query_types -= {SolixDeviceType.INVERTER.value}
-                if not ({SolixDeviceType.SMARTMETER.value,ApiCategories.smartmeter_energy} & exclude):
+                if not (
+                    {SolixDeviceType.SMARTMETER.value, ApiCategories.smartmeter_energy}
+                    & exclude
+                ):
                     query_types |= {SolixDeviceType.SMARTMETER.value}
                     query_sn = sn
-            if (dev_list := (site.get("solarbank_info") or {}).get("solarbank_list") or []) and isinstance(dev_list,list) and (sn := dev_list[0].get("device_sn")):
+            if (
+                (
+                    dev_list := (site.get("solarbank_info") or {}).get("solarbank_list")
+                    or []
+                )
+                and isinstance(dev_list, list)
+                and (sn := dev_list[0].get("device_sn"))
+            ):
                 query_types -= {SolixDeviceType.INVERTER.value}
-                if not ({SolixDeviceType.SOLARBANK.value,ApiCategories.solarbank_energy} & exclude):
+                if not (
+                    {SolixDeviceType.SOLARBANK.value, ApiCategories.solarbank_energy}
+                    & exclude
+                ):
                     query_types |= {SolixDeviceType.SOLARBANK.value}
                     query_sn = sn
             if query_types:
@@ -1621,9 +1676,7 @@ class AnkerSolixApi:
                 # obtain previous energy details to check if yesterday must be queried as well
                 energy = site.get("energy_details") or {}
                 today = datetime.today().strftime("%Y-%m-%d")
-                yesterday = (datetime.today() - timedelta(days=1)).strftime(
-                    "%Y-%m-%d"
-                )
+                yesterday = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today
                 data = await self.energy_daily(
                     siteId=site_id,
@@ -1638,11 +1691,11 @@ class AnkerSolixApi:
                     # get last date entries from file and replace date with yesterday and today for testing
                     days = len(data)
                     if len(data) > 1:
-                        entry: dict = list(data.values())[days-2]
+                        entry: dict = list(data.values())[days - 2]
                         entry.update({"date": yesterday})
                         energy["last_period"] = entry
                     if len(data) > 0:
-                        entry: dict = list(data.values())[days-1]
+                        entry: dict = list(data.values())[days - 1]
                         entry.update({"date": today})
                         energy["today"] = entry
                 else:
@@ -3416,7 +3469,7 @@ class AnkerSolixApi:
                     table.update({daystr: entry})
             # Grid related totals are only received as total value for given interval. If requested, make daily queries for given interval
             if dayTotals and table:
-                if max(numDays,fileNumDays) == 1:
+                if max(numDays, fileNumDays) == 1:
                     if fromFile:
                         daystr = fileStartDay
                     else:
@@ -3434,7 +3487,11 @@ class AnkerSolixApi:
                     table.update({daystr: entry})
                 else:
                     if fromFile:
-                        daylist = [datetime.strptime(fileStartDay,"%Y-%m-%d") + timedelta(days=x) for x in range(fileNumDays)]
+                        daylist = [
+                            datetime.strptime(fileStartDay, "%Y-%m-%d")
+                            + timedelta(days=x)
+                            for x in range(fileNumDays)
+                        ]
                     else:
                         daylist = [startDay + timedelta(days=x) for x in range(numDays)]
                     for day in daylist:
@@ -3496,7 +3553,7 @@ class AnkerSolixApi:
                 table.update({daystr: entry})
         # Solarbank charge and percentages are only received as total value for given interval. If requested, make daily queries for given interval
         if dayTotals and table:
-            if max(numDays,fileNumDays) == 1:
+            if max(numDays, fileNumDays) == 1:
                 if fromFile:
                     daystr = fileStartDay
                 else:
@@ -3516,7 +3573,10 @@ class AnkerSolixApi:
                 table.update({daystr: entry})
             else:
                 if fromFile:
-                    daylist = [datetime.strptime(fileStartDay,"%Y-%m-%d") + timedelta(days=x) for x in range(fileNumDays)]
+                    daylist = [
+                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
+                        for x in range(fileNumDays)
+                    ]
                 else:
                     daylist = [startDay + timedelta(days=x) for x in range(numDays)]
                 for day in daylist:
