@@ -1343,7 +1343,7 @@ class AnkerSolixApi:
                 self._logger.error("Response Text: %s", body_text)
                 raise
 
-    async def update_sites(self, fromFile: bool = False) -> dict:
+    async def update_sites(self, fromFile: bool = False) -> dict:  # noqa: C901
         """Get the latest info for all accessible sites and update class site and device variables.
 
         Example data:
