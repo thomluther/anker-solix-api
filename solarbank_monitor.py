@@ -99,11 +99,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
 
             while True:
                 resp = input(
-                    f"\nHow many seconds refresh interval should be used? (10-600, default: {REFRESH}): "
+                    f"\nHow many seconds refresh interval should be used? (5-600, default: {REFRESH}): "
                 )
                 if not resp:
                     break
-                if resp.isdigit() and 10 <= int(resp) <= 600:
+                if resp.isdigit() and 5 <= int(resp) <= 600:
                     REFRESH = int(resp)
                     break
 
@@ -133,7 +133,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if next_dev_refr <= now:
                     CONSOLE.info("Running device details refresh...")
                     await myapi.update_device_details(fromFile=use_file)
-                    next_dev_refr = next_refr + timedelta(seconds=REFRESH * 9)
+                    next_dev_refr = next_refr + timedelta(seconds=max(120,REFRESH * 9))
                     # schedules = {}
                 clearscreen()
                 CONSOLE.info(
@@ -143,19 +143,16 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 )
                 if use_file:
                     CONSOLE.info("Using input source folder: %s", myapi.testDir())
-                if len(myapi.sites) > 0:
-                    update_time = (
-                        (next(iter(myapi.sites.values()))).get("solarbank_info") or {}
-                    ).get("updated_time") or "Unknown"
-                else:
-                    update_time = "Unknown"
                 CONSOLE.info(
-                    f"Sites: {len(myapi.sites)}, Devices: {len(myapi.sites)},           Data-Updated: {update_time}"
+                    f"Sites: {len(myapi.sites)},  Devices: {len(myapi.devices)}"
                 )
+                CONSOLE.info("-"*80)
                 # pylint: disable=logging-fstring-interpolation
                 for sn, dev in myapi.devices.items():
                     devtype = dev.get("type", "Unknown")
                     admin = dev.get("is_admin", False)
+                    site = myapi.sites.get(dev.get("site_id","")) or {}
+                    update_time = (site.get("solarbank_info") or {}).get("updated_time") or "Unknown"
                     CONSOLE.info(
                         f"{'Device':<{col1}}: {(dev.get('name','NoName')):<{col2}} {'Alias':<{col3}}: {dev.get('alias','Unknown')}"
                     )
@@ -175,10 +172,13 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     CONSOLE.info(
                         f"{'Wifi state':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} {'Signal':<{col3}}: {dev.get('wifi_signal','---'):>4} %"
                     )
-                    if devtype == "solarbank":
+                    if devtype == api.SolixDeviceType.SOLARBANK.value:
                         upgrade = dev.get("auto_upgrade")
                         CONSOLE.info(
                             f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
+                        )
+                        CONSOLE.info(
+                            f"{'Cloud-Updated':<{col1}}: {update_time:<{col2}} {'Valid Data':<{col3}}: {'YES' if dev.get('data_valid') else 'NO'} (Requeries: {site.get("requeries")})"
                         )
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
@@ -195,6 +195,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'Battery Energy':<{col1}}: {energy:<{col2}} {'Capacity':<{col3}}: {dev.get('battery_capacity','----')!s:>4} Wh"
                         )
                         unit = dev.get("power_unit", "W")
+                        if dev.get("generation",0) > 1:
+                            CONSOLE.info(
+                                f"{'Exp. Batteries':<{col1}}: {dev.get('sub_package_num',''):>4} {'AC socket':<{col3}}: {dev.get('ac_power','---'):>4} {unit}"
+                            )
                         CONSOLE.info(
                             f"{'Solar Power':<{col1}}: {dev.get('input_power',''):>4} {unit:<{col2-5}} {'Output Power':<{col3}}: {dev.get('output_power',''):>4} {unit}"
                         )
@@ -239,25 +243,40 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{slot.get('id','')!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {slot.get('power_setting_mode') or '-'!s:^{t9}} {load.get('name','')!s}"
                                 )
-                    elif devtype == "inverter":
+                    elif devtype == api.SolixDeviceType.INVERTER.value:
                         upgrade = dev.get("auto_upgrade")
                         CONSOLE.info(
                             f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
                         )
                         CONSOLE.info(
-                            f"{'Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
+                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(
                             f"{'AC Power':<{col1}}: {dev.get('generate_power',''):>3} {unit}"
                         )
+                    elif devtype == api.SolixDeviceType.SMARTMETER.value:
+                        upgrade = dev.get("auto_upgrade")
+                        CONSOLE.info(
+                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
+                        )
+                        CONSOLE.info(
+                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
+                        )
+                        CONSOLE.info(
+                            f"{'Grid Status':<{col1}}: {dev.get('grid_status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('grid_status','-')!s}"
+                        )
+                        unit = "W"
+                        CONSOLE.info(
+                            f"{'Grid Import':<{col1}}: {dev.get('grid_to_home_power',''):>4} {unit:<{col2-5}} {'Grid Export':<{col3}}: {dev.get('photovoltaic_to_grid_power',''):>4} {unit}"
+                        )
                     else:
                         CONSOLE.warning(
-                            "Neither Solarbank nor Inverter device, further details will be skipped"
+                            "No Solarbank, Inverter or smartreader device, further details will be skipped"
                         )
-                    CONSOLE.info("")
-                    CONSOLE.info("Api Requests: %s", myapi.request_count)
-                    CONSOLE.debug(json.dumps(myapi.devices, indent=2))
+                    CONSOLE.info("-"*80)
+                CONSOLE.info("Api Requests: %s", myapi.request_count)
+                CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                 for sec in range(REFRESH):
                     now = datetime.now().astimezone()
                     if sys.stdin is sys.__stdin__:

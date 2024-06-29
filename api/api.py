@@ -15,12 +15,12 @@ import copy
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import ClassVar
 import json
 import logging
 import os
 import sys
 import time as systime
+from typing import ClassVar
 
 import aiofiles
 from aiohttp import ClientSession
@@ -371,7 +371,9 @@ class SolixDeviceCategory:
 class SolarbankDeviceMetrics:
     """Dataclass for Anker Solarbank metrics which should be tracked in device details cache depending on model type."""
 
-    A17C0: ClassVar[set[str]] = set()  # SOLIX E1600 Solarbank, single MPPT without channel reporting
+    A17C0: ClassVar[set[str]] = (
+        set()
+    )  # SOLIX E1600 Solarbank, single MPPT without channel reporting
     A17C1: ClassVar[set[str]] = {
         "solar_power_1",
         "solar_power_2",
@@ -379,12 +381,13 @@ class SolarbankDeviceMetrics:
         "solar_power_4",
         "ac_power",
         "to_home_load",
-    }  # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting
-    A17C2: ClassVar[set[str]] = set()  # SOLIX E1600 Solarbank 2,  without MPPT
+    }  # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting and AC socket
+    A17C2: ClassVar[set[str]] = {
+        "to_home_load",
+    }  # SOLIX E1600 Solarbank 2, without MPPT
     A17C3: ClassVar[set[str]] = {
         "solar_power_1",
         "solar_power_2",
-        "ac_power",
         "to_home_load",
     }  # SOLIX E1600 Solarbank 2 Plus, with 2 MPPT
 
@@ -436,6 +439,15 @@ class SolarbankStatus(Enum):
     # code 5 was not observed yet
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W
     standby = "7"
+    unknown = "unknown"
+
+
+class SmartmeterStatus(Enum):
+    """Enumuration for Anker Solix Smartmeter status."""
+
+    # TODO(#106) Update Smartmeter grid status description once known
+    unknown_0 = "0"
+    unknown_1 = "1"
     unknown = "unknown"
 
 
@@ -736,7 +748,7 @@ class AnkerSolixApi:
                                 device.update({"type": dev_type[0]})
                             # update generation if specified in device type definitions
                             if len(dev_type) > 1:
-                                device.update({"generation": dev_type[1]})
+                                device.update({"generation": int(dev_type[1])})
                     elif key in ["device_name"] and value:
                         if value != device.get("name", ""):
                             calc_capacity = True
@@ -745,39 +757,49 @@ class AnkerSolixApi:
                         device.update({"alias": str(value)})
                     elif key in ["device_sw_version"] and value:
                         device.update({"sw_version": str(value)})
-                    elif key in ["wifi_online"]:
-                        device.update({"wifi_online": bool(value)})
-                    elif key in ["wireless_type"]:
-                        device.update({"wireless_type": str(value)})
+                    elif key in [
+                        "wifi_online",
+                        "data_valid",
+                        "charge",
+                        "auto_upgrade",
+                        "is_ota_update",
+                    ]:
+                        device.update({key: bool(value)})
+                    elif key in [
+                        "wireless_type",
+                        "wifi_signal",
+                        "bt_ble_mac",
+                        "charging_power",
+                        "output_power",
+                        "power_unit",
+                        "bws_surplus",
+                    ]:
+                        device.update({key: str(value)})
                     elif key in ["wifi_name"] and value:
                         # wifi_name can be empty in details if device connected, avoid clearing name
                         device.update({"wifi_name": str(value)})
-                    elif key in ["wifi_signal"]:
-                        device.update({"wifi_signal": str(value)})
-                    elif key in ["bt_ble_mac"] and value:
-                        device.update({"bt_ble_mac": str(value)})
                     elif key in ["battery_power"] and value:
                         # This is a percentage value for the battery state of charge, not power
                         device.update({"battery_soc": str(value)})
-                    elif key in ["charging_power"]:
-                        device.update({"charging_power": str(value)})
                     elif key in ["photovoltaic_power"]:
                         device.update({"input_power": str(value)})
-                    elif key in [
-                        "solar_power_1",
-                        "solar_power_2",
-                        "solar_power_3",
-                        "solar_power_4",
-                        "ac_power",
-                        "to_home_load",
-                    ] and value:
-                        # Add solarbank metrics depending on device type
+                    # Add solarbank metrics depending on device type
+                    elif (
+                        key
+                        in [
+                            "solar_power_1",
+                            "solar_power_2",
+                            "solar_power_3",
+                            "solar_power_4",
+                            "ac_power",
+                            "to_home_load",
+                        ]
+                        and value
+                    ):
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
                             device.update({key: str(value)})
-                    elif key in ["output_power"]:
-                        device.update({"output_power": str(value)})
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
                     elif key in ["set_load_power", "parallel_home_load"] and value:
                         # Value may include unit, remove unit to have content consistent
@@ -793,8 +815,6 @@ class AnkerSolixApi:
                             device.update(
                                 {"set_output_power": str(value).replace("W", "")}
                             )
-                    elif key in ["power_unit"]:
-                        device.update({"power_unit": str(value)})
                     elif key in ["status"]:
                         device.update({"status": str(value)})
                         # decode the status into a description
@@ -837,16 +857,8 @@ class AnkerSolixApi:
                                     # Charge with output must be bypass charging
                                     description = SolarbankStatus.charge_bypass.name
                         device.update({"charging_status_desc": description})
-                    elif key in ["bws_surplus"]:
-                        device.update({"bws_surplus": str(value)})
-                    elif key in ["charge"]:
-                        device.update({"charge": bool(value)})
                     elif key in ["sub_package_num"] and str(value).isdigit():
                         device.update({"sub_package_num": int(value)})
-                    elif key in ["auto_upgrade"]:
-                        device.update({"auto_upgrade": bool(value)})
-                    elif key in ["is_ota_update"]:
-                        device.update({"is_ota_update": bool(value)})
                     elif (
                         key in ["power_cutoff", "output_cutoff_data"]
                         and str(value).isdigit()
@@ -949,8 +961,24 @@ class AnkerSolixApi:
                                         )
 
                     # inverter specific keys
-                    elif key in ["generate_power", "ac_power"]:
-                        device.update({"generate_power": str(value)})
+                    elif key in ["generate_power"]:
+                        device.update({key: str(value)})
+
+                    # smartmeter specific keys
+                    elif key in ["grid_status"]:
+                        device.update({"grid_status": str(value)})
+                        # decode the grid status into a description
+                        description = SmartmeterStatus.unknown.name
+                        for status in SmartmeterStatus:
+                            if str(value) == status.value:
+                                description = status.name
+                                break
+                        device.update({"grid_status_desc": description})
+                    elif key in [
+                        "photovoltaic_to_grid_power",
+                        "grid_to_home_power",
+                    ]:
+                        device.update({key: str(value)})
 
                     # generate extra values when certain conditions are met
                     if key in ["battery_power"] or calc_capacity:
@@ -1360,21 +1388,34 @@ class AnkerSolixApi:
                 # Update scene info for site
                 self._logger.debug("Getting scene info for site")
                 scene = await self.get_scene_info(myid, fromFile=fromFile)
+                # Check if Solarbank 2 data is valid, default to true if field not found
+                sb_info = scene.get("solarbank_info") or {}
+                data_valid = bool(sb_info.get("is_display_data", True))
+                requeries = 0
+                while requeries < 5 and not data_valid:
+                    requeries += 1
+                    self._logger.debug(
+                        "Received invalid solarbank data, %s retry to get valid scene info for site",
+                        requeries,
+                    )
+                    # delay 1 sec prior requery
+                    await sleep(1)
+                    scene = await self.get_scene_info(myid, fromFile=fromFile)
+                    sb_info = scene.get("solarbank_info") or {}
+                    data_valid = bool(sb_info.get("is_display_data", True))
+
+                # add indicator for valid data introduced for Solarbank 2 to site cache
+                mysite.update({"data_valid": data_valid, "requeries": requeries})
+
                 mysite.update(scene)
                 new_sites.update({myid: mysite})
                 # Update device details from scene info
-                sb_total_charge = (mysite.get("solarbank_info", {})).get(
-                    "total_charging_power", ""
-                )
-                sb_total_output = (mysite.get("solarbank_info", {})).get(
-                    "total_output_power", ""
-                )
-                sb_total_solar = (mysite.get("solarbank_info", {})).get(
-                    "total_photovoltaic_power", ""
-                )
+                sb_total_charge = sb_info.get("total_charging_power", "")
+                sb_total_output = sb_info.get("total_output_power", "")
+                sb_total_solar = sb_info.get("total_photovoltaic_power", "")
                 sb_total_charge_calc = 0
                 sb_charges = {}
-                sb_list = (mysite.get("solarbank_info", {})).get("solarbank_list", [])
+                sb_list = sb_info.get("solarbank_list") or []
                 for index, solarbank in enumerate(sb_list):
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in solarbank:
@@ -1413,10 +1454,10 @@ class AnkerSolixApi:
                     mysite["solarbank_info"]["solarbank_list"][index] = solarbank
                     new_sites.update({myid: mysite})
                     # add count of solarbanks to device details and other metrics that might be device related
-                    sb_info = mysite.get("solarbank_info") or {}
-                    sn = self._update_dev(
+                    if sn := self._update_dev(
                         solarbank
                         | {
+                            "data_valid": data_valid,
                             "solarbank_count": len(sb_list),
                             "solar_power_1": sb_info.get("solar_power_1"),
                             "solar_power_2": sb_info.get("solar_power_2"),
@@ -1428,8 +1469,7 @@ class AnkerSolixApi:
                         devType=SolixDeviceType.SOLARBANK.value,
                         siteId=myid,
                         isAdmin=admin,
-                    )
-                    if sn:
+                    ):
                         self._site_devices.add(sn)
                         sb_charges[sn] = charge_calc
                         # as time progressed, update actual schedule slot presets from a cached schedule if available
@@ -1470,19 +1510,44 @@ class AnkerSolixApi:
                 # make sure to write back any changes to the solarbank info in sites dict
                 new_sites.update({myid: mysite})
 
+                grid_info = mysite.get("grid_info") or {}
+                for grid in grid_info.get("grid_list") or []:
+                    # work around for device_name which is actually the device_alias in scene info
+                    if "device_name" in grid:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        grid = dict(grid).copy()
+                        grid.update({"alias_name": grid.pop("device_name")})
+                    if sn := self._update_dev(
+                        grid
+                        | {
+                            "data_valid": data_valid,
+                            "photovoltaic_to_grid_power": grid_info.get(
+                                "photovoltaic_to_grid_power", ""
+                            ),
+                            "grid_to_home_power": grid_info.get(
+                                "grid_to_home_power", ""
+                            ),
+                            "grid_status": grid_info.get(
+                                "grid_status", ""
+                            ),
+                        },
+                        devType=SolixDeviceType.SMARTMETER.value,
+                        siteId=myid,
+                        isAdmin=admin,
+                    ):
+                        self._site_devices.add(sn)
                 for pps in (mysite.get("pps_info", {})).get("pps_list", []):
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in pps:
                         # modify only a copy of the device dict to prevent changing the scene info dict
                         pps = dict(pps).copy()
                         pps.update({"alias_name": pps.pop("device_name")})
-                    sn = self._update_dev(
+                    if sn := self._update_dev(
                         pps,
                         devType=SolixDeviceType.PPS.value,
                         siteId=myid,
                         isAdmin=admin,
-                    )
-                    if sn:
+                    ):
                         self._site_devices.add(sn)
                 for solar in mysite.get("solar_list", []):
                     # work around for device_name which is actually the device_alias in scene info
@@ -1490,13 +1555,12 @@ class AnkerSolixApi:
                         # modify only a copy of the device dict to prevent changing the scene info dict
                         solar = dict(solar).copy()
                         solar.update({"alias_name": solar.pop("device_name")})
-                    sn = self._update_dev(
+                    if sn := self._update_dev(
                         solar,
                         devType=SolixDeviceType.INVERTER.value,
                         siteId=myid,
                         isAdmin=admin,
-                    )
-                    if sn:
+                    ):
                         self._site_devices.add(sn)
                 for powerpanel in mysite.get("powerpanel_list", []):
                     # work around for device_name which is actually the device_alias in scene info
@@ -1504,13 +1568,12 @@ class AnkerSolixApi:
                         # modify only a copy of the device dict to prevent changing the scene info dict
                         powerpanel = dict(powerpanel).copy()
                         powerpanel.update({"alias_name": powerpanel.pop("device_name")})
-                    sn = self._update_dev(
+                    if sn := self._update_dev(
                         powerpanel,
                         devType=SolixDeviceType.POWERPANEL.value,
                         siteId=myid,
                         isAdmin=admin,
-                    )
-                    if sn:
+                    ):
                         self._site_devices.add(sn)
         # Write back the updated sites
         self.sites = new_sites
