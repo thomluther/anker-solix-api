@@ -139,7 +139,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 CONSOLE.info(
                     "Solarbank Monitor (refresh %s s, details refresh %s s):",
                     REFRESH,
-                    10 * REFRESH,
+                    max(120,10 * REFRESH),
                 )
                 if use_file:
                     CONSOLE.info("Using input source folder: %s", myapi.testDir())

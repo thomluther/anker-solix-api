@@ -1394,14 +1394,14 @@ class AnkerSolixApi:
                 sb_info = scene.get("solarbank_info") or {}
                 data_valid = bool(sb_info.get("is_display_data", True))
                 requeries = 0
-                while requeries < 5 and not data_valid:
+                while requeries < 3 and not data_valid:
                     requeries += 1
                     self._logger.debug(
                         "Received invalid solarbank data, %s retry to get valid scene info for site",
                         requeries,
                     )
-                    # delay 1 sec prior requery
-                    await sleep(1)
+                    # delay 5 sec prior requery
+                    await sleep(5)
                     scene = await self.get_scene_info(myid, fromFile=fromFile)
                     sb_info = scene.get("solarbank_info") or {}
                     data_valid = bool(sb_info.get("is_display_data", True))
