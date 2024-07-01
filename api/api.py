@@ -859,6 +859,7 @@ class AnkerSolixApi:
                         device.update({"charging_status_desc": description})
                     elif key in ["sub_package_num"] and str(value).isdigit():
                         device.update({"sub_package_num": int(value)})
+                        calc_capacity = True
                     elif (
                         key in ["power_cutoff", "output_cutoff_data"]
                         and str(value).isdigit()
@@ -1002,12 +1003,13 @@ class AnkerSolixApi:
                                     .replace(" Plus", "")
                                 )
                             # consider battery packs for total device capacity
+                            exp = device.get("sub_package_num") or devData.get("sub_package_num") or 0
                             if (
                                 str(cap).isdigit()
-                                and str(device.get("sub_package_num")).isdigit()
+                                and str(exp).isdigit()
                             ):
                                 cap = int(cap) * (
-                                    1 + int(device.get("sub_package_num"))
+                                    1 + int(exp)
                                 )
                         soc = devData.get("battery_power", "") or device.get(
                             "battery_soc", ""

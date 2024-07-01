@@ -197,7 +197,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         unit = dev.get("power_unit", "W")
                         if dev.get("generation",0) > 1:
                             CONSOLE.info(
-                                f"{'Exp. Batteries':<{col1}}: {dev.get('sub_package_num',''):>4} {'AC socket':<{col3}}: {dev.get('ac_power','---'):>4} {unit}"
+                                f"{'Exp. Batteries':<{col1}}: {dev.get('sub_package_num',''):>4} {'Pcs':<{col2-5}} {'AC socket':<{col3}}: {dev.get('ac_power','---'):>4} {unit}"
                             )
                         CONSOLE.info(
                             f"{'Solar Power':<{col1}}: {dev.get('input_power',''):>4} {unit:<{col2-5}} {'Output Power':<{col3}}: {dev.get('output_power',''):>4} {unit}"
