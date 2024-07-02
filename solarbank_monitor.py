@@ -86,7 +86,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
     try:
         async with ClientSession() as websession:
             myapi = api.AnkerSolixApi(
-                "" if use_file else common.user(), "" if use_file else common.password(), "" if use_file else common.country(), websession, _LOGGER
+                "" if use_file else common.user(),
+                "" if use_file else common.password(),
+                "" if use_file else common.country(),
+                websession,
+                _LOGGER,
             )
             if use_file:
                 # set the correct test folder for Api
@@ -133,26 +137,28 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if next_dev_refr <= now:
                     CONSOLE.info("Running device details refresh...")
                     await myapi.update_device_details(fromFile=use_file)
-                    next_dev_refr = next_refr + timedelta(seconds=max(120,REFRESH * 9))
+                    next_dev_refr = next_refr + timedelta(seconds=max(120, REFRESH * 9))
                     # schedules = {}
                 clearscreen()
                 CONSOLE.info(
                     "Solarbank Monitor (refresh %s s, details refresh %s s):",
                     REFRESH,
-                    max(120,10 * REFRESH),
+                    max(120, 10 * REFRESH),
                 )
                 if use_file:
                     CONSOLE.info("Using input source folder: %s", myapi.testDir())
                 CONSOLE.info(
                     f"Sites: {len(myapi.sites)},  Devices: {len(myapi.devices)}"
                 )
-                CONSOLE.info("-"*80)
+                CONSOLE.info("-" * 80)
                 # pylint: disable=logging-fstring-interpolation
                 for sn, dev in myapi.devices.items():
                     devtype = dev.get("type", "Unknown")
                     admin = dev.get("is_admin", False)
-                    site = myapi.sites.get(dev.get("site_id","")) or {}
-                    update_time = (site.get("solarbank_info") or {}).get("updated_time") or "Unknown"
+                    site = myapi.sites.get(dev.get("site_id", "")) or {}
+                    update_time = (site.get("solarbank_info") or {}).get(
+                        "updated_time"
+                    ) or "Unknown"
                     CONSOLE.info(
                         f"{'Device':<{col1}}: {(dev.get('name','NoName')):<{col2}} {'Alias':<{col3}}: {dev.get('alias','Unknown')}"
                     )
@@ -195,7 +201,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'Battery Energy':<{col1}}: {energy:<{col2}} {'Capacity':<{col3}}: {dev.get('battery_capacity','----')!s:>4} Wh"
                         )
                         unit = dev.get("power_unit", "W")
-                        if dev.get("generation",0) > 1:
+                        if dev.get("generation", 0) > 1:
                             CONSOLE.info(
                                 f"{'Exp. Batteries':<{col1}}: {dev.get('sub_package_num',''):>4} {'Pcs':<{col2-5}} {'AC socket':<{col3}}: {dev.get('ac_power','---'):>4} {unit}"
                             )
@@ -274,7 +280,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.warning(
                             "No Solarbank, Inverter or smartreader device, further details will be skipped"
                         )
-                    CONSOLE.info("-"*80)
+                    CONSOLE.info("-" * 80)
                 CONSOLE.info("Api Requests: %s", myapi.request_count)
                 CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                 for sec in range(REFRESH):

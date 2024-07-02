@@ -252,6 +252,7 @@ class SolixDeviceType(Enum):
     SOLARBANK = "solarbank"
     INVERTER = "inverter"
     SMARTMETER = "smartmeter"
+    SMARTPLUG = "smartplug"
     PPS = "pps"
     POWERPANEL = "powerpanel"
     POWERCOOLER = "powercooler"
@@ -293,7 +294,6 @@ class SolixDeviceCapacity:
     A17C1: int = 1600  # SOLIX E1600 Solarbank 2 Pro
     A17C2: int = 1600  # SOLIX E1600 Solarbank 2
     A17C3: int = 1600  # SOLIX E1600 Solarbank 2 Plus
-    A17C1321: int = 1600  # SOLIX BP1600 Solarbank 2 Expansion battery
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1751: int = 512  # Anker PowerHouse 535 Portable Power Station
     A1753: int = 768  # SOLIX C800 Portable Power Station
@@ -446,8 +446,10 @@ class SmartmeterStatus(Enum):
     """Enumuration for Anker Solix Smartmeter status."""
 
     # TODO(#106) Update Smartmeter grid status description once known
-    unknown_0 = "0"
-    unknown_1 = "1"
+    ok = "0"  # normal grid state when smart meter is measuring
+    unknown_1 = "1"  # does it exist?
+    unknown_2 = "2"  # does it exist?
+    unknown_3 = "3"  # does it exist?
     unknown = "unknown"
 
 
@@ -1003,14 +1005,13 @@ class AnkerSolixApi:
                                     .replace(" Plus", "")
                                 )
                             # consider battery packs for total device capacity
-                            exp = device.get("sub_package_num") or devData.get("sub_package_num") or 0
-                            if (
-                                str(cap).isdigit()
-                                and str(exp).isdigit()
-                            ):
-                                cap = int(cap) * (
-                                    1 + int(exp)
-                                )
+                            exp = (
+                                device.get("sub_package_num")
+                                or devData.get("sub_package_num")
+                                or 0
+                            )
+                            if str(cap).isdigit() and str(exp).isdigit():
+                                cap = int(cap) * (1 + int(exp))
                         soc = devData.get("battery_power", "") or device.get(
                             "battery_soc", ""
                         )
@@ -1529,16 +1530,29 @@ class AnkerSolixApi:
                             "grid_to_home_power": grid_info.get(
                                 "grid_to_home_power", ""
                             ),
-                            "grid_status": grid_info.get(
-                                "grid_status", ""
-                            ),
+                            "grid_status": grid_info.get("grid_status", ""),
                         },
                         devType=SolixDeviceType.SMARTMETER.value,
                         siteId=myid,
                         isAdmin=admin,
                     ):
                         self._site_devices.add(sn)
-                for pps in (mysite.get("pps_info", {})).get("pps_list", []):
+                smartplug_info = mysite.get("smartplug_info") or {}
+                for smartplug in smartplug_info.get("smartplug_list") or []:
+                    # work around for device_name which is actually the device_alias in scene info
+                    if "device_name" in smartplug:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        smartplug = dict(smartplug).copy()
+                        smartplug.update({"alias_name": smartplug.pop("device_name")})
+                    if sn := self._update_dev(
+                        smartplug,
+                        devType=SolixDeviceType.SMARTPLUG.value,
+                        siteId=myid,
+                        isAdmin=admin,
+                    ):
+                        self._site_devices.add(sn)
+                pps_info = mysite.get("pps_info") or {}
+                for pps in pps_info.get("pps_list") or []:
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in pps:
                         # modify only a copy of the device dict to prevent changing the scene info dict
@@ -1551,7 +1565,7 @@ class AnkerSolixApi:
                         isAdmin=admin,
                     ):
                         self._site_devices.add(sn)
-                for solar in mysite.get("solar_list", []):
+                for solar in mysite.get("solar_list") or []:
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in solar:
                         # modify only a copy of the device dict to prevent changing the scene info dict
@@ -1564,7 +1578,7 @@ class AnkerSolixApi:
                         isAdmin=admin,
                     ):
                         self._site_devices.add(sn)
-                for powerpanel in mysite.get("powerpanel_list", []):
+                for powerpanel in mysite.get("powerpanel_list") or []:
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in powerpanel:
                         # modify only a copy of the device dict to prevent changing the scene info dict
@@ -1577,6 +1591,7 @@ class AnkerSolixApi:
                         isAdmin=admin,
                     ):
                         self._site_devices.add(sn)
+
         # Write back the updated sites
         self.sites = new_sites
         return self.sites
@@ -1635,21 +1650,29 @@ class AnkerSolixApi:
 
             # Fetch details that only work for site admins
             if device.get("is_admin", False) and site_id:
-                # Fetch wifi networks and signal strength and map to usage of device
-                if wifi_index := device.get("wireless_type", ""):
+                # Fetch site wifi list if not queried yet with wifi networks and signal strengths
+                if site_id not in site_wifi:
                     self._logger.debug(
                         "Getting wifi list of site for mapping to device"
                     )
+                    site_wifi[site_id] = (
+                        await self.get_wifi_list(siteId=site_id, fromFile=fromFile)
+                    ).get("wifi_info_list") or []
+                # Map Wifi to usage of device
+                wifi_list = site_wifi.get(site_id, [{}])
+                # Ensure to update wifi index if not provided for device in scene_info, but device has wifi online and only single wifi exists in list
+                if (
+                    not (wifi_index := device.get("wireless_type", ""))
+                    and len(wifi_list) == 1
+                    and device.get("wifi_online")
+                ):
+                    wifi_index = "1"
+                    self._update_dev({"device_sn": sn, "wireless_type": wifi_index})
+                if wifi_index:
                     if str(wifi_index).isdigit():
                         wifi_index = int(wifi_index)
                     else:
                         wifi_index = 0
-                    # fetch site wifi list if not queried yet
-                    if site_id not in site_wifi:
-                        site_wifi[site_id] = (
-                            await self.get_wifi_list(siteId=site_id, fromFile=fromFile)
-                        ).get("wifi_info_list") or []
-                    wifi_list = site_wifi.get(site_id, [{}])
                     if 0 < wifi_index <= len(wifi_list):
                         device.update(wifi_list[wifi_index - 1])
 

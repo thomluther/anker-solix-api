@@ -420,7 +420,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 siteId = device.get("site_id", "")
                 admin = device.get("is_admin")
 
-                if device.get("type") == "solarbank":
+                if device.get("type") == api.SolixDeviceType.SOLARBANK.value:
                     CONSOLE.info("Exporting solar info settings for solarbank...")
                     try:
                         export(
