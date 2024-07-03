@@ -31,7 +31,7 @@ _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 # _LOGGER.setLevel(logging.DEBUG)    # enable for debug output
 CONSOLE: logging.Logger = common.CONSOLE
 
-REFRESH = 30  # default refresh interval in seconds
+REFRESH = 0  # default No refresh interval
 INTERACTIVE = True
 
 
@@ -59,9 +59,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
     global REFRESH  # pylint: disable=global-statement  # noqa: PLW0603
     CONSOLE.info("Solarbank Monitor:")
     # get list of possible example and export folders to test the monitor against
-    exampleslist = get_subfolders(
+    exampleslist: list = get_subfolders(
         os.path.join(os.path.dirname(__file__), "examples")
     ) + get_subfolders(os.path.join(os.path.dirname(__file__), "exports"))
+    energy_stats: bool = False
+
     if INTERACTIVE:
         if exampleslist:
             exampleslist.sort()
@@ -101,14 +103,26 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 # Login validation will be done during first API call
                 CONSOLE.info("Anker Cloud authentication: CACHED")
 
-            while True:
+            while not use_file:
                 resp = input(
-                    f"\nHow many seconds refresh interval should be used? (5-600, default: {REFRESH}): "
+                    "How many seconds refresh interval should be used? (5-600, default: 30): "
                 )
                 if not resp:
+                    REFRESH = 30
                     break
                 if resp.isdigit() and 5 <= int(resp) <= 600:
                     REFRESH = int(resp)
+                    break
+
+            # ask for including energy details
+            while True:
+                resp = input(
+                    "Do you want to include daily site energy statistics? ([Y]es / [N]o = default): "
+                )
+                if not resp or resp.upper() in ["N", "NO"]:
+                    break
+                elif resp.upper() in ["Y","YES"]:
+                    energy_stats = True
                     break
 
             # Run loop to update Solarbank parameters
@@ -128,7 +142,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             t8 = 6
             t9 = 5
             while True:
-                CONSOLE.info("\n")
+                clearscreen()
                 now = datetime.now().astimezone()
                 if next_refr <= now:
                     CONSOLE.info("Running site refresh...")
@@ -137,16 +151,20 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if next_dev_refr <= now:
                     CONSOLE.info("Running device details refresh...")
                     await myapi.update_device_details(fromFile=use_file)
-                    next_dev_refr = next_refr + timedelta(seconds=max(120, REFRESH * 9))
+                    # run also energy refresh if requested
+                    if energy_stats:
+                        CONSOLE.info("Running energy details refresh...")
+                        await myapi.update_device_energy(fromFile=use_file)
+                    next_dev_refr = next_refr + timedelta(seconds=max((not use_file) * 120, REFRESH * 9))
                     # schedules = {}
-                clearscreen()
-                CONSOLE.info(
-                    "Solarbank Monitor (refresh %s s, details refresh %s s):",
-                    REFRESH,
-                    max(120, 10 * REFRESH),
-                )
                 if use_file:
                     CONSOLE.info("Using input source folder: %s", myapi.testDir())
+                else:
+                    CONSOLE.info(
+                        "Solarbank Monitor (refresh %s s, details refresh %s s):",
+                        REFRESH,
+                        max(120, 10 * REFRESH),
+                    )
                 CONSOLE.info(
                     f"Sites: {len(myapi.sites)},  Devices: {len(myapi.devices)}"
                 )
@@ -166,7 +184,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         f"{'Serialnumber':<{col1}}: {sn:<{col2}} {'Admin':<{col3}}: {'YES' if admin else 'NO'}"
                     )
                     siteid = dev.get("site_id", "")
-                    CONSOLE.info(f"{'Site ID':<{col1}}: {siteid}")
+                    CONSOLE.info(f"{'System':<{col1}}: {(site.get('site_info') or {}).get('site_name','Unknown')}  (Site ID: {siteid})")
                     for fsn, fitting in (dev.get("fittings") or {}).items():
                         CONSOLE.info(
                             f"{'Accessory':<{col1}}: {fitting.get('device_name',''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
@@ -278,27 +296,90 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                     else:
                         CONSOLE.warning(
-                            "No Solarbank, Inverter or smartreader device, further details will be skipped"
+                            "No Solarbank, Inverter or Smartreader device, further device details will be skipped"
                         )
                     CONSOLE.info("-" * 80)
-                CONSOLE.info("Api Requests: %s", myapi.request_count)
-                CONSOLE.debug(json.dumps(myapi.devices, indent=2))
-                for sec in range(REFRESH):
-                    now = datetime.now().astimezone()
-                    if sys.stdin is sys.__stdin__:
-                        print(  # noqa: T201
-                            f"Site refresh: {int((next_refr-now).total_seconds()):>3} sec,  Device details refresh: {int((next_dev_refr-now).total_seconds()):>3} sec  (CTRL-C to abort)",
-                            end="\r",
-                            flush=True,
-                        )
-                    elif sec == 0:
-                        # IDLE may be used and does not support cursor placement, skip time progress display
-                        print(  # noqa: T201
-                            f"Site refresh: {int((next_refr-now).total_seconds()):>3} sec,  Device details refresh: {int((next_dev_refr-now).total_seconds()):>3} sec  (CTRL-C to abort)",
-                            end="",
-                            flush=True,
-                        )
-                    time.sleep(1)
+                # print optional energy details
+                if energy_stats:
+                    unit = "kWh"
+                    for site_id, site in myapi.sites.items():
+                        if (energy:=site.get("energy_details") or {}):
+                            today :dict = energy.get("today")
+                            yesterday :dict = energy.get("last_period")
+                            CONSOLE.info(f"Energy details for System {(site.get('site_info') or {}).get('site_name','Unknown')} (Site ID: {site_id}):")
+                            CONSOLE.info(
+                                f"{'Today':<{col1}}: {today.get('date','----------'):<{col2}} {'Yesterday':<{col3}}: {yesterday.get('date','----------')!s}"
+                            )
+                            CONSOLE.info(
+                                f"{'Solar Energy':<{col1}}: {today.get('solar_production',''):>6} {unit:<{col2-7}} {'Solar Energy':<{col3}}: {yesterday.get('solar_production',''):>6} {unit}"
+                            )
+                            CONSOLE.info(
+                                f"{'SB Charged':<{col1}}: {today.get('solarbank_charge',''):>6} {unit:<{col2-7}} {'SB Charged':<{col3}}: {yesterday.get('solarbank_charge',''):>6} {unit}"
+                            )
+                            CONSOLE.info(
+                                f"{'SB Discharged':<{col1}}: {today.get('solarbank_discharge',''):>6} {unit:<{col2-7}} {'SB Discharged':<{col3}}: {yesterday.get('solarbank_discharge',''):>6} {unit}"
+                            )
+                            CONSOLE.info(
+                                f"{'House Feed':<{col1}}: {today.get('battery_to_home',''):>6} {unit:<{col2-7}} {'House Feed':<{col3}}: {yesterday.get('battery_to_home',''):>6} {unit}"
+                            )
+                            CONSOLE.info(
+                                f"{'House Usage':<{col1}}: {today.get('home_usage',''):>6} {unit:<{col2-7}} {'House Usage':<{col3}}: {yesterday.get('home_usage',''):>6} {unit}"
+                            )
+                            CONSOLE.info(
+                                f"{'Sol/Bat/Oth %':<{col1}}: {float(today.get('solar_percentage',''))*100:>3.0f}/{float(today.get('battery_percentage',''))*100:>3.0f}/{float(today.get('other_percentage',''))*100:>3.0f} {'%':<{col2-12}} {'Sol/Bat/Oth %':<{col3}}: {float(today.get('solar_percentage',''))*100:>3.0f}/{float(today.get('battery_percentage',''))*100:>3.0f}/{float(today.get('other_percentage',''))*100:>3.0f} %"
+                            )
+                            CONSOLE.info("-" * 80)
+
+                # ask to reload or switch to next file or wait for refresh cycle of real time monitoring
+                if use_file:
+                    while use_file:
+                        resp = input("[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext file or [Q]uit: ")
+                        if resp.upper() in ["S", "SITE"]:
+                            # set device details refresh to future to reload only site info
+                            next_dev_refr = datetime.now().astimezone() + timedelta(seconds=1)
+                            break
+                        elif resp.upper() in ["A", "ALL"]:
+                            break
+                        elif resp.upper() in ["O", "OTHER"] and exampleslist:
+                            CONSOLE.info("Select the input source for the monitor:")
+                            for idx, filename in enumerate(exampleslist, start=1):
+                                CONSOLE.info("(%s) %s", idx, filename)
+                            while use_file:
+                                selection = input(f"Enter source file number (1-{len(exampleslist)}): ")
+                                if (
+                                    selection.isdigit()
+                                    and 1 <= (selection := int(selection)) <= len(exampleslist)
+                                ):
+                                    break
+                            testfolder = exampleslist[selection - 1]
+                            myapi.testDir(testfolder)
+                            break
+                        elif resp.upper() in ["N", "NEXT"] and exampleslist:
+                            selection = (selection + 1) if selection < len(exampleslist) else 1
+                            testfolder = exampleslist[selection - 1]
+                            myapi.testDir(testfolder)
+                            break
+                        elif resp.upper() in ["Q", "QUIT"]:
+                            return True
+                else:
+                    CONSOLE.info("Api Requests: %s", myapi.request_count)
+                    CONSOLE.debug(json.dumps(myapi.devices, indent=2))
+                    for sec in range(REFRESH):
+                        now = datetime.now().astimezone()
+                        if sys.stdin is sys.__stdin__:
+                            print(  # noqa: T201
+                                f"Site refresh: {int((next_refr-now).total_seconds()):>3} sec,  Device details refresh: {int((next_dev_refr-now).total_seconds()):>3} sec  (CTRL-C to abort)",
+                                end="\r",
+                                flush=True,
+                            )
+                        elif sec == 0:
+                            # IDLE may be used and does not support cursor placement, skip time progress display
+                            print(  # noqa: T201
+                                f"Site refresh: {int((next_refr-now).total_seconds()):>3} sec,  Device details refresh: {int((next_dev_refr-now).total_seconds()):>3} sec  (CTRL-C to abort)",
+                                end="",
+                                flush=True,
+                            )
+                        time.sleep(1)
             return False
 
     except (ClientError, errors.AnkerSolixError) as err:
