@@ -14,6 +14,7 @@ the Anker App since it will be kicked out on each refresh.
 """  # noqa: D205
 
 import asyncio
+import contextlib
 from datetime import datetime, timedelta
 import json
 import logging
@@ -240,6 +241,17 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Charge Power':<{col1}}: {dev.get('charging_power',''):>4} {unit:<{col2-5}} {'Device Preset':<{col3}}: {preset:>4} {unit}"
                         )
+                        demand = site.get("home_load_power") or ""
+                        load = (site.get("solarbank_info") or {}).get("to_home_load") or ""
+                        diff = ""
+                        with contextlib.suppress(ValueError):
+                            if float(demand) > float(load):
+                                diff = "(-)"
+                            elif float(demand) < float(load):
+                                diff = "(+)"
+                        CONSOLE.info(
+                            f"{'Home Demand':<{col1}}: {demand or '---':>4} {unit:<{col2-5}} {'SB Home Load':<{col3}}: {load or '---':>4} {unit}  {diff}"
+                        )
                         # update schedule with device details refresh and print it
                         if admin:
                             data = dev.get("schedule") or {}
@@ -333,7 +345,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 # ask to reload or switch to next file or wait for refresh cycle of real time monitoring
                 if use_file:
                     while use_file:
-                        resp = input("[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext file or [Q]uit: ")
+                        resp = input("[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file or [Q]uit: ")
                         if resp.upper() in ["S", "SITE"]:
                             # set device details refresh to future to reload only site info
                             next_dev_refr = datetime.now().astimezone() + timedelta(seconds=1)
@@ -356,6 +368,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             break
                         elif resp.upper() in ["N", "NEXT"] and exampleslist:
                             selection = (selection + 1) if selection < len(exampleslist) else 1
+                            testfolder = exampleslist[selection - 1]
+                            myapi.testDir(testfolder)
+                            break
+                        elif resp.upper() in ["P", "PREVIOUS"] and exampleslist:
+                            selection = (selection - 1) if selection > 1 else len(exampleslist)
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
                             break

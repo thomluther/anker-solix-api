@@ -427,17 +427,18 @@ class SolixDeviceStatus(Enum):
 class SolarbankStatus(Enum):
     """Enumuration for Anker Solix Solarbank status."""
 
-    # TODO(#SB2): Eventually introduce dedicated type for solarbank 2 if it has different states
-    detection = "0"
-    bypass = "1"
-    discharge = "2"
-    charge = "3"
+    detection = "0"  # Rare for SB1, frequent for SB2 especially in combination with Smartmeter in the morning
+    protection_charge = "03"  # For SB2 only when there is charge while output below demand in detection mode
+    bypass = "1" # Bypass solar without charge
+    bypass_discharge = "15"  # preudo state for SB2 if discharging in bypass mode, not possible for SB1
+    discharge = "2"  # only seen if no solar available
+    charge = "3"  # normal charge for battery
     charge_bypass = "35"  # pseudo state, the solarbank does not distinguish this
-    charge_priority = "37"  # pseudo state, the solarbank does not distinguish this but reports 3 as seen so far
-    wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night as well
+    charge_priority = "37"  # pseudo state, the solarbank does not distinguish this, when no output power exists while preset is ignored
+    wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night, probably hourly? resync with the cloud
     # TODO(3): Add descriptions once status code usage is observed/known
     # code 5 was not observed yet
-    full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W
+    full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
     standby = "7"
     unknown = "unknown"
 
@@ -836,15 +837,20 @@ class AnkerSolixApi:
                                 break
                         # check if battery has bypass during charge (if output during charge)
                         # NOTE: charging power may be updated after initial device details update
-                        # NOTE: If status is 3=charging and larger than preset but nothing goes out, the charge priority is active (e.g. 0 Watt switch)
+                        # NOTE: SB1: If status is 3=charging and larger than preset but nothing goes out, the charge priority is active (e.g. 0 Watt switch)
+                        # NOTE: TODO(#SB2) Preset must be ignored for SB2 until the user mode can be distinguished whether the home demand or the output preset must be considered
                         # This key can be passed separately, make sure the other values are looked up in passed data first, then in device details
-                        preset = devData.get("set_load_power") or device(
+                        preset = devData.get("set_load_power") or device.get(
                             "set_output_power"
                         )
                         out = devData.get("output_power") or device.get("output_power")
                         solar = devData.get("photovoltaic_power") or device.get(
                             "input_power"
                         )
+                        generation = int(device.get("generation", 0))
+                        charge = devData.get("charging_power") or device.get('charging_power')
+                        homeload = devData.get("to_home_load") or device.get("to_home_load")
+                        demand = devData.get("home_load_power")
                         if (
                             description == SolarbankStatus.charge.name
                             and preset is not None
@@ -852,12 +858,40 @@ class AnkerSolixApi:
                             and solar is not None
                         ):
                             with contextlib.suppress(ValueError):
-                                if int(out) == 0 and int(solar) > int(preset):
-                                    # Bypass but 0 W output must be active charge priority
+                                if (
+                                    int(out) == 0
+                                    and int(solar) > int(preset)
+                                    and generation < 2
+                                ):  # TODO(#SB2) change once preset can be determined
+                                    # Charge and 0 W output while solar larger than preset must be active charge priority
                                     description = SolarbankStatus.charge_priority.name
                                 elif int(out) > 0:
                                     # Charge with output must be bypass charging
                                     description = SolarbankStatus.charge_bypass.name
+                        elif (
+                            description == SolarbankStatus.detection.name
+                            and generation > 1
+                            and charge is not None
+                            and homeload is not None
+                            and demand is not None
+                        ):
+                            with contextlib.suppress(ValueError):
+                                # Charge > 0 and home load < demand must be enforced charging
+                                if (
+                                    int(charge) > 0
+                                    and int(homeload) < int(demand)
+                                ):
+                                    description = SolarbankStatus.protection_charge.name
+                        elif (
+                            description == SolarbankStatus.bypass.name
+                            and generation > 1
+                            and charge is not None
+                        ):
+                            with contextlib.suppress(ValueError):
+                                # New SB2 Mode for Bypass and discharge
+                                if int(charge) < 0:
+                                    description = SolarbankStatus.bypass_discharge.name
+
                         device.update({"charging_status_desc": description})
                     elif key in ["sub_package_num"] and str(value).isdigit():
                         device.update({"sub_package_num": int(value)})
@@ -985,46 +1019,55 @@ class AnkerSolixApi:
 
                     # generate extra values when certain conditions are met
                     if key in ["battery_power"] or calc_capacity:
-                        # generate battery values when soc updated or device name changed or PN is known
-                        if not (cap := device.get("battery_capacity")):
-                            pn = device.get("device_pn") or ""
-                            if hasattr(SolixDeviceCapacity, pn):
-                                # get battery capacity from known PNs
-                                cap = getattr(SolixDeviceCapacity, pn)
-                            elif device.get("type") == SolixDeviceType.SOLARBANK.value:
-                                # Derive battery capacity in Wh from latest solarbank name or alias if available
-                                cap = (
-                                    (
-                                        device.get("name", "")
-                                        or devData.get("device_name", "")
-                                        or device.get("alias", "")
+                        # generate battery values when soc updated or device name changed or PN is known or exp packs changed
+                        # recalculate only with valid data, otherwise init extra fields with 0
+                        if devData.get("data_valid",True):
+                            if not (cap := device.get("battery_capacity")) or calc_capacity:
+                                pn = device.get("device_pn") or ""
+                                if hasattr(SolixDeviceCapacity, pn):
+                                    # get battery capacity from known PNs
+                                    cap = getattr(SolixDeviceCapacity, pn)
+                                elif device.get("type") == SolixDeviceType.SOLARBANK.value:
+                                    # Derive battery capacity in Wh from latest solarbank name or alias if available
+                                    cap = (
+                                        (
+                                            device.get("name", "")
+                                            or devData.get("device_name", "")
+                                            or device.get("alias", "")
+                                        )
+                                        .replace(" 2", "")
+                                        .replace("Solarbank E", "")
+                                        .replace(" Pro", "")
+                                        .replace(" Plus", "")
                                     )
-                                    .replace(" 2", "")
-                                    .replace("Solarbank E", "")
-                                    .replace(" Pro", "")
-                                    .replace(" Plus", "")
+                                # consider battery packs for total device capacity
+                                exp = (
+                                    devData.get("sub_package_num")
+                                    or device.get("sub_package_num")
+                                    or 0
                                 )
-                            # consider battery packs for total device capacity
-                            exp = (
-                                device.get("sub_package_num")
-                                or devData.get("sub_package_num")
-                                or 0
+                                if str(cap).isdigit() and str(exp).isdigit():
+                                    cap = int(cap) * (1 + int(exp))
+                            soc = devData.get("battery_power", "") or device.get(
+                                "battery_soc", ""
                             )
-                            if str(cap).isdigit() and str(exp).isdigit():
-                                cap = int(cap) * (1 + int(exp))
-                        soc = devData.get("battery_power", "") or device.get(
-                            "battery_soc", ""
-                        )
-                        # Calculate remaining energy in Wh and add values
-                        if cap and soc and str(cap).isdigit() and str(soc).isdigit():
-                            device.update(
-                                {
-                                    "battery_capacity": str(cap),
-                                    "battery_energy": str(
-                                        int(int(cap) * int(soc) / 100)
-                                    ),
-                                }
-                            )
+                            # Calculate remaining energy in Wh and add values
+                            if cap and soc and str(cap).isdigit() and str(soc).isdigit():
+                                device.update(
+                                    {
+                                        "battery_capacity": str(cap),
+                                        "battery_energy": str(
+                                            int(int(cap) * int(soc) / 100)
+                                        ),
+                                    }
+                                )
+                        else:
+                            # init calculated fields with 0 if not existing
+                            if "battery_capacity" not in device:
+                                device.update({"battery_capacity": "0"})
+                            if "battery_energy" not in device:
+                                device.update({"battery_energy": "0"})
+
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
                         "%s occured when updating device details for key %s with value %s: %s",
@@ -1378,8 +1421,8 @@ class AnkerSolixApi:
         for site in sites.get("site_list", []):
             if myid := site.get("site_id"):
                 # Update site info
-                mysite = self.sites.get(myid, {})
-                siteInfo = mysite.get("site_info", {})
+                mysite: dict = self.sites.get(myid, {})
+                siteInfo: dict = mysite.get("site_info", {})
                 siteInfo.update(site)
                 mysite.update(
                     {"type": SolixDeviceType.SYSTEM.value, "site_info": siteInfo}
@@ -1391,9 +1434,13 @@ class AnkerSolixApi:
                 # Update scene info for site
                 self._logger.debug("Getting scene info for site")
                 scene = await self.get_scene_info(myid, fromFile=fromFile)
-                # Check if Solarbank 2 data is valid, default to true if field not found
+                # Check if Solarbank 2 data is valid, default to true if field not found or no Solarbank in system
                 sb_info = scene.get("solarbank_info") or {}
-                data_valid = bool(sb_info.get("is_display_data", True))
+                data_valid = (
+                    bool(sb_info.get("is_display_data", True))
+                    or len(sb_info.get("solarbank_list") or []) == 0
+                )
+                # Work adound: Try few requeries if SB data is invalid in scene info response
                 requeries = 0
                 while requeries < 3 and not data_valid:
                     requeries += 1
@@ -1402,10 +1449,14 @@ class AnkerSolixApi:
                         requeries,
                     )
                     # delay 5 sec prior requery
-                    await sleep(5)
+                    if not fromFile:
+                        await sleep(5)
                     scene = await self.get_scene_info(myid, fromFile=fromFile)
                     sb_info = scene.get("solarbank_info") or {}
-                    data_valid = bool(sb_info.get("is_display_data", True))
+                    data_valid = (
+                        bool(sb_info.get("is_display_data", True))
+                        or len(sb_info.get("solarbank_list") or []) == 0
+                    )
 
                 # add indicator for valid data introduced for Solarbank 2 to site cache
                 mysite.update({"data_valid": data_valid, "requeries": requeries})
@@ -1417,7 +1468,7 @@ class AnkerSolixApi:
                 sb_total_output = sb_info.get("total_output_power", "")
                 sb_total_solar = sb_info.get("total_photovoltaic_power", "")
                 sb_total_charge_calc = 0
-                sb_charges = {}
+                sb_charges: dict = {}
                 sb_list = sb_info.get("solarbank_list") or []
                 for index, solarbank in enumerate(sb_list):
                     # work around for device_name which is actually the device_alias in scene info
@@ -1468,6 +1519,7 @@ class AnkerSolixApi:
                             "solar_power_4": sb_info.get("solar_power_4"),
                             "ac_power": sb_info.get("ac_power"),
                             "to_home_load": sb_info.get("to_home_load"),
+                            "home_load_power": mysite.get("home_load_power"), # only passed to device for proper SB2 charge status update
                         },
                         devType=SolixDeviceType.SOLARBANK.value,
                         siteId=myid,
@@ -1508,6 +1560,7 @@ class AnkerSolixApi:
                                 {
                                     "device_sn": sn,
                                     "charging_status": charge_status,
+                                    "home_load_power": mysite.get("home_load_power"), # only passed to device for proper SB2 charge status update
                                 }
                             )
                 # make sure to write back any changes to the solarbank info in sites dict
