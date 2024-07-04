@@ -430,10 +430,10 @@ class SolarbankStatus(Enum):
     detection = "0"  # Rare for SB1, frequent for SB2 especially in combination with Smartmeter in the morning
     protection_charge = "03"  # For SB2 only when there is charge while output below demand in detection mode
     bypass = "1" # Bypass solar without charge
-    bypass_discharge = "15"  # preudo state for SB2 if discharging in bypass mode, not possible for SB1
+    bypass_discharge = "12"  # preudo state for SB2 if discharging in bypass mode, not possible for SB1
     discharge = "2"  # only seen if no solar available
     charge = "3"  # normal charge for battery
-    charge_bypass = "35"  # pseudo state, the solarbank does not distinguish this
+    charge_bypass = "31"  # pseudo state, the solarbank does not distinguish this
     charge_priority = "37"  # pseudo state, the solarbank does not distinguish this, when no output power exists while preset is ignored
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night, probably hourly? resync with the cloud
     # TODO(3): Add descriptions once status code usage is observed/known
