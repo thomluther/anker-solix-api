@@ -122,7 +122,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 )
                 if not resp or resp.upper() in ["N", "NO"]:
                     break
-                elif resp.upper() in ["Y","YES"]:
+                if resp.upper() in ["Y","YES"]:
                     energy_stats = True
                     break
 
@@ -323,22 +323,40 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Today':<{col1}}: {today.get('date','----------'):<{col2}} {'Yesterday':<{col3}}: {yesterday.get('date','----------')!s}"
                             )
                             CONSOLE.info(
-                                f"{'Solar Energy':<{col1}}: {today.get('solar_production',''):>6} {unit:<{col2-7}} {'Solar Energy':<{col3}}: {yesterday.get('solar_production',''):>6} {unit}"
+                                f"{'Solar Energy':<{col1}}: {today.get('solar_production','-.--'):>6} {unit:<{col2-7}} {'Solar Energy':<{col3}}: {yesterday.get('solar_production','-.--'):>6} {unit}"
                             )
                             CONSOLE.info(
-                                f"{'SB Charged':<{col1}}: {today.get('solarbank_charge',''):>6} {unit:<{col2-7}} {'SB Charged':<{col3}}: {yesterday.get('solarbank_charge',''):>6} {unit}"
+                                f"{'SB Charged':<{col1}}: {today.get('solarbank_charge','-.--'):>6} {unit:<{col2-7}} {'SB Charged':<{col3}}: {yesterday.get('solarbank_charge','-.--'):>6} {unit}"
                             )
                             CONSOLE.info(
-                                f"{'SB Discharged':<{col1}}: {today.get('solarbank_discharge',''):>6} {unit:<{col2-7}} {'SB Discharged':<{col3}}: {yesterday.get('solarbank_discharge',''):>6} {unit}"
+                                f"{'SB Discharged':<{col1}}: {today.get('solarbank_discharge','-.--'):>6} {unit:<{col2-7}} {'SB Discharged':<{col3}}: {yesterday.get('solarbank_discharge','-.--'):>6} {unit}"
                             )
+                            if value := today.get('battery_to_home'):
+                                CONSOLE.info(
+                                    f"{'House Feed':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'House Feed':<{col3}}: {yesterday.get('battery_to_home','-.--'):>6} {unit}"
+                                )
+                            if value := today.get('home_usage'):
+                                CONSOLE.info(
+                                    f"{'House Usage':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'House Usage':<{col3}}: {yesterday.get('home_usage','-.--'):>6} {unit}"
+                                )
+                            if value := today.get('grid_to_home'):
+                                CONSOLE.info(
+                                    f"{'Grid Import':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Grid Import':<{col3}}: {yesterday.get('grid_to_home','-.--'):>6} {unit}"
+                                )
+                            if value := today.get('solar_to_grid'):
+                                CONSOLE.info(
+                                    f"{'Grid Export':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Grid Export':<{col3}}: {yesterday.get('solar_to_grid','-.--'):>6} {unit}"
+                                )
+                            if value := today.get('ac_socket'):
+                                CONSOLE.info(
+                                    f"{'AC Socket':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'AC Socket':<{col3}}: {yesterday.get('ac_socket','-.--'):>6} {unit}"
+                                )
+                            if value := today.get('smartplugs_total'):
+                                CONSOLE.info(
+                                    f"{'Smartplugs':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Smartplugs':<{col3}}: {yesterday.get('smartplugs_total','-.--'):>6} {unit}"
+                                )
                             CONSOLE.info(
-                                f"{'House Feed':<{col1}}: {today.get('battery_to_home',''):>6} {unit:<{col2-7}} {'House Feed':<{col3}}: {yesterday.get('battery_to_home',''):>6} {unit}"
-                            )
-                            CONSOLE.info(
-                                f"{'House Usage':<{col1}}: {today.get('home_usage',''):>6} {unit:<{col2-7}} {'House Usage':<{col3}}: {yesterday.get('home_usage',''):>6} {unit}"
-                            )
-                            CONSOLE.info(
-                                f"{'Sol/Bat/Oth %':<{col1}}: {float(today.get('solar_percentage',''))*100:>3.0f}/{float(today.get('battery_percentage',''))*100:>3.0f}/{float(today.get('other_percentage',''))*100:>3.0f} {'%':<{col2-12}} {'Sol/Bat/Oth %':<{col3}}: {float(today.get('solar_percentage',''))*100:>3.0f}/{float(today.get('battery_percentage',''))*100:>3.0f}/{float(today.get('other_percentage',''))*100:>3.0f} %"
+                                f"{'Sol/Bat/Oth %':<{col1}}: {float(today.get('solar_percentage',''))*100:>3.0f}/{float(today.get('battery_percentage',''))*100:>3.0f}/{float(today.get('other_percentage',''))*100:>3.0f} {'%':<{col2-12}} {'Sol/Bat/Oth %':<{col3}}: {float(yesterday.get('solar_percentage',''))*100:>3.0f}/{float(yesterday.get('battery_percentage',''))*100:>3.0f}/{float(yesterday.get('other_percentage',''))*100:>3.0f} %"
                             )
                             CONSOLE.info("-" * 80)
 
@@ -350,9 +368,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             # set device details refresh to future to reload only site info
                             next_dev_refr = datetime.now().astimezone() + timedelta(seconds=1)
                             break
-                        elif resp.upper() in ["A", "ALL"]:
+                        if resp.upper() in ["A", "ALL"]:
                             break
-                        elif resp.upper() in ["O", "OTHER"] and exampleslist:
+                        if resp.upper() in ["O", "OTHER"] and exampleslist:
                             CONSOLE.info("Select the input source for the monitor:")
                             for idx, filename in enumerate(exampleslist, start=1):
                                 CONSOLE.info("(%s) %s", idx, filename)
@@ -366,17 +384,17 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
                             break
-                        elif resp.upper() in ["N", "NEXT"] and exampleslist:
+                        if resp.upper() in ["N", "NEXT"] and exampleslist:
                             selection = (selection + 1) if selection < len(exampleslist) else 1
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
                             break
-                        elif resp.upper() in ["P", "PREVIOUS"] and exampleslist:
+                        if resp.upper() in ["P", "PREVIOUS"] and exampleslist:
                             selection = (selection - 1) if selection > 1 else len(exampleslist)
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
                             break
-                        elif resp.upper() in ["Q", "QUIT"]:
+                        if resp.upper() in ["Q", "QUIT"]:
                             return True
                 else:
                     CONSOLE.info("Api Requests: %s", myapi.request_count)

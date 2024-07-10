@@ -89,7 +89,7 @@ async def main() -> bool:
                     myapi.requestDelay(.3)
                 CONSOLE.info(
                     "Queries may take up to %s seconds with %.1f seconds delay...please wait...",
-                    round((2 * numdays * daytotals + 2) * myapi.requestDelay()),myapi.requestDelay()
+                    round((2 * numdays * daytotals + 1) * myapi.requestDelay()),myapi.requestDelay()
                 )
                 data = await myapi.energy_daily(
                     siteId=site_id,
@@ -97,6 +97,7 @@ async def main() -> bool:
                     startDay=startday,
                     numDays=numdays,
                     dayTotals=daytotals,
+                    # TODO(#SMARTPLUG): Add Smartplug type once supported
                     devTypes={api.SolixDeviceType.SOLARBANK.value,api.SolixDeviceType.SMARTMETER.value}    # include all possible energy stats per site
                 )
                 _LOGGER.debug(json.dumps(data, indent=2))

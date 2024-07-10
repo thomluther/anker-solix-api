@@ -77,6 +77,7 @@ _API_COUNTRIES = {
         "CA",
     ],
     "eu": [
+        "DE",
         "BE",
         "EL",
         "LT",
@@ -93,7 +94,6 @@ _API_COUNTRIES = {
         "HR",
         "MT",
         "SK",
-        "DE",
         "IT",
         "NL",
         "FI",
@@ -208,6 +208,55 @@ _API_ENDPOINTS = {
     'app/devicerelation/relate_device',
     'app/push/clear_count',
     'app/ota/batch/check_update',
+PPS and Power Panel related:
+    "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel
+    "charging_energy_service/get_system_running_info", # Cumulative Home/System Energy Savings since Home creation date
+    "charging_energy_service/get_device_infos", # Home Panel Info
+    "charging_energy_service/get_rom_versions”, # Check for firmware update and download available packages
+    "charging_energy_service/get_error_infos", # Unknown at this time
+    "charging_energy_service/get_wifi_info", # Displays WiFi network connected to Home Power Panel
+    "charging_energy_service/get_installation_inspection", # Unknown at this time - appears to say which page last viewed on App
+    "charging_energy_service/sync_installation_inspection", #Unknown at this time
+    "charging_energy_service/get_utility_rate_plan",
+    "charging_energy_service/report_device_data",
+    "charging_energy_service/restart_peak_session",
+    "charging_energy_service/preprocess_utility_rate_plan",
+    "charging_energy_service/ack_utility_rate_plan",
+    "charging_energy_service/get_configs",
+    "charging_energy_service/adjust_station_price_unit",
+    "charging_energy_service/sync_config",
+    "charging_energy_service/get_sns", # Displays Serial Numbers of attached PPS in Home
+    "charging_energy_service/get_world_monetary_unit",
+
+    "charging_hes_svc/ota",
+    "charging_hes_svc/check_update",
+    "charging_hes_svc/get_installer_info",
+    "charging_hes_svc/download_energy_statistics",
+    "charging_hes_svc/get_wifi_info", # ssid and rssi for a device
+    "charging_hes_svc/update_wifi_config",
+    "charging_hes_svc/get_device_product_info", # List of Anker power devices
+    "charging_hes_svc/report_device_data",
+    "charging_hes_svc/get_auto_disaster_prepare_status",
+    "charging_hes_svc/get_install_info",
+    "charging_hes_svc/get_device_pn_info",
+    "charging_hes_svc/get_device_card_list",
+    "charging_hes_svc/get_device_card_details",
+    "charging_hes_svc/get_system_running_time",
+    "charging_hes_svc/get_system_profit_detail",
+    "charging_hes_svc/get_tou_price_plan_detail",
+    "charging_hes_svc/get_electric_utility_and_electric_plan_list",
+    "charging_hes_svc/get_station_config_and_status",
+    "charging_hes_svc/get_current_disaster_prepare_details",
+    "charging_hes_svc/adjust_station_price_unit",
+    "charging_hes_svc/update_hes_utility_rate_plan",
+    "charging_hes_svc/quit_auto_disaster_prepare",
+    "charging_hes_svc/restart_peak_session",
+    "charging_hes_svc/check_function",
+    "charging_hes_svc/remove_user_fault_info",
+    "charging_hes_svc/user_event_alarm",
+    "charging_hes_svc/sync_back_up_history",
+    "charging_hes_svc/cancel_pop",
+
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -429,8 +478,10 @@ class SolarbankStatus(Enum):
 
     detection = "0"  # Rare for SB1, frequent for SB2 especially in combination with Smartmeter in the morning
     protection_charge = "03"  # For SB2 only when there is charge while output below demand in detection mode
-    bypass = "1" # Bypass solar without charge
-    bypass_discharge = "12"  # preudo state for SB2 if discharging in bypass mode, not possible for SB1
+    bypass = "1"  # Bypass solar without charge
+    bypass_discharge = (
+        "12"  # preudo state for SB2 if discharging in bypass mode, not possible for SB1
+    )
     discharge = "2"  # only seen if no solar available
     charge = "3"  # normal charge for battery
     charge_bypass = "31"  # pseudo state, the solarbank does not distinguish this
@@ -848,8 +899,12 @@ class AnkerSolixApi:
                             "input_power"
                         )
                         generation = int(device.get("generation", 0))
-                        charge = devData.get("charging_power") or device.get('charging_power')
-                        homeload = devData.get("to_home_load") or device.get("to_home_load")
+                        charge = devData.get("charging_power") or device.get(
+                            "charging_power"
+                        )
+                        homeload = devData.get("to_home_load") or device.get(
+                            "to_home_load"
+                        )
                         demand = devData.get("home_load_power")
                         if (
                             description == SolarbankStatus.charge.name
@@ -877,10 +932,7 @@ class AnkerSolixApi:
                         ):
                             with contextlib.suppress(ValueError):
                                 # Charge > 0 and home load < demand must be enforced charging
-                                if (
-                                    int(charge) > 0
-                                    and int(homeload) < int(demand)
-                                ):
+                                if int(charge) > 0 and int(homeload) < int(demand):
                                     description = SolarbankStatus.protection_charge.name
                         elif (
                             description == SolarbankStatus.bypass.name
@@ -1021,13 +1073,19 @@ class AnkerSolixApi:
                     if key in ["battery_power"] or calc_capacity:
                         # generate battery values when soc updated or device name changed or PN is known or exp packs changed
                         # recalculate only with valid data, otherwise init extra fields with 0
-                        if devData.get("data_valid",True):
-                            if not (cap := device.get("battery_capacity")) or calc_capacity:
+                        if devData.get("data_valid", True):
+                            if (
+                                not (cap := device.get("battery_capacity"))
+                                or calc_capacity
+                            ):
                                 pn = device.get("device_pn") or ""
                                 if hasattr(SolixDeviceCapacity, pn):
                                     # get battery capacity from known PNs
                                     cap = getattr(SolixDeviceCapacity, pn)
-                                elif device.get("type") == SolixDeviceType.SOLARBANK.value:
+                                elif (
+                                    device.get("type")
+                                    == SolixDeviceType.SOLARBANK.value
+                                ):
                                     # Derive battery capacity in Wh from latest solarbank name or alias if available
                                     cap = (
                                         (
@@ -1052,7 +1110,12 @@ class AnkerSolixApi:
                                 "battery_soc", ""
                             )
                             # Calculate remaining energy in Wh and add values
-                            if cap and soc and str(cap).isdigit() and str(soc).isdigit():
+                            if (
+                                cap
+                                and soc
+                                and str(cap).isdigit()
+                                and str(soc).isdigit()
+                            ):
                                 device.update(
                                     {
                                         "battery_capacity": str(cap),
@@ -1508,22 +1571,26 @@ class AnkerSolixApi:
                     mysite["solarbank_info"]["solarbank_list"][index] = solarbank
                     new_sites.update({myid: mysite})
                     # add count of solarbanks to device details and other metrics that might be device related
-                    if sn := self._update_dev(
-                        solarbank
-                        | {
-                            "data_valid": data_valid,
-                            "solarbank_count": len(sb_list),
-                            "solar_power_1": sb_info.get("solar_power_1"),
-                            "solar_power_2": sb_info.get("solar_power_2"),
-                            "solar_power_3": sb_info.get("solar_power_3"),
-                            "solar_power_4": sb_info.get("solar_power_4"),
-                            "ac_power": sb_info.get("ac_power"),
-                            "to_home_load": sb_info.get("to_home_load"),
-                            "home_load_power": mysite.get("home_load_power"), # only passed to device for proper SB2 charge status update
-                        },
-                        devType=SolixDeviceType.SOLARBANK.value,
-                        siteId=myid,
-                        isAdmin=admin,
+                    if (
+                        sn := self._update_dev(
+                            solarbank
+                            | {
+                                "data_valid": data_valid,
+                                "solarbank_count": len(sb_list),
+                                "solar_power_1": sb_info.get("solar_power_1"),
+                                "solar_power_2": sb_info.get("solar_power_2"),
+                                "solar_power_3": sb_info.get("solar_power_3"),
+                                "solar_power_4": sb_info.get("solar_power_4"),
+                                "ac_power": sb_info.get("ac_power"),
+                                "to_home_load": sb_info.get("to_home_load"),
+                                "home_load_power": mysite.get(
+                                    "home_load_power"
+                                ),  # only passed to device for proper SB2 charge status update
+                            },
+                            devType=SolixDeviceType.SOLARBANK.value,
+                            siteId=myid,
+                            isAdmin=admin,
+                        )
                     ):
                         self._site_devices.add(sn)
                         sb_charges[sn] = charge_calc
@@ -1560,7 +1627,9 @@ class AnkerSolixApi:
                                 {
                                     "device_sn": sn,
                                     "charging_status": charge_status,
-                                    "home_load_power": mysite.get("home_load_power"), # only passed to device for proper SB2 charge status update
+                                    "home_load_power": mysite.get(
+                                        "home_load_power"
+                                    ),  # only passed to device for proper SB2 charge status update
                                 }
                             )
                 # make sure to write back any changes to the solarbank info in sites dict
@@ -1780,7 +1849,7 @@ class AnkerSolixApi:
         query_sn: str = ""
         for site_id, site in self.sites.items():
             # build device types set for daily energy query, depending on device types found for site
-            # solarinfo will always be queried by daily energy and required if solarbank or inverters are in the system
+            # solarinfo will always be queried by daily energy and required for general site statistics
             # However, daily energy should not be queried for solarbank or smartmeter devices when they or their energy category is explicetly excluded
             if (
                 (dev_list := site.get("solar_list") or [])
@@ -3453,6 +3522,15 @@ class AnkerSolixApi:
         'statistics': [{'type': '1', 'total': '7.51', 'unit': 'kwh'}, {'type': '2', 'total': '7.49', 'unit': 'kg'}, {'type': '3', 'total': '3.00', 'unit': '€'}],
         'battery_discharging_total': '', 'solar_to_grid_total': '', 'grid_to_home_total': '', 'ac_out_put_total': '', 'home_usage_total': '', 'solar_total': '17.3105',
         'trend_unit': '', 'battery_to_home_total': '', 'smart_plug_info': {'smartplug_list': [],'total_power': '0.00'}}
+
+        Responses for solar_production:
+        Daily: Solar Energy, Extra Totals: charge, discharge, overall stats (Energy, CO2, Money), 3 x percentage share, solar_to_grid
+        Responses for solarbank:
+        Daily: Discharge Energy, Extra Totals: charge, discharge, ac_socket, battery_to_home
+        Responses for home_usage:
+        Daily: Home Usage Energy, Extra Totals: discharge, grid_to_home, battery_to_home, smart_plugs
+        Responses for grid:
+        Daily: solar_to_grid, grid_to_home, Extra Totals:
         """
         data = {
             "site_id": siteId,
@@ -3481,7 +3559,8 @@ class AnkerSolixApi:
     ) -> dict:
         """Fetch daily Energy data for given interval and provide it in a table format dictionary.
 
-        Solar production data is always queried. Additional energy data will be queried for devtypes 'solarbank' or 'smartmeter'
+        Solar production data is always queried. Additional energy data will be queried for devtypes 'solarbank' or 'smartmeter'. The number of
+        queries is optimized if dayTotals is True
         Example:
         {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21", "solarbank_discharge": "0.47", "solarbank_charge": "0.56"},
          "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "solarbank_discharge": "1.06", "solarbank_charge": "1.39"}}
@@ -3518,9 +3597,15 @@ class AnkerSolixApi:
                     endDay=startDay + timedelta(days=numDays - 1),
                     devType="solarbank",
                 )
+            fileNumDays = 0
+            fileStartDay = None
             for item in resp.get("power", []):
                 daystr = item.get("time", None)
                 if daystr:
+                    if fromFile:
+                        if fileStartDay is None:
+                            fileStartDay = daystr
+                        fileNumDays += 1
                     entry = table.get(daystr, {})
                     entry.update(
                         {
@@ -3529,39 +3614,145 @@ class AnkerSolixApi:
                         }
                     )
                     table.update({daystr: entry})
-            # Add solarbank 2 energy types if supported by cloud
-            if "home_usage_total" in resp:
-                if fromFile:
-                    resp = (
-                        await self._loadFromFile(
-                            os.path.join(
-                                self._testdir,
-                                f"energy_home_usage_{siteId}.json",
-                            )
-                        )
-                    ).get("data", {})
-                else:
-                    resp = await self.energy_analysis(
-                        siteId=siteId,
-                        deviceSn=deviceSn,
-                        rangeType="week",
-                        startDay=startDay,
-                        endDay=startDay + timedelta(days=numDays - 1),
-                        devType="home_usage",
+            # Solarbank 2 has AC socket output and battery to home related totals for given interval. If requested, make daily queries for given interval
+            if dayTotals and table and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1:
+                if max(numDays, fileNumDays) == 1:
+                    if fromFile:
+                        daystr = fileStartDay
+                    else:
+                        daystr = startDay.strftime("%Y-%m-%d")
+                    entry = table.get(daystr, {})
+                    entry.update(
+                        {
+                            "date": daystr,
+                            "ac_socket": resp.get("ac_out_put_total", ""),
+                            "battery_to_home": resp.get("battery_to_home_total", ""),
+                        }
                     )
-                for item in resp.get("power", []):
-                    daystr = item.get("time", None)
-                    if daystr:
+                    table.update({daystr: entry})
+                else:
+                    if fromFile:
+                        daylist = [
+                            datetime.strptime(fileStartDay, "%Y-%m-%d")
+                            + timedelta(days=x)
+                            for x in range(fileNumDays)
+                        ]
+                    else:
+                        daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+                    for day in daylist:
+                        daystr = day.strftime("%Y-%m-%d")
+                        # update response only for real requests
+                        if not fromFile:
+                            resp = await self.energy_analysis(
+                                siteId=siteId,
+                                deviceSn=deviceSn,
+                                rangeType="week",
+                                startDay=day,
+                                endDay=day,
+                                devType="solarbank",
+                            )
                         entry = table.get(daystr, {})
                         entry.update(
                             {
                                 "date": daystr,
-                                "home_usage": item.get("value", ""),
+                                "ac_socket": resp.get("ac_out_put_total", ""),
+                                "battery_to_home": resp.get("battery_to_home_total", ""),
                             }
                         )
                         table.update({daystr: entry})
-        # Add grid stats from smart reader
-        if SolixDeviceType.SMARTMETER.value in devTypes:
+
+        # Get home usage energy types if device is solarbank generation 2 or smartreader or smartplugs
+        if (
+            SolixDeviceType.SOLARBANK.value in devTypes
+            and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
+        ) or ({SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG} & devTypes):
+            if fromFile:
+                resp = (
+                    await self._loadFromFile(
+                        os.path.join(
+                            self._testdir,
+                            f"energy_home_usage_{siteId}.json",
+                        )
+                    )
+                ).get("data", {})
+            else:
+                resp = await self.energy_analysis(
+                    siteId=siteId,
+                    deviceSn=deviceSn,
+                    rangeType="week",
+                    startDay=startDay,
+                    endDay=startDay + timedelta(days=numDays - 1),
+                    devType="home_usage",
+                )
+            fileNumDays = 0
+            fileStartDay = None
+            for item in resp.get("power", []):
+                daystr = item.get("time", None)
+                if daystr:
+                    if fromFile:
+                        if fileStartDay is None:
+                            fileStartDay = daystr
+                        fileNumDays += 1
+                    entry = table.get(daystr, {})
+                    entry.update(
+                        {
+                            "date": daystr,
+                            "home_usage": item.get("value", ""),
+                        }
+                    )
+                    table.update({daystr: entry})
+            # Home usage has Grid import and smart plug related totals for given interval. If requested, make daily queries for given interval
+            if dayTotals and table:
+                if max(numDays, fileNumDays) == 1:
+                    if fromFile:
+                        daystr = fileStartDay
+                    else:
+                        daystr = startDay.strftime("%Y-%m-%d")
+                    entry = table.get(daystr, {})
+                    entry.update(
+                        {
+                            "date": daystr,
+                            "grid_to_home": resp.get("grid_to_home_total", ""),
+                            "smartplugs_total": (resp.get("smart_plug_info") or {}).get("total_power",""),
+                        }
+                    )
+                    table.update({daystr: entry})
+                else:
+                    if fromFile:
+                        daylist = [
+                            datetime.strptime(fileStartDay, "%Y-%m-%d")
+                            + timedelta(days=x)
+                            for x in range(fileNumDays)
+                        ]
+                    else:
+                        daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+                    for day in daylist:
+                        daystr = day.strftime("%Y-%m-%d")
+                        # update response only for real requests
+                        if not fromFile:
+                            resp = await self.energy_analysis(
+                                siteId=siteId,
+                                deviceSn=deviceSn,
+                                rangeType="week",
+                                startDay=day,
+                                endDay=day,
+                                devType="home_usage",
+                            )
+                        entry = table.get(daystr, {})
+                        entry.update(
+                            {
+                                "date": daystr,
+                                "grid_to_home": resp.get("grid_to_home_total", ""),
+                                "smartplugs_total": (resp.get("smart_plug_info") or {}).get("total_power",""),
+                            }
+                        )
+                        table.update({daystr: entry})
+
+        # Add grid stats from smart reader only if solarbank not requested, otherwise grid data available in solarbank and solar responses
+        if (
+            SolixDeviceType.SMARTMETER.value in devTypes
+            and SolixDeviceType.SOLARBANK.value not in devTypes
+        ):
             if fromFile:
                 resp = (
                     await self._loadFromFile(
@@ -3593,7 +3784,7 @@ class AnkerSolixApi:
                     entry.update(
                         {
                             "date": daystr,
-                            "grid": item.get("value", ""),
+                            "solar_to_grid": item.get("value", "").replace("-",""), # grid export is negative, convert to re-use as solar_to_grid value
                         }
                     )
                     table.update({daystr: entry})
@@ -3604,60 +3795,10 @@ class AnkerSolixApi:
                     entry.update(
                         {
                             "date": daystr,
-                            "grid_charge_trend": item.get("value", ""),
+                            "grid_to_home": item.get("value", ""),
                         }
                     )
                     table.update({daystr: entry})
-            # Grid related totals are only received as total value for given interval. If requested, make daily queries for given interval
-            if dayTotals and table:
-                if max(numDays, fileNumDays) == 1:
-                    if fromFile:
-                        daystr = fileStartDay
-                    else:
-                        daystr = startDay.strftime("%Y-%m-%d")
-                    entry = table.get(daystr, {})
-                    entry.update(
-                        {
-                            "date": daystr,
-                            # TODO(#SB2): To be validated for solarbank 2 systems whether new totals included in grid type response only
-                            "solar_to_grid": resp.get("solar_to_grid_total", ""),
-                            "grid_to_home": resp.get("grid_to_home_total", ""),
-                            "ac_out_put": resp.get("ac_out_put_total", ""),
-                        }
-                    )
-                    table.update({daystr: entry})
-                else:
-                    if fromFile:
-                        daylist = [
-                            datetime.strptime(fileStartDay, "%Y-%m-%d")
-                            + timedelta(days=x)
-                            for x in range(fileNumDays)
-                        ]
-                    else:
-                        daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                    for day in daylist:
-                        daystr = day.strftime("%Y-%m-%d")
-                        # update response only for real requests
-                        if not fromFile:
-                            resp = await self.energy_analysis(
-                                siteId=siteId,
-                                deviceSn=deviceSn,
-                                rangeType="week",
-                                startDay=day,
-                                endDay=day,
-                                devType="grid",
-                            )
-                        entry = table.get(daystr, {})
-                        entry.update(
-                            {
-                                "date": daystr,
-                                # TODO(#SB2): To be validated for solarbank 2 systems whether new totals included in grid type response only
-                                "solar_to_grid": resp.get("solar_to_grid_total", ""),
-                                "grid_to_home": resp.get("grid_to_home_total", ""),
-                                "ac_out_put": resp.get("ac_out_put_total", ""),
-                            }
-                        )
-                        table.update({daystr: entry})
 
         # Always Add solar production which contains percentages
         if fromFile:
@@ -3704,11 +3845,10 @@ class AnkerSolixApi:
                     {
                         "date": daystr,
                         "solarbank_charge": resp.get("charge_total", ""),
+                        "solar_to_grid": resp.get("solar_to_grid_total", ""),
                         "battery_percentage": resp.get("charging_pre", ""),
                         "solar_percentage": resp.get("electricity_pre", ""),
                         "other_percentage": resp.get("others_pre", ""),
-                        # TODO(#SB2): To be validated for solarbank 2 systems whether new totals included in solar_production type response
-                        "battery_to_home": resp.get("battery_to_home_total", ""),
                     }
                 )
                 table.update({daystr: entry})
@@ -3737,11 +3877,10 @@ class AnkerSolixApi:
                         {
                             "date": daystr,
                             "solarbank_charge": resp.get("charge_total", ""),
+                            "solar_to_grid": resp.get("solar_to_grid_total", ""),
                             "battery_percentage": resp.get("charging_pre", ""),
                             "solar_percentage": resp.get("electricity_pre", ""),
                             "other_percentage": resp.get("others_pre", ""),
-                            # TODO(#SB2): To be validated for solarbank 2 systems whether new totals included in solar_production type response
-                            "battery_to_home": resp.get("battery_to_home_total", ""),
                         }
                     )
                     table.update({daystr: entry})
