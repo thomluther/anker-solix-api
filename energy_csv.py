@@ -71,7 +71,7 @@ async def main() -> bool:
                     startday = datetime.fromisoformat(daystr)
                     numdays = int(input("How many days to query (1-366): "))
                     daytotals = input(
-                        "Do you want to include daily total data (e.g. solarbank charge) which require API query per day? (Y/N): "
+                        "Do you want to include daily total data (e.g. solarbank charge, grid import/export) which may require several API queries per day? (Y/N): "
                     )
                     daytotals = daytotals.upper() in ["Y", "YES", "TRUE", 1]
                     prefix = input(
@@ -89,7 +89,7 @@ async def main() -> bool:
                     myapi.requestDelay(.3)
                 CONSOLE.info(
                     "Queries may take up to %s seconds with %.1f seconds delay...please wait...",
-                    round((2 * numdays * daytotals + 1) * myapi.requestDelay()),myapi.requestDelay()
+                    round((2 * numdays * daytotals + 5) * myapi.requestDelay()),myapi.requestDelay()
                 )
                 data = await myapi.energy_daily(
                     siteId=site_id,
@@ -98,7 +98,7 @@ async def main() -> bool:
                     numDays=numdays,
                     dayTotals=daytotals,
                     # TODO(#SMARTPLUG): Add Smartplug type once supported
-                    devTypes={api.SolixDeviceType.SOLARBANK.value,api.SolixDeviceType.SMARTMETER.value}    # include all possible energy stats per site
+                    devTypes={api.SolixDeviceType.INVERTER.value,api.SolixDeviceType.SOLARBANK.value,api.SolixDeviceType.SMARTMETER.value}    # include all possible energy stats per site
                 )
                 _LOGGER.debug(json.dumps(data, indent=2))
                 # Write csv file

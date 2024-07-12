@@ -1165,11 +1165,12 @@ class AnkerSolixApi:
             resp = await self.request(
                 "post", API_ENDPOINTS["get_ota_update"], json=data
             )
-        data = resp.get("data") or {}
-        # update devices dict with new ota data
-        self._update_dev(
-            {"device_sn": deviceSn, "is_ota_update": data.get("is_ota_update")}
-        )
+        # update device details only if valid response for a given sn
+        if (data := resp.get("data") or {}) and deviceSn:
+            # update devices dict with new ota data
+            self._update_dev(
+                {"device_sn": deviceSn, "is_ota_update": data.get("is_ota_update")}
+            )
         return data
 
     async def check_upgrade_record(

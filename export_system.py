@@ -354,6 +354,19 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting OTA update info...")
+                try:
+                    export(
+                        os.path.join(folder, "ota_update.json"),
+                        await myapi.request(
+                            "post",
+                            api.API_ENDPOINTS["get_ota_update"],  # noqa: SLF001
+                            json={"device_sn": "", "insert_sn": ""},
+                        ),
+                    )  # works only for site owners
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
                 CONSOLE.info("Exporting site energy data for solarbank...")
                 try:
                     export(
@@ -579,7 +592,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
-                CONSOLE.info("Exporting OTA update info...")
+                CONSOLE.info("Exporting OTA update info for device...")
                 try:
                     export(
                         os.path.join(folder, f"ota_update_{randomize(sn,'_sn')}.json"),
