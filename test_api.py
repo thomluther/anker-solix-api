@@ -93,41 +93,41 @@ async def test_api_methods(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(await myapi.get_site_rules())
 
 
-async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
+async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _system = list(myapi.sites.values())[0]
     siteid = _system["site_info"]["site_id"]
     devicesn = _system["solarbank_info"]["solarbank_list"][0]["device_sn"]
-    _out(await myapi.request("post", api._API_ENDPOINTS["homepage"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.request("post", api._API_ENDPOINTS["site_list"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.request("post", api._API_ENDPOINTS["bind_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.request("post", api._API_ENDPOINTS["user_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.request("post", api._API_ENDPOINTS["charging_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.request("post", api._API_ENDPOINTS["get_auto_upgrade"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api.API_ENDPOINTS["homepage"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api.API_ENDPOINTS["site_list"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api.API_ENDPOINTS["bind_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api.API_ENDPOINTS["user_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api.API_ENDPOINTS["charging_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.request("post", api.API_ENDPOINTS["get_auto_upgrade"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["site_detail"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["site_detail"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["wifi_list"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["wifi_list"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_site_price"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_site_price"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["solar_info"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["solar_info"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "solarbank_sn": devicesn,
@@ -137,7 +137,7 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_cutoff"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_cutoff"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -147,7 +147,7 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_device_fittings"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_device_fittings"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -157,7 +157,7 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_device_load"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_device_load"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -167,7 +167,7 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["get_device_parm"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_device_parm"],  # pylint: disable=protected-access  # noqa: SLF001
             json={
                 "site_id": siteid,
                 "param_type": "4",
@@ -177,14 +177,14 @@ async def test_api_endpoints(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["compatible_process"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["compatible_process"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"solarbank_sn": devicesn},
         )
     )
     _out(
         await myapi.request(
             "post",
-            api._API_ENDPOINTS["home_load_chart"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["home_load_chart"],  # pylint: disable=protected-access  # noqa: SLF001
             json={"site_id": siteid},
         )
     )
@@ -231,7 +231,7 @@ async def main() -> None:
         await myapi.update_sites()
         await myapi.update_site_details()
         await myapi.update_device_details()
-        await myapi.update_device_energy(devtypes={api.SolixDeviceType.SOLARBANK.value})
+        await myapi.update_device_energy()
         CONSOLE.info("System Overview:")
         _out(myapi.sites)
         CONSOLE.info("Device Overview:")
@@ -241,7 +241,7 @@ async def main() -> None:
             await test_api_methods(myapi)
 
         if TESTAPIENDPOINTS:
-            await test_api_endpoints(myapi)
+            await testAPI_ENDPOINTS(myapi)
 
         if TESTAPIFROMJSON:
             await test_api_from_json_files(myapi)

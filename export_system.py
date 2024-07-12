@@ -125,7 +125,7 @@ def check_keys(data):
                 "wifi_name",
                 "home_load_data",
                 "param_data",
-                "device_name"
+                "device_name",
             ]
         ) or k in ["sn"]:
             data[k] = randomize(v, k)
@@ -223,39 +223,47 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
             CONSOLE.info("\nExporting homepage...")
             export(
                 os.path.join(folder, "homepage.json"),
-                await myapi.request("post", api._API_ENDPOINTS["homepage"], json={}),  # noqa: SLF001
+                await myapi.request("post", api.API_ENDPOINTS["homepage"], json={}),  # noqa: SLF001
             )
             CONSOLE.info("Exporting site list...")
             export(
                 os.path.join(folder, "site_list.json"),
-                await myapi.request("post", api._API_ENDPOINTS["site_list"], json={}),  # noqa: SLF001
+                await myapi.request("post", api.API_ENDPOINTS["site_list"], json={}),  # noqa: SLF001
             )
             CONSOLE.info("Exporting bind devices...")
             export(
                 os.path.join(folder, "bind_devices.json"),
                 await myapi.request(
-                    "post", api._API_ENDPOINTS["bind_devices"], json={}  # noqa: SLF001
+                    "post",
+                    api.API_ENDPOINTS["bind_devices"],
+                    json={},  # noqa: SLF001
                 ),
             )  # shows only owner devices
             CONSOLE.info("Exporting user devices...")
             export(
                 os.path.join(folder, "user_devices.json"),
                 await myapi.request(
-                    "post", api._API_ENDPOINTS["user_devices"], json={}  # noqa: SLF001
+                    "post",
+                    api.API_ENDPOINTS["user_devices"],
+                    json={},  # noqa: SLF001
                 ),
             )  # shows only owner devices
             CONSOLE.info("Exporting charging devices...")
             export(
                 os.path.join(folder, "charging_devices.json"),
                 await myapi.request(
-                    "post", api._API_ENDPOINTS["charging_devices"], json={}  # noqa: SLF001
+                    "post",
+                    api.API_ENDPOINTS["charging_devices"],
+                    json={},  # noqa: SLF001
                 ),
             )  # shows only owner devices
             CONSOLE.info("Exporting auto upgrade settings...")
             export(
                 os.path.join(folder, "auto_upgrade.json"),
                 await myapi.request(
-                    "post", api._API_ENDPOINTS["get_auto_upgrade"], json={}  # noqa: SLF001
+                    "post",
+                    api.API_ENDPOINTS["get_auto_upgrade"],
+                    json={},  # noqa: SLF001
                 ),
             )  # shows only owner devices
             for siteId, site in myapi.sites.items():
@@ -265,7 +273,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                     os.path.join(folder, f"scene_{randomize(siteId,'site_id')}.json"),
                     await myapi.request(
                         "post",
-                        api._API_ENDPOINTS["scene_info"],  # noqa: SLF001
+                        api.API_ENDPOINTS["scene_info"],  # noqa: SLF001
                         json={"site_id": siteId},
                     ),
                 )
@@ -278,7 +286,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["site_detail"],  # noqa: SLF001
+                            api.API_ENDPOINTS["site_detail"],  # noqa: SLF001
                             json={"site_id": siteId},
                         ),
                     )
@@ -293,7 +301,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["wifi_list"],  # noqa: SLF001
+                            api.API_ENDPOINTS["wifi_list"],  # noqa: SLF001
                             json={"site_id": siteId},
                         ),
                     )  # works only for site owners
@@ -308,7 +316,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_site_price"],  # noqa: SLF001
+                            api.API_ENDPOINTS["get_site_price"],  # noqa: SLF001
                             json={"site_id": siteId},
                         ),
                     )  # works only for site owners
@@ -323,7 +331,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_device_parm"],  # noqa: SLF001
+                            api.API_ENDPOINTS["get_device_parm"],  # noqa: SLF001
                             json={"site_id": siteId, "param_type": "4"},
                         ),
                     )  # works only for site owners
@@ -339,7 +347,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_upgrade_record"],  # noqa: SLF001
+                            api.API_ENDPOINTS["get_upgrade_record"],  # noqa: SLF001
                             json={"site_id": siteId, "type": 2},
                         ),
                     )  # works only for site owners
@@ -355,8 +363,17 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
-                            json={"site_id": siteId, "device_sn": "", "type": "week", "device_type": "solarbank", "start_time": (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d"), "end_time": datetime.today().strftime("%Y-%m-%d")},
+                            api.API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                            json={
+                                "site_id": siteId,
+                                "device_sn": "",
+                                "type": "week",
+                                "device_type": "solarbank",
+                                "start_time": (
+                                    datetime.today() - timedelta(days=1)
+                                ).strftime("%Y-%m-%d"),
+                                "end_time": datetime.today().strftime("%Y-%m-%d"),
+                            },
                         ),
                     )  # works also for site members
                 except (ClientError, errors.AnkerSolixError):
@@ -371,13 +388,61 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
-                            json={"site_id": siteId, "device_sn": "", "type": "week", "device_type": "solar_production", "start_time": (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d"), "end_time": datetime.today().strftime("%Y-%m-%d")},
+                            api.API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                            json={
+                                "site_id": siteId,
+                                "device_sn": "",
+                                "type": "week",
+                                "device_type": "solar_production",
+                                "start_time": (
+                                    datetime.today() - timedelta(days=1)
+                                ).strftime("%Y-%m-%d"),
+                                "end_time": datetime.today().strftime("%Y-%m-%d"),
+                            },
                         ),
                     )  # works also for site members
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
+                for ch in range(1, 5):
+                    CONSOLE.info(
+                        "Exporting site energy data for solar_production PV%s...", ch
+                    )
+                    try:
+                        if not (
+                            data := await myapi.request(
+                                "post",
+                                api.API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                                json={
+                                    "site_id": siteId,
+                                    "device_sn": "",
+                                    "type": "week",
+                                    "device_type": f"solar_production_pv{ch}",
+                                    "start_time": (
+                                        datetime.today() - timedelta(days=1)
+                                    ).strftime("%Y-%m-%d"),
+                                    "end_time": datetime.today().strftime("%Y-%m-%d"),
+                                },
+                            ) or {}
+                        ) or not data.get("data") or {}:
+                            CONSOLE.warning(
+                                "No solar production energy available for PV%s, skipping remaining PV channel export...", ch
+                            )
+                            break
+                        export(
+                            os.path.join(
+                                folder,
+                                f"energy_solar_production_pv{ch}_{randomize(siteId,'site_id')}.json",
+                            ),
+                            data,
+                        )  # works also for site members
+                    except (ClientError, errors.AnkerSolixError):
+                        if not admin:
+                            CONSOLE.warning("Query requires account of site owner!")
+                        CONSOLE.warning(
+                            "No solar production energy available for PV%s, skipping PV channel export...", ch
+                        )
+                        break
                 CONSOLE.info("Exporting site energy data for home_usage...")
                 try:
                     export(
@@ -387,8 +452,17 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
-                            json={"site_id": siteId, "device_sn": "", "type": "week", "device_type": "home_usage", "start_time": (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d"), "end_time": datetime.today().strftime("%Y-%m-%d")},
+                            api.API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                            json={
+                                "site_id": siteId,
+                                "device_sn": "",
+                                "type": "week",
+                                "device_type": "home_usage",
+                                "start_time": (
+                                    datetime.today() - timedelta(days=1)
+                                ).strftime("%Y-%m-%d"),
+                                "end_time": datetime.today().strftime("%Y-%m-%d"),
+                            },
                         ),
                     )  # works also for site members
                 except (ClientError, errors.AnkerSolixError):
@@ -403,8 +477,17 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
-                            json={"site_id": siteId, "device_sn": "", "type": "week", "device_type": "grid", "start_time": (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d"), "end_time": datetime.today().strftime("%Y-%m-%d")},
+                            api.API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                            json={
+                                "site_id": siteId,
+                                "device_sn": "",
+                                "type": "week",
+                                "device_type": "grid",
+                                "start_time": (
+                                    datetime.today() - timedelta(days=1)
+                                ).strftime("%Y-%m-%d"),
+                                "end_time": datetime.today().strftime("%Y-%m-%d"),
+                            },
                         ),
                     )  # works also for site members
                 except (ClientError, errors.AnkerSolixError):
@@ -429,7 +512,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                             ),
                             await myapi.request(
                                 "post",
-                                api._API_ENDPOINTS["solar_info"],  # noqa: SLF001
+                                api.API_ENDPOINTS["solar_info"],  # noqa: SLF001
                                 json={"solarbank_sn": sn},
                             ),
                         )
@@ -445,7 +528,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                             ),
                             await myapi.request(
                                 "post",
-                                api._API_ENDPOINTS["compatible_process"],  # noqa: SLF001
+                                api.API_ENDPOINTS["compatible_process"],  # noqa: SLF001
                                 json={"solarbank_sn": sn},
                             ),
                         )
@@ -461,7 +544,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_cutoff"],  # noqa: SLF001
+                            api.API_ENDPOINTS["get_cutoff"],  # noqa: SLF001
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
@@ -476,7 +559,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_device_fittings"],  # noqa: SLF001
+                            api.API_ENDPOINTS["get_device_fittings"],  # noqa: SLF001
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
@@ -489,7 +572,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         os.path.join(folder, f"device_load_{randomize(sn,'_sn')}.json"),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_device_load"],  # noqa: SLF001
+                            api.API_ENDPOINTS["get_device_load"],  # noqa: SLF001
                             json={"site_id": siteId, "device_sn": sn},
                         ),
                     )  # works only for site owners
@@ -502,7 +585,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         os.path.join(folder, f"ota_update_{randomize(sn,'_sn')}.json"),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_ota_update"],  # noqa: SLF001
+                            api.API_ENDPOINTS["get_ota_update"],  # noqa: SLF001
                             json={"device_sn": sn, "insert_sn": ""},
                         ),
                     )  # works only for site owners
@@ -512,11 +595,16 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 CONSOLE.info("Exporting device attributes...")
                 try:
                     export(
-                        os.path.join(folder, f"device_attrs_{randomize(sn,'_sn')}.json"),
+                        os.path.join(
+                            folder, f"device_attrs_{randomize(sn,'_sn')}.json"
+                        ),
                         await myapi.request(
                             "post",
-                            api._API_ENDPOINTS["get_device_attributes"],  # noqa: SLF001
-                            json={"device_sn": sn, "attributes": []}, # Not clear if empty attributes list will list all attributes if there are any
+                            api.API_ENDPOINTS["get_device_attributes"],  # noqa: SLF001
+                            json={
+                                "device_sn": sn,
+                                "attributes": [],
+                            },  # Not clear if empty attributes list will list all attributes if there are any
                         ),
                     )  # works only for site owners
                 except (ClientError, errors.AnkerSolixError):
@@ -526,13 +614,15 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
             CONSOLE.info("\nExporting site rules...")
             export(
                 os.path.join(folder, "site_rules.json"),
-                await myapi.request("post", api._API_ENDPOINTS["site_rules"], json={}),  # noqa: SLF001
+                await myapi.request("post", api.API_ENDPOINTS["site_rules"], json={}),  # noqa: SLF001
             )
             CONSOLE.info("Exporting message unread status...")
             export(
                 os.path.join(folder, "message_unread.json"),
                 await myapi.request(
-                    "get", api._API_ENDPOINTS["get_message_unread"], json={}  # noqa: SLF001
+                    "get",
+                    api.API_ENDPOINTS["get_message_unread"],
+                    json={},  # noqa: SLF001
                 ),
             )
 

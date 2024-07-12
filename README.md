@@ -49,7 +49,7 @@ Everything starts with an:
 import logging, json
 import asyncio
 from aiohttp import ClientSession
-from api import api, errors
+from api import api
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
