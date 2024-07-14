@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import ClassVar
 
 # API servers per region. Country assignment not clear, defaulting to EU server
@@ -285,12 +285,17 @@ class SolixParmType(Enum):
     SOLARBANK_2_SCHEDULE = "6"
 
 
-class SolarbankPowerMode(Enum):
+class SolarbankPowerMode(IntEnum):
     """Enumuration for Anker Solix Solarbank Power setting modes."""
 
     normal = 1
     advanced = 2
 
+class SolarbankUsageMode(IntEnum):
+    """Enumuration for Anker Solix Solarbank Power Usage modes."""
+
+    automatic = 1
+    manual = 3
 
 @dataclass(frozen=True)
 class ApiCategories:
@@ -432,6 +437,8 @@ class SolixDefaults:
     ALLOW_EXPORT: bool = True
     # Preset power mode for Solarbank schedule timeslot settings
     POWER_MODE: int = SolarbankPowerMode.normal.value
+    # Preset usage mode for Solarbank 2 schedules
+    USAGE_MODE: int = SolarbankUsageMode.manual.value
     # Charge Priority limit preset for Solarbank schedule timeslot settings
     CHARGE_PRIORITY_MIN: int = 0
     CHARGE_PRIORITY_MAX: int = 100
@@ -449,7 +456,6 @@ class SolixDeviceStatus(Enum):
     offline = "0"
     online = "1"
     unknown = "unknown"
-
 
 class SolarbankStatus(Enum):
     """Enumuration for Anker Solix Solarbank status."""

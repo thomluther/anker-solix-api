@@ -25,6 +25,7 @@ import time
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from api import api, errors  # type: ignore  # noqa: PGH003
+from api.types import SolarbankUsageMode
 import common  # type: ignore  # noqa: PGH003
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -258,27 +259,46 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
                             )
-                            CONSOLE.info(
-                                f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}} {'Mode':>{t9}} Name"
-                            )
-                            for slot in data.get("ranges") or []:
-                                enabled = slot.get("turn_on")
-                                load = slot.get("appliance_loads") or []
-                                load = load[0] if len(load) > 0 else {}
-                                solarbanks = slot.get("device_power_loads") or []
-                                sb1 = str(
-                                    solarbanks[0].get("power")
-                                    if len(solarbanks) > 0
-                                    else "---"
-                                )
-                                sb2 = str(
-                                    solarbanks[1].get("power")
-                                    if len(solarbanks) > 1
-                                    else "---"
+                            if dev.get("generation", 0) > 1:
+                                # Solarbank 2 schedule
+                                usage_mode = dev.get("preset_usage_mode") or 0
+                                week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+                                CONSOLE.info(
+                                    f"{'Usage Mode':<{col1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{col2}} {'Max Power':<{col3}}: {data.get("max_load") or '----':>4} W"
                                 )
                                 CONSOLE.info(
-                                    f"{slot.get('id','')!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {slot.get('power_setting_mode') or '-'!s:^{t9}} {load.get('name','')!s}"
+                                    f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}"
                                 )
+                                for idx in data.get("custom_rate_plan") or [{}]:
+                                    index = idx.get("index","--")
+                                    weekdays = [week[day] for day in idx.get("week") or []]
+                                    for slot in idx.get("ranges") or []:
+                                        CONSOLE.info(
+                                            f"{index!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {str(slot.get('power',''))+' W':>{t4}} {','.join(weekdays):<{t5}}"
+                                        )
+                            else:
+                                # Solarbank 1 schedule
+                                CONSOLE.info(
+                                    f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}} {'Mode':>{t9}} Name"
+                                )
+                                for slot in data.get("ranges") or []:
+                                    enabled = slot.get("turn_on")
+                                    load = slot.get("appliance_loads") or []
+                                    load = load[0] if len(load) > 0 else {}
+                                    solarbanks = slot.get("device_power_loads") or []
+                                    sb1 = str(
+                                        solarbanks[0].get("power")
+                                        if len(solarbanks) > 0
+                                        else "---"
+                                    )
+                                    sb2 = str(
+                                        solarbanks[1].get("power")
+                                        if len(solarbanks) > 1
+                                        else "---"
+                                    )
+                                    CONSOLE.info(
+                                        f"{slot.get('id','')!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {slot.get('power_setting_mode') or '-'!s:^{t9}} {load.get('name','')!s}"
+                                    )
                     elif devtype == api.SolixDeviceType.INVERTER.value:
                         upgrade = dev.get("auto_upgrade")
                         CONSOLE.info(

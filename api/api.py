@@ -473,76 +473,115 @@ class AnkerSolixApi:
                     elif key in ["schedule"] and isinstance(value, dict):
                         device.update({"schedule": dict(value)})
                         # set default presets for no active schedule slot
+                        generation = int(device.get("generation", 0))
                         cnt = device.get("solarbank_count", 0)
-                        device.update(
-                            {
-                                "preset_system_output_power": SolixDefaults.PRESET_NOSCHEDULE,
-                                "preset_allow_export": SolixDefaults.ALLOW_EXPORT,
-                                "preset_charge_priority": SolixDefaults.CHARGE_PRIORITY_DEF,
-                                "preset_power_mode": SolixDefaults.POWER_MODE
-                                if cnt > 1
-                                else None,
-                                "preset_device_output_power": int(
-                                    SolixDefaults.PRESET_NOSCHEDULE / cnt
-                                )
-                                if cnt > 1
-                                else None,
-                            }
-                        )
+                        if generation >= 2:
+                            # Solarbank 2 schedule
+                            device.update(
+                                {
+                                    "preset_system_output_power": value.get("default_home_load") or SolixDefaults.PRESET_NOSCHEDULE,
+                                    "preset_usage_mode": value.get("mode_type") or SolixDefaults.USAGE_MODE,
+                                }
+                            )
+                        else:
+                            # Solarbank 1 schedule
+                            device.update(
+                                {
+                                    "preset_system_output_power": SolixDefaults.PRESET_NOSCHEDULE,
+                                    "preset_allow_export": SolixDefaults.ALLOW_EXPORT,
+                                    "preset_charge_priority": SolixDefaults.CHARGE_PRIORITY_DEF,
+                                    "preset_power_mode": SolixDefaults.POWER_MODE
+                                    if cnt > 1
+                                    else None,
+                                    "preset_device_output_power": int(
+                                        SolixDefaults.PRESET_NOSCHEDULE / cnt
+                                    )
+                                    if cnt > 1
+                                    else None,
+                                }
+                            )
                         # get actual presets from current slot
-                        now = datetime.now().time().replace(microsecond=0)
+                        now: datetime = datetime.now().time().replace(microsecond=0)
                         # set now to new daytime if close to end of day
                         if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
                             now = datetime.strptime("00:00", "%H:%M").time()
-                        for slot in value.get("ranges") or []:
-                            with contextlib.suppress(ValueError):
-                                start_time = datetime.strptime(
-                                    slot.get("start_time") or "00:00", "%H:%M"
-                                ).time()
-                                end_time = slot.get("end_time") or "00:00"
-                                # "24:00" format not supported in strptime
-                                if end_time == "24:00":
-                                    end_time = datetime.strptime(
-                                        "23:59:59", "%H:%M:%S"
+                        if generation >= 2:
+                            # Solarbank 2 schedule, weekday starts with 0=Sunday)
+                            # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
+                            weekday = int(datetime.now().strftime('%w'))
+                            day_ranges = next(iter([day.get("ranges") or [] for day in (value.get("custom_rate_plan") or [{}]) if weekday in (day.get("week") or [])]), [])
+                            for slot in day_ranges:
+                                with contextlib.suppress(ValueError):
+                                    start_time = datetime.strptime(
+                                        slot.get("start_time") or "00:00", "%H:%M"
                                     ).time()
-                                else:
-                                    end_time = datetime.strptime(
-                                        end_time, "%H:%M"
-                                    ).time()
-                                if start_time <= now < end_time:
-                                    preset_power = (
-                                        slot.get("appliance_loads") or [{}]
-                                    )[0].get("power")
-                                    device.update(
-                                        {
-                                            "preset_system_output_power": preset_power,
-                                            "preset_allow_export": slot.get("turn_on"),
-                                            "preset_charge_priority": slot.get(
-                                                "charge_priority"
-                                            ),
-                                        }
-                                    )
-                                    # add presets for dual solarbank setups, default to None if schedule does not support new keys yet
-                                    power_mode = slot.get("power_setting_mode")
-                                    dev_presets = slot.get("device_power_loads") or [{}]
-                                    dev_power = next(
-                                        iter(
-                                            [
-                                                d.get("power")
-                                                for d in dev_presets
-                                                if d.get("device_sn") == sn
-                                            ]
-                                        ),
-                                        None,
-                                    )
-                                    if cnt > 1:
-                                        # adjust device power value for default share which is always using 50%, also for single solarbank setups
+                                    end_time = slot.get("end_time") or "00:00"
+                                    # "24:00" format not supported in strptime
+                                    if end_time == "24:00":
+                                        end_time = datetime.strptime(
+                                            "23:59:59", "%H:%M:%S"
+                                        ).time()
+                                    else:
+                                        end_time = datetime.strptime(
+                                            end_time, "%H:%M"
+                                        ).time()
+                                    if start_time <= now < end_time:
                                         device.update(
                                             {
-                                                "preset_power_mode": power_mode,
-                                                "preset_device_output_power": dev_power,
+                                                "preset_system_output_power": slot.get("power"),
                                             }
                                         )
+                        else:
+                            # Solarbank 1 schedule
+                            for slot in value.get("ranges") or []:
+                                with contextlib.suppress(ValueError):
+                                    start_time = datetime.strptime(
+                                        slot.get("start_time") or "00:00", "%H:%M"
+                                    ).time()
+                                    end_time = slot.get("end_time") or "00:00"
+                                    # "24:00" format not supported in strptime
+                                    if end_time == "24:00":
+                                        end_time = datetime.strptime(
+                                            "23:59:59", "%H:%M:%S"
+                                        ).time()
+                                    else:
+                                        end_time = datetime.strptime(
+                                            end_time, "%H:%M"
+                                        ).time()
+                                    if start_time <= now < end_time:
+                                        preset_power = (
+                                            slot.get("appliance_loads") or [{}]
+                                        )[0].get("power")
+                                        device.update(
+                                            {
+                                                "preset_system_output_power": preset_power,
+                                                "preset_allow_export": slot.get("turn_on"),
+                                                "preset_charge_priority": slot.get(
+                                                    "charge_priority"
+                                                ),
+                                            }
+                                        )
+                                        # add presets for dual solarbank setups, default to None if schedule does not support new keys yet
+                                        power_mode = slot.get("power_setting_mode")
+                                        dev_presets = slot.get("device_power_loads") or [{}]
+                                        dev_power = next(
+                                            iter(
+                                                [
+                                                    d.get("power")
+                                                    for d in dev_presets
+                                                    if d.get("device_sn") == sn
+                                                ]
+                                            ),
+                                            None,
+                                        )
+                                        if cnt > 1:
+                                            # adjust device power value for default share which is always using 50%, also for single solarbank setups
+                                            device.update(
+                                                {
+                                                    "preset_power_mode": power_mode,
+                                                    "preset_device_output_power": dev_power,
+                                                }
+                                            )
 
                     # inverter specific keys
                     elif key in ["generate_power"]:
