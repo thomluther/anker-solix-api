@@ -6,7 +6,7 @@ from asyncio import sleep
 import contextlib
 from datetime import datetime, timedelta
 
-from .types import ApiCategories, SolarbankStatus, SolixDeviceType
+from .types import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
 
 
 async def update_sites(api, fromFile: bool = False) -> dict:  # noqa: C901
@@ -355,25 +355,32 @@ async def update_device_details(
                     await api.get_power_cutoff(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
-                # Fetch available OTA update for solarbanks
-                api._logger.debug("Getting OTA update info for device")
-                await api.get_ota_update(deviceSn=sn, fromFile=fromFile)
-                # Fetch defined inverter details for solarbanks
-                if {ApiCategories.solarbank_solar_info} - exclude:
-                    api._logger.debug("Getting inverter settings for device")
-                    await api.get_solar_info(solarbankSn=sn, fromFile=fromFile)
-                # Fetch schedule for device types supporting it
-                api._logger.debug("Getting schedule details for device")
-                await api.get_device_load(
-                    siteId=site_id, deviceSn=sn, fromFile=fromFile
-                )
-                # Fetch device fittings for device types supporting it
-                if {ApiCategories.solarbank_fittings} - exclude:
-                    api._logger.debug("Getting fittings for device")
-                    await api.get_device_fittings(
+                # queries for solarbank 1 only
+                if ((api.devices.get(sn) or {}).get("generation") or 0) < 2:
+                    # Fetch available OTA update for solarbanks, does not work for solarbank 2 with device SN
+                    api._logger.debug("Getting OTA update info for device")
+                    await api.get_ota_update(deviceSn=sn, fromFile=fromFile)
+                    # Fetch defined inverter details for solarbanks
+                    if {ApiCategories.solarbank_solar_info} - exclude:
+                        api._logger.debug("Getting inverter settings for device")
+                        await api.get_solar_info(solarbankSn=sn, fromFile=fromFile)
+                    # Fetch schedule for Solarbank 1
+                    api._logger.debug("Getting schedule details for device")
+                    await api.get_device_load(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
-
+                    # Fetch device fittings for device types supporting it
+                    if {ApiCategories.solarbank_fittings} - exclude:
+                        api._logger.debug("Getting fittings for device")
+                        await api.get_device_fittings(
+                            siteId=site_id, deviceSn=sn, fromFile=fromFile
+                        )
+                else:
+                    # Fetch schedule for Solarbank 2
+                    api._logger.debug("Getting schedule details for device")
+                    await api.get_device_parm(
+                        siteId=site_id, paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value, deviceSn=sn, fromFile=fromFile
+                    )
             # update entry in devices
             api.devices.update({sn: device})
 
@@ -448,16 +455,27 @@ async def update_device_energy(
             energy = site.get("energy_details") or {}
             today = datetime.today().strftime("%Y-%m-%d")
             yesterday = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-            # Fetch energy from today
-            data = await api.energy_daily(
-                siteId=site_id,
-                deviceSn=query_sn,
-                startDay=datetime.fromisoformat(today),
-                numDays=1,
-                dayTotals=True,
-                devTypes=query_types,
-                fromFile=fromFile,
-            )
+            # Fetch energy from today or both days
+            if yesterday != (energy.get("last_period") or {}).get("date"):
+                data = await api.energy_daily(
+                    siteId=site_id,
+                    deviceSn=query_sn,
+                    startDay=datetime.fromisoformat(yesterday),
+                    numDays=2,
+                    dayTotals=True,
+                    devTypes=query_types,
+                    fromFile=fromFile,
+                )
+            else:
+                data = await api.energy_daily(
+                    siteId=site_id,
+                    deviceSn=query_sn,
+                    startDay=datetime.fromisoformat(today),
+                    numDays=1,
+                    dayTotals=True,
+                    devTypes=query_types,
+                    fromFile=fromFile,
+                )
             if fromFile:
                 # get last date entries from file and replace date with yesterday and today for testing
                 days = len(data)
@@ -471,17 +489,7 @@ async def update_device_energy(
                     energy["today"] = entry
             else:
                 energy["today"] = data.get(today) or {}
-                # Fetch energy from previous day once
-                if yesterday != (energy.get("last_period") or {}).get("date"):
-                    data = await api.energy_daily(
-                        siteId=site_id,
-                        deviceSn=query_sn,
-                        startDay=datetime.fromisoformat(yesterday),
-                        numDays=1,
-                        dayTotals=True,
-                        devTypes=query_types,
-                        fromFile=fromFile,
-                    )
+                if data.get(yesterday):
                     energy["last_period"] = data.get(yesterday) or {}
             # save energy stats with sites dictionary
             site["energy_details"] = energy

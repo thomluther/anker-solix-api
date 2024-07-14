@@ -323,16 +323,31 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
-                CONSOLE.info("Exporting device parameter settings...")
+                CONSOLE.info("Exporting device parameter type 4 settings...")
                 try:
                     export(
                         os.path.join(
-                            folder, f"device_parm_{randomize(siteId,'site_id')}.json"
+                            folder, f"device_parm_4_{randomize(siteId,'site_id')}.json"
                         ),
                         await myapi.request(
                             "post",
                             api.API_ENDPOINTS["get_device_parm"],  # noqa: SLF001
                             json={"site_id": siteId, "param_type": "4"},
+                        ),
+                    )  # works only for site owners
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting device parameter type 6 settings...")
+                try:
+                    export(
+                        os.path.join(
+                            folder, f"device_parm_6_{randomize(siteId,'site_id')}.json"
+                        ),
+                        await myapi.request(
+                            "post",
+                            api.API_ENDPOINTS["get_device_parm"],  # noqa: SLF001
+                            json={"site_id": siteId, "param_type": "6"},
                         ),
                     )  # works only for site owners
                 except (ClientError, errors.AnkerSolixError):

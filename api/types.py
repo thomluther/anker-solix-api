@@ -282,6 +282,7 @@ class SolixParmType(Enum):
     """Enumuration for Anker Solix Parameter types."""
 
     SOLARBANK_SCHEDULE = "4"
+    SOLARBANK_2_SCHEDULE = "6"
 
 
 class SolarbankPowerMode(Enum):

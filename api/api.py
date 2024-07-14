@@ -29,18 +29,14 @@ from .types import (
     API_COUNTRIES,
     API_ENDPOINTS,
     API_SERVERS,
-    ApiCategories,
     SmartmeterStatus,
     SolarbankDeviceMetrics,
-    SolarbankPowerMode,
     SolarbankStatus,
-    SolarbankTimeslot,
     SolixDefaults,
     SolixDeviceCapacity,
     SolixDeviceCategory,
     SolixDeviceStatus,
     SolixDeviceType,
-    SolixParmType,
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)

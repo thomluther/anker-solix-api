@@ -111,18 +111,30 @@ async def get_device_parm(
 ) -> dict:
     r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId listed in the homepage info site_list. The paramType is always 4, but can be modified if necessary.
 
-    Example data for provided site_id:
+    Example data for provided site_id with param_type 4 for SB1:
     {"param_data": "{\"ranges\":[
         {\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},
         {\"id\":0,\"start_time\":\"08:30\",\"end_time\":\"17:00\",\"turn_on\":false,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":100,\"number\":1}],\"charge_priority\":80},
         {\"id\":0,\"start_time\":\"17:00\",\"end_time\":\"24:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":0}],
         \"min_load\":100,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":1}"}
+    Example data for provided site_id with param_type 6 for SB2:
+    {"param_data":"{\"mode_type\":3,\"custom_rate_plan\":[
+        {\"index\":0,\"week\":[0,6],\"ranges\":[
+            {\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":110}]},
+        {\"index\":1,\"week\":[1,2,3,4,5],\"ranges\":[
+            {\"start_time\":\"00:00\",\"end_time\":\"08:00\",\"power\":90},{\"start_time\":\"08:00\",\"end_time\":\"22:00\",\"power\":120},{\"start_time\":\"22:00\",\"end_time\":\"24:00\",\"power\":90}]}],
+    \"blend_plan\":null,\"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"}
     """
     data = {"site_id": siteId, "param_type": paramType}
     if fromFile:
         resp = await self._loadFromFile(
-            os.path.join(self._testdir, f"device_parm_{siteId}.json")
+            os.path.join(self._testdir, f"device_parm_{paramType}_{siteId}.json")
         )
+        # ensure backward filename compatibility
+        if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
+            resp = await self._loadFromFile(
+                os.path.join(self._testdir, f"device_parm_{siteId}.json")
+            )
     else:
         resp = await self.request(
             "post", API_ENDPOINTS["get_device_parm"], json=data
@@ -167,8 +179,8 @@ async def set_device_parm(
     """Set device parameters (e.g. solarbank schedule).
 
     command: Must be 17 for solarbank schedule.
-    paramType: was always string "4"
-    Example paramData:
+    paramType: was always string "4" for SB1, SB2 needs "6" and different structure
+    Example paramData for type "4":
     {"param_data": '{"ranges":['
         '{"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},'
         '{"id":0,"start_time":"08:30","end_time":"17:00","turn_on":false,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":100,"number":1}],"charge_priority":80},'
@@ -206,13 +218,13 @@ async def set_home_load(  # noqa: C901
     test_count: int
     | None = None,  # used only for testing instead of real solarbank count
 ) -> bool | dict:
-    """Set the home load parameters for a given site id and device for actual or all slots in the existing schedule.
+    """Set the home load parameters for a given site id and solarbank 1 device for actual or all slots in the existing schedule.
 
     If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
     Optionally when set_slot SolarbankTimeslot is provided, the given slot will replace the existing schedule completely.
     When insert_slot SolarbankTimeslot is provided, the given slot will be incoorporated into existing schedule. Adjacent overlapping slot times will be updated and overlayed slots will be replaced.
 
-    Example schedules for Solarbank as provided via Api:
+    Example schedules for Solarbank 1 as provided via Api:
     {"ranges":[
         {"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},
         {"id":0,"start_time":"08:30","end_time":"17:00","turn_on":false,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":100,"number":1}],"charge_priority":80},
