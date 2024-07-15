@@ -264,7 +264,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 usage_mode = dev.get("preset_usage_mode") or 0
                                 week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
                                 CONSOLE.info(
-                                    f"{'Usage Mode':<{col1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{col2}} {'Max Power':<{col3}}: {data.get("max_load") or '----':>4} W"
+                                    f"{'Usage Mode':<{col1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{col2}} {'Sched. Preset':<{col3}}: {dev.get("preset_system_output_power",'----'):>4} W"
                                 )
                                 CONSOLE.info(
                                     f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}"

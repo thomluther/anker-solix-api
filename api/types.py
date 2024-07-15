@@ -295,6 +295,7 @@ class SolarbankUsageMode(IntEnum):
     """Enumuration for Anker Solix Solarbank Power Usage modes."""
 
     automatic = 1
+    unknown_2 = 2   # Does it exist?
     manual = 3
 
 @dataclass(frozen=True)
