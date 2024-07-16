@@ -76,9 +76,18 @@ async def update_sites(api, fromFile: bool = False) -> dict:  # noqa: C901
                     bool(sb_info.get("is_display_data", True))
                     or len(sb_info.get("solarbank_list") or []) == 0
                 )
-
             # add indicator for valid data introduced for Solarbank 2 to site cache
             mysite.update({"data_valid": data_valid, "requeries": requeries})
+            # copy old SB info data timestamp if new is invalid, because can be invalid even if data is valid
+            # example       "updated_time": "1970-01-01 00:00:00",
+            if sb_info.get("solarbank_list") and (oldstamp := (mysite.get("solarbank_info") or {}).get("updated_time") or ""):
+                timestamp = datetime.now().replace(year=1970)
+                fmt = "%Y-%m-%d %H:%M:%S"
+                with contextlib.suppress(ValueError):
+                    timestamp = datetime.strptime(sb_info.get("updated_time"), fmt)
+                if timestamp.year == 1970 and oldstamp:
+                    # replace the field in the new scene referenced sb info
+                    sb_info["updated_time"] = datetime.now().strftime(fmt) if data_valid else oldstamp
 
             mysite.update(scene)
             new_sites.update({myid: mysite})

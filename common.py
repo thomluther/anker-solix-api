@@ -1,8 +1,11 @@
 """A collection of helper functions for pyscripts."""  # noqa: INP001
+
 import getpass
 import logging
 import os
 import sys
+
+from api.types import SolarbankUsageMode
 
 CONSOLE: logging.Logger = logging.getLogger("console")
 CONSOLE.addHandler(logging.StreamHandler(sys.stdout))
@@ -50,6 +53,7 @@ def country() -> str:
 def print_schedule(schedule: dict) -> None:
     """Print the schedule ranges as table."""
 
+    plan = schedule or {}
     t1 = 2
     t2 = 5
     t3 = 5
@@ -59,16 +63,35 @@ def print_schedule(schedule: dict) -> None:
     t7 = 6
     t8 = 6
     t9 = 5
-    CONSOLE.info(
-        f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}} {'Mode':>{t9}} Name"
-    )
-    for slot in (schedule or {}).get("ranges", []):
-        enabled = slot.get("turn_on")
-        load = slot.get("appliance_loads", [])
-        load = load[0] if len(load) > 0 else {}
-        solarbanks = slot.get("device_power_loads", [])
-        sb1 = str(solarbanks[0].get("power") if len(solarbanks) > 0 else "---")
-        sb2 = str(solarbanks[1].get("power") if len(solarbanks) > 1 else "---")
+    if plan.get("mode_type", 0):
+        # SB2 schedule
+        usage_mode = plan.get("mode_type") or 0
+        week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         CONSOLE.info(
-            f"{str(slot.get('id','')):>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {str(slot.get('power_setting_mode','-')):^{t9}} {str(load.get('name',''))}"
+            f"{'Usage Mode':<{t1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{t2+t3+t4}} {'Def. Preset':<{t3}}: {plan.get("default_home_load",'----'):>4} W"
         )
+        CONSOLE.info(
+            f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}"
+        )
+        for idx in plan.get("custom_rate_plan") or [{}]:
+            index = idx.get("index", "--")
+            weekdays = [week[day] for day in idx.get("week") or []]
+            for slot in idx.get("ranges") or []:
+                CONSOLE.info(
+                    f"{index!s:>{t1}} {slot.get('start_time','')!s:<{t2}} {slot.get('end_time','')!s:<{t3}} {str(slot.get('power',''))+' W':>{t4}} {','.join(weekdays):<{t5}}"
+                )
+    else:
+        # SB1 schedule
+        CONSOLE.info(
+            f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}} {'Mode':>{t9}} Name"
+        )
+        for slot in (schedule or {}).get("ranges", []):
+            enabled = slot.get("turn_on")
+            load = slot.get("appliance_loads", [])
+            load = load[0] if len(load) > 0 else {}
+            solarbanks = slot.get("device_power_loads", [])
+            sb1 = str(solarbanks[0].get("power") if len(solarbanks) > 0 else "---")
+            sb2 = str(solarbanks[1].get("power") if len(solarbanks) > 1 else "---")
+            CONSOLE.info(
+                f"{slot.get('id','')!s:>{t1}} {slot.get('start_time','')!s:<{t2}} {slot.get('end_time','')!s:<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {slot.get('power_setting_mode','-')!s:^{t9}} {load.get('name','')!s}"
+            )

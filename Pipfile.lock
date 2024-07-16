@@ -623,7 +623,7 @@
                 "sha256:c054629b81b946d63a9c6e732bc8b2513a7c3ea645f11d0139a2191d735c60c6"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==69.1.0"
+            "version": ">=70.0.0"
         },
         "virtualenv": {
             "hashes": [

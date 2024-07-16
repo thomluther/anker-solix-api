@@ -8,8 +8,10 @@ import os
 
 from .types import (
     API_ENDPOINTS,
+    Solarbank2Timeslot,
     SolarbankPowerMode,
     SolarbankTimeslot,
+    SolarbankUsageMode,
     SolixDefaults,
     SolixParmType,
 )
@@ -176,7 +178,7 @@ async def set_device_parm(
     command: int = 17,
     deviceSn: str | None = None,
 ) -> bool:
-    """Set device parameters (e.g. solarbank schedule).
+    r"""Set device parameters (e.g. solarbank schedule).
 
     command: Must be 17 for solarbank schedule.
     paramType: was always string "4" for SB1, SB2 needs "6" and different structure
@@ -186,6 +188,14 @@ async def set_device_parm(
         '{"id":0,"start_time":"08:30","end_time":"17:00","turn_on":false,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":100,"number":1}],"charge_priority":80},'
         '{"id":0,"start_time":"17:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":0}],'
     '"min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}}'
+
+    Example data for provided site_id with param_type 6 for SB2:
+    {"param_data":"{\"mode_type\":3,\"custom_rate_plan\":[
+        {\"index\":0,\"week\":[0,6],\"ranges\":[
+            {\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":110}]},
+        {\"index\":1,\"week\":[1,2,3,4,5],\"ranges\":[
+            {\"start_time\":\"00:00\",\"end_time\":\"08:00\",\"power\":90},{\"start_time\":\"08:00\",\"end_time\":\"22:00\",\"power\":120},{\"start_time\":\"22:00\",\"end_time\":\"24:00\",\"power\":90}]}],
+    \"blend_plan\":null,\"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"}
     """
     data = {
         "site_id": siteId,
@@ -199,7 +209,7 @@ async def set_device_parm(
     if not isinstance(code, int) or int(code) != 0:
         return False
     # update the data in api dict
-    await self.get_device_parm(siteId=siteId, deviceSn=deviceSn)
+    await self.get_device_parm(siteId=siteId, paramType=paramType, deviceSn=deviceSn)
     return True
 
 async def set_home_load(  # noqa: C901
@@ -1037,6 +1047,135 @@ async def set_home_load(  # noqa: C901
     # NOTE: set_device_load does not seem to be usable yet for changing the home load, or is only usable in dual bank setups for changing the appliance load share as well?
     return await self.set_device_parm(
         siteId=siteId,
+        paramData=schedule,
+        deviceSn=deviceSn,
+    )
+
+
+
+async def set_sb2_home_load(  # noqa: C901
+    self,
+    siteId: str,
+    deviceSn: str,
+    all_day: bool = False,
+    preset: int | None = None,
+    usage_mode: int | None = None,
+    set_slot: Solarbank2Timeslot | None = None,
+    insert_slot: Solarbank2Timeslot | None = None,
+    test_schedule: dict | None = None,  # used only for testing instead of real schedule
+) -> bool | dict:
+    """Set the home load parameters for a given site id and solarbank 2 device for actual or all slots in the existing schedule.
+
+    If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
+    Optionally when set_slot SolarbankTimeslot is provided, the given slot will replace the existing schedule completely.
+    When insert_slot SolarbankTimeslot is provided, the given slot will be incoorporated into existing schedule. Adjacent overlapping slot times will be updated and overlayed slots will be replaced.
+
+    Example schedule for Solarbank 2 as provided via Api:
+    Example data for provided site_id with param_type 6 for SB2:
+    "schedule": {
+        "mode_type": 3,"custom_rate_plan": [
+            {"index": 0,"week": [0,6],"ranges": [
+                {"start_time": "00:00","end_time": "24:00","power": 110}]},
+            {"index": 1,"week": [1,2,3,4,5],"ranges": [
+                {"start_time": "00:00","end_time": "08:00","power": 100},
+                {"start_time": "08:00","end_time": "22:00","power": 120},
+                {"start_time": "22:00","end_time": "24:00","power": 90}]}],
+        "blend_plan": null,"default_home_load": 200,"max_load": 800,"min_load": 0,"step": 10}
+    """
+    # fast quit if nothing to change
+    preset = (
+        int(preset)
+        if str(preset).isdigit() or isinstance(preset, int | float)
+        else None
+    )
+    # Allow automatic mode only when smartmeter available in site
+    usage_mode = (
+        int(usage_mode)
+        if usage_mode in iter(SolarbankUsageMode)
+        and not (
+            usage_mode == SolarbankUsageMode.automatic.value
+            and len(
+                ((self.sites.get(siteId) or {}).get("grid_info") or {}).get("grid_list")
+                or []
+            )
+            < 1
+        )
+        else None
+    )
+    if (
+        preset is None
+        and usage_mode is None
+        and set_slot is None
+        and insert_slot is None
+    ):
+        return False
+    # set flag for required current parameter update
+    # pending_now_update = bool(set_slot is None and insert_slot is None)
+    # obtain actual device schedule from internal dict or fetch via api
+    if test_schedule is not None:
+        schedule = test_schedule
+    elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
+        schedule = (
+            await self.get_device_parm(
+                siteId=siteId,
+                paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+                deviceSn=deviceSn,
+            )
+        ).get("param_data") or {}
+    # update the usage mode in the overall schedule object
+    if usage_mode is not None:
+        schedule.update({"mode_type": usage_mode})
+
+    rate_plan = schedule.get("custom_rate_plan") or []
+    new_rate_plan = []
+    pending_insert = False
+    if len(rate_plan) > 0:
+        if insert_slot:
+            # set flag for pending insert slot
+            pending_insert = True
+    elif insert_slot:
+        # use insert_slot for set_slot to define a single new slot when no slots exist
+        set_slot = insert_slot
+
+    # TODO: Insert code to handle output preset changes or set_slot and insert_slot cases
+    new_rate_plan = copy.deepcopy(rate_plan)
+
+    # If no rate plan exists or new slot to be set, set defaults or given set_slot parameters
+    if (not new_rate_plan or not ((new_rate_plan[0]).get("ranges") or [])) and (set_slot or preset is not None):
+        if not set_slot:
+            # fill set_slot with given parameters
+            set_slot = Solarbank2Timeslot(
+                start_time=datetime.strptime("00:00", "%H:%M"),
+                end_time=datetime.strptime("23:59", "%H:%M"),
+                appliance_load=preset,
+                weekdays=set(range(0,7)),
+            )
+        slot = {
+            "start_time": datetime.strftime(set_slot.start_time, "%H:%M"),
+            "end_time": datetime.strftime(set_slot.end_time, "%H:%M").replace(
+                "23:59", "24:00"
+            ),
+            "power": SolixDefaults.PRESET_DEF
+            if set_slot.appliance_load is None
+            else set_slot.appliance_load,
+        }
+        rate: dict = next(iter(new_rate_plan),{})
+        new_rate_plan: list = [
+            {
+                "index": rate.get("index",0),
+                "week": rate.get("week",list(set_slot.weekdays)),
+                "ranges": [slot],
+            }
+        ]
+
+    schedule.update({"custom_rate_plan": new_rate_plan})
+    # return resulting schedule for test purposes without Api call
+    if test_schedule is not None:
+        return schedule
+    # Make the Api call with final schedule and check for return code, the set call will also update api dict
+    return await self.set_device_parm(
+        siteId=siteId,
+        paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
         paramData=schedule,
         deviceSn=deviceSn,
     )

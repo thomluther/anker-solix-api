@@ -32,6 +32,7 @@ from .types import (
     SmartmeterStatus,
     SolarbankDeviceMetrics,
     SolarbankStatus,
+    SolarbankUsageMode,
     SolixDefaults,
     SolixDeviceCapacity,
     SolixDeviceCategory,
@@ -63,6 +64,7 @@ class AnkerSolixApi:
         set_device_load,
         set_device_parm,
         set_home_load,
+        set_sb2_home_load,
     )
 
     def __init__(
@@ -382,10 +384,10 @@ class AnkerSolixApi:
                                 description = status.name
                                 break
                         # check if battery has bypass during charge (if output during charge)
+                        # This key can be passed separately, make sure the other values are looked up in provided data first, then in device details
                         # NOTE: charging power may be updated after initial device details update
                         # NOTE: SB1: If status is 3=charging and larger than preset but nothing goes out, the charge priority is active (e.g. 0 Watt switch)
-                        # NOTE: TODO(#SB2) Preset must be ignored for SB2 until the user mode can be distinguished whether the home demand or the output preset must be considered
-                        # This key can be passed separately, make sure the other values are looked up in passed data first, then in device details
+                        # NOTE: SB2: Preset must be replaced by house demand for SB2 when running auto usage mode
                         preset = devData.get("set_load_power") or device.get(
                             "set_output_power"
                         )
@@ -401,6 +403,15 @@ class AnkerSolixApi:
                             "to_home_load"
                         )
                         demand = devData.get("home_load_power")
+                        # use house demand for preset if in auto mode
+                        if generation > 1 and (
+                            (
+                                device.get("preset_usage_mode")
+                                or SolixDefaults.USAGE_MODE
+                            )
+                            == SolarbankUsageMode.automatic.value
+                        ):
+                            preset = demand
                         if (
                             description == SolarbankStatus.charge.name
                             and preset is not None
@@ -409,10 +420,9 @@ class AnkerSolixApi:
                         ):
                             with contextlib.suppress(ValueError):
                                 if (
-                                    int(out) == 0
-                                    and int(solar) > int(preset)
-                                    and generation < 2
-                                ):  # TODO(#SB2) change once preset can be determined
+                                    int(out) == 0 and int(solar) > int(preset)
+                                    # and generation < 2
+                                ):
                                     # Charge and 0 W output while solar larger than preset must be active charge priority
                                     description = SolarbankStatus.charge_priority.name
                                 elif int(out) > 0:
@@ -423,11 +433,11 @@ class AnkerSolixApi:
                             and generation > 1
                             and charge is not None
                             and homeload is not None
-                            and demand is not None
+                            and preset is not None
                         ):
                             with contextlib.suppress(ValueError):
                                 # Charge > 0 and home load < demand must be enforced charging
-                                if int(charge) > 0 and int(homeload) < int(demand):
+                                if int(charge) > 0 and int(homeload) < int(preset):
                                     description = SolarbankStatus.protection_charge.name
                         elif (
                             description == SolarbankStatus.bypass.name
@@ -479,8 +489,12 @@ class AnkerSolixApi:
                             # Solarbank 2 schedule
                             device.update(
                                 {
-                                    "preset_system_output_power": value.get("default_home_load") or SolixDefaults.PRESET_NOSCHEDULE,
-                                    "preset_usage_mode": value.get("mode_type") or SolixDefaults.USAGE_MODE,
+                                    "preset_system_output_power": value.get(
+                                        "default_home_load"
+                                    )
+                                    or SolixDefaults.PRESET_NOSCHEDULE,
+                                    "preset_usage_mode": value.get("mode_type")
+                                    or SolixDefaults.USAGE_MODE,
                                 }
                             )
                         else:
@@ -508,8 +522,19 @@ class AnkerSolixApi:
                         if generation >= 2:
                             # Solarbank 2 schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
-                            weekday = int(datetime.now().strftime('%w'))
-                            day_ranges = next(iter([day.get("ranges") or [] for day in (value.get("custom_rate_plan") or [{}]) if weekday in (day.get("week") or [])]), [])
+                            weekday = int(datetime.now().strftime("%w"))
+                            day_ranges = next(
+                                iter(
+                                    [
+                                        day.get("ranges") or []
+                                        for day in (
+                                            value.get("custom_rate_plan") or [{}]
+                                        )
+                                        if weekday in (day.get("week") or [])
+                                    ]
+                                ),
+                                [],
+                            )
                             for slot in day_ranges:
                                 with contextlib.suppress(ValueError):
                                     start_time = datetime.strptime(
@@ -528,7 +553,9 @@ class AnkerSolixApi:
                                     if start_time <= now < end_time:
                                         device.update(
                                             {
-                                                "preset_system_output_power": slot.get("power"),
+                                                "preset_system_output_power": slot.get(
+                                                    "power"
+                                                ),
                                             }
                                         )
                         else:
@@ -555,7 +582,9 @@ class AnkerSolixApi:
                                         device.update(
                                             {
                                                 "preset_system_output_power": preset_power,
-                                                "preset_allow_export": slot.get("turn_on"),
+                                                "preset_allow_export": slot.get(
+                                                    "turn_on"
+                                                ),
                                                 "preset_charge_priority": slot.get(
                                                     "charge_priority"
                                                 ),
@@ -563,7 +592,9 @@ class AnkerSolixApi:
                                         )
                                         # add presets for dual solarbank setups, default to None if schedule does not support new keys yet
                                         power_mode = slot.get("power_setting_mode")
-                                        dev_presets = slot.get("device_power_loads") or [{}]
+                                        dev_presets = slot.get(
+                                            "device_power_loads"
+                                        ) or [{}]
                                         dev_power = next(
                                             iter(
                                                 [
@@ -699,17 +730,29 @@ class AnkerSolixApi:
         """Create/Update api sites cache structure."""
         return await poller.update_sites(self, fromFile=fromFile)
 
-    async def update_site_details(self, fromFile: bool = False, exclude: set | None = None) -> dict:
+    async def update_site_details(
+        self, fromFile: bool = False, exclude: set | None = None
+    ) -> dict:
         """Add/Update site details in api sites cache structure."""
-        return await poller.update_site_details(self, fromFile=fromFile, exclude=exclude)
+        return await poller.update_site_details(
+            self, fromFile=fromFile, exclude=exclude
+        )
 
-    async def update_device_energy(self, fromFile: bool = False, exclude: set | None = None) -> dict:
+    async def update_device_energy(
+        self, fromFile: bool = False, exclude: set | None = None
+    ) -> dict:
         """Add/Update energy details in api sites cache structure."""
-        return await poller.update_device_energy(self, fromFile=fromFile, exclude=exclude)
+        return await poller.update_device_energy(
+            self, fromFile=fromFile, exclude=exclude
+        )
 
-    async def update_device_details(self, fromFile: bool = False, exclude: set | None = None) -> dict:
+    async def update_device_details(
+        self, fromFile: bool = False, exclude: set | None = None
+    ) -> dict:
         """Create/Update device details in api devices cache structure."""
-        return await poller.update_device_details(self, fromFile=fromFile, exclude=exclude)
+        return await poller.update_device_details(
+            self, fromFile=fromFile, exclude=exclude
+        )
 
     async def get_site_rules(self, fromFile: bool = False) -> dict:
         """Get the site rules supported by the api.
@@ -969,9 +1012,7 @@ class AnkerSolixApi:
             }
             # Make the Api call and check for return code
             code = (
-                await self.request(
-                    "post", API_ENDPOINTS["set_auto_upgrade"], json=data
-                )
+                await self.request("post", API_ENDPOINTS["set_auto_upgrade"], json=data)
             ).get("code")
             if not isinstance(code, int) or int(code) != 0:
                 return False
@@ -1043,9 +1084,9 @@ class AnkerSolixApi:
             "cutoff_data_id": setId,
         }
         # Make the Api call and check for return code
-        code = (
-            await self.request("post", API_ENDPOINTS["set_cutoff"], json=data)
-        ).get("code")
+        code = (await self.request("post", API_ENDPOINTS["set_cutoff"], json=data)).get(
+            "code"
+        )
         if not isinstance(code, int) or int(code) != 0:
             return False
         # update the data in api dict
@@ -1123,7 +1164,6 @@ class AnkerSolixApi:
         # update the data in api dict
         await self.get_site_price(siteId=siteId)
         return True
-
 
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False

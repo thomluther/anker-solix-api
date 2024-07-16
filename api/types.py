@@ -317,7 +317,6 @@ class SolixDeviceCapacity:
     """Dataclass for Anker Solix device battery capacities in Wh by Part Number."""
 
     A17C0: int = 1600  # SOLIX E1600 Solarbank
-    # TODO(#SB2): Update solarbank 2 PNs once known
     A17C1: int = 1600  # SOLIX E1600 Solarbank 2 Pro
     A17C2: int = 1600  # SOLIX E1600 Solarbank 2
     A17C3: int = 1600  # SOLIX E1600 Solarbank 2 Plus
@@ -486,7 +485,6 @@ class SmartmeterStatus(Enum):
     ok = "0"  # normal grid state when smart meter is measuring
     unknown_1 = "1"  # does it exist?
     unknown_2 = "2"  # does it exist?
-    unknown_3 = "3"  # does it exist?
     unknown = "unknown"
 
 
@@ -513,4 +511,4 @@ class Solarbank2Timeslot:
     start_time: datetime
     end_time: datetime
     appliance_load: int | None = None  # mapped to appliance_load setting
-    # TODO(#SB2): Update dedicated Solarbank2Timeslot once structure is known
+    weekdays: set[int] | None = None
