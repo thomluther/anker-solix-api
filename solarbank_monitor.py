@@ -20,7 +20,6 @@ import json
 import logging
 import os
 import sys
-import time
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
@@ -264,7 +263,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 usage_mode = dev.get("preset_usage_mode") or 0
                                 week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
                                 CONSOLE.info(
-                                    f"{'Usage Mode':<{col1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{col2}} {'Sched. Preset':<{col3}}: {dev.get("preset_system_output_power",'----'):>4} W"
+                                    f"{'Usage Mode':<{col1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{col2}} {'Sched. Preset':<{col3}}: {dev.get('preset_system_output_power','----'):>4} W"
                                 )
                                 CONSOLE.info(
                                     f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}"
@@ -442,7 +441,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 end="",
                                 flush=True,
                             )
-                        time.sleep(1)
+                        await asyncio.sleep(1)
             return False
 
     except (ClientError, errors.AnkerSolixError) as err:

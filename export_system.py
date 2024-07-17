@@ -437,24 +437,32 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         "Exporting site energy data for solar_production PV%s...", ch
                     )
                     try:
-                        if not (
-                            data := await myapi.request(
-                                "post",
-                                api.API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
-                                json={
-                                    "site_id": siteId,
-                                    "device_sn": "",
-                                    "type": "week",
-                                    "device_type": f"solar_production_pv{ch}",
-                                    "start_time": (
-                                        datetime.today() - timedelta(days=1)
-                                    ).strftime("%Y-%m-%d"),
-                                    "end_time": datetime.today().strftime("%Y-%m-%d"),
-                                },
-                            ) or {}
-                        ) or not data.get("data") or {}:
+                        if (
+                            not (
+                                data := await myapi.request(
+                                    "post",
+                                    api.API_ENDPOINTS["energy_analysis"],  # noqa: SLF001
+                                    json={
+                                        "site_id": siteId,
+                                        "device_sn": "",
+                                        "type": "week",
+                                        "device_type": f"solar_production_pv{ch}",
+                                        "start_time": (
+                                            datetime.today() - timedelta(days=1)
+                                        ).strftime("%Y-%m-%d"),
+                                        "end_time": datetime.today().strftime(
+                                            "%Y-%m-%d"
+                                        ),
+                                    },
+                                )
+                                or {}
+                            )
+                            or not data.get("data")
+                            or {}
+                        ):
                             CONSOLE.warning(
-                                "No solar production energy available for PV%s, skipping remaining PV channel export...", ch
+                                "No solar production energy available for PV%s, skipping remaining PV channel export...",
+                                ch,
                             )
                             break
                         export(
@@ -468,7 +476,8 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         if not admin:
                             CONSOLE.warning("Query requires account of site owner!")
                         CONSOLE.warning(
-                            "No solar production energy available for PV%s, skipping PV channel export...", ch
+                            "No solar production energy available for PV%s, skipping PV channel export...",
+                            ch,
                         )
                         break
                 CONSOLE.info("Exporting site energy data for home_usage...")

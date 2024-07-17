@@ -46,8 +46,12 @@ Everything starts with an:
 [aiohttp](https://aiohttp.readthedocs.io/en/stable/) `ClientSession`:
 
 ```python
-import logging, json
+"""Example module to test the api methods."""
+
 import asyncio
+import json
+import logging
+
 from aiohttp import ClientSession
 from api import api
 import common
@@ -59,7 +63,7 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 async def main() -> None:
     """Create the aiohttp session and run the example."""
     async with ClientSession() as websession:
-        """put your code here, example"""
+        # put your code here, example
         myapi = api.AnkerSolixApi(
             common.user(), common.password(), common.country(), websession, _LOGGER
         )

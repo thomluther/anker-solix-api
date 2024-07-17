@@ -68,7 +68,7 @@ def print_schedule(schedule: dict) -> None:
         usage_mode = plan.get("mode_type") or 0
         week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         CONSOLE.info(
-            f"{'Usage Mode':<{t1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{t2+t3+t4}} {'Def. Preset':<{t3}}: {plan.get("default_home_load",'----'):>4} W"
+            f"{'Usage Mode':<{t1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{t2+t3+t4}} {'Def. Preset':<{t3}}: {plan.get('default_home_load','----'):>4} W"
         )
         CONSOLE.info(
             f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}"

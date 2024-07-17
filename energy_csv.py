@@ -12,7 +12,6 @@ export, an additional API query per day is required.  The received daily values
 will be exported into a csv file.
 
 """
-# pylint: disable=duplicate-code
 
 import asyncio
 import csv
@@ -103,7 +102,7 @@ async def main() -> bool:
                 _LOGGER.debug(json.dumps(data, indent=2))
                 # Write csv file
                 if len(data) > 0:
-                    with open(
+                    with open(  # noqa: ASYNC230
                         filename, "w", newline="", encoding="utf-8"
                     ) as csvfile:
                         fieldnames = (next(iter(data.values()))).keys()

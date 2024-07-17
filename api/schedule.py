@@ -1148,7 +1148,7 @@ async def set_sb2_home_load(  # noqa: C901
                 start_time=datetime.strptime("00:00", "%H:%M"),
                 end_time=datetime.strptime("23:59", "%H:%M"),
                 appliance_load=preset,
-                weekdays=set(range(0,7)),
+                weekdays=set(range(7)),
             )
         slot = {
             "start_time": datetime.strftime(set_slot.start_time, "%H:%M"),
