@@ -265,7 +265,7 @@ LOGIN_RESPONSE: dict = {
 
 
 class SolixDeviceType(Enum):
-    """Enumuration for Anker Solix device types."""
+    """Enumeration for Anker Solix device types."""
 
     SYSTEM = "system"
     SOLARBANK = "solarbank"
@@ -279,20 +279,20 @@ class SolixDeviceType(Enum):
 
 
 class SolixParmType(Enum):
-    """Enumuration for Anker Solix Parameter types."""
+    """Enumeration for Anker Solix Parameter types."""
 
     SOLARBANK_SCHEDULE = "4"
     SOLARBANK_2_SCHEDULE = "6"
 
 
 class SolarbankPowerMode(IntEnum):
-    """Enumuration for Anker Solix Solarbank Power setting modes."""
+    """Enumeration for Anker Solix Solarbank Power setting modes."""
 
     normal = 1
     advanced = 2
 
 class SolarbankUsageMode(IntEnum):
-    """Enumuration for Anker Solix Solarbank Power Usage modes."""
+    """Enumeration for Anker Solix Solarbank Power Usage modes."""
 
     automatic = 1
     unknown_2 = 2   # Does it exist?
@@ -300,7 +300,7 @@ class SolarbankUsageMode(IntEnum):
 
 @dataclass(frozen=True)
 class ApiCategories:
-    """Dataclass to specify supported Api categorties for regular Api cache refresh cycles."""
+    """Dataclass to specify supported Api categories for regular Api cache refresh cycles."""
 
     site_price: str = "site_price"
     device_auto_upgrade: str = "device_auto_upgrade"
@@ -310,7 +310,7 @@ class ApiCategories:
     solarbank_cutoff: str = "solarbank_cutoff"
     solarbank_solar_info: str = "solarbank_solar_info"
     smartmeter_energy: str = "smartmeter_energy"
-
+    smartplug_energy: str = "smartplug_energy"
 
 @dataclass(frozen=True)
 class SolixDeviceCapacity:
@@ -337,6 +337,7 @@ class SolixDeviceCapacity:
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
+    A5220: int = 5000  # SOLIX X1 Battery module
 
 
 @dataclass(frozen=True)
@@ -390,8 +391,8 @@ class SolixDeviceCategory:
         SolixDeviceType.POWERPANEL.value
     )  # SOLIX Home Power Panel for SOLIX F3800
     # Home Energy System (HES)
-    A5102: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module
-    A5103: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module
+    A5102: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module 1P
+    A5103: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module 3P
     A5220: str = SolixDeviceType.HES.value  # SOLIX X1 Battery module
     # Power Cooler
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
@@ -450,7 +451,7 @@ class SolixDefaults:
 
 
 class SolixDeviceStatus(Enum):
-    """Enumuration for Anker Solix Device status."""
+    """Enumeration for Anker Solix Device status."""
 
     # The device status code seems to be used for cloud connection status.
     offline = "0"
@@ -458,7 +459,7 @@ class SolixDeviceStatus(Enum):
     unknown = "unknown"
 
 class SolarbankStatus(Enum):
-    """Enumuration for Anker Solix Solarbank status."""
+    """Enumeration for Anker Solix Solarbank status."""
 
     detection = "0"  # Rare for SB1, frequent for SB2 especially in combination with Smartmeter in the morning
     protection_charge = "03"  # For SB2 only when there is charge while output below demand in detection mode
@@ -479,7 +480,7 @@ class SolarbankStatus(Enum):
 
 
 class SmartmeterStatus(Enum):
-    """Enumuration for Anker Solix Smartmeter status."""
+    """Enumeration for Anker Solix Smartmeter status."""
 
     # TODO(#106) Update Smartmeter grid status description once known
     ok = "0"  # normal grid state when smart meter is measuring

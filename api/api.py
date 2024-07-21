@@ -726,9 +726,11 @@ class AnkerSolixApi:
             self._logger.info("Set log level to: %s", level)
         return self._logger.getEffectiveLevel()
 
-    async def update_sites(self, fromFile: bool = False) -> dict:  # noqa: C901
+    async def update_sites(
+        self, siteId: str | None = None, fromFile: bool = False
+    ) -> dict:  # noqa: C901
         """Create/Update api sites cache structure."""
-        return await poller.update_sites(self, fromFile=fromFile)
+        return await poller.update_sites(self, siteId=siteId, fromFile=fromFile)
 
     async def update_site_details(
         self, fromFile: bool = False, exclude: set | None = None

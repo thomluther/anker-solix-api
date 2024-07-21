@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 from .types import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
 
 
-async def update_sites(api, fromFile: bool = False) -> dict:  # noqa: C901
-    """Get the latest info for all accessible sites and update class site and device variables.
+async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -> dict:  # noqa: C901
+    """Get the latest info for all accessible sites or only the provided siteId and update class sites and devices dictionaries used as cache.
 
     Example data:
     {'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c':
@@ -33,11 +33,19 @@ async def update_sites(api, fromFile: bool = False) -> dict:  # noqa: C901
         'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c',
         'powerpanel_list': []}}
     """
-    api._logger.debug("Updating Sites data")
-    new_sites = {}
-    api._logger.debug("Getting site list")
-    sites = await api.get_site_list(fromFile=fromFile)
-    api._site_devices = set()
+    if siteId and (api.sites.get(siteId) or {}):
+        # update only the provided site ID
+        api._logger.debug("Updating Sites data for site ID %s", siteId)
+        new_sites = api.sites
+        # prepare the site list dictionary for the update loop by copying the requested site from the cache
+        sites: dict = {"site_list": [api.sites[siteId].get("site_info") or {}]}
+    else:
+        # run normal refresh for all sites
+        api._logger.debug("Updating Sites data")
+        new_sites = {}
+        api._logger.debug("Getting site list")
+        sites = await api.get_site_list(fromFile=fromFile)
+        api._site_devices = set()
     for site in sites.get("site_list", []):
         if myid := site.get("site_id"):
             # Update site info
@@ -80,15 +88,21 @@ async def update_sites(api, fromFile: bool = False) -> dict:  # noqa: C901
             mysite.update({"data_valid": data_valid, "requeries": requeries})
             # copy old SB info data timestamp if new is invalid, because can be invalid even if data is valid
             # example       "updated_time": "1970-01-01 00:00:00",
-            if sb_info.get("solarbank_list") and (oldstamp := (mysite.get("solarbank_info") or {}).get("updated_time") or ""):
+            if sb_info.get("solarbank_list"):
+                oldstamp = (mysite.get("solarbank_info") or {}).get(
+                    "updated_time"
+                ) or ""
                 timestamp = datetime.now().replace(year=1970)
                 fmt = "%Y-%m-%d %H:%M:%S"
                 with contextlib.suppress(ValueError):
                     timestamp = datetime.strptime(sb_info.get("updated_time"), fmt)
-                if timestamp.year == 1970 and oldstamp:
+                if timestamp.year == 1970:
                     # replace the field in the new scene referenced sb info
-                    sb_info["updated_time"] = datetime.now().strftime(fmt) if data_valid else oldstamp
-
+                    sb_info["updated_time"] = (
+                        datetime.now().strftime(fmt)
+                        if data_valid or not oldstamp
+                        else oldstamp
+                    )
             mysite.update(scene)
             new_sites.update({myid: mysite})
             # Update device details from scene info
@@ -104,7 +118,7 @@ async def update_sites(api, fromFile: bool = False) -> dict:  # noqa: C901
                     # modify only a copy of the device dict to prevent changing the scene info dict
                     solarbank = dict(solarbank).copy()
                     solarbank.update({"alias_name": solarbank.pop("device_name")})
-                # work around for system and device output presets, which are not set correctly and cannot be queried with load schedule for shared accounts
+                # work around for system and device output presets in dual solarbank setups, which are not set correctly and cannot be queried with load schedule for shared accounts
                 if not str(solarbank.get("set_load_power")).isdigit():
                     total_preset = str(mysite.get("retain_load", "")).replace("W", "")
                     if total_preset.isdigit():
@@ -388,7 +402,10 @@ async def update_device_details(
                     # Fetch schedule for Solarbank 2
                     api._logger.debug("Getting schedule details for device")
                     await api.get_device_parm(
-                        siteId=site_id, paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value, deviceSn=sn, fromFile=fromFile
+                        siteId=site_id,
+                        paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+                        deviceSn=sn,
+                        fromFile=fromFile,
                     )
             # update entry in devices
             api.devices.update({sn: device})

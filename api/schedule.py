@@ -132,7 +132,7 @@ async def get_device_parm(
         resp = await self._loadFromFile(
             os.path.join(self._testdir, f"device_parm_{paramType}_{siteId}.json")
         )
-        # ensure backward filename compatibility
+        # ensure backward filename compatibility without parm type in name
         if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
             resp = await self._loadFromFile(
                 os.path.join(self._testdir, f"device_parm_{siteId}.json")
@@ -149,7 +149,7 @@ async def get_device_parm(
 
     # update api device dict with latest data if optional device SN was provided, e.g. when called by set_device_parm for device details update
     data = resp.get("data") or {}
-    # update schedule also for all device serials found in schedule
+    # update schedule also for other device serials found in Solarbank 1 schedules
     schedule = data.get("param_data") or {}
     dev_serials = []
     for slot in schedule.get("ranges") or []:
@@ -1139,6 +1139,10 @@ async def set_sb2_home_load(  # noqa: C901
 
     # TODO: Insert code to handle output preset changes or set_slot and insert_slot cases
     new_rate_plan = copy.deepcopy(rate_plan)
+    # The SB2 schedule first needs to find a matching weekday plan or create a new one
+    # If no weekdays are provided, the plan for actual weekday will be selected. Otherwise the plan with most matching weekdays will be selected
+    # In both cases a new plan will be created if none of relevant weekdays is defined yet in a plan
+    # If extra weekdays are provided for an existing plan, those will be removed from other plans where they are defined
 
     # If no rate plan exists or new slot to be set, set defaults or given set_slot parameters
     if (not new_rate_plan or not ((new_rate_plan[0]).get("ranges") or [])) and (set_slot or preset is not None):
