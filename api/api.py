@@ -351,11 +351,18 @@ class AnkerSolixApi:
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
                             device.update({key: str(value)})
+                    elif key in ["sub_package_num"] and str(value).isdigit():
+                        if key in getattr(
+                            SolarbankDeviceMetrics, device.get("device_pn") or "", {}
+                        ):
+                            device.update({"sub_package_num": int(value)})
+                            calc_capacity = True
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
                     elif key in ["set_load_power", "parallel_home_load"] and value:
                         # Value may include unit, remove unit to have content consistent
                         device.update({"set_output_power": str(value).replace("W", "")})
                     # The current_home_load from get_device_load always shows the system wide settings made via the schedule
+                    # get_device_load cannot be used for SB2 schedules, but site refresh will pass this as workaround.
                     elif key in ["current_home_load"] and value:
                         # Value may include unit, remove unit to have content consistent
                         device.update(
@@ -450,9 +457,6 @@ class AnkerSolixApi:
                                     description = SolarbankStatus.bypass_discharge.name
 
                         device.update({"charging_status_desc": description})
-                    elif key in ["sub_package_num"] and str(value).isdigit():
-                        device.update({"sub_package_num": int(value)})
-                        calc_capacity = True
                     elif (
                         key in ["power_cutoff", "output_cutoff_data"]
                         and str(value).isdigit()

@@ -408,6 +408,7 @@ class SolarbankDeviceMetrics:
         set()
     )  # SOLIX E1600 Solarbank, single MPPT without channel reporting
     A17C1: ClassVar[set[str]] = {
+        "sub_package_num",
         "solar_power_1",
         "solar_power_2",
         "solar_power_3",
@@ -416,9 +417,11 @@ class SolarbankDeviceMetrics:
         "to_home_load",
     }  # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting and AC socket
     A17C2: ClassVar[set[str]] = {
+        "sub_package_num",
         "to_home_load",
     }  # SOLIX E1600 Solarbank 2, without MPPT
     A17C3: ClassVar[set[str]] = {
+        "sub_package_num",
         "solar_power_1",
         "solar_power_2",
         "to_home_load",

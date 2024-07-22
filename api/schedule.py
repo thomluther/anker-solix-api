@@ -30,6 +30,8 @@ async def get_device_load(
         {\"id\":0,\"start_time\":\"17:00\",\"end_time\":\"24:00\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":0}],
         \"min_load\":100,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":1}",
     "current_home_load": "300W","parallel_home_load": "","parallel_display": false}
+    Attention: This method and endpoint actually returns only solarbank 1 schedule structure, which is invalid for different Solarbank 2 structures.
+    While it also returns the applied home load settings, it cannot be used for Solarbank 2 due to wrong schedule data.
     """
     data = {"site_id": siteId, "device_sn": deviceSn}
     if fromFile:
@@ -86,8 +88,9 @@ async def set_device_load(
         '"charge_priority":0,"power_setting_mode":1,"device_power_loads":[{"device_sn":"9JVB42LJK8J0P5RY","power":150}]}],'
         '"min_load":100,"max_load":800,"step":0,"is_charge_priority":0,"default_charge_priority":0,"is_zero_output_tips":1,"display_advanced_mode":0,"advanced_mode_min_load":0}'
     }
-    Attention: This method and endpoint actually accepts the input data, but does not change anything on the solarbank.
-    The set_device_parm endpoint may have to be used. Eventually this method is used for Solarbank 2 since that will use a different schedule structure?
+    Attention: This method and endpoint actually accepts the input data, but does not change anything on the solarbank 1.
+    The set_device_parm endpoint has to be used instead.
+    TODO: Test if this method can be used for Solarbank 2 schedule structure?
     """
     data = {
         "site_id": siteId,
@@ -164,8 +167,8 @@ async def get_device_parm(
             {
                 "device_sn": sn,
                 "schedule": schedule,
-                "current_home_load": data.get("current_home_load") or "",
-                "parallel_home_load": data.get("parallel_home_load") or "",
+                #"current_home_load": data.get("current_home_load") or "",   # This field is not provided with get_device_parm
+                #"parallel_home_load": data.get("parallel_home_load") or "",   # This field is not provided with get_device_parm
             }
         )
     return data

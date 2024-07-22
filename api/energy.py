@@ -69,7 +69,7 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "solarbank_discharge": item.get("value", ""),
+                        "solarbank_discharge": item.get("value") or None,
                     }
                 )
                 table.update({daystr: entry})
@@ -88,16 +88,15 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "ac_socket": resp.get("ac_out_put_total", ""),
-                        "battery_to_home": resp.get("battery_to_home_total", ""),
+                        "ac_socket": resp.get("ac_out_put_total") or None,
+                        "battery_to_home": resp.get("battery_to_home_total") or None,
                     }
                 )
                 table.update({daystr: entry})
             else:
                 if fromFile:
                     daylist = [
-                        datetime.strptime(fileStartDay, "%Y-%m-%d")
-                        + timedelta(days=x)
+                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
                         for x in range(fileNumDays)
                     ]
                 else:
@@ -118,10 +117,8 @@ async def energy_daily(  # noqa: C901
                     entry.update(
                         {
                             "date": daystr,
-                            "ac_socket": resp.get("ac_out_put_total", ""),
-                            "battery_to_home": resp.get(
-                                "battery_to_home_total", ""
-                            ),
+                            "ac_socket": resp.get("ac_out_put_total") or None,
+                            "battery_to_home": resp.get("battery_to_home_total") or None,
                         }
                     )
                     table.update({daystr: entry})
@@ -162,7 +159,7 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "home_usage": item.get("value", ""),
+                        "home_usage": item.get("value") or None,
                     }
                 )
                 table.update({daystr: entry})
@@ -177,18 +174,18 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "grid_to_home": resp.get("grid_to_home_total", ""),
+                        "grid_to_home": resp.get("grid_to_home_total") or None,
                         "smartplugs_total": (resp.get("smart_plug_info") or {}).get(
-                            "total_power", ""
-                        ),
+                            "total_power"
+                        )
+                        or None,
                     }
                 )
                 table.update({daystr: entry})
             else:
                 if fromFile:
                     daylist = [
-                        datetime.strptime(fileStartDay, "%Y-%m-%d")
-                        + timedelta(days=x)
+                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
                         for x in range(fileNumDays)
                     ]
                 else:
@@ -209,10 +206,11 @@ async def energy_daily(  # noqa: C901
                     entry.update(
                         {
                             "date": daystr,
-                            "grid_to_home": resp.get("grid_to_home_total", ""),
-                            "smartplugs_total": (
-                                resp.get("smart_plug_info") or {}
-                            ).get("total_power", ""),
+                            "grid_to_home": resp.get("grid_to_home_total") or None,
+                            "smartplugs_total": (resp.get("smart_plug_info") or {}).get(
+                                "total_power"
+                            )
+                            or None,
                         }
                     )
                     table.update({daystr: entry})
@@ -253,9 +251,8 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "solar_to_grid": item.get("value", "").replace(
-                            "-", ""
-                        ),  # grid export is negative, convert to re-use as solar_to_grid value
+                        "solar_to_grid": item.get("value", "").replace("-", "")
+                        or None,  # grid export is negative, convert to re-use as solar_to_grid value
                     }
                 )
                 table.update({daystr: entry})
@@ -266,14 +263,14 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "grid_to_home": item.get("value", ""),
+                        "grid_to_home": item.get("value") or None,
                     }
                 )
                 table.update({daystr: entry})
 
     # Add solar energy per channel if supported by device, e.g. Solarbank 2 embedded inverter
     if SolixDeviceType.INVERTER.value in devTypes:
-        for ch in range (1,5):
+        for ch in range(1, 5):
             # query only if provided device SN has solar power values in cache
             if (self.devices.get(deviceSn) or {}).get(f"solar_power_{ch}") or "":
                 if fromFile:
@@ -307,7 +304,7 @@ async def energy_daily(  # noqa: C901
                         entry.update(
                             {
                                 "date": daystr,
-                                f"solar_production_pv{ch}": item.get("value", ""),
+                                f"solar_production_pv{ch}": item.get("value") or None,
                             }
                         )
                         table.update({daystr: entry})
@@ -342,7 +339,7 @@ async def energy_daily(  # noqa: C901
                 fileNumDays += 1
             entry = table.get(daystr, {})
             entry.update(
-                {"date": daystr, "solar_production": item.get("value", "")}
+                {"date": daystr, "solar_production": item.get("value") or None}
             )
             table.update({daystr: entry})
     # Solarbank charge and percentages are only received as total value for given interval. If requested, make daily queries for given interval
@@ -356,11 +353,11 @@ async def energy_daily(  # noqa: C901
             entry.update(
                 {
                     "date": daystr,
-                    "solarbank_charge": resp.get("charge_total", ""),
-                    "solar_to_grid": resp.get("solar_to_grid_total", ""),
-                    "battery_percentage": resp.get("charging_pre", ""),
-                    "solar_percentage": resp.get("electricity_pre", ""),
-                    "other_percentage": resp.get("others_pre", ""),
+                    "solarbank_charge": resp.get("charge_total") or None,
+                    "solar_to_grid": resp.get("solar_to_grid_total") or None,
+                    "battery_percentage": resp.get("charging_pre") or None,
+                    "solar_percentage": resp.get("electricity_pre") or None,
+                    "other_percentage": resp.get("others_pre") or None,
                 }
             )
             table.update({daystr: entry})
@@ -388,15 +385,16 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "solarbank_charge": resp.get("charge_total", ""),
-                        "solar_to_grid": resp.get("solar_to_grid_total", ""),
-                        "battery_percentage": resp.get("charging_pre", ""),
-                        "solar_percentage": resp.get("electricity_pre", ""),
-                        "other_percentage": resp.get("others_pre", ""),
+                        "solarbank_charge": resp.get("charge_total") or None,
+                        "solar_to_grid": resp.get("solar_to_grid_total") or None,
+                        "battery_percentage": resp.get("charging_pre") or None,
+                        "solar_percentage": resp.get("electricity_pre") or None,
+                        "other_percentage": resp.get("others_pre") or None,
                     }
                 )
                 table.update({daystr: entry})
     return table
+
 
 async def energy_analysis(
     self,
@@ -442,7 +440,10 @@ async def energy_analysis(
         if startDay
         else datetime.today().strftime("%Y-%m-%d"),
         "device_type": devType
-        if (devType in ["solar_production", "solarbank", "home_usage", "grid"] or "solar_production_pv" in devType)
+        if (
+            devType in ["solar_production", "solarbank", "home_usage", "grid"]
+            or "solar_production_pv" in devType
+        )
         else "solar_production",
         "end_time": endDay.strftime("%Y-%m-%d") if endDay else "",
     }
@@ -461,4 +462,3 @@ async def home_load_chart(self, siteId: str, deviceSn: str | None = None) -> dic
         data.update({"device_sn": deviceSn})
     resp = await self.request("post", API_ENDPOINTS["home_load_chart"], json=data)
     return resp.get("data") or {}
-
