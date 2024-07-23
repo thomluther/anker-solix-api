@@ -146,6 +146,7 @@ API_ENDPOINTS = {
     'power_service/v1/site/delete_site_devices',
     'power_service/v1/site/update_site_devices',
     'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
+    '/power_service/v1/site/get_comb_addable_sites'
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
@@ -362,6 +363,8 @@ class SolixDeviceCategory:
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
     # Smart Meter
     A17X7: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter
+    # Smart Plug
+    A17X8: str = SolixDeviceType.SMARTPLUG.value  # SOLIX Smart Plug
     # Portable Power Stations (PPS)
     A1720: str = (
         SolixDeviceType.PPS.value
@@ -515,4 +518,4 @@ class Solarbank2Timeslot:
     start_time: datetime
     end_time: datetime
     appliance_load: int | None = None  # mapped to appliance_load setting
-    weekdays: set[int] | None = None
+    weekdays: set[int] | None = None  # set of weekdays where this slow applies, defaulting to all if None. Sun = 0, Sat = 6
