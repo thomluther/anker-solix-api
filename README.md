@@ -1,6 +1,9 @@
-<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solix Api" align="right" height="100" />
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png" alt="Anker MI80 Logo" title="Anker MI80" align="right" height="80" />
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png" alt="Solarbank E1600 Logo" title="Anker Solarbank E1600" align="right" height="90" />
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/opwTD5izbjD9DjKB/picl_A17X7_normal.png" alt="Smart Meter Logo" title="Anker Smart Meter" align="right" height="80" />
+<img src="https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png" alt="Solarbank 2 E1600 Logo" title="Anker Solarbank 2 E1600" align="right" height="90" />
 
-# Anker Solix Api
+# Anker Solix Api library
 
 [![github license](https://img.shields.io/badge/License-MIT-orange)](https://github.com/thomluther/anker-solix-api/blob/main/LICENSE)
 ![python badge](https://img.shields.io/badge/Made%20with-Python-orange)
@@ -43,6 +46,7 @@ which is equivalent to what is displayed in the mobile app on the home screen fo
 # Usage
 
 Everything starts with an:
+
 [aiohttp](https://aiohttp.readthedocs.io/en/stable/) `ClientSession`:
 
 ```python
@@ -98,8 +102,9 @@ The AnkerSolixApi class provides 4 main methods to query data and cache them int
 - `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices from each site and store data in dictionary `AnkerSolixApi.sites` for quick access.
   This method should be run less frequently since this will fetch 4-6 queries per site depending on found device types. With version 2.0.0 solar, solarbank and smartmeter devices are supported. However it was noticed, that the energy statistics endpoint (maybe each endpoint) is limited to 25-30 queries per minute.
 
-Check out `test_api.py` and other python executable tools that may help to leverage and explore the Api for your Anker power system.
-The subfolder [`examples`](https://github.com/thomluther/anker-solix-api/tree/main/examples) contains actual or older example exports with json files using anonymized responses of the `export_system.py` module giving you an idea of how various Api responses look like.
+The code of these 4 main methods has been separated into the [`poller.py`](api/poller.py). To reduce the size of the ever growing api class module, other Api class methods have been separated into various python files and are simply imported into the main class api module. The known endpoints are documented in the [`types.py`](api/types.py), however parameter usage for many of them is unknown.
+Check out [`test_api.py`](./test_api.py) and other python executable tools that may help to leverage and explore the Api for your Anker power system.
+The subfolder [`examples`](./examples) contains actual or older example exports with json files using anonymized responses of the [`export_system.py`](./export_system.py) module giving you an idea of how various Api responses look like.
 Those json files can also be used to develop/debug the Api for system constellations not available to the developer.
 
 # AnkerSolixApi Tools
@@ -110,7 +115,7 @@ Those json files can also be used to develop/debug the Api for system constellat
 > pipenv run ./test_api.py
 ```
 
-Example exec module that can be used to explore and test AnkerSolixApi methods or direct endpoint requests with parameters. You can modify this module as required. Optionally you can create your own test file called `client.py` which is not indexed and added to gitignore, so your local changes are not tracked for git updates/commits.
+Example exec module that can be used to explore and test AnkerSolixApi methods or direct endpoint requests with parameters. You can modify this module as required. Optionally you can create your own test file called `client.py` starting with the usage example above. This file is not indexed and added to gitignore, so your local changes are not tracked for git updates/commits.
 This allows you to code your credentials in the local file if you do not want to utilize the environment variables:
 ```python
 _CREDENTIALS = {
