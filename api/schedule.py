@@ -233,8 +233,8 @@ async def set_home_load(  # noqa: C901
     """Set the home load parameters for a given site id and solarbank 1 device for actual or all slots in the existing schedule.
 
     If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
-    Optionally when set_slot SolarbankTimeslot is provided, the given slot will replace the existing schedule completely.
-    When insert_slot SolarbankTimeslot is provided, the given slot will be incoorporated into existing schedule. Adjacent overlapping slot times will be updated and overlayed slots will be replaced.
+    Optionally when set_slot Solarbank Timeslot is provided, the given slot will replace the existing schedule completely.
+    When insert_slot SolarbankTimeslot is provided, the given slot will be incorporated into existing schedule. Adjacent overlapping slot times will be updated and overlay slots will be replaced.
 
     Example schedules for Solarbank 1 as provided via Api:
     {"ranges":[
@@ -288,7 +288,7 @@ async def set_home_load(  # noqa: C901
     ranges = schedule.get("ranges") or []
     # get appliance load name from first existing slot to avoid mixture
     # NOTE: The solarbank may behave weird if a mixture is found or the name does not match with some internal settings
-    # The name cannot be queried, but seems to be 'custom' by default. However, the mobile app translates it to whather language is defined in the App
+    # The name cannot be queried, but seems to be 'custom' by default. However, the mobile app translates it to whatever language is defined in the App
     appliance_name = None
     pending_insert = False
     sb_count = 0
@@ -312,7 +312,7 @@ async def set_home_load(  # noqa: C901
     # get appliance and device limits based on number of solar banks
     if (min_load := str(schedule.get("min_load"))).isdigit():
         # min_load = int(min_load)
-        # Allow lower min setting as defined by API minimum. This however may be ignored if outsite of appliance defined slot boundaries.
+        # Allow lower min setting as defined by API minimum. This however may be ignored if outside of appliance defined slot boundaries.
         min_load = SolixDefaults.PRESET_MIN
     else:
         min_load = SolixDefaults.PRESET_MIN
@@ -332,7 +332,7 @@ async def set_home_load(  # noqa: C901
     # If only appliance preset provided, always use normal power mode. The device presets must not be specified in schedule, default of 50% share will be applied automatically
     # If device preset provided, always use advanced power mode if supported by existing schedule structure and adjust appliance load. Fall back to legacy appliance load usage
     # If appliance and device preset provided, always use advanced power mode if supported by existing schedule structure and adjust other device load. Fall back to legacy appliance load usage
-    # If neither appliance nor device preset provided, leave power mode unchanged. Legacy mode will be used with default 50% share when default applicane load must be set
+    # If neither appliance nor device preset provided, leave power mode unchanged. Legacy mode will be used with default 50% share when default appliance load must be set
     if sb_count > 1:
         if (
             dev_preset is not None
@@ -696,7 +696,7 @@ async def set_home_load(  # noqa: C901
                             # skip current slot since overlapped by insert slot
                             continue
                         if split_slot:
-                            # insert second part of a preceeding slot that was split
+                            # insert second part of a preceding slot that was split
                             new_ranges.append(split_slot)
                             split_slot = {}
                             # delay start time of current slot not needed if previous slot was split
@@ -741,7 +741,7 @@ async def set_home_load(  # noqa: C901
                                 ).replace("23:59", "24:00")
                             }
                         )
-                    # shorten end of preceeding slot
+                    # shorten end of preceding slot
                     slot.update(
                         {"end_time": datetime.strftime(insert_slot.start_time, "%H:%M")}
                     )
@@ -889,7 +889,7 @@ async def set_home_load(  # noqa: C901
                 slot = insert
                 new_ranges.append(slot)
                 if split_slot:
-                    # insert second part of a preceeding slot that was split
+                    # insert second part of a preceding slot that was split
                     new_ranges.append(split_slot)
                     split_slot = {}
 
@@ -1040,7 +1040,7 @@ async def set_sb2_home_load(  # noqa: C901
 
     If no time slot is defined for current time, a new slot will be inserted for the gap. This will result in full day definition when no slot is defined.
     Optionally when set_slot SolarbankTimeslot is provided, the given slot will replace the existing schedule completely.
-    When insert_slot SolarbankTimeslot is provided, the given slot will be incoorporated into existing schedule. Adjacent overlapping slot times will be updated and overlayed slots will be replaced.
+    When insert_slot SolarbankTimeslot is provided, the given slot will be incorporated into existing schedule. Adjacent overlapping slot times will be updated and overlay slots will be replaced.
 
     Example schedule for Solarbank 2 as provided via Api:
     Example data for provided site_id with param_type 6 for SB2:
