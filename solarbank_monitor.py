@@ -253,11 +253,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'Home Demand':<{col1}}: {demand or '---':>4} {unit:<{col2-5}} {'SB Home Load':<{col3}}: {load or '---':>4} {unit}  {diff}"
                         )
                         # update schedule with device details refresh and print it
+                        CONSOLE.info(
+                            f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
+                        )
                         if admin:
                             data = dev.get("schedule") or {}
-                            CONSOLE.info(
-                                f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
-                            )
                             if dev.get("generation", 0) > 1:
                                 # Solarbank 2 schedule
                                 usage_mode = dev.get("preset_usage_mode") or 0

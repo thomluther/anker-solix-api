@@ -66,7 +66,7 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
                 bool(sb_info.get("is_display_data", True))
                 or len(sb_info.get("solarbank_list") or []) == 0
             )
-            # Work adound: Try few requeries if SB data is invalid in scene info response
+            # Work around: Try few requeries if SB data is invalid in scene info response
             requeries = 0
             # Disabled requeries since they don't help, increase loop check counter if requeries should be done
             while requeries < 0 and not data_valid:
@@ -119,15 +119,17 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
                     solarbank = dict(solarbank).copy()
                     solarbank.update({"alias_name": solarbank.pop("device_name")})
                 # work around for system and device output presets in dual solarbank setups, which are not set correctly and cannot be queried with load schedule for shared accounts
-                if not str(solarbank.get("set_load_power")).isdigit():
-                    total_preset = str(mysite.get("retain_load", "")).replace("W", "")
-                    if total_preset.isdigit():
-                        solarbank.update(
-                            {
-                                "set_load_power": f"{(int(total_preset)/len(sb_list)):.0f}",
-                                "current_home_load": total_preset,
-                            }
-                        )
+                total_preset = str(mysite.get("retain_load", "")).replace("W", "")
+                if (
+                    not str(solarbank.get("set_load_power")).isdigit()
+                    and total_preset.isdigit()
+                ):
+                    solarbank.update(
+                        {
+                            "parallel_home_load": f"{(int(total_preset)/len(sb_list)):.0f}",
+                            "current_home_load": total_preset,
+                        }
+                    )
                 # Work around for weird charging power fields in SB totals and device list: They have same names, but completely different usage
                 # SB total charging power shows only power into the battery. At this time, charging power in device list seems to reflect the output power. This is seen for status 3
                 # SB total charging power show 0 when discharging, but then device charging power shows correct value. This is seen for status 2
@@ -175,6 +177,7 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
                             {
                                 "device_sn": sn,
                                 "schedule": schedule,
+                                "retain_load": total_preset,  # only a flag to indicate the actual schedule preset updates don't need to update site appliance load
                             }
                         )
             # adjust calculated SB charge to match total
