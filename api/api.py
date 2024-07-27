@@ -641,7 +641,7 @@ class AnkerSolixApi:
                                             dev_power = "0"
                                         break
                         # update appliance load in site cache upon device details or schedule updates not triggered by sites update
-                        if not devData.get("retain_load") and (mysite:= self.sites.get(device.get("site_id") or "") or {}):
+                        if not devData.get("retain_load") and (mysite:= self.sites.get(device.get("site_id") or "") or {}) and sys_power:
                             mysite.update({"retain_load": sys_power})
                             # update also device fields for output power if not provided along with schedule update
                             if not devData.get("current_home_load") and sys_power:
