@@ -571,11 +571,11 @@ class AnkerSolixApi:
                                                 "preset_system_output_power": sys_power,
                                             }
                                         )
-                                        # adjust schedule preset for eventual reuse as active presets
-                                        # Active Preset must only be considered if usage mode is manual
-                                        sys_power = str(sys_power) if (value.get("mode_type") or 0) == SolarbankUsageMode.manual.value else None
-                                        dev_power = sys_power
                                         break
+                            # adjust schedule preset for eventual reuse as active presets
+                            # Active Preset must only be considered if usage mode is manual
+                            sys_power = str(device.get("preset_system_output_power") or "") if (value.get("mode_type") or 0) == SolarbankUsageMode.manual.value else None
+                            dev_power = sys_power
                         else:
                             # Solarbank 1 schedule
                             for slot in value.get("ranges") or []:
@@ -629,17 +629,18 @@ class AnkerSolixApi:
                                                     "preset_device_output_power": dev_power,
                                                 }
                                             )
-                                        # adjust schedule presets for eventual reuse as active presets
-                                        # Charge priority and SOC must only be considered if MI80 inverter is configured for SB1
-                                        prio = prio if ((device.get("solar_info") or {}).get("solar_model") or "") == "A5143" else 0
-                                        if export and int(prio) <= int(device.get("battery_soc") or "0"):
-                                            sys_power = str(preset_power)
-                                            # active device power depends on SB count
-                                            dev_power = str(dev_power if dev_power is not None and cnt > 1 else sys_power)
-                                        else:
-                                            sys_power = "0"
-                                            dev_power = "0"
                                         break
+                            # adjust schedule presets for eventual reuse as active presets
+                            # Charge priority and SOC must only be considered if MI80 inverter is configured for SB1
+                            prio = (device.get("preset_charge_priority") or 0) if ((device.get("solar_info") or {}).get("solar_model") or "") == "A5143" else 0
+                            if device.get("preset_allow_export") and int(prio) <= int(device.get("battery_soc") or "0"):
+                                sys_power = str(device.get("preset_system_output_power") or "")
+                                # active device power depends on SB count
+                                dev_power = device.get("preset_device_output_power") or None
+                                dev_power = str(dev_power if dev_power is not None and cnt > 1 else sys_power)
+                            else:
+                                sys_power = "0"
+                                dev_power = "0"
                         # update appliance load in site cache upon device details or schedule updates not triggered by sites update
                         if not devData.get("retain_load") and (mysite:= self.sites.get(device.get("site_id") or "") or {}) and sys_power:
                             mysite.update({"retain_load": sys_power})
