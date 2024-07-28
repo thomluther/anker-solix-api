@@ -384,8 +384,9 @@ async def update_device_details(
                 # queries for solarbank 1 only
                 if ((api.devices.get(sn) or {}).get("generation") or 0) < 2:
                     # Fetch available OTA update for solarbanks, does not work for solarbank 2 with device SN
-                    api._logger.debug("Getting OTA update info for device")
-                    await api.get_ota_update(deviceSn=sn, fromFile=fromFile)
+                    # DISABLED: Not reliable for Solarbank 1 either, SN can also be "", so not clear what the response actually reports
+                    # api._logger.debug("Getting OTA update info for device")
+                    # await api.get_ota_update(deviceSn=sn, fromFile=fromFile)
                     # Fetch defined inverter details for solarbanks
                     if {ApiCategories.solarbank_solar_info} - exclude:
                         api._logger.debug("Getting inverter settings for device")
