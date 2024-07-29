@@ -417,14 +417,14 @@ class AnkerSolixApi:
                         homeload = devData.get("to_home_load") or device.get(
                             "to_home_load"
                         )
-                        demand = devData.get("home_load_power")
+                        demand = devData.get("home_load_power") or 0
                         # use house demand for preset if in auto mode
                         if generation > 1 and (
                             (
                                 device.get("preset_usage_mode")
                                 or SolixDefaults.USAGE_MODE
                             )
-                            == SolarbankUsageMode.automatic.value
+                            in [SolarbankUsageMode.smartmeter.value,SolarbankUsageMode.smartplugs.value]
                         ):
                             preset = demand
                         if (

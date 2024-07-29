@@ -198,14 +198,14 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
                     )
                     # Update also the charge status description which may change after charging power correction
                     charge_status = api.devices[sn].get("charging_status")
-                    if charge_status == SolarbankStatus.charge:
+                    if charge_status in [SolarbankStatus.charge, SolarbankStatus.bypass, SolarbankStatus.detection]:
                         api._update_dev(
                             {
                                 "device_sn": sn,
                                 "charging_status": charge_status,
                                 "home_load_power": mysite.get(
                                     "home_load_power"
-                                ),  # only passed to device for proper SB2 charge status update
+                                ),  # only passed for proper SB2 charge status update
                             }
                         )
             # make sure to write back any changes to the solarbank info in sites dict
