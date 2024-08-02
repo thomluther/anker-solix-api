@@ -700,8 +700,8 @@ async def set_home_load(  # noqa: C901
                             new_ranges.append(split_slot)
                             split_slot = {}
                             # delay start time of current slot not needed if previous slot was split
-                        else:
-                            # delay start time of current slot
+                        elif insert_slot.end_time.time() > start_time:
+                            # delay start time of current slot if insert slot end falls into current slot
                             slot.update(
                                 {
                                     "start_time": datetime.strftime(
@@ -795,14 +795,15 @@ async def set_home_load(  # noqa: C901
                             )
 
                 elif next_start and next_start < end_time:
-                    # delay start of slot following an insert
-                    slot.update(
-                        {
-                            "start_time": (
-                                next_start.isoformat(timespec="minutes")
-                            ).replace("23:59", "24:00")
-                        }
-                    )
+                    # delay start of slot following an insert if it falls into the slot
+                    if next_start > start_time:
+                        slot.update(
+                            {
+                                "start_time": (
+                                    next_start.isoformat(timespec="minutes")
+                                ).replace("23:59", "24:00")
+                            }
+                        )
                     next_start = None
 
                 elif not insert_slot and (all_day or start_time <= now < end_time):
@@ -1158,7 +1159,9 @@ async def set_sb2_home_load(  # noqa: C901
     # First identify a matching rate plan for provided week days
     if preset is not None or set_slot or insert_slot:
         for idx in rate_plan:
-            if len((days := set(idx.get("week") or [])) & weekdays) > len(matched_days & weekdays):
+            if len((days := set(idx.get("week") or [])) & weekdays) > len(
+                matched_days & weekdays
+            ):
                 matched_days = days.copy()
                 index = idx.get("index")
                 # quit loop on total match
@@ -1227,7 +1230,7 @@ async def set_sb2_home_load(  # noqa: C901
                 insert: dict = {}
 
                 # Check if parameter update required for current time but it falls into gap of no defined slot.
-                # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications required for allday usage
+                # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications (required for allday usage)
                 if (
                     not insert_slot
                     and pending_now_update
@@ -1336,8 +1339,8 @@ async def set_sb2_home_load(  # noqa: C901
                             new_ranges.append(split_slot)
                             split_slot: dict = {}
                             # delay start time of current slot not needed if previous slot was split
-                        else:
-                            # delay start time of current slot
+                        elif insert_slot.end_time.time() > start_time:
+                            # delay start time of current slot if insert slot end falls into current slot
                             slot.update(
                                 {
                                     "start_time": datetime.strftime(
@@ -1388,14 +1391,15 @@ async def set_sb2_home_load(  # noqa: C901
                             insert_slot.appliance_load = slot.get("power")
 
                 elif next_start and next_start < end_time:
-                    # delay start of slot following an insert
-                    slot.update(
-                        {
-                            "start_time": (
-                                next_start.isoformat(timespec="minutes")
-                            ).replace("23:59", "24:00")
-                        }
-                    )
+                    # delay start of slot following an insert if it falls into the slot
+                    if next_start > start_time:
+                        slot.update(
+                            {
+                                "start_time": (
+                                    next_start.isoformat(timespec="minutes")
+                                ).replace("23:59", "24:00")
+                            }
+                        )
                     next_start = None
 
                 elif not insert_slot and (start_time <= now < end_time):
