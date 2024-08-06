@@ -1151,12 +1151,12 @@ async def set_sb2_home_load(  # noqa: C901
         if rate_plan and not delete_plan
         else set(range(7))
     )
-    match_slot = False
+    # set flag to match weekdays with current plan if no weekdays provided
+    match_plan = True
     if insert_slot and isinstance(insert_slot, Solarbank2Timeslot):
         if insert_slot.weekdays:
             weekdays = insert_slot.weekdays
-        else:
-            match_slot = True
+            match_plan = False
         # Check insert_slot has required time parameters
         if not (insert_slot.start_time and insert_slot.end_time):
             self._logger.error(
@@ -1167,11 +1167,9 @@ async def set_sb2_home_load(  # noqa: C901
                 ),
             )
             return False
-    elif set_slot and isinstance(set_slot, Solarbank2Timeslot):
-        if set_slot.weekdays:
+    elif set_slot and isinstance(set_slot, Solarbank2Timeslot) and set_slot.weekdays:
             weekdays = set_slot.weekdays
-        else:
-            match_slot = True
+            match_plan = False
     # allow weekday strings as used by HA and convert to proper weekday number as required for api
     weekdays = {days.index(day) for day in weekdays if day in days} | (
         weekdays & set(range(7))
@@ -1196,7 +1194,7 @@ async def set_sb2_home_load(  # noqa: C901
                     matched_days = days.copy()
                     index = idx.get("index")
                     # re-use matching plan days if no weekdays provided
-                    if match_slot:
+                    if match_plan:
                         weekdays = days.copy()
                     # quit loop on total match
                     if (matched_days & weekdays) == weekdays:
