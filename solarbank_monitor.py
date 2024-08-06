@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-"""Example exec module to use the Anker API for continously querying and
+"""Example exec module to use the Anker API for continuously querying and
 displaying important solarbank parameters This module will prompt for the Anker
-account details if not pre-set in the header.  Upon successfull authentication,
-you will see the solarbank parameters displayed and refreshed at reqular
+account details if not pre-set in the header.  Upon successful authentication,
+you will see the solarbank parameters displayed and refreshed at regular
 interval.
 
 Note: When the system owning account is used, more details for the solarbank
 can be queried and displayed.
 
-Attention: During executiion of this module, the used account cannot be used in
+Attention: During execution of this module, the used account cannot be used in
 the Anker App since it will be kicked out on each refresh.
 
 """  # noqa: D205
@@ -327,7 +327,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                     else:
                         CONSOLE.warning(
-                            "No Solarbank, Inverter or Smartreader device, further device details will be skipped"
+                            "No Solarbank, Inverter or Smart Meter device, further device details will be skipped"
                         )
                     CONSOLE.info("-" * 80)
                 # print optional energy details

@@ -225,7 +225,7 @@ async def main() -> None:
                 CONSOLE.info("Cached Login response:")
             _out(
                 myapi._login_response  # pylint: disable=protected-access  # noqa: SLF001
-            )  # show used login response for API reqests
+            )  # show used login response for API requests
 
         # test site api methods
         await myapi.update_sites()

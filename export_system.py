@@ -4,7 +4,7 @@ and device details.
 
 This module will prompt for the Anker account details if not pre-set in the header.
 
-Upon successfull authentication, you can specify a subfolder for the exported
+Upon successful authentication, you can specify a subfolder for the exported
 JSON files received as API query response, defaulting to your nick name.
 
 Optionally you can specify whether personalized information in the response
@@ -37,7 +37,7 @@ _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
 # _LOGGER.setLevel(logging.DEBUG)    # enable for debug output
 CONSOLE: logging.Logger = common.CONSOLE
 
-RANDOMIZE = True  # Global flag to save randomize decission
+RANDOMIZE = True  # Global flag to save randomize decision
 RANDOMDATA = {}  # Global dict for randomized data, printed at the end
 
 
