@@ -16,7 +16,6 @@ Optionally the API class can use the json files for debugging and testing on
 various system outputs.
 
 """  # noqa: D205
-# pylint: disable=duplicate-code
 
 import asyncio
 from datetime import datetime, timedelta
@@ -24,13 +23,14 @@ import json
 import logging
 import os
 import random
+import shutil
 import string
 import sys
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api, errors  # type: ignore  # noqa: PGH003
-import common  # type: ignore  # noqa: PGH003
+from api import api, errors  # pylint: disable=no-name-in-module
+import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -207,6 +207,25 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
             # Ensure to use local subfolder
             folder = os.path.join(os.path.dirname(__file__), "exports", folder)
             os.makedirs(folder, exist_ok=True)
+
+            zipfolder: bool = True
+            resp = input(
+                "\nDo you want to zip the output folder? (default: YES) (Y/N): "
+            )
+            if resp != "":
+                zipfolder = resp.upper() in ["Y", "YES", "TRUE", 1]
+
+            # create file handler which logs even debug messages
+            fh = logging.FileHandler(os.path.join(folder, "system_export.log"))
+            fh.setLevel(logging.DEBUG)
+            fh.setFormatter(
+                logging.Formatter(
+                    fmt="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+                    datefmt="%H:%M:%S",
+                )
+            )
+            CONSOLE.addHandler(fh)
+
             # define minimum delay in seconds between requests
             myapi.requestDelay(0.5)
 
@@ -266,8 +285,21 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                     json={},  # noqa: SLF001
                 ),
             )  # shows only owner devices
+            CONSOLE.info("Exporting config...")
+            export(
+                os.path.join(folder, "config.json"),
+                await myapi.request(
+                    "post",
+                    api.API_ENDPOINTS["get_config"],
+                    json={},  # noqa: SLF001
+                ),
+            )  # shows only owner devices
+
             for siteId, site in myapi.sites.items():
-                CONSOLE.info("\nExporting site specific data for site %s...", siteId)
+                CONSOLE.info(
+                    "\nExporting site specific data for site %s...",
+                    randomize(siteId, "site_id"),
+                )
                 CONSOLE.info("Exporting scene info...")
                 export(
                     os.path.join(folder, f"scene_{randomize(siteId,'site_id')}.json"),
@@ -302,6 +334,21 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                         await myapi.request(
                             "post",
                             api.API_ENDPOINTS["wifi_list"],  # noqa: SLF001
+                            json={"site_id": siteId},
+                        ),
+                    )  # works only for site owners
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting installation...")
+                try:
+                    export(
+                        os.path.join(
+                            folder, f"installation_{randomize(siteId,'site_id')}.json"
+                        ),
+                        await myapi.request(
+                            "post",
+                            api.API_ENDPOINTS["get_installation"],  # noqa: SLF001
                             json={"site_id": siteId},
                         ),
                     )  # works only for site owners
@@ -348,22 +395,6 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                             "post",
                             api.API_ENDPOINTS["get_device_parm"],  # noqa: SLF001
                             json={"site_id": siteId, "param_type": "6"},
-                        ),
-                    )  # works only for site owners
-                except (ClientError, errors.AnkerSolixError):
-                    if not admin:
-                        CONSOLE.warning("Query requires account of site owner!")
-                CONSOLE.info("Exporting site upgrade record...")
-                try:
-                    export(
-                        os.path.join(
-                            folder,
-                            f"get_upgrade_record_{randomize(siteId,'site_id')}.json",
-                        ),
-                        await myapi.request(
-                            "post",
-                            api.API_ENDPOINTS["get_upgrade_record"],  # noqa: SLF001
-                            json={"site_id": siteId, "type": 2},
                         ),
                     )  # works only for site owners
                 except (ClientError, errors.AnkerSolixError):
@@ -535,7 +566,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 CONSOLE.info(
                     "\nExporting device specific data for device %s SN %s...",
                     device.get("name", ""),
-                    sn,
+                    randomize(sn, "_sn"),
                 )
                 siteId = device.get("site_id", "")
                 admin = device.get("is_admin")
@@ -629,6 +660,23 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 except (ClientError, errors.AnkerSolixError):
                     if not admin:
                         CONSOLE.warning("Query requires account of site owner!")
+                CONSOLE.info("Exporting upgrade record for device...")
+                try:
+                    export(
+                        os.path.join(
+                            folder,
+                            f"get_upgrade_record_{randomize(sn,'_sn')}.json",
+                        ),
+                        await myapi.request(
+                            "post",
+                            api.API_ENDPOINTS["get_upgrade_record"],  # noqa: SLF001
+                            json={"device_sn": sn, "type": 1},
+                        ),
+                    )  # works only for site owners
+                except (ClientError, errors.AnkerSolixError):
+                    if not admin:
+                        CONSOLE.warning("Query requires account of site owner!")
+
                 CONSOLE.info("Exporting device attributes...")
                 try:
                     export(
@@ -684,6 +732,8 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 skip_randomize=True,
             )
 
+            # remove log file handler again before closing summary
+            CONSOLE.removeHandler(fh)
             CONSOLE.info(
                 "\nCompleted export of Anker Solix system data for user %s", user
             )
@@ -700,6 +750,18 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
                 CONSOLE.info(
                     "Folder %s contains the JSON files.", os.path.abspath(folder)
                 )
+
+            # Optionally zip the output
+            if zipfolder:
+                head_tail =  os.path.split(folder)
+                zipname = os.path.join(head_tail[0],head_tail[1])
+                CONSOLE.info(
+                    "\nZipping output folder to %s", zipname+".zip"
+                )
+                CONSOLE.info(
+                    "Zipfile created: %s", shutil.make_archive(base_name=zipname, format='zip', root_dir=head_tail[0],base_dir=head_tail[1])
+                )
+
             return True
 
     except (ClientError, errors.AnkerSolixError) as err:
@@ -710,7 +772,7 @@ async def main() -> bool:  # noqa: C901 # pylint: disable=too-many-branches,too-
 # run async main
 if __name__ == "__main__":
     try:
-        if not asyncio.run(main()):
+        if not asyncio.run(main(), debug=False):
             CONSOLE.info("Aborted!")
     except KeyboardInterrupt:
         CONSOLE.warning("Aborted!")

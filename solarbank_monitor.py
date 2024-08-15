@@ -23,9 +23,9 @@ import sys
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api, errors  # type: ignore  # noqa: PGH003
-from api.types import SolarbankUsageMode
-import common  # type: ignore  # noqa: PGH003
+from api import api, errors  # pylint: disable=no-name-in-module
+from api.apitypes import SolarbankUsageMode  # pylint: disable=no-name-in-module
+import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -325,9 +325,21 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Grid Import':<{col1}}: {dev.get('grid_to_home_power',''):>4} {unit:<{col2-5}} {'Grid Export':<{col3}}: {dev.get('photovoltaic_to_grid_power',''):>4} {unit}"
                         )
+                    elif devtype == api.SolixDeviceType.SMARTPLUG.value:
+                        upgrade = dev.get("auto_upgrade")
+                        CONSOLE.info(
+                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
+                        )
+                        CONSOLE.info(
+                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
+                        )
+                        unit = dev.get("power_unit", "W")
+                        CONSOLE.info(
+                            f"{'Plug Power':<{col1}}: {dev.get('current_power',''):>4} {unit:<{col2-5}} {'Tag':<{col3}}: {dev.get('tag','')}"
+                        )
                     else:
                         CONSOLE.warning(
-                            "No Solarbank, Inverter or Smart Meter device, further device details will be skipped"
+                            "No Solarbank, Inverter, Smart Meter or Smart Plug device, further device details will be skipped"
                         )
                     CONSOLE.info("-" * 80)
                 # print optional energy details
@@ -452,7 +464,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
 # run async main
 if __name__ == "__main__":
     try:
-        if not asyncio.run(main()):
+        if not asyncio.run(main(), debug=False):
             CONSOLE.warning("\nAborted!")
     except KeyboardInterrupt:
         CONSOLE.warning("\nAborted!")

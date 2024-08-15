@@ -22,8 +22,8 @@ import os
 import sys
 
 from aiohttp import ClientSession
-from api import api  # type: ignore  # noqa: PGH003
-import common  # type: ignore  # noqa: PGH003
+from api import api  # pylint: disable=no-name-in-module
+import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.StreamHandler(sys.stdout))
@@ -126,7 +126,7 @@ async def main() -> bool:
 # run async main
 if __name__ == "__main__":
     try:
-        if not asyncio.run(main()):
+        if not asyncio.run(main(), debug=False):
             CONSOLE.warning("Aborted!")
     except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(exception), exception)

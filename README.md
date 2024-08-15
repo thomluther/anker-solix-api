@@ -57,7 +57,7 @@ import json
 import logging
 
 from aiohttp import ClientSession
-from api import api
+from api import api, apitypes
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -80,11 +80,19 @@ async def main() -> None:
         print("Device Overview:")
         print(json.dumps(myapi.devices, indent=2))
 
+        # Test a defined endpoint from apitypes module
+        #print(json.dumps((await myapi.request("post", apitypes.API_ENDPOINTS["bind_devices"],json={})), indent=2))
+
+        # Test an undefined endpoint directly (available endpoints documented in apitypes module)
+        #mysite = "<your_site_id>"
+        #print(json.dumps((await myapi.request("post", "power_service/v1/app/compatible/get_installation",json={"site_id": mysite})), indent=2))
+
+        # Note: Error response msg from api request may list missing field names or wrong field types from what the endpoint is expecting in the json payload
 
 # run async main
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        asyncio.run(main(), debug=False)
     except Exception as err:
         print(f"{type(err)}: {err}")
 ```
@@ -102,7 +110,7 @@ The AnkerSolixApi class provides 4 main methods to query data and cache them int
 - `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices from each site and store data in dictionary `AnkerSolixApi.sites` for quick access.
   This method should be run less frequently since this will fetch 4-6 queries per site depending on found device types. With version 2.0.0 solar, solarbank and smartmeter devices are supported. However it was noticed, that the energy statistics endpoint (maybe each endpoint) is limited to 25-30 queries per minute.
 
-The code of these 4 main methods has been separated into the [`poller.py`](api/poller.py). To reduce the size of the ever growing api class module, other Api class methods have been separated into various python files and are simply imported into the main class api module. The known endpoints are documented in the [`types.py`](api/types.py), however parameter usage for many of them is unknown.
+The code of these 4 main methods has been separated into the [`poller.py`](api/poller.py). To reduce the size of the ever growing api class module, other Api class methods have been separated into various python files and are simply imported into the main class api module. The known endpoints are documented in the [`apitypes.py`](api/apitypes.py), however parameter usage for many of them is unknown.
 Check out [`test_api.py`](./test_api.py) and other python executable tools that may help to leverage and explore the Api for your Anker power system.
 The subfolder [`examples`](./examples) contains actual or older example exports with json files using anonymized responses of the [`export_system.py`](./export_system.py) module giving you an idea of how various Api responses look like.
 Those json files can also be used to develop/debug the Api for system constellations not available to the developer.
@@ -169,7 +177,7 @@ This method will prompt for the Anker account details if not pre-set in the head
 Then you can specify a start day and the number of days for data extraction from the Anker Cloud.
 Note: The Solar production, Solarbank discharge, Smartmeter and Home usage can be queried across the full range each. The solarbank
 charge as well as smartmeter totals however can be queried only as total for an interval (e.g. day). Therefore when daily total
-data is also selected for export, 1-2 additional Api queries per day are required.
+data is also selected for export, 2 additional Api queries per day are required.
 The received daily values will be exported into a csv file.
 
 # Contributing

@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 
-from api.types import SolarbankUsageMode
+from api.apitypes import SolarbankUsageMode  # pylint: disable=no-name-in-module
 
 CONSOLE: logging.Logger = logging.getLogger("console")
 CONSOLE.addHandler(logging.StreamHandler(sys.stdout))

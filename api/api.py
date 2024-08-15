@@ -324,6 +324,9 @@ class AnkerSolixApi:
                         "output_power",
                         "power_unit",
                         "bws_surplus",
+                        "current_power",
+                        "tag",
+                        "err_code"
                     ]:
                         device.update({key: str(value)})
                     elif key in ["wifi_name"] and value:
@@ -334,7 +337,7 @@ class AnkerSolixApi:
                         device.update({"battery_soc": str(value)})
                     elif key in ["photovoltaic_power"]:
                         device.update({"input_power": str(value)})
-                    # Add solarbank metrics depending on device type
+                    # Add solarbank metrics depending on device type or generation
                     elif (
                         key
                         in [
