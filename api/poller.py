@@ -233,7 +233,7 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
                     isAdmin=admin,
                 ):
                     api._site_devices.add(sn)
-            smartplug_info = mysite.get("smartplug_info") or {}
+            smartplug_info = mysite.get("smart_plug_info") or {}
             for smartplug in smartplug_info.get("smartplug_list") or []:
                 # work around for device_name which is actually the device_alias in scene info
                 if "device_name" in smartplug:

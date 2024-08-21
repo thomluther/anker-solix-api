@@ -64,6 +64,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
         os.path.join(os.path.dirname(__file__), "examples")
     ) + get_subfolders(os.path.join(os.path.dirname(__file__), "exports"))
     energy_stats: bool = False
+    testfolder: str | None = None
 
     if INTERACTIVE:
         if exampleslist:

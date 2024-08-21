@@ -325,6 +325,7 @@ class ApiCategories:
 
     site_price: str = "site_price"
     device_auto_upgrade: str = "device_auto_upgrade"
+    device_tag: str = "device_tag"
     solar_energy: str = "solar_energy"
     solarbank_energy: str = "solarbank_energy"
     solarbank_fittings: str = "solarbank_fittings"
