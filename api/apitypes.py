@@ -131,8 +131,8 @@ API_ENDPOINTS = {
     "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
     "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
     "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smart meter? NOT IMPLEMENTED YET
-    "get_config": "power_service/v1/app/get_config", # shows empty config list, also for shared account
-    "get_installation": "power_service/v1/app/compatible/get_installation", # shows install_mode and solar_sn, also for shared account
+    "get_config": "power_service/v1/app/get_config",  # shows empty config list, also for shared account
+    "get_installation": "power_service/v1/app/compatible/get_installation",  # shows install_mode and solar_sn, also for shared account
 }
 
 """ Other endpoints neither implemented nor explored:
@@ -312,12 +312,14 @@ class SolarbankPowerMode(IntEnum):
     normal = 1
     advanced = 2
 
+
 class SolarbankUsageMode(IntEnum):
     """Enumeration for Anker Solix Solarbank Power Usage modes."""
 
     smartmeter = 1
-    smartplugs = 2   # TODO to be validated if correct mode for smart plugs
+    smartplugs = 2  # TODO to be validated if correct mode for smart plugs
     manual = 3
+
 
 @dataclass(frozen=True)
 class ApiCategories:
@@ -333,6 +335,7 @@ class ApiCategories:
     solarbank_solar_info: str = "solarbank_solar_info"
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
+
 
 @dataclass(frozen=True)
 class SolixDeviceCapacity:
@@ -485,6 +488,7 @@ class SolixDeviceStatus(Enum):
     online = "1"
     unknown = "unknown"
 
+
 class SolarbankStatus(Enum):
     """Enumeration for Anker Solix Solarbank status."""
 
@@ -539,4 +543,6 @@ class Solarbank2Timeslot:
     start_time: datetime | None
     end_time: datetime | None
     appliance_load: int | None = None  # mapped to appliance_load setting
-    weekdays: set[int|str] | None = None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
+    weekdays: set[int | str] | None = (
+        None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
+    )

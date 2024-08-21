@@ -19,4 +19,9 @@ profile="black"
 
 [tool.pylint]
 jobs=0
-disable = ["import-error", "line-too-long", "invalid-name"]
+disable = [
+    "import-error",
+    "line-too-long",
+    "invalid-name",
+    "protected-access",
+]
