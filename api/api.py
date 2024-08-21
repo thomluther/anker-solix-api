@@ -317,6 +317,7 @@ class AnkerSolixApi:
                     ]:
                         device.update({key: bool(value)})
                     elif key in [
+                        # keys with string values
                         "wireless_type",
                         "wifi_signal",
                         "bt_ble_mac",
@@ -329,8 +330,14 @@ class AnkerSolixApi:
                         "err_code",
                     ]:
                         device.update({key: str(value)})
-                    elif key in ["wifi_name"] and value:
-                        # wifi_name can be empty in details if device connected, avoid clearing name
+                    elif (
+                        key
+                        in [
+                            # keys with string values that should only updated if value returned
+                            "wifi_name",
+                        ]
+                        and value
+                    ):
                         device.update({"wifi_name": str(value)})
                     elif key in ["battery_power"] and value:
                         # This is a percentage value for the battery state of charge, not power
