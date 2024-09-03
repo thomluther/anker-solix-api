@@ -27,10 +27,10 @@ from api import api, errors  # pylint: disable=no-name-in-module
 from api.apitypes import SolarbankUsageMode  # pylint: disable=no-name-in-module
 import common
 
-_LOGGER: logging.Logger = logging.getLogger(__name__)
-_LOGGER.addHandler(logging.StreamHandler(sys.stdout))
-# _LOGGER.setLevel(logging.DEBUG)    # enable for debug output
+# use Console logger from common module
 CONSOLE: logging.Logger = common.CONSOLE
+# enable debug mode for the console handler
+#CONSOLE.handlers[0].setLevel(logging.DEBUG)
 
 REFRESH = 0  # default No refresh interval
 INTERACTIVE = True
@@ -94,7 +94,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 "" if use_file else common.password(),
                 "" if use_file else common.country(),
                 websession,
-                _LOGGER,
+                CONSOLE,
             )
             if use_file:
                 # set the correct test folder for Api
@@ -123,7 +123,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 )
                 if not resp or resp.upper() in ["N", "NO"]:
                     break
-                if resp.upper() in ["Y","YES"]:
+                if resp.upper() in ["Y", "YES"]:
                     energy_stats = True
                     break
 
@@ -157,7 +157,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     if energy_stats:
                         CONSOLE.info("Running energy details refresh...")
                         await myapi.update_device_energy(fromFile=use_file)
-                    next_dev_refr = next_refr + timedelta(seconds=max((not use_file) * 120, REFRESH * 9))
+                    next_dev_refr = next_refr + timedelta(
+                        seconds=max((not use_file) * 120, REFRESH * 9)
+                    )
                     # schedules = {}
                 if use_file:
                     CONSOLE.info("Using input source folder: %s", myapi.testDir())
@@ -168,7 +170,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         max(120, 10 * REFRESH),
                     )
                 CONSOLE.info(
-                    f"Sites: {len(myapi.sites)},  Devices: {len(myapi.devices)}"
+                    "Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices)
                 )
                 CONSOLE.info("-" * 80)
                 # pylint: disable=logging-fstring-interpolation
@@ -186,7 +188,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         f"{'Serialnumber':<{col1}}: {sn:<{col2}} {'Admin':<{col3}}: {'YES' if admin else 'NO'}"
                     )
                     siteid = dev.get("site_id", "")
-                    CONSOLE.info(f"{'System':<{col1}}: {(site.get('site_info') or {}).get('site_name','Unknown')}  (Site ID: {siteid})")
+                    CONSOLE.info(
+                        f"{'System':<{col1}}: {(site.get('site_info') or {}).get('site_name','Unknown')}  (Site ID: {siteid})"
+                    )
                     for fsn, fitting in (dev.get("fittings") or {}).items():
                         CONSOLE.info(
                             f"{'Accessory':<{col1}}: {fitting.get('device_name',''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
@@ -243,7 +247,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'Charge Power':<{col1}}: {dev.get('charging_power',''):>4} {unit:<{col2-5}} {'Device Preset':<{col3}}: {preset:>4} {unit}"
                         )
                         demand = site.get("home_load_power") or ""
-                        load = (site.get("solarbank_info") or {}).get("to_home_load") or ""
+                        load = (site.get("solarbank_info") or {}).get(
+                            "to_home_load"
+                        ) or ""
                         diff = ""
                         with contextlib.suppress(ValueError):
                             if float(demand) > float(load):
@@ -262,7 +268,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             if dev.get("generation", 0) > 1:
                                 # Solarbank 2 schedule
                                 usage_mode = dev.get("preset_usage_mode") or 0
-                                week = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+                                week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
                                 CONSOLE.info(
                                     f"{'Usage Mode':<{col1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{col2}} {'Sched. Preset':<{col3}}: {dev.get('preset_system_output_power','----'):>4} W"
                                 )
@@ -270,8 +276,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}"
                                 )
                                 for idx in data.get("custom_rate_plan") or [{}]:
-                                    index = idx.get("index","--")
-                                    weekdays = [week[day] for day in idx.get("week") or []]
+                                    index = idx.get("index", "--")
+                                    weekdays = [
+                                        week[day] for day in idx.get("week") or []
+                                    ]
                                     for slot in idx.get("ranges") or []:
                                         CONSOLE.info(
                                             f"{index!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {str(slot.get('power',''))+' W':>{t4}} {','.join(weekdays):<{t5}}"
@@ -347,21 +355,23 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if energy_stats:
                     unit = "kWh"
                     for site_id, site in myapi.sites.items():
-                        if (energy:=site.get("energy_details") or {}):
-                            today :dict = energy.get("today")
-                            yesterday :dict = energy.get("last_period")
-                            CONSOLE.info(f"Energy details for System {(site.get('site_info') or {}).get('site_name','Unknown')} (Site ID: {site_id}):")
+                        if energy := site.get("energy_details") or {}:
+                            today: dict = energy.get("today")
+                            yesterday: dict = energy.get("last_period")
+                            CONSOLE.info(
+                                f"Energy details for System {(site.get('site_info') or {}).get('site_name','Unknown')} (Site ID: {site_id}):"
+                            )
                             CONSOLE.info(
                                 f"{'Today':<{col1}}: {today.get('date','----------'):<{col2}} {'Yesterday':<{col3}}: {yesterday.get('date','----------')!s}"
                             )
                             CONSOLE.info(
                                 f"{'Solar Energy':<{col1}}: {today.get('solar_production','-.--'):>5} {unit:<{col2-6}} {'Solar Energy':<{col3}}: {yesterday.get('solar_production','-.--'):>5} {unit}"
                             )
-                            if value := today.get('solar_production_pv1'):
+                            if value := today.get("solar_production_pv1"):
                                 CONSOLE.info(
                                     f"{'Solar Ch 1/2':<{col1}}: {today.get('solar_production_pv1','-.--'):>5} / {today.get('solar_production_pv2','-.--'):>4} {unit:<{col2-13}} {'Solar Ch 1/2':<{col3}}: {yesterday.get('solar_production_pv1','-.--'):>5} / {yesterday.get('solar_production_pv2','-.--'):>4} {unit}"
                                 )
-                            if value := today.get('solar_production_pv3'):
+                            if value := today.get("solar_production_pv3"):
                                 CONSOLE.info(
                                     f"{'Solar Ch 3/4':<{col1}}: {today.get('solar_production_pv3','-.--'):>5} / {today.get('solar_production_pv4','-.--'):>4} {unit:<{col2-13}} {'Solar Ch 3/4':<{col3}}: {yesterday.get('solar_production_pv3','-.--'):>5} / {yesterday.get('solar_production_pv4','-.--'):>4} {unit}"
                                 )
@@ -371,27 +381,27 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'SB Discharged':<{col1}}: {today.get('solarbank_discharge','-.--'):>5} {unit:<{col2-6}} {'SB Discharged':<{col3}}: {yesterday.get('solarbank_discharge','-.--'):>5} {unit}"
                             )
-                            if value := today.get('battery_to_home'):
+                            if value := today.get("battery_to_home"):
                                 CONSOLE.info(
                                     f"{'House Feed':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'House Feed':<{col3}}: {yesterday.get('battery_to_home','-.--'):>5} {unit}"
                                 )
-                            if value := today.get('home_usage'):
+                            if value := today.get("home_usage"):
                                 CONSOLE.info(
                                     f"{'House Usage':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'House Usage':<{col3}}: {yesterday.get('home_usage','-.--'):>5} {unit}"
                                 )
-                            if value := today.get('grid_to_home'):
+                            if value := today.get("grid_to_home"):
                                 CONSOLE.info(
                                     f"{'Grid Import':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'Grid Import':<{col3}}: {yesterday.get('grid_to_home','-.--'):>5} {unit}"
                                 )
-                            if value := today.get('solar_to_grid'):
+                            if value := today.get("solar_to_grid"):
                                 CONSOLE.info(
                                     f"{'Grid Export':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'Grid Export':<{col3}}: {yesterday.get('solar_to_grid','-.--'):>5} {unit}"
                                 )
-                            if value := today.get('ac_socket'):
+                            if value := today.get("ac_socket"):
                                 CONSOLE.info(
                                     f"{'AC Socket':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'AC Socket':<{col3}}: {yesterday.get('ac_socket','-.--'):>5} {unit}"
                                 )
-                            if value := today.get('smartplugs_total'):
+                            if value := today.get("smartplugs_total"):
                                 CONSOLE.info(
                                     f"{'Smartplugs':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'Smartplugs':<{col3}}: {yesterday.get('smartplugs_total','-.--'):>5} {unit}"
                                 )
@@ -403,10 +413,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 # ask to reload or switch to next file or wait for refresh cycle of real time monitoring
                 if use_file:
                     while use_file:
-                        resp = input("[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file or [Q]uit: ")
+                        resp = input(
+                            "[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file or [Q]uit: "
+                        )
                         if resp.upper() in ["S", "SITE"]:
                             # set device details refresh to future to reload only site info
-                            next_dev_refr = datetime.now().astimezone() + timedelta(seconds=1)
+                            next_dev_refr = datetime.now().astimezone() + timedelta(
+                                seconds=1
+                            )
                             break
                         if resp.upper() in ["A", "ALL"]:
                             break
@@ -415,22 +429,27 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             for idx, filename in enumerate(exampleslist, start=1):
                                 CONSOLE.info("(%s) %s", idx, filename)
                             while use_file:
-                                selection = input(f"Enter source file number (1-{len(exampleslist)}): ")
-                                if (
-                                    selection.isdigit()
-                                    and 1 <= (selection := int(selection)) <= len(exampleslist)
-                                ):
+                                selection = input(
+                                    f"Enter source file number (1-{len(exampleslist)}): "
+                                )
+                                if selection.isdigit() and 1 <= (
+                                    selection := int(selection)
+                                ) <= len(exampleslist):
                                     break
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
                             break
                         if resp.upper() in ["N", "NEXT"] and exampleslist:
-                            selection = (selection + 1) if selection < len(exampleslist) else 1
+                            selection = (
+                                (selection + 1) if selection < len(exampleslist) else 1
+                            )
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
                             break
                         if resp.upper() in ["P", "PREVIOUS"] and exampleslist:
-                            selection = (selection - 1) if selection > 1 else len(exampleslist)
+                            selection = (
+                                (selection - 1) if selection > 1 else len(exampleslist)
+                            )
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
                             break

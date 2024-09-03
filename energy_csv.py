@@ -19,16 +19,15 @@ from datetime import datetime
 import json
 import logging
 import os
-import sys
 
 from aiohttp import ClientSession
 from api import api  # pylint: disable=no-name-in-module
 import common
 
-_LOGGER: logging.Logger = logging.getLogger(__name__)
-_LOGGER.addHandler(logging.StreamHandler(sys.stdout))
-# _LOGGER.setLevel(logging.DEBUG)    # enable for debug output
+# use Console logger from common module
 CONSOLE: logging.Logger = common.CONSOLE
+# enable debug mode for the console handler
+# CONSOLE.handlers[0].setLevel(logging.DEBUG)
 
 
 async def main() -> bool:
@@ -38,7 +37,7 @@ async def main() -> bool:
         async with ClientSession() as websession:
             CONSOLE.info("\nTrying authentication...")
             myapi = api.AnkerSolixApi(
-                common.user(), common.password(), common.country(), websession, _LOGGER
+                common.user(), common.password(), common.country(), websession, CONSOLE
             )
             if await myapi.async_authenticate():
                 CONSOLE.info("OK")
@@ -53,7 +52,7 @@ async def main() -> bool:
                 return False
             CONSOLE.info("OK")
             CONSOLE.info("\nSites: %s", len(myapi.sites))
-            _LOGGER.debug(json.dumps(myapi.sites, indent=2))
+            CONSOLE.debug(json.dumps(myapi.sites, indent=2))
 
             for site_id, site in myapi.sites.items():
                 site_name = (site.get("site_info") or {}).get("site_name") or ""
@@ -85,21 +84,26 @@ async def main() -> bool:
                 if numdays > 10:
                     myapi.requestDelay(2.5)
                 else:
-                    myapi.requestDelay(.3)
+                    myapi.requestDelay(0.3)
                 CONSOLE.info(
                     "Queries may take up to %s seconds with %.1f seconds delay...please wait...",
-                    round((2 * numdays * daytotals + 5) * myapi.requestDelay()),myapi.requestDelay()
+                    round((2 * numdays * daytotals + 5) * myapi.requestDelay()),
+                    myapi.requestDelay(),
                 )
                 data = await myapi.energy_daily(
                     siteId=site_id,
-                    deviceSn="",    # mandatory parameter but can be empty since not distinguished for site energy stats
+                    deviceSn="",  # mandatory parameter but can be empty since not distinguished for site energy stats
                     startDay=startday,
                     numDays=numdays,
                     dayTotals=daytotals,
                     # TODO(#SMARTPLUG): Add Smartplug type once supported
-                    devTypes={api.SolixDeviceType.INVERTER.value,api.SolixDeviceType.SOLARBANK.value,api.SolixDeviceType.SMARTMETER.value}    # include all possible energy stats per site
+                    devTypes={
+                        api.SolixDeviceType.INVERTER.value,
+                        api.SolixDeviceType.SOLARBANK.value,
+                        api.SolixDeviceType.SMARTMETER.value,
+                    },  # include all possible energy stats per site
                 )
-                _LOGGER.debug(json.dumps(data, indent=2))
+                CONSOLE.debug(json.dumps(data, indent=2))
                 # Write csv file
                 if len(data) > 0:
                     with open(  # noqa: ASYNC230
@@ -114,7 +118,9 @@ async def main() -> bool:
                             os.path.abspath(filename),
                         )
                 else:
-                    CONSOLE.info("No data received for site %s ID %s", site_name, site_id)
+                    CONSOLE.info(
+                        "No data received for site %s ID %s", site_name, site_id
+                    )
                     return False
             return True
 

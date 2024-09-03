@@ -3,13 +3,19 @@
 import getpass
 import logging
 import os
-import sys
 
 from api.apitypes import SolarbankUsageMode  # pylint: disable=no-name-in-module
 
-CONSOLE: logging.Logger = logging.getLogger("console")
-CONSOLE.addHandler(logging.StreamHandler(sys.stdout))
-CONSOLE.setLevel(logging.INFO)
+# create logger
+CONSOLE: logging.Logger = logging.getLogger(__name__)
+# Set parent to lowest level to allow messages passed to all handlers using their own level
+CONSOLE.setLevel(logging.DEBUG)
+
+# create console handler and set level to info
+ch = logging.StreamHandler()
+# This can be changed to DEBUG if more messages should be printed to console
+ch.setLevel(logging.INFO)
+CONSOLE.addHandler(ch)
 
 # Optional default Anker Account credentials to be used
 _CREDENTIALS = {
