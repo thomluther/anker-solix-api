@@ -17,6 +17,7 @@ various system outputs.
 """
 
 import asyncio
+import json
 import logging
 
 from aiohttp import ClientSession
@@ -29,36 +30,42 @@ CONSOLE: logging.Logger = common.CONSOLE
 CONSOLE.name = "ExportSystem"
 # enable debug mode for the console handler
 # CONSOLE.handlers[0].setLevel(logging.DEBUG)
+CONSOLE.handlers[0].setFormatter(
+    logging.Formatter(
+        fmt="%(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+)
 
 
 async def main() -> bool:
     """Run main function to export config after querying some options from user."""
 
-    CONSOLE.info("Exporting found Anker Solix system data for all assigned sites:")
+    CONSOLE.info("Exporting found Anker Solix system data for all assigned sites.")
     randomize = True
     try:
         user = common.user()
         async with ClientSession() as websession:
-            CONSOLE.info("\nTrying authentication...")
+            CONSOLE.info("Trying Api authentication...")
             myapi = api.AnkerSolixApi(
                 user, common.password(), common.country(), websession
             )
             if await myapi.async_authenticate():
-                CONSOLE.info("OK")
+                CONSOLE.info("Authentication: OK")
             else:
                 CONSOLE.info(
-                    "CACHED"
+                    "Authentication: CACHED"
                 )  # Login validation will be done during first API call
 
             resp = input(
-                f"\nDo you want to randomize unique IDs and SNs in exported files? (default: {'YES' if randomize else 'NO'}) (Y/N): "
+                f"INPUT: Do you want to randomize unique IDs and SNs in exported files? (default: {'YES' if randomize else 'NO'}) (Y/N): "
             )
             if resp != "" or not isinstance(randomize, bool):
                 randomize = resp.upper() in ["Y", "YES", "TRUE", 1]
             nickname = myapi.nickname.replace(
                 "*", "#"
             )  # avoid filesystem problems with * in user nicknames
-            folder = input(f"Subfolder for export (default: {nickname}): ")
+            folder = input(f"INPUT: Subfolder for export (default: {nickname}): ")
             if folder == "":
                 if nickname == "":
                     return False
@@ -66,7 +73,7 @@ async def main() -> bool:
 
             zipped: bool = True
             resp = input(
-                "\nDo you want to zip the output folder? (default: YES) (Y/N): "
+                "INPUT: Do you want to zip the output folder? (default: YES) (Y/N): "
             )
             if resp != "":
                 zipped = resp.upper() in ["Y", "YES", "TRUE", 1]
@@ -75,11 +82,18 @@ async def main() -> bool:
                 client=myapi,
                 logger=CONSOLE,
             )
-            return await myexport.export_data(
+            result = await myexport.export_data(
                 export_folder=folder,
                 randomized=randomize,
                 zipped=zipped,
             )
+            if result and randomize:
+                CONSOLE.info("")
+                CONSOLE.info(
+                    "Following trace or site IDs, SNs and MAC addresses have been randomized in files (from -> to):\n%s",
+                    json.dumps(myexport.get_random_mapping(), indent=2),
+                )
+            return result
 
     except (ClientError, errors.AnkerSolixError) as err:
         CONSOLE.error("%s: %s", type(err), err)
@@ -90,7 +104,7 @@ async def main() -> bool:
 if __name__ == "__main__":
     try:
         if not asyncio.run(main(), debug=False):
-            CONSOLE.info("Aborted!")
+            CONSOLE.warning("Aborted!")
     except KeyboardInterrupt:
         CONSOLE.warning("Aborted!")
     except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
