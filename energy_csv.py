@@ -18,7 +18,7 @@ import csv
 from datetime import datetime
 import json
 import logging
-import os
+from pathlib import Path
 
 from aiohttp import ClientSession
 from api import api  # pylint: disable=no-name-in-module
@@ -106,8 +106,8 @@ async def main() -> bool:
                 CONSOLE.debug(json.dumps(data, indent=2))
                 # Write csv file
                 if len(data) > 0:
-                    with open(  # noqa: ASYNC230
-                        filename, "w", newline="", encoding="utf-8"
+                    with Path.open(  # noqa: ASYNC230
+                        Path(filename), "w", newline="", encoding="utf-8"
                     ) as csvfile:
                         fieldnames = (next(iter(data.values()))).keys()
                         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -115,7 +115,7 @@ async def main() -> bool:
                         writer.writerows(data.values())
                         CONSOLE.info(
                             "\nCompleted: Successfully exported data to %s",
-                            os.path.abspath(filename),
+                            Path.resolve(Path(filename)),
                         )
                 else:
                     CONSOLE.info(

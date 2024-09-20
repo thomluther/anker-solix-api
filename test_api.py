@@ -6,7 +6,7 @@ import asyncio
 from datetime import datetime
 import json
 import logging
-import os
+from pathlib import Path
 import sys
 
 from aiohttp import ClientSession
@@ -191,7 +191,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
 
 
 async def test_api_from_json_files(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
-    myapi.testDir(os.path.join(os.path.dirname(__file__), "examples", "example1"))
+    myapi.testDir(Path(Path(__file__).parent) / "examples" / "example1")
     await myapi.update_sites(fromFile=True)
     await myapi.update_site_details(fromFile=True)
     await myapi.update_device_details(fromFile=True)

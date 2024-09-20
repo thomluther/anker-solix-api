@@ -19,7 +19,6 @@ This is an experimental Python library for Anker Solix Power devices (Solarbank,
 
 The library is currently supported on
 
-- Python 3.11
 - Python 3.12
 
 # Required libraries

@@ -63,7 +63,7 @@ async def main() -> bool:
             if resp != "" or not isinstance(randomize, bool):
                 randomize = resp.upper() in ["Y", "YES", "TRUE", 1]
             nickname = myapi.nickname.replace(
-                "*", "#"
+                "*", "x"
             )  # avoid filesystem problems with * in user nicknames
             folder = input(f"INPUT: Subfolder for export (default: {nickname}): ")
             if folder == "":

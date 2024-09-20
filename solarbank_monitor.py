@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 import json
 import logging
 import os
+from pathlib import Path
 import sys
 
 from aiohttp import ClientSession
@@ -30,7 +31,7 @@ import common
 # use Console logger from common module
 CONSOLE: logging.Logger = common.CONSOLE
 # enable debug mode for the console handler
-#CONSOLE.handlers[0].setLevel(logging.DEBUG)
+# CONSOLE.handlers[0].setLevel(logging.DEBUG)
 
 REFRESH = 0  # default No refresh interval
 INTERACTIVE = True
@@ -46,10 +47,12 @@ def clearscreen():
         # CONSOLE.info("\033[H\033[2J", end="")  # ESC characters to clear terminal screen, system independent?
 
 
-def get_subfolders(folder: str) -> list:
+def get_subfolders(folder: str | Path) -> list:
     """Get the full pathnames of all subfolders for given folder as list."""
-    if os.path.isdir(folder):
-        return [os.path.abspath(f) for f in os.scandir(folder) if f.is_dir()]
+    if isinstance(folder, str):
+        folder: Path = Path(folder)
+    if Path.is_dir(folder):
+        return [Path.resolve(f) for f in Path.iterdir(folder) if Path.is_dir(f)]
     return []
 
 
@@ -61,11 +64,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
     CONSOLE.info("Solarbank Monitor:")
     # get list of possible example and export folders to test the monitor against
     exampleslist: list = get_subfolders(
-        os.path.join(os.path.dirname(__file__), "examples")
-    ) + get_subfolders(os.path.join(os.path.dirname(__file__), "exports"))
+        Path(Path(__file__).parent) / "examples"
+    ) + get_subfolders(Path(Path(__file__).parent) / "exports")
     energy_stats: bool = False
     testfolder: str | None = None
-
     if INTERACTIVE:
         if exampleslist:
             exampleslist.sort()
