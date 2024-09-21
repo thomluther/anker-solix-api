@@ -51,8 +51,8 @@ def get_subfolders(folder: str | Path) -> list:
     """Get the full pathnames of all subfolders for given folder as list."""
     if isinstance(folder, str):
         folder: Path = Path(folder)
-    if Path.is_dir(folder):
-        return [Path.resolve(f) for f in Path.iterdir(folder) if Path.is_dir(f)]
+    if folder.is_dir():
+        return [f.resolve() for f in folder.iterdir() if f.is_dir()]
     return []
 
 
@@ -64,8 +64,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
     CONSOLE.info("Solarbank Monitor:")
     # get list of possible example and export folders to test the monitor against
     exampleslist: list = get_subfolders(
-        Path(Path(__file__).parent) / "examples"
-    ) + get_subfolders(Path(Path(__file__).parent) / "exports")
+        Path(__file__).parent / "examples"
+    ) + get_subfolders(Path(__file__).parent / "exports")
     energy_stats: bool = False
     testfolder: str | None = None
     if INTERACTIVE:

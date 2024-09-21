@@ -73,7 +73,7 @@ class AnkerSolixApiExport:
 
         if not export_path:
             # default to exports self.export_path in parent path of api library
-            self.export_path = Path(Path(__file__).parent) / ".." / "exports"
+            self.export_path = Path(__file__).parent / ".." / "exports"
         else:
             self.export_path = Path(export_path)
         if not export_folder:
@@ -97,10 +97,10 @@ class AnkerSolixApiExport:
             # avoid filesystem problems with * in user nicknames
             self.export_folder = self.client.nickname.replace("*", "x")
         # complete path and ensure parent self.export_path for export exists
-        self.export_path = Path.resolve(Path(self.export_path) / self.export_folder)
+        self.export_path : Path = Path.resolve(Path(self.export_path) / self.export_folder)
         try:
             # clear export folder if it exists already
-            if Path.exists(self.export_path):
+            if self.export_path.exists():
                 loop = asyncio.get_running_loop()
                 await loop.run_in_executor(None, shutil.rmtree, self.export_path)
                 # shutil.rmtree(self.export_path)

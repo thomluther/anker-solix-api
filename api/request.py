@@ -61,11 +61,11 @@ async def async_authenticate(self, restart: bool = False) -> bool:
         self._loggedIn = False
         self._authFileTime = 0
         self.nickname = ""
-        if Path.is_file(Path(self._authFile)):
+        if Path(self._authFile).is_file():
             with contextlib.suppress(Exception):
-                Path.unlink(Path(self._authFile))
+                Path(self._authFile).unlink()
     # First check if cached login response is availble and login params can be filled, otherwise query server for new login tokens
-    if Path.is_file(Path(self._authFile)):
+    if Path(self._authFile).is_file():
         data = await self._loadFromFile(self._authFile)
         self._authFileTime = Path(self._authFile).stat().st_mtime
         self._logger.debug(
@@ -163,7 +163,7 @@ async def request(
     if endpoint != API_LOGIN and (
         not self._loggedIn
         or (
-            Path.is_file(Path(self._authFile))
+            Path(self._authFile).is_file()
             and self._authFileTime != Path(self._authFile).stat().st_mtime
         )
     ):

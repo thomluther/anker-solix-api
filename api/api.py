@@ -209,7 +209,7 @@ class AnkerSolixApi:
         else:
             masked_filename = filename
         try:
-            if Path.is_file(Path(filename)):
+            if Path(filename).is_file():
                 async with aiofiles.open(filename, encoding="utf-8") as file:
                     data = json.loads(await file.read())
                     self._logger.debug("Loaded JSON from file %s:", masked_filename)
@@ -795,7 +795,7 @@ class AnkerSolixApi:
         """Get or set the subfolder for local API test files."""
         if not subfolder or subfolder == self._testdir:
             return self._testdir
-        if not Path.is_dir(Path(subfolder)):
+        if not Path(subfolder).is_dir():
             self._logger.error("Specified test folder does not exist: %s", subfolder)
         else:
             self._testdir = subfolder
