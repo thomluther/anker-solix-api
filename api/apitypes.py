@@ -133,6 +133,7 @@ API_ENDPOINTS = {
     "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smart meter? NOT IMPLEMENTED YET
     "get_config": "power_service/v1/app/get_config",  # shows empty config list, also for shared account
     "get_installation": "power_service/v1/app/compatible/get_installation",  # shows install_mode and solar_sn, also for shared account
+    "set_installation": "power_service/v1/app/compatible/set_installation",  # not explored yet
     "get_third_platforms": "power_service/v1/app/third/platform/list",  # list supported third party device models
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
     "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
@@ -392,7 +393,11 @@ class SolixDeviceCapacity:
     A17C3: int = 1600  # SOLIX E1600 Solarbank 2 Plus
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
+    A1723: int = 230  # SOLIX C200 Portable Power Station
+    A1725: int = 230  # SOLIX C200 Portable Power Station
     A1726: int = 288  # SOLIX C300 DC Portable Power Station
+    A1727: int = 230  # SOLIX C200 DC Portable Power Station
+    A1728: int = 288  # SOLIX C300 X Portable Power Station
     A1751: int = 512  # Anker PowerHouse 535 Portable Power Station
     A1753: int = 768  # SOLIX C800 Portable Power Station
     A1754: int = 768  # SOLIX C800 Plus Portable Power Station
@@ -443,7 +448,11 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 521 Portable Power Station
     A1722: str = SolixDeviceType.PPS.value  # SOLIX C300 Portable Power Station
+    A1723: str = SolixDeviceType.PPS.value  # SOLIX C200 Portable Power Station
+    A1725: str = SolixDeviceType.PPS.value  # SOLIX C200 Portable Power Station
     A1726: str = SolixDeviceType.PPS.value  # SOLIX C300 DC Portable Power Station
+    A1727: str = SolixDeviceType.PPS.value  # SOLIX C200 DC Portable Power Station
+    A1728: str = SolixDeviceType.PPS.value  # SOLIX C300X Portable Power Station
     A1751: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 535 Portable Power Station
