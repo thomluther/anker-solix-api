@@ -83,7 +83,7 @@ class AnkerSolixApiExport:
         self.request_delay = (
             request_delay
             if isinstance(request_delay, int | float)
-            else self.client.requestDelay()
+            else self.client.apisession.requestDelay()
         )
         self.randomized = randomized if isinstance(randomized, bool) else True
         self.zipped = zipped if isinstance(randomized, bool) else True
@@ -92,10 +92,10 @@ class AnkerSolixApiExport:
         # ensure nickname is set for api client
         await self.client.async_authenticate()
         if not self.export_folder:
-            if not self.client.nickname:
+            if not self.client.apisession.nickname:
                 return False
             # avoid filesystem problems with * in user nicknames
-            self.export_folder = self.client.nickname.replace("*", "x")
+            self.export_folder = self.client.apisession.nickname.replace("*", "x")
         # complete path and ensure parent self.export_path for export exists
         self.export_path : Path = Path.resolve(Path(self.export_path) / self.export_folder)
         try:
@@ -113,7 +113,7 @@ class AnkerSolixApiExport:
 
         self._logger.info(
             "Exporting Anker Solix data for all account sites and devices of nickname %s.",
-            self.client.nickname,
+            self.client.apisession.nickname,
         )
         try:
             # create a queue for async file logging
@@ -144,8 +144,8 @@ class AnkerSolixApiExport:
             listener.start()
 
             # save existing api delay and adjust request delay for export
-            if (old_delay := self.client.requestDelay()) != self.request_delay:
-                self.client.requestDelay(self.request_delay)
+            if (old_delay := self.client.apisession.requestDelay()) != self.request_delay:
+                self.client.apisession.requestDelay(self.request_delay)
                 self._logger.debug(
                     "Saved original request delay of %s seconds and modified delay to %s seconds.",
                     old_delay,
@@ -178,7 +178,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -194,7 +194,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -210,7 +210,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -226,7 +226,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -242,7 +242,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -258,7 +258,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -274,7 +274,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -290,7 +290,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -305,7 +305,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -320,7 +320,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -335,7 +335,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -349,7 +349,7 @@ class AnkerSolixApiExport:
                 filename := f"{API_FILEPREFIXES['get_token_by_userid']}.json",
             )
             payload = {}
-            response = await self.client.request(
+            response = await self.client.apisession.request(
                 method,
                 endpoint,
                 json=payload,
@@ -370,7 +370,7 @@ class AnkerSolixApiExport:
             payload = {"token": (response or {}).get("data", {}).get("token", "")}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -395,7 +395,7 @@ class AnkerSolixApiExport:
                 payload = {"site_id": siteId}
                 await self._export(
                     Path(self.export_path) / filename,
-                    await self.client.request(
+                    await self.client.apisession.request(
                         method,
                         endpoint,
                         json=payload,
@@ -419,7 +419,7 @@ class AnkerSolixApiExport:
                         payload = {"site_id": siteId}
                         await self._export(
                             Path(self.export_path) / filename,
-                            await self.client.request(
+                            await self.client.apisession.request(
                                 method,
                                 endpoint,
                                 json=payload,
@@ -451,7 +451,7 @@ class AnkerSolixApiExport:
                         payload = {"site_id": siteId}
                         await self._export(
                             Path(self.export_path) / filename,
-                            await self.client.request(
+                            await self.client.apisession.request(
                                 method,
                                 endpoint,
                                 json=payload,
@@ -478,7 +478,7 @@ class AnkerSolixApiExport:
                     payload = {"site_id": siteId}
                     await self._export(
                         Path(self.export_path) / filename,
-                        await self.client.request(
+                        await self.client.apisession.request(
                             method,
                             endpoint,
                             json=payload,
@@ -510,7 +510,7 @@ class AnkerSolixApiExport:
                         payload = {"site_id": siteId}
                         await self._export(
                             Path(self.export_path) / filename,
-                            await self.client.request(
+                            await self.client.apisession.request(
                                 method,
                                 endpoint,
                                 json=payload,
@@ -545,7 +545,7 @@ class AnkerSolixApiExport:
                             payload = {"site_id": siteId, "param_type": parmtype}
                             await self._export(
                                 Path(self.export_path) / filename,
-                                await self.client.request(
+                                await self.client.apisession.request(
                                     method,
                                     endpoint,
                                     json=payload,
@@ -581,7 +581,7 @@ class AnkerSolixApiExport:
                     }
                     await self._export(
                         Path(self.export_path) / filename,
-                        await self.client.request(
+                        await self.client.apisession.request(
                             method,
                             endpoint,
                             json=payload,
@@ -617,7 +617,7 @@ class AnkerSolixApiExport:
                     }
                     await self._export(
                         Path(self.export_path) / filename,
-                        await self.client.request(
+                        await self.client.apisession.request(
                             method,
                             endpoint,
                             json=payload,
@@ -655,7 +655,7 @@ class AnkerSolixApiExport:
                             "end_time": datetime.today().strftime("%Y-%m-%d"),
                         }
                         data = (
-                            await self.client.request(
+                            await self.client.apisession.request(
                                 method,
                                 endpoint,
                                 json=payload,
@@ -707,7 +707,7 @@ class AnkerSolixApiExport:
                     }
                     await self._export(
                         Path(self.export_path) / filename,
-                        await self.client.request(
+                        await self.client.apisession.request(
                             method,
                             endpoint,
                             json=payload,
@@ -743,7 +743,7 @@ class AnkerSolixApiExport:
                     }
                     await self._export(
                         Path(self.export_path) / filename,
-                        await self.client.request(
+                        await self.client.apisession.request(
                             method,
                             endpoint,
                             json=payload,
@@ -783,7 +783,7 @@ class AnkerSolixApiExport:
                         payload = {"solarbank_sn": sn}
                         await self._export(
                             Path(self.export_path) / filename,
-                            await self.client.request(
+                            await self.client.apisession.request(
                                 method,
                                 endpoint,
                                 json=payload,
@@ -815,7 +815,7 @@ class AnkerSolixApiExport:
                         payload = {"solarbank_sn": sn}
                         await self._export(
                             Path(self.export_path) / filename,
-                            await self.client.request(
+                            await self.client.apisession.request(
                                 method,
                                 endpoint,
                                 json=payload,
@@ -850,7 +850,7 @@ class AnkerSolixApiExport:
                         payload = {"site_id": siteId, "device_sn": sn}
                         await self._export(
                             Path(self.export_path) / filename,
-                            await self.client.request(
+                            await self.client.apisession.request(
                                 method,
                                 endpoint,
                                 json=payload,
@@ -884,7 +884,7 @@ class AnkerSolixApiExport:
                         payload = {"site_id": siteId, "device_sn": sn}
                         await self._export(
                             Path(self.export_path) / filename,
-                            await self.client.request(
+                            await self.client.apisession.request(
                                 method,
                                 endpoint,
                                 json=payload,
@@ -918,7 +918,7 @@ class AnkerSolixApiExport:
                         payload = {"site_id": siteId, "device_sn": sn}
                         await self._export(
                             Path(self.export_path) / filename,
-                            await self.client.request(
+                            await self.client.apisession.request(
                                 method,
                                 endpoint,
                                 json=payload,
@@ -947,7 +947,7 @@ class AnkerSolixApiExport:
                     payload = {"device_sn": sn, "insert_sn": ""}
                     await self._export(
                         Path(self.export_path) / filename,
-                        await self.client.request(
+                        await self.client.apisession.request(
                             method,
                             endpoint,
                             json=payload,
@@ -976,7 +976,7 @@ class AnkerSolixApiExport:
                     payload = {"device_sn": sn, "type": 1}
                     await self._export(
                         Path(self.export_path) / filename,
-                        await self.client.request(
+                        await self.client.apisession.request(
                             method,
                             endpoint,
                             json=payload,
@@ -1009,7 +1009,7 @@ class AnkerSolixApiExport:
                     }
                     await self._export(
                         Path(self.export_path) / filename,
-                        await self.client.request(
+                        await self.client.apisession.request(
                             method,
                             endpoint,
                             json=payload,
@@ -1038,7 +1038,7 @@ class AnkerSolixApiExport:
             payload = {}
             await self._export(
                 Path(self.export_path) / filename,
-                await self.client.request(
+                await self.client.apisession.request(
                     method,
                     endpoint,
                     json=payload,
@@ -1088,7 +1088,7 @@ class AnkerSolixApiExport:
             )
             # restore old api delay
             if old_delay != self.request_delay:
-                self.client.requestDelay(old_delay)
+                self.client.apisession.requestDelay(old_delay)
                 self._logger.debug(
                     "Restored original client request delay to %s seconds.",
                     old_delay,
@@ -1099,7 +1099,7 @@ class AnkerSolixApiExport:
             self._logger.info("")
             self._logger.info(
                 "Completed export of Anker Solix system data for account %s",
-                self.client.nickname,
+                self.client.apisession.nickname,
             )
             if self.randomized:
                 self._logger.info(

@@ -8,27 +8,18 @@ pip install aiofiles
 
 from __future__ import annotations
 
-from base64 import b64encode
 import contextlib
 from datetime import datetime
-import json
 import logging
 from pathlib import Path
-import sys
 
-import aiofiles
 from aiohttp import ClientSession
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes, padding
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from . import poller
+from .session import AnkerSolixClientSession
 from .apitypes import (
-    API_COUNTRIES,
     API_ENDPOINTS,
     API_FILEPREFIXES,
-    API_SERVERS,
     SmartmeterStatus,
     SolarbankDeviceMetrics,
     SolarbankStatus,
@@ -39,7 +30,6 @@ from .apitypes import (
     SolixDeviceStatus,
     SolixDeviceType,
 )
-from .helpers import RequestCounter
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -53,12 +43,6 @@ class AnkerSolixApi:
         energy_daily,
         home_load_chart,
     )
-    from .request import (  # pylint: disable=import-outside-toplevel
-        _wait_delay,
-        async_authenticate,
-        request,
-        requestDelay,
-    )
     from .schedule import (  # pylint: disable=import-outside-toplevel
         get_device_load,
         get_device_parm,
@@ -70,183 +54,34 @@ class AnkerSolixApi:
 
     def __init__(
         self,
-        email: str,
-        password: str,
-        countryId: str,
-        websession: ClientSession,
-        logger=None,
+        email: str | None = None,
+        password: str | None = None,
+        countryId: str | None = None,
+        websession: ClientSession | None = None,
+        logger: logging.Logger | None = None,
+        apisession: AnkerSolixClientSession | None = None
     ) -> None:
         """Initialize."""
-        self._countryId: str = countryId.upper()
-        self._api_base: str | None = None
-        for region, countries in API_COUNTRIES.items():
-            if self._countryId in countries:
-                self._api_base = API_SERVERS.get(region)
-        # default to EU server
-        if not self._api_base:
-            self._api_base = API_SERVERS.get("eu")
-        self._email: str = email
-        self._password: str = password
-        self._session: ClientSession = websession
-        self._loggedIn: bool = False
-        self._testdir: str = str(
-            Path(Path(__file__).parent) / ".." / "examples" / "example1"
-        )
-
-        self._retry_attempt: bool = False  # Flag for retry after any token error
-        Path(Path(Path(__file__).parent) / "authcache").mkdir(
-            parents=True, exist_ok=True
-        )  # ensure folder for authentication caching exists
-        self._authFile: str = str(
-            Path(Path(__file__).parent) / "authcache" / f"{email}.json"
-        )  # filename for authentication cache
-        self._authFileTime: float = 0
-        # initialize logger for object
-        if logger:
-            self._logger = logger
+        self.apisession: AnkerSolixClientSession
+        if apisession:
+            # reuse provided client
+            self.apisession = apisession
         else:
-            self._logger = _LOGGER
-            self._logger.setLevel(logging.WARNING)
-        if not self._logger.hasHandlers():
-            self._logger.addHandler(logging.StreamHandler(sys.stdout))
+            # init new client
+            self.apisession = AnkerSolixClientSession(email=email,password=password,countryId=countryId,websession=websession,logger=logger)
+        self._testdir: str = self.apisession.testDir()
+        self._logger: logging.Logger = self.apisession.logger()
 
-        self._timezone: str = (
-            self._getTimezoneGMTString()
-        )  # Timezone format: 'GMT+01:00'
-        self._gtoken: str | None = None
-        self._token: str | None = None
-        self._token_expiration: datetime | None = None
-        self._login_response: dict = {}
-        self.mask_credentials: bool = True
-        self.encrypt_body: bool = False
-        self.request_count: RequestCounter = RequestCounter()
-        self._request_delay: float = SolixDefaults.REQUEST_DELAY_DEF
-        self._last_request_time: datetime | None = None
-
-        # Define Encryption for password, using ECDH asymmetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
-        # uncompressed public key from EU Anker server in the format 04 [32 byte x value] [32 byte y value]
-        # Both, the EU and COM Anker server public key is the same and login response is provided for both upon an authentication request
-        # However, if country ID assignment is to wrong server, no sites or devices will be listed for the authenticated account.
-        self._api_public_key_hex = "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076"
-        # Encryption curve SECP256R1 (identical to prime256v1)
-        self._curve = ec.SECP256R1()
-        # get EllipticCurvePrivateKey
-        self._ecdh = ec.generate_private_key(self._curve, default_backend())
-        # get EllipticCurvePublicKey
-        self._public_key = self._ecdh.public_key()
-        # get bytes of shared secret
-        self._shared_key = self._ecdh.exchange(
-            ec.ECDH(),
-            ec.EllipticCurvePublicKey.from_encoded_point(
-                self._curve, bytes.fromhex(self._api_public_key_hex)
-            ),
-        )
 
         # track active devices bound to any site
         self._site_devices: set = set()
-
         # reset class variables for saving the most recent site and device data (Api cache)
-        self.nickname: str = ""
         self.sites: dict = {}
         self.devices: dict = {}
+        # link previous api methods to apisession for refactoring backwards compatability
+        self.request_count = self.apisession.request_count
+        self.async_authenticate = self.apisession.async_authenticate
 
-    def _md5(self, text: str) -> str:
-        """Return MD5 hash in hex for given string."""
-        h = hashes.Hash(hashes.MD5())
-        h.update(text.encode("utf-8"))
-        return h.finalize().hex()
-
-    def _getTimezoneGMTString(self) -> str:
-        """Construct timezone GMT string with offset, e.g. GMT+01:00."""
-        tzo = datetime.now().astimezone().strftime("%z")
-        return f"GMT{tzo[:3]}:{tzo[3:5]}"
-
-    def _encryptApiData(self, raw: str) -> str:
-        """Return Base64 encoded secret as utf-8 decoded string using the shared secret with seed of 16 for the encryption."""
-        # Password must be UTF-8 encoded and AES-256-CBC encrypted with block size of 16
-        aes = Cipher(
-            algorithms.AES(self._shared_key),
-            modes.CBC(self._shared_key[0:16]),
-            backend=default_backend(),
-        )
-        encryptor = aes.encryptor()
-        # Use default PKCS7 padding for incomplete AES blocks
-        padder = padding.PKCS7(128).padder()
-        raw_padded = padder.update(raw.encode("utf-8")) + padder.finalize()
-        return (b64encode(encryptor.update(raw_padded) + encryptor.finalize())).decode(
-            "utf-8"
-        )
-
-    def mask_values(self, data: dict | str, *args: str) -> dict | str:
-        """Mask values in dictionary for provided keys or the given string."""
-        if self.mask_credentials:
-            if isinstance(data, str):
-                datacopy: dict = {"text": data}
-                args: list = ["text"]
-            else:
-                datacopy = data.copy()
-            for key in args:
-                if old := datacopy.get(key):
-                    new = ""
-                    for idx in range(0, len(old), 16):
-                        new = new + (
-                            f"{old[idx:idx+2]}###masked###{old[idx+14:idx+16]}"
-                        )
-                    new = new[: len(old)]
-                    datacopy[key] = new
-            if isinstance(data, str):
-                return datacopy.get("text")
-            return datacopy
-        return data
-
-    async def _loadFromFile(self, filename: str | Path) -> dict:
-        """Load json data from given file for testing."""
-        filename = str(filename)
-        if self.mask_credentials:
-            masked_filename = filename.replace(
-                self._email, self.mask_values(self._email)
-            )
-        else:
-            masked_filename = filename
-        try:
-            if Path(filename).is_file():
-                async with aiofiles.open(filename, encoding="utf-8") as file:
-                    data = json.loads(await file.read())
-                    self._logger.debug("Loaded JSON from file %s:", masked_filename)
-                    self._logger.debug(
-                        "Data: %s",
-                        self.mask_values(
-                            data, "user_id", "auth_token", "email", "geo_key", "token"
-                        ),
-                    )
-                    return data
-        except OSError as err:
-            self._logger.error(
-                "ERROR: Failed to load JSON from file %s", masked_filename
-            )
-            self._logger.error(err)
-        return {}
-
-    async def _saveToFile(self, filename: str | Path, data: dict | None = None) -> bool:
-        """Save json data to given file for testing."""
-        filename = str(filename)
-        if self.mask_credentials:
-            masked_filename = filename.replace(
-                self._email, self.mask_values(self._email)
-            )
-        else:
-            masked_filename = filename
-        if not data:
-            data = {}
-        try:
-            async with aiofiles.open(filename, "w", encoding="utf-8") as file:
-                await file.write(json.dumps(data, indent=2))
-                self._logger.debug("Saved JSON to file %s:", masked_filename)
-                return True
-        except OSError as err:
-            self._logger.error("ERROR: Failed to save JSON to file %s", masked_filename)
-            self._logger.error(err)
-            return False
 
     def _update_site(  # noqa: C901
         self,
@@ -793,13 +628,8 @@ class AnkerSolixApi:
 
     def testDir(self, subfolder: str | None = None) -> str:
         """Get or set the subfolder for local API test files."""
-        if not subfolder or subfolder == self._testdir:
-            return self._testdir
-        if not Path(subfolder).is_dir():
-            self._logger.error("Specified test folder does not exist: %s", subfolder)
-        else:
-            self._testdir = subfolder
-            self._logger.info("Set Api test folder to: %s", subfolder)
+        if subfolder is not None:
+            self._testdir = self.apisession.testDir(subfolder)
         return self._testdir
 
     def logLevel(self, level: int | None = None) -> int:
@@ -862,11 +692,11 @@ class AnkerSolixApi:
                 'quantity_min_limit_map': {'A5103': 1}, 'quantity_max_limit_map': {'A5103': 6}}]}
         """
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['site_rules']}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["site_rules"])
+            resp = await self.apisession.request("post", API_ENDPOINTS["site_rules"])
         return resp.get("data") or {}
 
     async def get_site_list(self, fromFile: bool = False) -> dict:
@@ -876,11 +706,11 @@ class AnkerSolixApi:
         {'site_list': [{'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'site_name': 'BKW', 'site_img': '', 'device_type_list': [3], 'ms_type': 2, 'power_site_type': 2, 'is_allow_delete': True}]}
         """
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['site_list']}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["site_list"])
+            resp = await self.apisession.request("post", API_ENDPOINTS["site_list"])
         return resp.get("data") or {}
 
     async def get_scene_info(self, siteId: str, fromFile: bool = False) -> dict:
@@ -901,11 +731,11 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['scene_info']}_{siteId}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["scene_info"], json=data)
+            resp = await self.apisession.request("post", API_ENDPOINTS["scene_info"], json=data)
         return resp.get("data") or {}
 
     async def get_homepage(self, fromFile: bool = False) -> dict:
@@ -921,11 +751,11 @@ class AnkerSolixApi:
         "powerpanel_list":[]}
         """
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['homepage']}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["homepage"])
+            resp = await self.apisession.request("post", API_ENDPOINTS["homepage"])
         return resp.get("data") or {}
 
     async def get_bind_devices(self, fromFile: bool = False) -> dict:
@@ -937,11 +767,11 @@ class AnkerSolixApi:
         "link_time":1695392302068,"wifi_online":false,"wifi_name":"","relate_type":["ble","wifi"],"charge":false,"bws_surplus":0,"device_sw_version":"v1.4.4","has_manual":false}]}
         """
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['bind_devices']}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["bind_devices"])
+            resp = await self.apisession.request("post", API_ENDPOINTS["bind_devices"])
         data = resp.get("data") or {}
         active_devices = set()
         for device in data.get("data") or []:
@@ -967,11 +797,11 @@ class AnkerSolixApi:
         'photovoltaic_power': '', 'output_power': '', 'create_time': 0}]}
         """
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['user_devices']}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["user_devices"])
+            resp = await self.apisession.request("post", API_ENDPOINTS["user_devices"])
         return resp.get("data") or {}
 
     async def get_charging_devices(self, fromFile: bool = False) -> dict:
@@ -981,11 +811,11 @@ class AnkerSolixApi:
         {'device_list': None, 'guide_txt': ''}
         """
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['charging_devices']}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["charging_devices"])
+            resp = await self.apisession.request("post", API_ENDPOINTS["charging_devices"])
         return resp.get("data") or {}
 
     async def get_solar_info(self, solarbankSn: str, fromFile: bool = False) -> dict:
@@ -996,12 +826,12 @@ class AnkerSolixApi:
         """
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['solar_info']}_{solarbankSn}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["solar_info"], json=data)
+            resp = await self.apisession.request("post", API_ENDPOINTS["solar_info"], json=data)
         data = resp.get("data") or {}
         if data:
             self._update_dev({"device_sn": solarbankSn, "solar_info": data})
@@ -1020,12 +850,12 @@ class AnkerSolixApi:
         """
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['compatible_process']}_{solarbankSn}.json"
             )
         else:
-            resp = await self.request(
+            resp = await self.apisession.request(
                 "post", API_ENDPOINTS["compatible_process"], json=data
             )
         data = resp.get("data") or {}
@@ -1041,11 +871,11 @@ class AnkerSolixApi:
         'icon': 'https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png'}]}
         """
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['get_auto_upgrade']}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["get_auto_upgrade"])
+            resp = await self.apisession.request("post", API_ENDPOINTS["get_auto_upgrade"])
         data = resp.get("data") or {}
         main = data.get("main_switch")
         devicelist = data.get("device_list", [])  # could be null for non owning account
@@ -1099,7 +929,7 @@ class AnkerSolixApi:
             }
             # Make the Api call and check for return code
             code = (
-                await self.request("post", API_ENDPOINTS["set_auto_upgrade"], json=data)
+                await self.apisession.request("post", API_ENDPOINTS["set_auto_upgrade"], json=data)
             ).get("code")
             if not isinstance(code, int) or int(code) != 0:
                 return False
@@ -1116,11 +946,11 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['wifi_list']}_{siteId}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["wifi_list"], json=data)
+            resp = await self.apisession.request("post", API_ENDPOINTS["wifi_list"], json=data)
         return resp.get("data") or {}
 
     async def get_power_cutoff(
@@ -1135,12 +965,12 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_cutoff']}_{deviceSn}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["get_cutoff"], json=data)
+            resp = await self.apisession.request("post", API_ENDPOINTS["get_cutoff"], json=data)
         data = resp.get("data") or {}
         # add whole list to device details to provide option selection capabilities
         details = {
@@ -1172,7 +1002,7 @@ class AnkerSolixApi:
             "cutoff_data_id": setId,
         }
         # Make the Api call and check for return code
-        code = (await self.request("post", API_ENDPOINTS["set_cutoff"], json=data)).get(
+        code = (await self.apisession.request("post", API_ENDPOINTS["set_cutoff"], json=data)).get(
             "code"
         )
         if not isinstance(code, int) or int(code) != 0:
@@ -1189,12 +1019,12 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
             )
         else:
-            resp = await self.request(
+            resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_site_price"], json=data
             )
         data = resp.get("data") or {}
@@ -1246,7 +1076,7 @@ class AnkerSolixApi:
             )
         # Make the Api call and check for return code
         code = (
-            await self.request("post", API_ENDPOINTS["update_site_price"], json=data)
+            await self.apisession.request("post", API_ENDPOINTS["update_site_price"], json=data)
         ).get("code")
         if not isinstance(code, int) or int(code) != 0:
             return False
@@ -1268,12 +1098,12 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_device_fittings']}_{deviceSn}.json"
             )
         else:
-            resp = await self.request(
+            resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_device_fittings"], json=data
             )
         data = resp.get("data") or {}
@@ -1304,12 +1134,12 @@ class AnkerSolixApi:
         """
         data = {"solar_bank_sn": solarbankSn, "solar_sn": inverterSn}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_ota_info']}_{solarbankSn or inverterSn}.json"
             )
         else:
-            resp = await self.request("post", API_ENDPOINTS["get_ota_info"], json=data)
+            resp = await self.apisession.request("post", API_ENDPOINTS["get_ota_info"], json=data)
         return resp.get("data") or {}
 
     async def get_ota_update(
@@ -1322,12 +1152,12 @@ class AnkerSolixApi:
         """
         data = {"device_sn": deviceSn, "insert_sn": insertSn}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_ota_update']}_{deviceSn}.json"
             )
         else:
-            resp = await self.request(
+            resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_ota_update"], json=data
             )
         # update device details only if valid response for a given sn
@@ -1350,12 +1180,12 @@ class AnkerSolixApi:
         """
         data = {"type": recordType}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['check_upgrade_record']}_{recordType}.json"
             )
         else:
-            resp = await self.request(
+            resp = await self.apisession.request(
                 "post", API_ENDPOINTS["check_upgrade_record"], json=data
             )
         return resp.get("data") or {}
@@ -1389,14 +1219,14 @@ class AnkerSolixApi:
             recordType = 0 if recordType is None else recordType
             data = {"type": recordType}
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(
                     self._testdir
                     / f"{API_FILEPREFIXES['get_upgrade_record']}_{recordType}_{deviceSn if deviceSn else siteId if siteId else recordType}.json"
                 )
             )
         else:
-            resp = await self.request(
+            resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_upgrade_record"], json=data
             )
         return resp.get("data") or {}
@@ -1408,11 +1238,11 @@ class AnkerSolixApi:
         {"has_unread_msg": false}
         """
         if fromFile:
-            resp = await self._loadFromFile(
+            resp = await self.apisession._loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['get_message_unread']}.json"
             )
         else:
-            resp = await self.request("get", API_ENDPOINTS["get_message_unread"])
+            resp = await self.apisession.request("get", API_ENDPOINTS["get_message_unread"])
         # save unread msg flag in each known site
         data = resp.get("data") or {}
         for siteId in self.sites:
