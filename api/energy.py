@@ -40,7 +40,7 @@ async def energy_daily(  # noqa: C901
     if SolixDeviceType.SOLARBANK.value in devTypes:
         if fromFile:
             resp = (
-                await self.apisession._loadFromFile(
+                await self.apisession.loadFromFile(
                     Path(self._testdir)
                     / f"{API_FILEPREFIXES['energy_solarbank']}_{siteId}.json"
                 )
@@ -129,7 +129,7 @@ async def energy_daily(  # noqa: C901
     ) or ({SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG} & devTypes):
         if fromFile:
             resp = (
-                await self.apisession._loadFromFile(
+                await self.apisession.loadFromFile(
                     Path(self._testdir)
                     / f"{API_FILEPREFIXES['energy_home_usage']}_{siteId}.json"
                 )
@@ -219,7 +219,7 @@ async def energy_daily(  # noqa: C901
     ):
         if fromFile:
             resp = (
-                await self.apisession._loadFromFile(
+                await self.apisession.loadFromFile(
                     Path(self._testdir)
                     / f"{API_FILEPREFIXES['energy_grid']}_{siteId}.json"
                 )
@@ -270,7 +270,7 @@ async def energy_daily(  # noqa: C901
             if (self.devices.get(deviceSn) or {}).get(f"solar_power_{ch}") or "":
                 if fromFile:
                     resp = (
-                        await self.apisession._loadFromFile(
+                        await self.apisession.loadFromFile(
                             Path(self._testdir)
                             / f"{API_FILEPREFIXES['energy_solar_production_pv']}{ch}_{siteId}.json"
                         )
@@ -305,7 +305,7 @@ async def energy_daily(  # noqa: C901
     # Always Add solar production which contains percentages
     if fromFile:
         resp = (
-            await self.apisession._loadFromFile(
+            await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['energy_solar_production']}_{siteId}.json"
             )
@@ -438,7 +438,7 @@ async def energy_analysis(
         else "solar_production",
         "end_time": endDay.strftime("%Y-%m-%d") if endDay else "",
     }
-    resp = await self.client.request("post", API_ENDPOINTS["energy_analysis"], json=data)
+    resp = await self.apisession.request("post", API_ENDPOINTS["energy_analysis"], json=data)
     return resp.get("data") or {}
 
 
@@ -451,5 +451,5 @@ async def home_load_chart(self, siteId: str, deviceSn: str | None = None) -> dic
     data = {"site_id": siteId}
     if deviceSn:
         data.update({"device_sn": deviceSn})
-    resp = await self.client.request("post", API_ENDPOINTS["home_load_chart"], json=data)
+    resp = await self.apisession.request("post", API_ENDPOINTS["home_load_chart"], json=data)
     return resp.get("data") or {}

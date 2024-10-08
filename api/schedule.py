@@ -36,12 +36,12 @@ async def get_device_load(
     """
     data = {"site_id": siteId, "device_sn": deviceSn}
     if fromFile:
-        resp = await self.apisession._loadFromFile(
+        resp = await self.apisession.loadFromFile(
             Path(self._testdir)
             / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
         )
     else:
-        resp = await self.client.request("post", API_ENDPOINTS["get_device_load"], json=data)
+        resp = await self.apisession.request("post", API_ENDPOINTS["get_device_load"], json=data)
     # The home_load_data is provided as string instead of object...Convert into object for proper handling
     # It must be converted back to a string when passing this as input to set home load
     string_data = (resp.get("data") or {}).get("home_load_data") or {}
@@ -100,7 +100,7 @@ async def set_device_load(
     }
     # Make the Api call and check for return code
     code = (
-        await self.client.request("post", API_ENDPOINTS["set_device_load"], json=data)
+        await self.apisession.request("post", API_ENDPOINTS["set_device_load"], json=data)
     ).get("code")
     if not isinstance(code, int) or int(code) != 0:
         return False
@@ -134,18 +134,18 @@ async def get_device_parm(
     """
     data = {"site_id": siteId, "param_type": paramType}
     if fromFile:
-        resp = await self.apisession._loadFromFile(
+        resp = await self.apisession.loadFromFile(
             Path(self._testdir)
             / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
         )
         # ensure backward filename compatibility without parm type in name
         if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_device_parm']}_{siteId}.json"
             )
     else:
-        resp = await self.client.request("post", API_ENDPOINTS["get_device_parm"], json=data)
+        resp = await self.apisession.request("post", API_ENDPOINTS["get_device_parm"], json=data)
     # The home_load_data is provided as string instead of object...Convert into object for proper handling
     # It must be converted back to a string when passing this as input to set home load
     string_data = (resp.get("data", {})).get("param_data", {})
@@ -210,7 +210,7 @@ async def set_device_parm(
         "param_data": json.dumps(paramData),  # Must be string type
     }
     code = (
-        await self.client.request("post", API_ENDPOINTS["set_device_parm"], json=data)
+        await self.apisession.request("post", API_ENDPOINTS["set_device_parm"], json=data)
     ).get("code")
     if not isinstance(code, int) or int(code) != 0:
         return False

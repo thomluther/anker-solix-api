@@ -1,22 +1,21 @@
 """Anker Power/Solix Cloud API class to handle a client connection session for an account."""
 
 from asyncio import sleep
+from base64 import b64encode
 import contextlib
 from datetime import datetime
-import logging
 import json
+import logging
 from pathlib import Path
 import time as systime
 
 import aiofiles
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from base64 import b64encode
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-
 
 from . import errors
 from .apitypes import (
@@ -25,7 +24,7 @@ from .apitypes import (
     API_HEADERS,
     API_LOGIN,
     API_SERVERS,
-    SolixDefaults
+    SolixDefaults,
 )
 from .helpers import RequestCounter, getTimezoneGMTString, md5
 
@@ -195,7 +194,7 @@ class AnkerSolixClientSession:
                     Path(self._authFile).unlink()
         # First check if cached login response is available and login params can be filled, otherwise query server for new login tokens
         if Path(self._authFile).is_file():
-            data = await self._loadFromFile(self._authFile)
+            data = await self.loadFromFile(self._authFile)
             self._authFileTime = Path(self._authFile).stat().st_mtime
             self._logger.debug(
                 "Cached Login for %s from %s:",
@@ -471,7 +470,7 @@ class AnkerSolixClientSession:
             return datacopy
         return data
 
-    async def _loadFromFile(self, filename: str | Path) -> dict:
+    async def loadFromFile(self, filename: str | Path) -> dict:
         """Load json data from given file for testing."""
         filename = str(filename)
         if self.mask_credentials:
@@ -499,7 +498,7 @@ class AnkerSolixClientSession:
             self._logger.error(err)
         return {}
 
-    async def _saveToFile(self, filename: str | Path, data: dict | None = None) -> bool:
+    async def saveToFile(self, filename: str | Path, data: dict | None = None) -> bool:
         """Save json data to given file for testing."""
         filename = str(filename)
         if self.mask_credentials:

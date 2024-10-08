@@ -16,7 +16,6 @@ from pathlib import Path
 from aiohttp import ClientSession
 
 from . import poller
-from .session import AnkerSolixClientSession
 from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
@@ -30,6 +29,7 @@ from .apitypes import (
     SolixDeviceStatus,
     SolixDeviceType,
 )
+from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -81,7 +81,6 @@ class AnkerSolixApi:
         # link previous api methods to apisession for refactoring backwards compatability
         self.request_count = self.apisession.request_count
         self.async_authenticate = self.apisession.async_authenticate
-
 
     def _update_site(  # noqa: C901
         self,
@@ -692,7 +691,7 @@ class AnkerSolixApi:
                 'quantity_min_limit_map': {'A5103': 1}, 'quantity_max_limit_map': {'A5103': 6}}]}
         """
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['site_rules']}.json"
             )
         else:
@@ -706,7 +705,7 @@ class AnkerSolixApi:
         {'site_list': [{'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'site_name': 'BKW', 'site_img': '', 'device_type_list': [3], 'ms_type': 2, 'power_site_type': 2, 'is_allow_delete': True}]}
         """
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['site_list']}.json"
             )
         else:
@@ -731,7 +730,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['scene_info']}_{siteId}.json"
             )
         else:
@@ -751,7 +750,7 @@ class AnkerSolixApi:
         "powerpanel_list":[]}
         """
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['homepage']}.json"
             )
         else:
@@ -767,7 +766,7 @@ class AnkerSolixApi:
         "link_time":1695392302068,"wifi_online":false,"wifi_name":"","relate_type":["ble","wifi"],"charge":false,"bws_surplus":0,"device_sw_version":"v1.4.4","has_manual":false}]}
         """
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['bind_devices']}.json"
             )
         else:
@@ -797,7 +796,7 @@ class AnkerSolixApi:
         'photovoltaic_power': '', 'output_power': '', 'create_time': 0}]}
         """
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['user_devices']}.json"
             )
         else:
@@ -811,7 +810,7 @@ class AnkerSolixApi:
         {'device_list': None, 'guide_txt': ''}
         """
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['charging_devices']}.json"
             )
         else:
@@ -826,7 +825,7 @@ class AnkerSolixApi:
         """
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['solar_info']}_{solarbankSn}.json"
             )
@@ -850,7 +849,7 @@ class AnkerSolixApi:
         """
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['compatible_process']}_{solarbankSn}.json"
             )
@@ -871,7 +870,7 @@ class AnkerSolixApi:
         'icon': 'https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png'}]}
         """
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['get_auto_upgrade']}.json"
             )
         else:
@@ -946,7 +945,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['wifi_list']}_{siteId}.json"
             )
         else:
@@ -965,7 +964,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_cutoff']}_{deviceSn}.json"
             )
@@ -1019,7 +1018,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
             )
@@ -1098,7 +1097,7 @@ class AnkerSolixApi:
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_device_fittings']}_{deviceSn}.json"
             )
@@ -1134,7 +1133,7 @@ class AnkerSolixApi:
         """
         data = {"solar_bank_sn": solarbankSn, "solar_sn": inverterSn}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_ota_info']}_{solarbankSn or inverterSn}.json"
             )
@@ -1152,7 +1151,7 @@ class AnkerSolixApi:
         """
         data = {"device_sn": deviceSn, "insert_sn": insertSn}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['get_ota_update']}_{deviceSn}.json"
             )
@@ -1180,7 +1179,7 @@ class AnkerSolixApi:
         """
         data = {"type": recordType}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
                 / f"{API_FILEPREFIXES['check_upgrade_record']}_{recordType}.json"
             )
@@ -1219,7 +1218,7 @@ class AnkerSolixApi:
             recordType = 0 if recordType is None else recordType
             data = {"type": recordType}
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(
                     self._testdir
                     / f"{API_FILEPREFIXES['get_upgrade_record']}_{recordType}_{deviceSn if deviceSn else siteId if siteId else recordType}.json"
@@ -1238,7 +1237,7 @@ class AnkerSolixApi:
         {"has_unread_msg": false}
         """
         if fromFile:
-            resp = await self.apisession._loadFromFile(
+            resp = await self.apisession.loadFromFile(
                 Path(self._testdir) / f"{API_FILEPREFIXES['get_message_unread']}.json"
             )
         else:

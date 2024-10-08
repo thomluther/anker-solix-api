@@ -9,11 +9,11 @@
 ![python badge](https://img.shields.io/badge/Made%20with-Python-orange)
 [![GitHub repo Good Issues for newbies](https://img.shields.io/github/issues/thomluther/anker-solix-api/good%20first%20issue?style=flat&logo=github&logoColor=green&label=Good%20First%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) [![GitHub Help Wanted issues](https://img.shields.io/github/issues/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub Help Wanted PRs](https://img.shields.io/github/issues-pr/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20PRs)](https://github.com/thomluther/anker-solix-api/pulls?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub repo Issues](https://img.shields.io/github/issues/thomluther/anker-solix-api?style=flat&logo=github&logoColor=red&label=Issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen)
 
-This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter etc).
+This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter etc).
 
 🚨 This is by no means an official Anker Api. 🚨
 
-🚨 It can break at any time, or Api request can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
+🚨 It can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
 
 # Python Versions
 
@@ -33,14 +33,13 @@ pipenv run python [...]
 
 # Anker Account Information
 
-Because of the way the Anker Solix Api works, one account with email/password cannot be used for the Anker mobile App and this Api in parallel.
-The Anker Cloud allows only one request token per account at any time. Each new authentication request by a client will create a new token and drop a previous token.
+Because of the way the Anker Solix Cloud Api works, one account with email/password cannot be used for the Anker mobile app and this Api in parallel.
+The Anker Solix Cloud allows only one request token per account at any time. Each new authentication request by a client will create a new token and drop a previous token.
 Therefore usage of this Api may kick out your account login in the mobile app.
 However, starting with Anker mobile app release 2.0, you can share your defined system(s) with 'family members'.
 Therefore it is recommended to create a second Anker account with a different email address and share your defined system(s) with the second account.
 Attention: A shared account is only a member of the shared system, and as such currently has no permissions to access or query device details of the shared system.
-Therefore an Api homepage query will neither display any data for a shared account. However, a shared account can receive Api scene/site details of shared systems (App system = Api site),
-which is equivalent to what is displayed in the mobile app on the home screen for the selected system.
+Therefore an Api homepage query will neither display any data for a shared account. However, a shared account can receive Api scene/site details of shared systems (app system = Api site), which is equivalent to what is displayed in the mobile app on the home screen for the selected system.
 
 # Usage
 
@@ -63,6 +62,10 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 # _LOGGER.setLevel(logging.DEBUG)    # enable for detailed Api output
 
 
+def _out(jsondata):
+    """Print json string in readable format."""
+    CONSOLE.info(json.dumps(jsondata, indent=2))
+
 async def main() -> None:
     """Create the aiohttp session and run the example."""
     async with ClientSession() as websession:
@@ -74,17 +77,17 @@ async def main() -> None:
         await myapi.update_site_details()
         await myapi.update_device_details()
         await myapi.update_device_energy()
-        print("System Overview:")
-        print(json.dumps(myapi.sites, indent=2))
-        print("Device Overview:")
-        print(json.dumps(myapi.devices, indent=2))
+        CONSOLE.info("System Overview:")
+        _out(myapi.sites)
+        CONSOLE.info("Device Overview:")
+        _out(myapi.devices)
 
         # Test a defined endpoint from apitypes module
-        #print(json.dumps((await myapi.request("post", apitypes.API_ENDPOINTS["bind_devices"],json={})), indent=2))
+        #_out(await myapi.apisession.request("post", apitypes.API_ENDPOINTS["bind_devices"],json={}))
 
         # Test an undefined endpoint directly (available endpoints documented in apitypes module)
         #mysite = "<your_site_id>"
-        #print(json.dumps((await myapi.request("post", "power_service/v1/app/compatible/get_installation",json={"site_id": mysite})), indent=2))
+        #_out(await myapi.apisession.request("post", "power_service/v1/app/compatible/get_installation",json={"site_id": mysite}))
 
         # Note: Error response msg from api request may list missing field names or wrong field types from what the endpoint is expecting in the json payload
 
@@ -93,10 +96,11 @@ if __name__ == "__main__":
     try:
         asyncio.run(main(), debug=False)
     except Exception as err:
-        print(f"{type(err)}: {err}")
+        CONSOLE.info(f"{type(err)}: {err}")
 ```
 
-The AnkerSolixApi class provides 4 main methods to query data and cache them into internal dictionaries:
+The AnkerSolixApi class starts an AnkerSolixApiSession to handle the Api connection for the provided Anker user account.
+The AnkerSolixApi class provides also methods that utilize the `power_service` endpoints and it provides 4 main methods to query data and cache them into internal dictionaries:
 
 - `AnkerSolixApi.update_sites()` to query overview data for all accessible sites and store data in dictionaries `AnkerSolixApi.sites` and `AnkerSolixApi.devices` for quick access.
   This method could be run in regular intervals (60sec or more) to fetch new data of the systems. Note that the system devices update the cloud data only once per minute, therefore less than 60 second intervals do not provide much benefit
@@ -107,9 +111,11 @@ The AnkerSolixApi class provides 4 main methods to query data and cache them int
 - `AnkerSolixApi.update_site_details()` to query further settings for the defined site (power system) and store data in dictionary `AnkerSolixApi.sites` for quick access.
   This method should be run less frequently since this will mostly fetch various site configuration settings and needs multiple queries.
 - `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices from each site and store data in dictionary `AnkerSolixApi.sites` for quick access.
-  This method should be run less frequently since this will fetch 4-6 queries per site depending on found device types. With version 2.0.0 solar, solarbank and smartmeter devices are supported. However it was noticed, that the energy statistics endpoint (maybe each endpoint) is limited to 25-30 queries per minute.
+  This method should be run less frequently since this will fetch 4-6 queries per site depending on found device types. With version 2.0.0, solarbank, inverter and smart meter devices are supported. However it was noticed, that the energy statistics endpoint (maybe each endpoint) is limited to 25-30 queries per minute.
 
-The code of these 4 main methods has been separated into the [`poller.py`](api/poller.py). To reduce the size of the ever growing api class module, other Api class methods have been separated into various python files and are simply imported into the main class api module. The known endpoints are documented in the [`apitypes.py`](api/apitypes.py), however parameter usage for many of them is unknown.
+The code of these 4 main methods has been separated into the [`poller.py`](api/poller.py) module. To reduce the size of the ever growing AnkerSolixApi class in the [`api.py`](api/api.py) module, other AnkerSolixApi class methods have been separated into various python modules and are simply imported into the main AnkerSolixApi class in the api module. The known Anker Cloud Api endpoints are documented in the [`apitypes.py`](api/apitypes.py) module. However, parameter usage for many of them is unknown.
+If additional `charging_energy_service` endpoints (for Power Panels / Power Stations ?) and/or `charging_hes_svc` endpoints (for Home Energy Systems like X1 ?) will be tested and documented by the community in future, a new AnkerSolixApi alike class should be created for each endpoint type. Since Anker accounts may utilize different AnkerSolixApi alike classes in parallel, they should share the same instance of the created AnkerSolixApiSession for the user account. If an AnkerSolixApiSession instance was already created for the user account, the AnkerSolixApi class can be instanced with the AnkerSolixApiSession instance instead of the Anker Account credentials.
+
 Check out [`test_api.py`](./test_api.py) and other python executable tools that may help to leverage and explore the Api for your Anker power system.
 The subfolder [`examples`](./examples) contains actual or older example exports with json files using anonymized responses of the [`export_system.py`](./export_system.py) module giving you an idea of how various Api responses look like.
 Those json files can also be used to develop/debug the Api for system constellations not available to the developer.
@@ -174,9 +180,9 @@ Note: When the system owning account is used, more details for the solarbank can
 Example exec module to use the Anker Api for export of daily Energy Data.
 This method will prompt for the Anker account details if not pre-set in the header.
 Then you can specify a start day and the number of days for data extraction from the Anker Cloud.
-Note: The Solar production, Solarbank discharge, Smartmeter and Home usage can be queried across the full range each. The solarbank
-charge as well as smartmeter totals however can be queried only as total for an interval (e.g. day). Therefore when daily total
-data is also selected for export, 2 additional Api queries per day are required.
+Note: The Solar production, Solarbank discharge, Smart Meter and Home usage can be queried across the full range each. The solarbank
+charge as well as Smart Meter totals however can be queried only as total for an interval (e.g. day). Therefore when daily total
+data is also selected for export, 2-4 additional Api queries per day are required.
 The received daily values will be exported into a csv file.
 
 # Contributing
