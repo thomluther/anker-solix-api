@@ -82,13 +82,13 @@ async def main() -> bool:
                     return False
                 # delay requests, limit appears to be around 25 per minute
                 if numdays > 10:
-                    myapi.requestDelay(2.5)
+                    myapi.apisession.requestDelay(2.5)
                 else:
-                    myapi.requestDelay(0.3)
+                    myapi.apisession.requestDelay(0.3)
                 CONSOLE.info(
                     "Queries may take up to %s seconds with %.1f seconds delay...please wait...",
-                    round((2 * numdays * daytotals + 5) * myapi.requestDelay()),
-                    myapi.requestDelay(),
+                    round((2 * numdays * daytotals + 5) * myapi.apisession.requestDelay()),
+                    myapi.apisession.requestDelay(),
                 )
                 data = await myapi.energy_daily(
                     siteId=site_id,

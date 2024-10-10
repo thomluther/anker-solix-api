@@ -21,8 +21,8 @@ CONSOLE: logging.Logger = common.CONSOLE
 TESTAUTHENTICATE = False
 TESTAPIMETHODS = False
 TESTAPIENDPOINTS = False
-TESTAPIFROMJSON = False
-
+TESTAPIFROMJSON = True
+JSONFOLDER = "SB2_SM_ManMode_Schedule"
 
 def _out(jsondata):
     CONSOLE.info(json.dumps(jsondata, indent=2))
@@ -200,10 +200,11 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
 
 
 async def test_api_from_json_files(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
-    myapi.testDir(Path(Path(__file__).parent) / "examples" / "example1")
+    myapi.testDir(Path(Path(__file__).parent) / "examples" / JSONFOLDER)
     await myapi.update_sites(fromFile=True)
     await myapi.update_site_details(fromFile=True)
     await myapi.update_device_details(fromFile=True)
+    await myapi.update_device_energy(fromFile=True)
     _out(myapi.sites)
     _out(myapi.devices)
 
@@ -237,23 +238,24 @@ async def main() -> None:
             )  # show used login response for API requests
 
         # test site api methods
-        await myapi.update_sites()
-        await myapi.update_site_details()
-        await myapi.update_device_details()
-        await myapi.update_device_energy()
-        CONSOLE.info("System Overview:")
-        _out(myapi.sites)
-        CONSOLE.info("Device Overview:")
-        _out(myapi.devices)
-
-        if TESTAPIMETHODS:
-            await test_api_methods(myapi)
-
-        if TESTAPIENDPOINTS:
-            await testAPI_ENDPOINTS(myapi)
-
         if TESTAPIFROMJSON:
             await test_api_from_json_files(myapi)
+        else:
+            await myapi.update_sites()
+            await myapi.update_site_details()
+            await myapi.update_device_details()
+            await myapi.update_device_energy()
+            CONSOLE.info("System Overview:")
+            _out(myapi.sites)
+            CONSOLE.info("Device Overview:")
+            _out(myapi.devices)
+
+            if TESTAPIMETHODS:
+                await test_api_methods(myapi)
+
+            if TESTAPIENDPOINTS:
+                await testAPI_ENDPOINTS(myapi)
+
 
 
 # run async main
