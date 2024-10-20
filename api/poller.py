@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from .apitypes import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
 
 
-async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -> dict:  # noqa: C901
+async def poll_sites(api, siteId: str | None = None, fromFile: bool = False) -> dict:  # noqa: C901
     """Get the latest info for all accessible sites or only the provided siteId and update class sites and devices dictionaries used as cache.
 
     Example data:
@@ -161,9 +161,8 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
                         "solar_power_4": sb_info.get("solar_power_4"),
                         "ac_power": sb_info.get("ac_power"),
                         "to_home_load": sb_info.get("to_home_load"),
-                        "home_load_power": mysite.get(
-                            "home_load_power"
-                        ),  # only passed to device for proper SB2 charge status update
+                        # only passed to device for proper SB2 charge status update
+                        "home_load_power": mysite.get("home_load_power"),
                     },
                     devType=SolixDeviceType.SOLARBANK.value,
                     siteId=myid,
@@ -297,7 +296,7 @@ async def update_sites(api, siteId: str | None = None, fromFile: bool = False) -
     return api.sites
 
 
-async def update_site_details(
+async def poll_site_details(
     api, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the latest updates for additional site related details updated less frequently.
@@ -323,7 +322,7 @@ async def update_site_details(
     return api.sites
 
 
-async def update_device_details(
+async def poll_device_details(
     api, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the latest updates for additional device info updated less frequently.
@@ -342,8 +341,11 @@ async def update_device_details(
     await api.get_bind_devices(fromFile=fromFile)
     # Get the setting for effective automated FW upgrades
     if {ApiCategories.device_auto_upgrade} - exclude:
-        api._logger.debug("Getting OTA settings")
+        api._logger.debug("Getting OTA update settings")
         await api.get_auto_upgrade(fromFile=fromFile)
+        # Get the OTA batch info for firmware updates of owning devices
+        api._logger.debug("Getting OTA update info for devices")
+        await api.get_ota_batch(fromFile=fromFile)
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
     for sn, device in api.devices.items():
@@ -358,7 +360,7 @@ async def update_device_details(
                 site_wifi[site_id] = (
                     await api.get_wifi_list(siteId=site_id, fromFile=fromFile)
                 ).get("wifi_info_list") or []
-            # Map Wifi to usage of device
+            # Map Wifi to usage of device if device_sn not part yet of wifi_list item
             wifi_list = site_wifi.get(site_id, [{}])
             # Ensure to update wifi index if not provided for device in scene_info, but device has wifi online and only single wifi exists in list
             if (
@@ -368,13 +370,14 @@ async def update_device_details(
             ):
                 wifi_index = "1"
                 api._update_dev({"device_sn": sn, "wireless_type": wifi_index})
-            if wifi_index:
+            # check if device_sn found in wifi_list, then it was updated already in the wifi list query, otherwise use old index method for update
+            if wifi_index and not [sn for d in wifi_list if d.get("device_sn") == sn]:
                 if str(wifi_index).isdigit():
                     wifi_index = int(wifi_index)
                 else:
                     wifi_index = 0
                 if 0 < wifi_index <= len(wifi_list):
-                    device.update(wifi_list[wifi_index - 1])
+                    api._update_dev({"device_sn": sn} | dict(wifi_list[wifi_index - 1]))
 
             # Fetch device type specific details, if device type not excluded
 
@@ -423,7 +426,7 @@ async def update_device_details(
     return api.devices
 
 
-async def update_device_energy(
+async def poll_device_energy(
     api, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the site energy statistics for given device types from today and yesterday.
