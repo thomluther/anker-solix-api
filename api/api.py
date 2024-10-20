@@ -39,7 +39,7 @@ from .session import AnkerSolixClientSession
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-class AnkerSolixApi():
+class AnkerSolixApi:
     """Define the API class to handle Anker server authentication and API requests, along with the last state of queried site details and Device information."""
 
     # import outsourced methods
