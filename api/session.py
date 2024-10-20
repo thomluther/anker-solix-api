@@ -401,7 +401,7 @@ class AnkerSolixClientSession:
                     data["msg"] = body_text
                 if resp.status in [401, 403]:
                     # Unauthorized or forbidden request
-                    # reattempt autentication with same credentials if cached token was kicked out
+                    # reattempt authentication with same credentials if cached token was kicked out
                     # retry attempt is set if login response data were not cached to fail immediately
                     if not self._retry_attempt:
                         self._logger.warning("Login failed, retrying authentication")

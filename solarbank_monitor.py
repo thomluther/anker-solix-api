@@ -48,7 +48,7 @@ def clearscreen():
 
 
 def get_subfolders(folder: str | Path) -> list:
-    """Get the full pathnames of all subfolders for given folder as list."""
+    """Get the full pathname of all subfolder for given folder as list."""
     if isinstance(folder, str):
         folder: Path = Path(folder)
     if folder.is_dir():
@@ -75,9 +75,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             CONSOLE.info("(0) Real time from Anker cloud")
             for idx, filename in enumerate(exampleslist, start=1):
                 CONSOLE.info("(%s) %s", idx, filename)
-        selection = input(f"Input Source number (0-{len(exampleslist)}): ")
+            CONSOLE.info("(q) Quit")
+        selection = input(f"Input Source number (0-{len(exampleslist)}) or [q]uit: ")
         if (
-            not selection.isdigit()
+            selection.upper() in ["Q","QUIT"]
+            or not selection.isdigit()
             or int(selection) < 0
             or int(selection) > len(exampleslist)
         ):
@@ -91,8 +93,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
         use_file = False
     try:
         async with ClientSession() as websession:
+            user = "" if use_file else common.user()
+            if not use_file:
+                CONSOLE.info("Trying Api authentication for user %s...", user)
             myapi = api.AnkerSolixApi(
-                "" if use_file else common.user(),
+                user,
                 "" if use_file else common.password(),
                 "" if use_file else common.country(),
                 websession,
@@ -202,13 +207,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     )
                     online = dev.get("wifi_online")
                     CONSOLE.info(
-                        f"{'Wifi state':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} {'Signal':<{col3}}: {dev.get('wifi_signal','---'):>4} %"
+                        f"{'Wifi state':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} {'Signal':<{col3}}: {dev.get('wifi_signal') or '---':>4} % ({dev.get('rssi') or '---'} dBm)"
+                    )
+                    upgrade = dev.get("auto_upgrade")
+                    ota = dev.get("is_ota_update")
+                    CONSOLE.info(
+                        f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'} (OTA {dev.get('ota_version') or 'Unknown'})"
                     )
                     if devtype == api.SolixDeviceType.SOLARBANK.value:
-                        upgrade = dev.get("auto_upgrade")
-                        CONSOLE.info(
-                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
-                        )
                         CONSOLE.info(
                             f"{'Cloud-Updated':<{col1}}: {update_time:<{col2}} {'Valid Data':<{col3}}: {'YES' if dev.get('data_valid') else 'NO'} (Requeries: {site.get('requeries')})"
                         )
@@ -310,10 +316,6 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                         f"{slot.get('id','')!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {slot.get('power_setting_mode') or '-'!s:^{t9}} {load.get('name','')!s}"
                                     )
                     elif devtype == api.SolixDeviceType.INVERTER.value:
-                        upgrade = dev.get("auto_upgrade")
-                        CONSOLE.info(
-                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
-                        )
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
                         )
@@ -322,10 +324,6 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'AC Power':<{col1}}: {dev.get('generate_power',''):>3} {unit}"
                         )
                     elif devtype == api.SolixDeviceType.SMARTMETER.value:
-                        upgrade = dev.get("auto_upgrade")
-                        CONSOLE.info(
-                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
-                        )
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
                         )
@@ -337,10 +335,6 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'Grid Import':<{col1}}: {dev.get('grid_to_home_power',''):>4} {unit:<{col2-5}} {'Grid Export':<{col3}}: {dev.get('photovoltaic_to_grid_power',''):>4} {unit}"
                         )
                     elif devtype == api.SolixDeviceType.SMARTPLUG.value:
-                        upgrade = dev.get("auto_upgrade")
-                        CONSOLE.info(
-                            f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown'):<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'}"
-                        )
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
                         )
@@ -348,9 +342,13 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Plug Power':<{col1}}: {dev.get('current_power',''):>4} {unit:<{col2-5}} {'Tag':<{col3}}: {dev.get('tag','')}"
                         )
+                    elif devtype in [api.SolixDeviceType.POWERPANEL.value,api.SolixDeviceType.HES.value]:
+                        CONSOLE.info(
+                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
+                        )
                     else:
                         CONSOLE.warning(
-                            "No Solarbank, Inverter, Smart Meter or Smart Plug device, further device details will be skipped"
+                            "No Solarbank, Inverter, Smart Meter, Smart Plug, Power Panel or HES device, further device details will be skipped"
                         )
                     CONSOLE.info("-" * 80)
                 # print optional energy details
@@ -430,10 +428,13 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info("Select the input source for the monitor:")
                             for idx, filename in enumerate(exampleslist, start=1):
                                 CONSOLE.info("(%s) %s", idx, filename)
+                            CONSOLE.info("(q) Quit")
                             while use_file:
                                 selection = input(
-                                    f"Enter source file number (1-{len(exampleslist)}): "
+                                    f"Enter source file number (1-{len(exampleslist)}) or [q]uit: "
                                 )
+                                if selection.upper() in ["Q", "QUIT"]:
+                                    return True
                                 if selection.isdigit() and 1 <= (
                                     selection := int(selection)
                                 ) <= len(exampleslist):

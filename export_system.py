@@ -17,12 +17,13 @@ various system outputs.
 """
 
 import asyncio
+from dataclasses import asdict
 import json
 import logging
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api, errors, export  # pylint: disable=no-name-in-module
+from api import api, apitypes, errors, export  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -42,11 +43,12 @@ async def main() -> bool:
     """Run main function to export config after querying some options from user."""
 
     CONSOLE.info("Exporting found Anker Solix system data for all assigned sites.")
-    randomize = True
+    randomize: bool = True
+    services: set = set()
     try:
         user = common.user()
         async with ClientSession() as websession:
-            CONSOLE.info("Trying Api authentication...")
+            CONSOLE.info("Trying Api authentication for user %s...", user)
             myapi = api.AnkerSolixApi(
                 user, common.password(), common.country(), websession
             )
@@ -58,10 +60,30 @@ async def main() -> bool:
                 )  # Login validation will be done during first API call
 
             resp = input(
+                "INPUT: Which Api endpoint services do you want to export? [A]ll / [P]ower / [C]harging / [H]es / [D]iscover (default): "
+            )
+            if resp != "" or not isinstance(services, set):
+                if resp.upper() in ["A", "LL"]:
+                    services = set(asdict(apitypes.ApiEndpointServices()).values())
+                elif resp.upper() in ["P", "POWER"]:
+                    services = {apitypes.ApiEndpointServices.power}
+                elif resp.upper() in ["C", "CHARGING"]:
+                    services = {apitypes.ApiEndpointServices.charging}
+                elif resp.upper() in ["H", "HES"]:
+                    services = {apitypes.ApiEndpointServices.hes_svc}
+                else:
+                    # default to discover required services
+                    services = set()
+            CONSOLE.info(
+                "Exporting following services: %s",
+                services if services else "Discover automatically",
+            )
+            resp = input(
                 f"INPUT: Do you want to randomize unique IDs and SNs in exported files? (default: {'YES' if randomize else 'NO'}) (Y/N): "
             )
             if resp != "" or not isinstance(randomize, bool):
                 randomize = resp.upper() in ["Y", "YES", "TRUE", 1]
+            CONSOLE.info("Randomization of data: %s", randomize)
             nickname = myapi.apisession.nickname.replace(
                 "*", "x"
             )  # avoid filesystem problems with * in user nicknames
@@ -70,6 +92,7 @@ async def main() -> bool:
                 if nickname == "":
                     return False
                 folder = nickname
+            CONSOLE.info("Subfolder for export: %s", folder)
 
             zipped: bool = True
             resp = input(
@@ -77,6 +100,7 @@ async def main() -> bool:
             )
             if resp != "":
                 zipped = resp.upper() in ["Y", "YES", "TRUE", 1]
+            CONSOLE.info("Zip output folder: %s", zipped)
 
             myexport = export.AnkerSolixApiExport(
                 client=myapi,
@@ -84,6 +108,7 @@ async def main() -> bool:
             )
             result = await myexport.export_data(
                 export_folder=folder,
+                export_services=services,
                 randomized=randomize,
                 zipped=zipped,
             )
