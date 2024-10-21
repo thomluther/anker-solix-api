@@ -85,12 +85,43 @@ class AnkerSolixApi:
 
         # track active devices bound to any site
         self._site_devices: set = set()
-        # reset class variables for saving the most recent site and device data (Api cache)
+        # reset class variables for saving the most recent account, site and device data (Api cache)
+        self.account: dict = {}
         self.sites: dict = {}
         self.devices: dict = {}
         # link previous api methods to apisession for refactoring backwards compatibility
         self.request_count = self.apisession.request_count
         self.async_authenticate = self.apisession.async_authenticate
+
+    def _update_account(  # noqa: C901
+        self,
+        details: dict,
+    ) -> None:
+        """Update the internal account dictionary with data provided in details dictionary.
+
+        This method is used to consolidate acount related details from various less frequent requests that are not covered with the update_sites method.
+        """
+        # lookup old account details if any or update account info if nickname is different (e.g. after authentication)
+        if (
+            not (
+                account_details := self.account.get(SolixDeviceType.ACCOUNT.value) or {}
+            )
+            or account_details.get("nickname")
+            != self.apisession.nickname
+        ):
+            # init or update the account details
+            account_details.update(
+                {
+                    "type": SolixDeviceType.ACCOUNT.value,
+                    "email": self.apisession.email,
+                    "nickname": self.apisession.nickname,
+                    "country": self.apisession.countryId,
+                    "server": self.apisession.server,
+                }
+            )
+        # update extra details
+        account_details.update(details)
+        self.account[SolixDeviceType.ACCOUNT.value] = account_details
 
     def _update_site(  # noqa: C901
         self,
@@ -684,25 +715,19 @@ class AnkerSolixApi:
         self, fromFile: bool = False, exclude: set | None = None
     ) -> dict:
         """Add/Update site details in api sites cache structure."""
-        return await poll_site_details(
-            self, fromFile=fromFile, exclude=exclude
-        )
+        return await poll_site_details(self, fromFile=fromFile, exclude=exclude)
 
     async def update_device_energy(
         self, fromFile: bool = False, exclude: set | None = None
     ) -> dict:
         """Add/Update energy details in api sites cache structure."""
-        return await poll_device_energy(
-            self, fromFile=fromFile, exclude=exclude
-        )
+        return await poll_device_energy(self, fromFile=fromFile, exclude=exclude)
 
     async def update_device_details(
         self, fromFile: bool = False, exclude: set | None = None
     ) -> dict:
         """Create/Update device details in api devices cache structure."""
-        return await poll_device_details(
-            self, fromFile=fromFile, exclude=exclude
-        )
+        return await poll_device_details(self, fromFile=fromFile, exclude=exclude)
 
     async def get_site_rules(self, fromFile: bool = False) -> dict:
         """Get the site rules supported by the api.
@@ -999,7 +1024,7 @@ class AnkerSolixApi:
                 "post", API_ENDPOINTS["wifi_list"], json=data
             )
         # update device data if device_sn found in wifi list
-        if (data := resp.get("data") or {}):
+        if data := resp.get("data") or {}:
             for wifi_info in data.get("wifi_info_list") or []:
                 if wifi_info.get("device_sn"):
                     self._update_dev(wifi_info)
@@ -1353,4 +1378,6 @@ class AnkerSolixApi:
         data = resp.get("data") or {}
         for siteId in self.sites:
             self._update_site(siteId, data)
+        # save unread msg flag in account dictionary
+        self._update_account(data)
         return data

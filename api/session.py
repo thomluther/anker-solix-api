@@ -116,6 +116,20 @@ class AnkerSolixClientSession:
         self.encrypt_body: bool = False
         self.request_count: RequestCounter = RequestCounter()
 
+    @property
+    def email(self) -> str:
+        """Get the email used for the active session."""
+        return self._email
+
+    @property
+    def countryId(self) -> str:
+        """Get the country ID used for the active session."""
+        return self._countryId
+
+    @property
+    def server(self) -> str | None:
+        """Get the server used for the active session."""
+        return self._api_base
 
     def logger(self, logger: logging.Logger | None = None) -> str:
         """Get or set the logger for API client."""

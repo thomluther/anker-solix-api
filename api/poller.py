@@ -46,6 +46,10 @@ async def poll_sites(api, siteId: str | None = None, fromFile: bool = False) -> 
         api._logger.debug("Getting site list")
         sites = await api.get_site_list(fromFile=fromFile)
         api._site_devices = set()
+        # init account dictionary once after first successful query
+        if not api.account:
+            api._update_account({})
+
     for site in sites.get("site_list", []):
         if myid := site.get("site_id"):
             # Update site info
@@ -299,17 +303,17 @@ async def poll_sites(api, siteId: str | None = None, fromFile: bool = False) -> 
 async def poll_site_details(
     api, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
-    """Get the latest updates for additional site related details updated less frequently.
+    """Get the latest updates for additional account or site related details updated less frequently.
 
     Most of theses requests return data only when user has admin rights for sites owning the devices.
     To limit API requests, this update site details method should be called less frequently than update site method,
-    and it updates just the nested site_details dictionary in the sites dictionary.
+    and it updates just the nested site_details dictionary in the sites dictionary as well as the account dictionary
     """
     # define excluded categories to skip for queries
     if not exclude or not isinstance(exclude, set):
         exclude = set()
     api._logger.debug("Updating Sites Details")
-    # Fetch unread account messages once and put in site details for all sites
+    # Fetch unread account messages once and put in site details for all sites as well as into account dictionary
     api._logger.debug("Getting unread messages indicator")
     await api.get_message_unread(fromFile=fromFile)
     for site_id, site in api.sites.items():

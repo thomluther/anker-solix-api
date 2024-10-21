@@ -381,6 +381,7 @@ LOGIN_RESPONSE: dict = {
 class SolixDeviceType(Enum):
     """Enumeration for Anker Solix device types."""
 
+    ACCOUNT = "account"
     SYSTEM = "system"
     SOLARBANK = "solarbank"
     INVERTER = "inverter"
