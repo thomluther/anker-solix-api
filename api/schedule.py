@@ -1085,7 +1085,7 @@ async def set_sb2_home_load(  # noqa: C901
         and not (
             usage_mode == SolarbankUsageMode.smartplugs.value
             and len(
-                ((self.sites.get(siteId) or {}).get("smartplug_info") or {}).get(
+                ((self.sites.get(siteId) or {}).get("smart_plug_info") or {}).get(
                     "smartplug_list"
                 )
                 or []
