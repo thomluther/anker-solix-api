@@ -4,7 +4,7 @@ import getpass
 import logging
 import os
 
-from api.apitypes import SolarbankUsageMode  # pylint: disable=no-name-in-module
+from api.apitypes import SolarbankUsageMode, SolarbankRatePlan  # pylint: disable=no-name-in-module
 
 # create logger
 CONSOLE: logging.Logger = logging.getLogger(__name__)
@@ -72,6 +72,21 @@ def print_schedule(schedule: dict) -> None:
     if plan.get("mode_type", 0):
         # SB2 schedule
         usage_mode = plan.get("mode_type") or 0
+        # get rate_plan_name depending on use usage mode_type
+        rate_plan_name = getattr(
+                SolarbankRatePlan,
+                next(
+                    iter(
+                        [
+                            item.name
+                            for item in SolarbankUsageMode
+                            if item.value == usage_mode
+                        ]
+                    ),
+                    SolarbankUsageMode.manual.name,
+                ),
+                SolarbankRatePlan.manual,
+            )
         week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         CONSOLE.info(
             f"{'Usage Mode':<{t1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{t2+t3+t4}} {'Def. Preset':<{t3}}: {plan.get('default_home_load','----'):>4} W"
@@ -79,7 +94,7 @@ def print_schedule(schedule: dict) -> None:
         CONSOLE.info(
             f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}"
         )
-        for idx in plan.get("custom_rate_plan") or [{}]:
+        for idx in plan.get(rate_plan_name) or [{}]:
             index = idx.get("index", "--")
             weekdays = [week[day] for day in idx.get("week") or []]
             for slot in idx.get("ranges") or []:

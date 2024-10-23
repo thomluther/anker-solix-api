@@ -6,10 +6,13 @@ from asyncio import sleep
 import contextlib
 from datetime import datetime, timedelta
 
+from .apibase import AnkerSolixBaseApi
 from .apitypes import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
 
 
-async def poll_sites(api, siteId: str | None = None, fromFile: bool = False) -> dict:  # noqa: C901
+async def poll_sites(
+    api: AnkerSolixBaseApi, siteId: str | None = None, fromFile: bool = False
+) -> dict:  # noqa: C901
     """Get the latest info for all accessible sites or only the provided siteId and update class sites and devices dictionaries used as cache.
 
     Example data:
@@ -46,9 +49,6 @@ async def poll_sites(api, siteId: str | None = None, fromFile: bool = False) -> 
         api._logger.debug("Getting site list")
         sites = await api.get_site_list(fromFile=fromFile)
         api._site_devices = set()
-        # init account dictionary once after first successful query
-        if not api.account:
-            api._update_account({})
 
     for site in sites.get("site_list", []):
         if myid := site.get("site_id"):
@@ -297,11 +297,13 @@ async def poll_sites(api, siteId: str | None = None, fromFile: bool = False) -> 
 
     # Write back the updated sites
     api.sites = new_sites
+    # update account dictionary with number of requests
+    api._update_account({"use_files": fromFile})
     return api.sites
 
 
 async def poll_site_details(
-    api, fromFile: bool = False, exclude: set | None = None
+    api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the latest updates for additional account or site related details updated less frequently.
 
@@ -323,11 +325,13 @@ async def poll_site_details(
             if {ApiCategories.site_price} - exclude:
                 api._logger.debug("Getting price and CO2 settings for site")
                 await api.get_site_price(siteId=site_id, fromFile=fromFile)
+    # update account dictionary with number of requests
+    api._update_account({"use_files": fromFile})
     return api.sites
 
 
 async def poll_device_details(
-    api, fromFile: bool = False, exclude: set | None = None
+    api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the latest updates for additional device info updated less frequently.
 
@@ -427,11 +431,13 @@ async def poll_device_details(
 
         # TODO(#0): Fetch other details of specific device types as known and relevant
 
+    # update account dictionary with number of requests
+    api._update_account({"use_files": fromFile})
     return api.devices
 
 
 async def poll_device_energy(
-    api, fromFile: bool = False, exclude: set | None = None
+    api:AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the site energy statistics for given device types from today and yesterday.
 
@@ -447,7 +453,7 @@ async def poll_device_energy(
     for site_id, site in api.sites.items():
         # build device types set for daily energy query, depending on device types found for site
         # solarinfo will always be queried by daily energy and required for general site statistics
-        # However, daily energy should not be queried for solarbank or smartmeter devices when they or their energy category is explicitly excluded
+        # However, daily energy should not be queried for solarbank, smartmeter or smart plug devices when they or their energy category is explicitly excluded
         if (
             (dev_list := site.get("solar_list") or [])
             and isinstance(dev_list, list)
@@ -466,6 +472,17 @@ async def poll_device_energy(
             ):
                 query_types |= {SolixDeviceType.SMARTMETER.value}
                 query_sn = sn
+        if plug_list := (site.get("smart_plug_info") or {}).get("smartplug_list") or []:
+            query_types -= {SolixDeviceType.INVERTER.value}
+            if not (
+                {
+                    SolixDeviceType.SMARTPLUG.value,
+                    ApiCategories.smartplug_energy,
+                }
+                & exclude
+            ):
+                query_types |= {SolixDeviceType.SMARTPLUG.value}
+                query_sn = plug_list[0].get("device_sn") or ""
         if (
             (dev_list := (site.get("solarbank_info") or {}).get("solarbank_list") or [])
             and isinstance(dev_list, list)
@@ -535,4 +552,6 @@ async def poll_device_energy(
             # save energy stats with sites dictionary
             site["energy_details"] = energy
             api.sites[site_id] = site
+    # update account dictionary with number of requests
+    api._update_account({"use_files": fromFile})
     return api.sites

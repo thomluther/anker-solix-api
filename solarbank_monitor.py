@@ -405,6 +405,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Smartplugs':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'Smartplugs':<{col3}}: {yesterday.get('smartplugs_total','-.--'):>5} {unit}"
                                 )
+                            for idx, plug_t in enumerate(today.get("smartplug_list") or []):
+                                plug_y = (yesterday.get("smartplug_list") or [])[idx]
+                                CONSOLE.info(
+                                    f"{'>'+plug_t.get('alias','Plug '+str(idx+1)):<{col1}}: {plug_t.get('energy') or '-.--':>5} {unit:<{col2-6}} {'>'+plug_y.get('alias','Plug '+str(idx+1)):<{col3}}: {plug_y.get('energy','-.--'):>5} {unit}"
+                                )
                             CONSOLE.info(
                                 f"{'Sol/Bat/Gri %':<{col1}}: {float(today.get('solar_percentage',''))*100:>3.0f}/{float(today.get('battery_percentage',''))*100:>3.0f}/{float(today.get('other_percentage',''))*100:>3.0f} {'%':<{col2-12}} {'Sol/Bat/Gri %':<{col3}}: {float(yesterday.get('solar_percentage',''))*100:>3.0f}/{float(yesterday.get('battery_percentage',''))*100:>3.0f}/{float(yesterday.get('other_percentage',''))*100:>3.0f} %"
                             )

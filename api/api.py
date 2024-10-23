@@ -15,11 +15,13 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
+from .apibase import AnkerSolixBaseApi
 from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
     SmartmeterStatus,
     SolarbankDeviceMetrics,
+    SolarbankRatePlan,
     SolarbankStatus,
     SolarbankUsageMode,
     SolixDefaults,
@@ -39,8 +41,8 @@ from .session import AnkerSolixClientSession
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-class AnkerSolixApi:
-    """Define the API class to handle Anker server authentication and API requests, along with the last state of queried site details and Device information."""
+class AnkerSolixApi(AnkerSolixBaseApi):
+    """Define the API class to handle API data for Anker balcony power sites and devices using power_service endpoints."""
 
     # import outsourced methods
     from .energy import (  # pylint: disable=import-outside-toplevel
@@ -67,79 +69,17 @@ class AnkerSolixApi:
         apisession: AnkerSolixClientSession | None = None,
     ) -> None:
         """Initialize."""
-        self.apisession: AnkerSolixClientSession
-        if apisession:
-            # reuse provided client
-            self.apisession = apisession
-        else:
-            # init new client
-            self.apisession = AnkerSolixClientSession(
-                email=email,
-                password=password,
-                countryId=countryId,
-                websession=websession,
-                logger=logger,
-            )
-        self._testdir: str = self.apisession.testDir()
-        self._logger: logging.Logger = self.apisession.logger()
-
-        # track active devices bound to any site
-        self._site_devices: set = set()
-        # reset class variables for saving the most recent account, site and device data (Api cache)
-        self.account: dict = {}
-        self.sites: dict = {}
-        self.devices: dict = {}
-        # link previous api methods to apisession for refactoring backwards compatibility
+        super().__init__(
+            email=email,
+            password=password,
+            countryId=countryId,
+            websession=websession,
+            logger=logger,
+            apisession=apisession,
+        )
+        # link previous api methods to apisession for refactoring backward compatibility
         self.request_count = self.apisession.request_count
         self.async_authenticate = self.apisession.async_authenticate
-
-    def _update_account(  # noqa: C901
-        self,
-        details: dict,
-    ) -> None:
-        """Update the internal account dictionary with data provided in details dictionary.
-
-        This method is used to consolidate acount related details from various less frequent requests that are not covered with the update_sites method.
-        """
-        # lookup old account details if any or update account info if nickname is different (e.g. after authentication)
-        if (
-            not (
-                account_details := self.account.get(SolixDeviceType.ACCOUNT.value) or {}
-            )
-            or account_details.get("nickname")
-            != self.apisession.nickname
-        ):
-            # init or update the account details
-            account_details.update(
-                {
-                    "type": SolixDeviceType.ACCOUNT.value,
-                    "email": self.apisession.email,
-                    "nickname": self.apisession.nickname,
-                    "country": self.apisession.countryId,
-                    "server": self.apisession.server,
-                }
-            )
-        # update extra details
-        account_details.update(details)
-        self.account[SolixDeviceType.ACCOUNT.value] = account_details
-
-    def _update_site(  # noqa: C901
-        self,
-        siteId: str,
-        details: dict,
-    ) -> None:
-        """Update the internal sites dictionary with data provided for the nested site details dictionary.
-
-        This method is used to consolidate site details from various less frequent requests that are not covered with the update_sites method.
-        """
-        # lookup old site details if any
-        if siteId in self.sites:
-            site_details = (self.sites[siteId]).get("site_details") or {}
-            site_details.update(details)
-        else:
-            site_details = details
-            self.sites[siteId] = {}
-        self.sites[siteId]["site_details"] = site_details
 
     def _update_dev(  # noqa: C901
         self,
@@ -232,14 +172,16 @@ class AnkerSolixApi:
                                 device.update(
                                     {
                                         "wifi_signal": str(
-                                            max(
-                                                0,
-                                                min(
-                                                    100,
-                                                    (float(value) - dbmmin)
-                                                    * 100
-                                                    / (dbmmax - dbmmin),
-                                                ),
+                                            round(
+                                                max(
+                                                    0,
+                                                    min(
+                                                        100,
+                                                        (float(value) - dbmmin)
+                                                        * 100
+                                                        / (dbmmax - dbmmin),
+                                                    ),
+                                                )
                                             )
                                         )
                                     }
@@ -455,12 +397,27 @@ class AnkerSolixApi:
                             # Solarbank 2 schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
                             weekday = int(datetime.now().strftime("%w"))
+                            # get rate_plan_name depending on use usage mode_type
+                            rate_plan_name = getattr(
+                                    SolarbankRatePlan,
+                                    next(
+                                        iter(
+                                            [
+                                                item.name
+                                                for item in SolarbankUsageMode
+                                                if item.value == value.get("mode_type")
+                                            ]
+                                        ),
+                                        SolarbankUsageMode.manual.name,
+                                    ),
+                                    SolarbankRatePlan.manual,
+                                )
                             day_ranges = next(
                                 iter(
                                     [
                                         day.get("ranges") or []
                                         for day in (
-                                            value.get("custom_rate_plan") or [{}]
+                                            value.get(rate_plan_name) or [{}]
                                         )
                                         if weekday in (day.get("week") or [])
                                     ]
@@ -692,19 +649,6 @@ class AnkerSolixApi:
             self.devices.update({str(sn): device})
         return sn
 
-    def testDir(self, subfolder: str | None = None) -> str:
-        """Get or set the subfolder for local API test files."""
-        if subfolder is not None:
-            self._testdir = self.apisession.testDir(subfolder)
-        return self._testdir
-
-    def logLevel(self, level: int | None = None) -> int:
-        """Get or set the logger log level."""
-        if level is not None and isinstance(level, int):
-            self._logger.setLevel(level)
-            self._logger.info("Set log level to: %s", level)
-        return self._logger.getEffectiveLevel()
-
     async def update_sites(
         self, siteId: str | None = None, fromFile: bool = False
     ) -> dict:  # noqa: C901
@@ -729,81 +673,10 @@ class AnkerSolixApi:
         """Create/Update device details in api devices cache structure."""
         return await poll_device_details(self, fromFile=fromFile, exclude=exclude)
 
-    async def get_site_rules(self, fromFile: bool = False) -> dict:
-        """Get the site rules supported by the api.
-
-        Example data:
-        {'rule_list': [
-            {'power_site_type': 1, 'main_device_models': ['A5143'], 'device_models': ['A5143', 'A1771'], 'can_empty_site': False,
-                'quantity_min_limit_map': {'A1771': 1, 'A5143': 1},'quantity_max_limit_map': {'A1771': 2, 'A5143': 1}},
-            {'power_site_type': 2, 'main_device_models': ['A17C0'], 'device_models': ['A17C0', 'A5143', 'A1771'], 'can_empty_site': False,
-                'quantity_min_limit_map': {'A17C0': 1}, 'quantity_max_limit_map': {'A1771': 2, 'A17C0': 2, 'A5143': 1}},
-            {'power_site_type': 4, 'main_device_models': ['A17B1'], 'device_models': ['A17B1'], 'can_empty_site': True,
-                'quantity_min_limit_map': None, 'quantity_max_limit_map': {'A17B1': 1}},
-            {'power_site_type': 5, 'main_device_models': ['A17C1'], 'device_models': ['A17C1', 'A17X7'], 'can_empty_site': True,
-                'quantity_min_limit_map': None, 'quantity_max_limit_map': {'A17C1': 1}},
-            {'power_site_type': 6, 'main_device_models': ['A5341'], 'device_models': ['A5341', 'A5101', 'A5220'], 'can_empty_site': False,
-                'quantity_min_limit_map': {'A5341': 1}, 'quantity_max_limit_map': {'A5341': 1}},
-            {'power_site_type': 7, 'main_device_models': ['A5101'], 'device_models': ['A5101', 'A5220'], 'can_empty_site': False,
-                'quantity_min_limit_map': {'A5101': 1}, 'quantity_max_limit_map': {'A5101': 6}},
-            {'power_site_type': 8, 'main_device_models': ['A5102'], 'device_models': ['A5102', 'A5220'], 'can_empty_site': False,
-                'quantity_min_limit_map': {'A5102': 1}, 'quantity_max_limit_map': {'A5102': 6}},
-            {'power_site_type': 9, 'main_device_models': ['A5103'], 'device_models': ['A5103', 'A5220'], 'can_empty_site': False,
-                'quantity_min_limit_map': {'A5103': 1}, 'quantity_max_limit_map': {'A5103': 6}}]}
-        """
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['site_rules']}.json"
-            )
-        else:
-            resp = await self.apisession.request("post", API_ENDPOINTS["site_rules"])
-        return resp.get("data") or {}
-
-    async def get_site_list(self, fromFile: bool = False) -> dict:
-        """Get the site list.
-
-        Example data:
-        {'site_list': [{'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'site_name': 'BKW', 'site_img': '', 'device_type_list': [3], 'ms_type': 2, 'power_site_type': 2, 'is_allow_delete': True}]}
-        """
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['site_list']}.json"
-            )
-        else:
-            resp = await self.apisession.request("post", API_ENDPOINTS["site_list"])
-        return resp.get("data") or {}
-
-    async def get_scene_info(self, siteId: str, fromFile: bool = False) -> dict:
-        """Get scene info. This can be queried for each siteId listed in the homepage info site_list. It shows also data for accounts that are only site members.
-
-        Example data for provided site_id:
-        {"home_info":{"home_name":"Home","home_img":"","charging_power":"0.00","power_unit":"W"},
-        "solar_list":[],
-        "pps_info":{"pps_list":[],"total_charging_power":"0.00","power_unit":"W","total_battery_power":"0.00","updated_time":"","pps_status":0},
-        "statistics":[{"type":"1","total":"89.75","unit":"kwh"},{"type":"2","total":"89.48","unit":"kg"},{"type":"3","total":"35.90","unit":"€"}],
-        "topology_type":"1","solarbank_info":{"solarbank_list":
-            [{"device_pn":"A17C0","device_sn":"9JVB42LJK8J0P5RY","device_name":"Solarbank E1600",
-                "device_img":"https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
-                "battery_power":"75","bind_site_status":"","charging_power":"0","power_unit":"W","charging_status":"2","status":"0","wireless_type":"1","main_version":"","photovoltaic_power":"0",
-                "output_power":"0","create_time":1695392386}],
-            "total_charging_power":"0","power_unit":"W","charging_status":"0","total_battery_power":"0.00","updated_time":"2023-12-28 18:53:27","total_photovoltaic_power":"0","total_output_power":"0.00"},
-        "retain_load":"0W","updated_time":"01-01-0001 00:00:00","power_site_type":2,"site_id":"efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c"}
-        """
-        data = {"site_id": siteId}
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['scene_info']}_{siteId}.json"
-            )
-        else:
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["scene_info"], json=data
-            )
-        return resp.get("data") or {}
-
     async def get_homepage(self, fromFile: bool = False) -> dict:
         """Get the latest homepage info.
 
-        NOTE: This returns only data if the site is owned by the account. No data returned for site member accounts
+        NOTE: This returns only data if the site is owned by the account. No data returned for site member accounts, therefore not really useful.
         Example data:
         {"site_list":[{"site_id":"efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","site_name":"BKW","site_img":"","device_type_list":[3],"ms_type":0,"power_site_type":0,"is_allow_delete":false}],
         "solar_list":[],"pps_list":[],
@@ -820,37 +693,8 @@ class AnkerSolixApi:
             resp = await self.apisession.request("post", API_ENDPOINTS["homepage"])
         return resp.get("data") or {}
 
-    async def get_bind_devices(self, fromFile: bool = False) -> dict:
-        """Get the bind device information, contains firmware level of devices.
-
-        Example data:
-        {"data": [{"device_sn":"9JVB42LJK8J0P5RY","product_code":"A17C0","bt_ble_id":"BC:A2:AF:C7:55:F9","bt_ble_mac":"BCA2AFC755F9","device_name":"Solarbank E1600","alias_name":"Solarbank E1600",
-        "img_url":"https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
-        "link_time":1695392302068,"wifi_online":false,"wifi_name":"","relate_type":["ble","wifi"],"charge":false,"bws_surplus":0,"device_sw_version":"v1.4.4","has_manual":false}]}
-        """
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['bind_devices']}.json"
-            )
-        else:
-            resp = await self.apisession.request("post", API_ENDPOINTS["bind_devices"])
-        data = resp.get("data") or {}
-        active_devices = set()
-        for device in data.get("data") or []:
-            if sn := self._update_dev(device):
-                active_devices.add(sn)
-        # recycle api device list and remove devices no longer used in sites or bind devices
-        rem_devices = [
-            dev
-            for dev in self.devices
-            if dev not in (self._site_devices | active_devices)
-        ]
-        for dev in rem_devices:
-            self.devices.pop(dev, None)
-        return data
-
     async def get_user_devices(self, fromFile: bool = False) -> dict:
-        """Get device details of all devices owned by user.
+        """Get device details of all devices owned by user. The response fields are pretty much empty, not really useful.
 
         Example data: (Information is mostly empty when device is bound to site)
         {'solar_list': [], 'pps_list': [], 'solarbank_list': [{'device_pn': 'A17C0', 'device_sn': '9JVB42LJK8J0P5RY', 'device_name': 'Solarbank E1600',
@@ -867,7 +711,7 @@ class AnkerSolixApi:
         return resp.get("data") or {}
 
     async def get_charging_devices(self, fromFile: bool = False) -> dict:
-        """Get the charging devices (Power stations?).
+        """Get the charging devices. The response fields are pretty much empty, not really useful for anything, not even for PPS devices.
 
         Example data:
         {'device_list': None, 'guide_txt': ''}
@@ -929,111 +773,10 @@ class AnkerSolixApi:
             self._update_dev({"device_sn": solarbankSn, "solar_info": info})
         return data
 
-    async def get_auto_upgrade(self, fromFile: bool = False) -> dict:
-        """Get auto upgrade settings and devices enabled for auto upgrade.
-
-        Example data:
-        {'main_switch': True, 'device_list': [{'device_sn': '9JVB42LJK8J0P5RY', 'device_name': 'Solarbank E1600', 'auto_upgrade': True, 'alias_name': 'Solarbank E1600',
-        'icon': 'https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png'}]}
-        """
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['get_auto_upgrade']}.json"
-            )
-        else:
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["get_auto_upgrade"]
-            )
-        data = resp.get("data") or {}
-        main = data.get("main_switch")
-        devicelist = data.get("device_list", [])  # could be null for non owning account
-        if not devicelist:
-            devicelist = []
-        for device in devicelist:
-            dev_ota = device.get("auto_upgrade")
-            if isinstance(dev_ota, bool):
-                # update device setting based on main setting if available
-                if isinstance(main, bool):
-                    device.update({"auto_upgrade": main and dev_ota})
-                self._update_dev(device)
-        return data
-
-    async def set_auto_upgrade(self, devices: dict[str, bool]) -> bool:
-        """Set auto upgrade switches for given device dictionary.
-
-        Example input:
-        devices = {'9JVB42LJK8J0P5RY': True}
-        The main switch must be set True if any device switch is set True. The main switch does not need to be changed to False if no device is True.
-        But if main switch is set to False, all devices will automatically be set to False and individual setting is ignored by Api.
-        """
-        # get actual settings
-        settings = await self.get_auto_upgrade()
-        if (main_switch := settings.get("main_switch")) is None:
-            return False
-        dev_switches = {}
-        main = None
-        change_list = []
-        for dev_setting in settings.get("device_list") or []:
-            if (
-                isinstance(dev_setting, dict)
-                and (device_sn := dev_setting.get("device_sn"))
-                and (dev_upgrade := dev_setting.get("auto_upgrade")) is not None
-            ):
-                dev_switches[device_sn] = dev_upgrade
-        # Loop through provided device list and compose the request data device list that needs to be send
-        for sn, upgrade in devices.items():
-            if sn in dev_switches:
-                if upgrade != dev_switches[sn]:
-                    change_list.append({"device_sn": sn, "auto_upgrade": upgrade})
-                    if upgrade:
-                        main = True
-
-        if change_list:
-            # json example for endpoint
-            # {"main_switch": False, "device_list": [{"device_sn": "9JVB42LJK8J0P5RY","auto_upgrade": True}]}
-            data = {
-                "main_switch": main if main is not None else main_switch,
-                "device_list": change_list,
-            }
-            # Make the Api call and check for return code
-            code = (
-                await self.apisession.request(
-                    "post", API_ENDPOINTS["set_auto_upgrade"], json=data
-                )
-            ).get("code")
-            if not isinstance(code, int) or int(code) != 0:
-                return False
-            # update the data in api dict
-            await self.get_auto_upgrade()
-
-        return True
-
-    async def get_wifi_list(self, siteId: str, fromFile: bool = False) -> dict:
-        """Get the wifi list.
-
-        Example data:
-        {'wifi_info_list': [{"wifi_name": "wifi-network-1","wifi_signal": "48","device_sn": "7SKIVRGPK8XC2ROB","rssi": "","offline": false}]}
-        """
-        data = {"site_id": siteId}
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['wifi_list']}_{siteId}.json"
-            )
-        else:
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["wifi_list"], json=data
-            )
-        # update device data if device_sn found in wifi list
-        if data := resp.get("data") or {}:
-            for wifi_info in data.get("wifi_info_list") or []:
-                if wifi_info.get("device_sn"):
-                    self._update_dev(wifi_info)
-        return resp.get("data") or {}
-
     async def get_power_cutoff(
         self, deviceSn: str, siteId: str = "", fromFile: bool = False
     ) -> dict:
-        """Get power cut off settings.
+        """Get power cut off settings. This works for any device in a Solarbank system, but only SB cutoffs are returned.
 
         Example data:
         {'power_cutoff_data': [
@@ -1207,50 +950,6 @@ class AnkerSolixApi:
         self._update_dev({"device_sn": deviceSn, "fittings": fittings})
         return data
 
-    async def get_ota_batch(
-        self, deviceSns: list | None = None, fromFile: bool = False
-    ) -> dict:
-        """Get the OTA info for provided list of device serials or for all owning devices in devices dict.
-
-        Example data:
-        {"update_infos": [{"device_sn": "9JVB42LJK8J0P5RY","need_update": false,"upgrade_type": 0,"lastPackage": {
-                "product_code": "","product_component": "","version": "","is_forced": false,"md5": "","url": "","size": 0},
-            "change_log": "","current_version": "v1.6.3","children": null}]}
-        """
-        # default to all admin devices in devices dict if no device serial list provided
-        if not deviceSns or not isinstance(deviceSns, list):
-            deviceSns = [
-                s for s, device in self.devices.items() if device.get("is_admin")
-            ]
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['get_ota_batch']}.json"
-            )
-        else:
-            data = {
-                "device_list": [
-                    {"device_sn": serial, "version": ""} for serial in deviceSns
-                ]
-            }
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["get_ota_batch"], json=data
-            )
-        # update device details only if valid response
-        if (data := resp.get("data") or {}) and deviceSns:
-            # update devices dict with new ota data
-            for dev in data.get("update_infos") or []:
-                if deviceSn := dev.get("device_sn"):
-                    self._update_dev(
-                        {
-                            "device_sn": deviceSn,
-                            "is_ota_update": dev.get("need_update"),
-                            "ota_version": (dev.get("lastPackage") or {}).get("version")
-                            or dev.get("current_version")
-                            or "",
-                        }
-                    )
-        return resp.get("data") or {}
-
     async def get_ota_info(
         self, solarbankSn: str = "", inverterSn: str = "", fromFile: bool = False
     ) -> dict:
@@ -1359,25 +1058,3 @@ class AnkerSolixApi:
                 "post", API_ENDPOINTS["get_upgrade_record"], json=data
             )
         return resp.get("data") or {}
-
-    async def get_message_unread(self, fromFile: bool = False) -> dict:
-        """Get the unread messages for account.
-
-        Example data:
-        {"has_unread_msg": false}
-        """
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['get_message_unread']}.json"
-            )
-        else:
-            resp = await self.apisession.request(
-                "get", API_ENDPOINTS["get_message_unread"]
-            )
-        # save unread msg flag in each known site
-        data = resp.get("data") or {}
-        for siteId in self.sites:
-            self._update_site(siteId, data)
-        # save unread msg flag in account dictionary
-        self._update_account(data)
-        return data

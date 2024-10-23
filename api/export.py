@@ -69,12 +69,6 @@ class AnkerSolixApiExport:
         else:
             self._logger = _LOGGER
             self._logger.setLevel(logging.DEBUG)
-        # Add console to logger if no handler available
-        # if not self._logger.hasHandlers():
-        #     # create console handler and set level to info
-        #     ch = logging.StreamHandler()
-        #     ch.setLevel(logging.INFO)
-        #     self._logger.addHandler(ch)
 
     async def export_data(  # noqa: C901
         self,
@@ -167,7 +161,11 @@ class AnkerSolixApiExport:
             # start the listener
             listener.start()
 
-            self._logger.info("Using AnkerSolixApiExport version: %s, Date: %s", VERSION,datetime.now().strftime("%Y-%m-%d"))
+            self._logger.info(
+                "Using AnkerSolixApiExport version: %s, Date: %s",
+                VERSION,
+                datetime.now().strftime("%Y-%m-%d"),
+            )
 
             # save existing api delay and adjust request delay for export
             if (old_delay := self.client.requestDelay()) != self.request_delay:
@@ -195,6 +193,24 @@ class AnkerSolixApiExport:
                 ApiEndpointServices.hes_svc
             } & self.export_services or not self.export_services:
                 await self.export_charging_hes_svc_data()
+
+            # Always export account dictionary
+            self._logger.info("")
+            self._logger.info("Exporting Api account cache...")
+            self._logger.debug(
+                "Api account cache --> %s",
+                filename := f"{API_FILEPREFIXES['api_account']}.json",
+            )
+            # update account dictionary with number of requests during export
+            self.api_power._update_account()  # noqa: SLF001
+            # Randomizing dictionary for account data
+            await self._export(
+                Path(self.export_path) / filename,
+                self.api_power.account,
+            )
+
+            # Print stats
+            self._logger.info("Api Request stats: %s", self.client.request_count)
 
             # restore old api session delay
             if old_delay != self.request_delay:
@@ -578,14 +594,15 @@ class AnkerSolixApiExport:
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                     admin=admin,
                 )
-                self._logger.info("Exporting OTA update info for device...")
-                await self.query(
-                    endpoint=API_ENDPOINTS["get_ota_update"],
-                    filename=f"{API_FILEPREFIXES['get_ota_update']}_{self._randomize(sn,'_sn')}.json",
-                    payload={"device_sn": sn, "insert_sn": ""},
-                    replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
-                    admin=admin,
-                )
+                # This query does not work for most devices, device firmware data is covered with a single ota_batch query
+                # self._logger.info("Exporting OTA update info for device...")
+                # await self.query(
+                #     endpoint=API_ENDPOINTS["get_ota_update"],
+                #     filename=f"{API_FILEPREFIXES['get_ota_update']}_{self._randomize(sn,'_sn')}.json",
+                #     payload={"device_sn": sn, "insert_sn": ""},
+                #     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                #     admin=admin,
+                # )
                 self._logger.info("Exporting upgrade record for device...")
                 await self.query(
                     endpoint=API_ENDPOINTS["get_upgrade_record"],
@@ -613,6 +630,7 @@ class AnkerSolixApiExport:
             # update api dictionaries from exported files to use randomized input data
             # this is more efficient and allows validation of randomized data in export files
             # save real api cache data first
+            old_account = deepcopy(self.api_power.account)
             old_sites = deepcopy(self.api_power.sites)
             old_devices = deepcopy(self.api_power.devices)
             old_testdir = self.api_power.testDir()
@@ -646,6 +664,7 @@ class AnkerSolixApiExport:
                 skip_randomize=True,
             )
             # restore real client cache data for re-use of sites and devices in other Api services
+            self.api_power.account = old_account
             self.api_power.sites = old_sites
             self.api_power.devices = old_devices
             # skip restore of default test dir in client session since it may not exist
@@ -1284,6 +1303,9 @@ class AnkerSolixApiExport:
             elif "wifi_name" in key or "ssid" in key:
                 idx = sum(1 for s in self._randomdata.values() if "wifi-network-" in s)
                 randomstr = f"wifi-network-{idx+1}"
+            elif "email" in key:
+                idx = sum(1 for s in self._randomdata.values() if "anonymous-" in s)
+                randomstr = f"anonymous-{idx+1}@domain.com"
             elif key in ["home_load_data", "param_data"]:
                 # these keys may contain schedule dict encoded as string, ensure contained serials are replaced in string
                 # replace all mappings from self._randomdata, but skip trace ids
@@ -1327,6 +1349,7 @@ class AnkerSolixApiExport:
                     "param_data",
                     "device_name",
                     "token",
+                    "email",
                 ]
             ) or k in ["sn"]:
                 data[k] = self._randomize(v, k)
@@ -1422,7 +1445,9 @@ class AnkerSolixApiExport:
             else:
                 # return real response data without randomization if needed
                 response = await self.client.request(method, endpoint, json=payload)
-                await self._export(Path(self.export_path) / filename, response, randomkeys=randomkeys)
+                await self._export(
+                    Path(self.export_path) / filename, response, randomkeys=randomkeys
+                )
         except errors.AnkerSolixError as err:
             if catch:
                 for secret, public in replace:

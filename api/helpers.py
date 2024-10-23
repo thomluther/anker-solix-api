@@ -36,7 +36,7 @@ class RequestCounter:
         return len([x for x in self.elements if x > last_time])
 
     def last_hour(self) -> int:
-        """Get number of timestamps for last minute."""
+        """Get number of timestamps for last hour."""
         last_time = datetime.now() - timedelta(hours=1)
         return len([x for x in self.elements if x > last_time])
 

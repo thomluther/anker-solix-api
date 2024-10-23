@@ -313,6 +313,7 @@ API_FILEPREFIXES = {
     "check_upgrade_record": "check_upgrade_record",
     "get_device_attributes": "device_attrs",
     "get_message_unread": "message_unread",
+    "api_account": "api_account",
     "api_sites": "api_sites",
     "api_devices": "api_devices",
     # charging_energy_service endpoint file prefixes
@@ -413,6 +414,15 @@ class SolarbankUsageMode(IntEnum):
     smartmeter = 1
     smartplugs = 2
     manual = 3
+
+@dataclass(frozen=True)
+class SolarbankRatePlan:
+    """Dataclass for Anker Solix Solarbank rate plan types."""
+
+    # rate plan per usage mode
+    smartmeter: str = "custom_rate_plan" # used for default output setting on connection loss
+    smartplugs: str = "blend_plan"
+    manual: str = "custom_rate_plan"
 
 
 @dataclass(frozen=True)
