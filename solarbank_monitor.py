@@ -25,7 +25,7 @@ import sys
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from api import api, errors  # pylint: disable=no-name-in-module
-from api.apitypes import SolarbankUsageMode  # pylint: disable=no-name-in-module
+from api.apitypes import SolarbankUsageMode, SolarbankRatePlan  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -78,7 +78,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             CONSOLE.info("(q) Quit")
         selection = input(f"Input Source number (0-{len(exampleslist)}) or [q]uit: ")
         if (
-            selection.upper() in ["Q","QUIT"]
+            selection.upper() in ["Q", "QUIT"]
             or not selection.isdigit()
             or int(selection) < 0
             or int(selection) > len(exampleslist)
@@ -267,6 +267,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Home Demand':<{col1}}: {demand or '---':>4} {unit:<{col2-5}} {'SB Home Load':<{col3}}: {load or '---':>4} {unit}  {diff}"
                         )
+                        # Total smart plug power and other power?
+                        CONSOLE.info(
+                            f"{'Smart Plugs':<{col1}}: {(site.get('smart_plug_info') or {}).get("total_power") or '---':>4} {unit:<{col2-5}} {'Other (Plan)':<{col3}}: {site.get('other_loads_power') or '---':>4} {unit}"
+                        )
                         # update schedule with device details refresh and print it
                         CONSOLE.info(
                             f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
@@ -280,18 +284,22 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Usage Mode':<{col1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{col2}} {'Sched. Preset':<{col3}}: {dev.get('preset_system_output_power','----'):>4} W"
                                 )
-                                CONSOLE.info(
-                                    f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}"
-                                )
-                                for idx in data.get("custom_rate_plan") or [{}]:
-                                    index = idx.get("index", "--")
-                                    weekdays = [
-                                        week[day] for day in idx.get("week") or []
-                                    ]
-                                    for slot in idx.get("ranges") or []:
-                                        CONSOLE.info(
-                                            f"{index!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {str(slot.get('power',''))+' W':>{t4}} {','.join(weekdays):<{t5}}"
-                                        )
+                                for plan in {
+                                    getattr(SolarbankRatePlan, attr.name)
+                                    for attr in SolarbankUsageMode
+                                }:
+                                    CONSOLE.info(
+                                        f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}   <== {plan}{' (Smart plugs)' if plan == SolarbankRatePlan.smartplugs else ''}"
+                                    )
+                                    for idx in data.get(plan) or [{}]:
+                                        index = idx.get("index", "--")
+                                        weekdays = [
+                                            week[day] for day in idx.get("week") or []
+                                        ]
+                                        for slot in idx.get("ranges") or []:
+                                            CONSOLE.info(
+                                                f"{index!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {str(slot.get('power',''))+' W':>{t4}} {','.join(weekdays):<{t5}}"
+                                            )
                             else:
                                 # Solarbank 1 schedule
                                 CONSOLE.info(
@@ -342,7 +350,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Plug Power':<{col1}}: {dev.get('current_power',''):>4} {unit:<{col2-5}} {'Tag':<{col3}}: {dev.get('tag','')}"
                         )
-                    elif devtype in [api.SolixDeviceType.POWERPANEL.value,api.SolixDeviceType.HES.value]:
+                    elif devtype in [
+                        api.SolixDeviceType.POWERPANEL.value,
+                        api.SolixDeviceType.HES.value,
+                    ]:
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
                         )
@@ -405,10 +416,12 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Smartplugs':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'Smartplugs':<{col3}}: {yesterday.get('smartplugs_total','-.--'):>5} {unit}"
                                 )
-                            for idx, plug_t in enumerate(today.get("smartplug_list") or []):
+                            for idx, plug_t in enumerate(
+                                today.get("smartplug_list") or []
+                            ):
                                 plug_y = (yesterday.get("smartplug_list") or [])[idx]
                                 CONSOLE.info(
-                                    f"{'>'+plug_t.get('alias','Plug '+str(idx+1)):<{col1}}: {plug_t.get('energy') or '-.--':>5} {unit:<{col2-6}} {'>'+plug_y.get('alias','Plug '+str(idx+1)):<{col3}}: {plug_y.get('energy','-.--'):>5} {unit}"
+                                    f"{'-'+plug_t.get('alias','Plug '+str(idx+1)):<{col1}}: {plug_t.get('energy') or '-.--':>5} {unit:<{col2-6}} {'-'+plug_y.get('alias','Plug '+str(idx+1)):<{col3}}: {plug_y.get('energy','-.--'):>5} {unit}"
                                 )
                             CONSOLE.info(
                                 f"{'Sol/Bat/Gri %':<{col1}}: {float(today.get('solar_percentage',''))*100:>3.0f}/{float(today.get('battery_percentage',''))*100:>3.0f}/{float(today.get('other_percentage',''))*100:>3.0f} {'%':<{col2-12}} {'Sol/Bat/Gri %':<{col3}}: {float(yesterday.get('solar_percentage',''))*100:>3.0f}/{float(yesterday.get('battery_percentage',''))*100:>3.0f}/{float(yesterday.get('other_percentage',''))*100:>3.0f} %"

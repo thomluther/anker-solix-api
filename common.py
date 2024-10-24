@@ -59,7 +59,6 @@ def country() -> str:
 def print_schedule(schedule: dict) -> None:
     """Print the schedule ranges as table."""
 
-    plan = schedule or {}
     t1 = 2
     t2 = 5
     t3 = 5
@@ -69,38 +68,28 @@ def print_schedule(schedule: dict) -> None:
     t7 = 6
     t8 = 6
     t9 = 5
+    plan = schedule or {}
     if plan.get("mode_type", 0):
         # SB2 schedule
         usage_mode = plan.get("mode_type") or 0
-        # get rate_plan_name depending on use usage mode_type
-        rate_plan_name = getattr(
-                SolarbankRatePlan,
-                next(
-                    iter(
-                        [
-                            item.name
-                            for item in SolarbankUsageMode
-                            if item.value == usage_mode
-                        ]
-                    ),
-                    SolarbankUsageMode.manual.name,
-                ),
-                SolarbankRatePlan.manual,
-            )
-        week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         CONSOLE.info(
             f"{'Usage Mode':<{t1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{t2+t3+t4}} {'Def. Preset':<{t3}}: {plan.get('default_home_load','----'):>4} W"
         )
-        CONSOLE.info(
-            f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}"
-        )
-        for idx in plan.get(rate_plan_name) or [{}]:
-            index = idx.get("index", "--")
-            weekdays = [week[day] for day in idx.get("week") or []]
-            for slot in idx.get("ranges") or []:
-                CONSOLE.info(
-                    f"{index!s:>{t1}} {slot.get('start_time','')!s:<{t2}} {slot.get('end_time','')!s:<{t3}} {str(slot.get('power',''))+' W':>{t4}} {','.join(weekdays):<{t5}}"
-                )
+        week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        for rate_plan_name in {
+            getattr(SolarbankRatePlan, attr.name)
+            for attr in SolarbankUsageMode
+        }:
+            CONSOLE.info(
+                f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}   <== {rate_plan_name}{' (Smart plugs)' if rate_plan_name == SolarbankRatePlan.smartplugs else ''}"
+            )
+            for idx in plan.get(rate_plan_name) or [{}]:
+                index = idx.get("index", "--")
+                weekdays = [week[day] for day in idx.get("week") or []]
+                for slot in idx.get("ranges") or []:
+                    CONSOLE.info(
+                        f"{index!s:>{t1}} {slot.get('start_time','')!s:<{t2}} {slot.get('end_time','')!s:<{t3}} {str(slot.get('power',''))+' W':>{t4}} {','.join(weekdays):<{t5}}"
+                    )
     else:
         # SB1 schedule
         CONSOLE.info(

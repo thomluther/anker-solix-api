@@ -96,12 +96,13 @@ async def main() -> bool:
                     startDay=startday,
                     numDays=numdays,
                     dayTotals=daytotals,
-                    # TODO(#SMARTPLUG): Add Smartplug type once supported
+                    # include all possible energy stats per site
                     devTypes={
                         api.SolixDeviceType.INVERTER.value,
                         api.SolixDeviceType.SOLARBANK.value,
                         api.SolixDeviceType.SMARTMETER.value,
-                    },  # include all possible energy stats per site
+                        api.SolixDeviceType.SMARTPLUG.value,
+                    },
                 )
                 CONSOLE.debug(json.dumps(data, indent=2))
                 # Write csv file
