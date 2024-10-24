@@ -25,7 +25,10 @@ import sys
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from api import api, errors  # pylint: disable=no-name-in-module
-from api.apitypes import SolarbankUsageMode, SolarbankRatePlan  # pylint: disable=no-name-in-module
+from api.apitypes import (  # pylint: disable=no-name-in-module
+    SolarbankRatePlan,
+    SolarbankUsageMode,
+)
 import common
 
 # use Console logger from common module
@@ -350,9 +353,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Plug Power':<{col1}}: {dev.get('current_power',''):>4} {unit:<{col2-5}} {'Tag':<{col3}}: {dev.get('tag','')}"
                         )
-                        CONSOLE.info(
-                            f"{'Energy today':<{col1}}: {dev.get('energy_today','-.--'):>4} {'kWh':<{col2-5}} {'Last Period':<{col3}}: {dev.get('energy_last_period','-.--'):>4} kWh"
-                        )
+                        if dev.get('energy_today'):
+                            CONSOLE.info(
+                                f"{'Energy today':<{col1}}: {dev.get('energy_today','-.--'):>4} {'kWh':<{col2-5}} {'Last Period':<{col3}}: {dev.get('energy_last_period','-.--'):>4} kWh"
+                            )
                     elif devtype in [
                         api.SolixDeviceType.POWERPANEL.value,
                         api.SolixDeviceType.HES.value,

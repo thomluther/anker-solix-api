@@ -10,9 +10,9 @@ from .apibase import AnkerSolixBaseApi
 from .apitypes import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
 
 
-async def poll_sites(
+async def poll_sites(  # noqa: C901
     api: AnkerSolixBaseApi, siteId: str | None = None, fromFile: bool = False
-) -> dict:  # noqa: C901
+) -> dict:
     """Get the latest info for all accessible sites or only the provided siteId and update class sites and devices dictionaries used as cache.
 
     Example data:
@@ -437,7 +437,7 @@ async def poll_device_details(
 
 
 async def poll_device_energy(
-    api:AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
+    api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the site energy statistics for given device types from today and yesterday.
 

@@ -95,7 +95,7 @@ API_COUNTRIES = {
     ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
-"""Following are the Anker Power/Solix Cloud API power_service endpoints known so far. Some are common, others are mainly for balkony power systems"""
+"""Following are the Anker Power/Solix Cloud API power_service endpoints known so far. Some are common, others are mainly for balcony power systems"""
 API_ENDPOINTS = {
     "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as presented on App Home Page (mostly empty for shared accounts)
     "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
