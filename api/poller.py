@@ -552,6 +552,22 @@ async def poll_device_energy(
             # save energy stats with sites dictionary
             site["energy_details"] = energy
             api.sites[site_id] = site
+            # Add individual smart plug energy per serial also to smart plug device cache
+            for plug in (energy.get("today") or {}).get("smartplug_list") or []:
+                api._update_dev(
+                    {
+                        "device_sn": plug.get("device_sn"),
+                        "energy_today": plug.get("energy"),
+                    }
+                )
+            for plug in (energy.get("last_period") or {}).get("smartplug_list") or []:
+                api._update_dev(
+                    {
+                        "device_sn": plug.get("device_sn"),
+                        "energy_last_period": plug.get("energy"),
+                    }
+                )
+
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})
     return api.sites

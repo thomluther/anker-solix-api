@@ -350,6 +350,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Plug Power':<{col1}}: {dev.get('current_power',''):>4} {unit:<{col2-5}} {'Tag':<{col3}}: {dev.get('tag','')}"
                         )
+                        CONSOLE.info(
+                            f"{'Energy today':<{col1}}: {dev.get('energy_today','-.--'):>4} {'kWh':<{col2-5}} {'Last Period':<{col3}}: {dev.get('energy_last_period','-.--'):>4} kWh"
+                        )
                     elif devtype in [
                         api.SolixDeviceType.POWERPANEL.value,
                         api.SolixDeviceType.HES.value,

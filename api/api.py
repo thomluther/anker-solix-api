@@ -152,6 +152,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         in [
                             # keys with string values that should only updated if value returned
                             "wifi_name",
+                            "energy_today",
+                            "energy_last_period"
                         ]
                         and value
                     ):

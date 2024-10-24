@@ -179,9 +179,12 @@ async def energy_daily(  # noqa: C901
                     }
                 )
                 # Add Smart Plug details if available
-                if plug_list := (resp.get("smart_plug_info") or {}).get(
-                    "smartplug_list"
-                ) or []:
+                if (
+                    plug_list := (resp.get("smart_plug_info") or {}).get(
+                        "smartplug_list"
+                    )
+                    or []
+                ):
                     entry.update(
                         {
                             "smartplug_list": [
@@ -227,9 +230,12 @@ async def energy_daily(  # noqa: C901
                         }
                     )
                     # Add Smart Plug details if available
-                    if plug_list := (resp.get("smart_plug_info") or {}).get(
-                        "smartplug_list"
-                    ) or []:
+                    if (
+                        plug_list := (resp.get("smart_plug_info") or {}).get(
+                            "smartplug_list"
+                        )
+                        or []
+                    ):
                         entry.update(
                             {
                                 "smartplug_list": [
