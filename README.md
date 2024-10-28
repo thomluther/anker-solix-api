@@ -80,6 +80,8 @@ async def main() -> None:
         await myapi.update_site_details()
         await myapi.update_device_details()
         await myapi.update_device_energy()
+        CONSOLE.info("Account Overview:")
+        _out(myapi.account)
         CONSOLE.info("System Overview:")
         _out(myapi.sites)
         CONSOLE.info("Device Overview:")
@@ -116,12 +118,15 @@ The AnkerSolixApi class provides also methods that utilize the `power_service` e
 - `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices from each site and store data in dictionary `AnkerSolixApi.sites` for quick access.
   This method should be run less frequently since this will fetch 4-6 queries per site depending on found device types. With version 2.0.0, solarbank, inverter and smart meter devices are supported. However it was noticed, that the energy statistics endpoint (maybe each endpoint) is limited to 25-30 queries per minute.
 
-The code of these 4 main methods has been separated into the [`poller.py`](api/poller.py) module. To reduce the size of the ever growing AnkerSolixApi class in the [`api.py`](api/api.py) module, other AnkerSolixApi class methods have been separated into various python modules and are simply imported into the main AnkerSolixApi class in the api module. The known Anker Cloud Api endpoints are documented in the [`apitypes.py`](api/apitypes.py) module. However, parameter usage for many of them is unknown.
-If additional `charging_energy_service` endpoints (for Power Panels / Power Stations ?) and/or `charging_hes_svc` endpoints (for Home Energy Systems like X1 ?) will be tested and documented by the community in future, a new AnkerSolixApi alike class should be created for each endpoint type. Since Anker accounts may utilize different AnkerSolixApi alike classes in parallel, they should share the same instance of the created AnkerSolixApiSession for the user account. If an AnkerSolixApiSession instance was already created for the user account, the AnkerSolixApi class can be instanced with the AnkerSolixApiSession instance instead of the Anker Account credentials.
+The code of these 4 main methods has been separated into the [`poller.py`](api/poller.py) module. To reduce the size of the ever growing AnkerSolixApi class in the [`api.py`](api/api.py) module, a common base class AnkerSolixBaseApi was introduced with common attributes and methods that may be used by different Api client types. the AnkerSolixApi class enhances the base class for methods required to support balcony power systems. Due to the size of the required methods, they have been separated into various python modules and are simply imported into the main AnkerSolixApi class in the api module. The known Anker Cloud Api endpoints are all documented in the [`apitypes.py`](api/apitypes.py) module. However, parameter usage for many of them is unknown and still need to be explored for useful information.
+If additional `charging_energy_service` endpoints (for Power Panels / Power Stations ?) and/or `charging_hes_svc` endpoints (for Home Energy Systems like X1 ?) will be tested and documented by the community in future, a new AnkerSolixApi alike class based on AnkerSolixBaseApi class should be created for each endpoint type or power system category. Since Anker accounts may utilize different power system types and AnkerSolixApi alike classes in parallel, they should share the same instance of the created AnkerSolixApiSession for the user account. If any AnkerSolixApiSession instance was already created for the user account, the AnkerSolixApi class can be instanced with the AnkerSolixApiSession instance instead of the Anker Account credentials.
 
-Check out [`test_api.py`](./test_api.py) and other python executable tools that may help to leverage and explore the Api for your Anker power system.
-The subfolder [`examples`](./examples) contains actual or older example exports with json files using anonymized responses of the [`export_system.py`](./export_system.py) module giving you an idea of how various Api responses look like.
-Those json files can also be used to develop/debug the Api for system constellations not available to the developer.
+Check out the given example code and [`test_api.py`](./test_api.py) or other python executable tools that may help to leverage and explore the Api for your Anker power system.
+The subfolder [`examples`](./examples) contains actual or older example exports with json files using anonymized responses of the [`export_system.py`](./export_system.py) module giving you an idea of how various Api responses look like. Those json files can also be used to develop/debug the Api for system constellations not available to the developer.
+
+**Attention:**
+
+The response structure may change over time without notice because additional fields have been added to support new functionalities. Hopefully existing fields will not be modified to ensure backward compatibility.
 
 # AnkerSolixApi Tools
 
@@ -149,14 +154,13 @@ _CREDENTIALS = {
 
 Example exec module to use the Anker Api for export of defined system data and device details.
 This module will prompt for the Anker account details if not pre-set in the header or defined in environment variables.
-Upon successful authentication, you can specify a subfolder for the exported JSON files received as Api query response, defaulting to your nick name
-Optionally you can specify whether personalized information in the response data should be randomized in the files, like SNs, Site IDs, Trace IDs etc.
+Upon successful authentication, you can specify which endpoint types you want to export and a subfolder for the exported JSON files received as Api query response, defaulting to your nick name. Optionally you can specify whether personalized information in the response data should be randomized in the files, like SNs, Site IDs, Trace IDs etc, and whether the output folder should be zipped to a file.
 You can review the response files afterwards. They can be used as examples for dedicated data extraction from the devices.
 Optionally the AnkerSolixApi class can use the json files for debugging and testing on various system outputs.
 
 **Note**:
 
-You should preferably run the export_system with the owner account of the site. Otherwise only limited information can be exported by shared accounts due to access permissions.
+You should preferably run the export_system.py with the owner account of the power system. Otherwise only limited information can be exported by shared accounts due to access permissions.
 
 ## solarbank_monitor.py
 
@@ -164,13 +168,13 @@ You should preferably run the export_system with the owner account of the site. 
 > pipenv run ./solarbank_monitor.py
 ```
 
-Example exec module to use the Anker Api for continuously querying and displaying important solarbank parameters.
-This module will can use real time data from your Anker account, or optionally use json files from your local examples or export folder.
+Example exec module to use the Anker Api for continuously querying and displaying important Anker power device parameters.
+This module can use real time data from your Anker account, or optionally use json files from your local examples or export folder.
 When using the real time option, it will prompt for the Anker account details if not pre-set in the header or defined in environment variables.
-Upon successful authentication, you will see the solarbank parameters displayed and refreshed at regular interval.
-When using monitoring from local json file folder, they values will not change. But this option is useful to validate the api parsing with various system constellations.
+Upon successful authentication, you will see relevant parameter of supported devices displayed and refreshed at regular interval.
+When using monitoring from local json file folder, the values will not change. But this option is useful to validate the api parsing with various system constellations. You can navigate through the list of json folders to verify/debug various system exports with the tool.
 
-Note: When the system owning account is used, more details for the solarbank can be queried and displayed.
+Note: When the system owning account is used, more details for the owning sites and devices can be queried and displayed.
 
 **Attention: When executing this module with real time data from your Anker account, the used account cannot be used in the Anker App since it will be kicked out on each refresh.**
 
@@ -183,8 +187,8 @@ Note: When the system owning account is used, more details for the solarbank can
 Example exec module to use the Anker Api for export of daily Energy Data.
 This method will prompt for the Anker account details if not pre-set in the header.
 Then you can specify a start day and the number of days for data extraction from the Anker Cloud.
-Note: The Solar production, Solarbank discharge, Smart Meter and Home usage can be queried across the full range each. The solarbank
-charge as well as Smart Meter totals however can be queried only as total for an interval (e.g. day). Therefore when daily total
+Note: The solar production, Solarbank discharge, smart meter, smart plug and home usage can be queried across the full range each. The solarbank
+charge as well as smart meter and smart plug totals however can be queried only as total for an interval (e.g. day). Therefore when daily total
 data is also selected for export, 2-4 additional Api queries per day are required.
 The received daily values will be exported into a csv file.
 

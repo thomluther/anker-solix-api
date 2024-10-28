@@ -24,6 +24,7 @@ TESTAPIENDPOINTS = False
 TESTAPIFROMJSON = True
 JSONFOLDER = "SB2_SM_ManMode_Schedule"
 
+
 def _out(jsondata):
     CONSOLE.info(json.dumps(jsondata, indent=2))
 
@@ -41,6 +42,7 @@ async def test_api_methods(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(await myapi.get_upgrade_record())
     _out(await myapi.get_ota_update(deviceSn=devicesn))
     _out(await myapi.get_ota_info(solarbankSn=devicesn))
+    _out(await myapi.get_ota_batch())
     _out(await myapi.get_scene_info(siteId=siteid))
     _out(await myapi.get_wifi_list(siteId=siteid))
     _out(await myapi.get_solar_info(solarbankSn=devicesn))
@@ -54,27 +56,15 @@ async def test_api_methods(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
             siteId=siteid, paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value
         )
     )
-
-    _out(
-        await myapi.get_power_cutoff(
-            siteId=siteid,
-            deviceSn=devicesn,
-        )
-    )
-    _out(
-        await myapi.get_device_load(
-            siteId=siteid,
-            deviceSn=devicesn,
-        )
-    )
-
+    _out(await myapi.get_power_cutoff(siteId=siteid, deviceSn=devicesn))
+    _out(await myapi.get_device_load(siteId=siteid, deviceSn=devicesn))
     _out(
         await myapi.energy_analysis(
             siteId=siteid,
             deviceSn=devicesn,
             rangeType="week",
-            startDay=datetime.fromisoformat("2023-10-10"),
-            endDay=datetime.fromisoformat("2023-10-10"),
+            startDay=datetime.fromisoformat("2024-10-10"),
+            endDay=datetime.fromisoformat("2024-10-10"),
             devType="solar_production",
         )
     )
@@ -83,8 +73,8 @@ async def test_api_methods(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
             siteId=siteid,
             deviceSn=devicesn,
             rangeType="week",
-            startDay=datetime.fromisoformat("2023-10-10"),
-            endDay=datetime.fromisoformat("2023-10-10"),
+            startDay=datetime.fromisoformat("2024-10-10"),
+            endDay=datetime.fromisoformat("2024-10-10"),
             devType="solarbank",
         )
     )
@@ -92,7 +82,7 @@ async def test_api_methods(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
         await myapi.energy_daily(
             siteId=siteid,
             deviceSn=devicesn,
-            startDay=datetime.fromisoformat("2024-01-10"),
+            startDay=datetime.fromisoformat("2024-10-10"),
             numDays=10,
         )
     )
@@ -107,11 +97,29 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     siteid = _system["site_info"]["site_id"]
     devicesn = _system["solarbank_info"]["solarbank_list"][0]["device_sn"]
     _out(await myapi.apisession.request("post", api.API_ENDPOINTS["homepage"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.apisession.request("post", api.API_ENDPOINTS["site_list"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.apisession.request("post", api.API_ENDPOINTS["bind_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.apisession.request("post", api.API_ENDPOINTS["user_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.apisession.request("post", api.API_ENDPOINTS["charging_devices"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
-    _out(await myapi.apisession.request("post", api.API_ENDPOINTS["get_auto_upgrade"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(
+        await myapi.apisession.request("post", api.API_ENDPOINTS["site_list"], json={})
+    )  # pylint: disable=protected-access  # noqa: SLF001
+    _out(
+        await myapi.apisession.request(
+            "post", api.API_ENDPOINTS["bind_devices"], json={}
+        )
+    )  # pylint: disable=protected-access  # noqa: SLF001
+    _out(
+        await myapi.apisession.request(
+            "post", api.API_ENDPOINTS["user_devices"], json={}
+        )
+    )  # pylint: disable=protected-access  # noqa: SLF001
+    _out(
+        await myapi.apisession.request(
+            "post", api.API_ENDPOINTS["charging_devices"], json={}
+        )
+    )  # pylint: disable=protected-access  # noqa: SLF001
+    _out(
+        await myapi.apisession.request(
+            "post", api.API_ENDPOINTS["get_auto_upgrade"], json={}
+        )
+    )  # pylint: disable=protected-access  # noqa: SLF001
     _out(
         await myapi.apisession.request(
             "post",
@@ -205,6 +213,7 @@ async def test_api_from_json_files(myapi: api.AnkerSolixApi) -> None:  # noqa: D
     await myapi.update_site_details(fromFile=True)
     await myapi.update_device_details(fromFile=True)
     await myapi.update_device_energy(fromFile=True)
+    _out(myapi.account)
     _out(myapi.sites)
     _out(myapi.devices)
 
@@ -245,6 +254,8 @@ async def main() -> None:
             await myapi.update_site_details()
             await myapi.update_device_details()
             await myapi.update_device_energy()
+            CONSOLE.info("Account Overview:")
+            _out(myapi.account)
             CONSOLE.info("System Overview:")
             _out(myapi.sites)
             CONSOLE.info("Device Overview:")
@@ -255,7 +266,6 @@ async def main() -> None:
 
             if TESTAPIENDPOINTS:
                 await testAPI_ENDPOINTS(myapi)
-
 
 
 # run async main
