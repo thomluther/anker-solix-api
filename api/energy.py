@@ -126,7 +126,7 @@ async def energy_daily(  # noqa: C901
     if (
         SolixDeviceType.SOLARBANK.value in devTypes
         and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
-    ) or ({SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG} & devTypes):
+    ) or ({SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG.value} & devTypes):
         if fromFile:
             resp = (
                 await self.apisession.loadFromFile(

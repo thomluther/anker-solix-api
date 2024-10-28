@@ -21,7 +21,7 @@ from .apitypes import (
 
 
 async def get_device_load(
-    self, siteId: str, deviceSn: str, fromFile: bool = False
+    self, siteId: str, deviceSn: str, fromFile: bool = False, testSchedule: dict | None = None
 ) -> dict:
     r"""Get device load settings. This provides only SB1 schedule structure, not useful for SB2.
 
@@ -36,24 +36,31 @@ async def get_device_load(
     Attention: This method and endpoint actually returns only solarbank 1 schedule structure, which is invalid for different Solarbank 2 structures.
     While it also returns the applied home load settings, it cannot be used for Solarbank 2 due to wrong schedule data.
     """
-    data = {"site_id": siteId, "device_sn": deviceSn}
-    if fromFile:
-        resp = await self.apisession.loadFromFile(
-            Path(self._testdir)
-            / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
-        )
+    if not isinstance(testSchedule,dict):
+        testSchedule = None
+    if testSchedule is None:
+        data = {"site_id": siteId, "device_sn": deviceSn}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self._testdir)
+                / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_device_load"], json=data
+            )
+        # The home_load_data is provided as string instead of object...Convert into object for proper handling
+        # It must be converted back to a string when passing this as input to set home load
+        string_data = (resp.get("data") or {}).get("home_load_data") or {}
+        if isinstance(string_data, str):
+            resp["data"].update({"home_load_data": json.loads(string_data)})
+        data = resp.get("data") or {}
+        # update schedule also for all device serials found in schedule
+        schedule = data.get("home_load_data") or {}
     else:
-        resp = await self.apisession.request(
-            "post", API_ENDPOINTS["get_device_load"], json=data
-        )
-    # The home_load_data is provided as string instead of object...Convert into object for proper handling
-    # It must be converted back to a string when passing this as input to set home load
-    string_data = (resp.get("data") or {}).get("home_load_data") or {}
-    if isinstance(string_data, str):
-        resp["data"].update({"home_load_data": json.loads(string_data)})
-    data = resp.get("data") or {}
-    # update schedule also for all device serials found in schedule
-    schedule = data.get("home_load_data") or {}
+        # For testing purpose only, use test schedule to update dependent fields in device cache
+        schedule = testSchedule
+        data = {}
     dev_serials = []
     for slot in schedule.get("ranges") or []:
         for dev in slot.get("device_power_loads") or []:
@@ -121,6 +128,7 @@ async def get_device_parm(
     paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
     deviceSn: str | None = None,
     fromFile: bool = False,
+    testSchedule: dict | None = None,
 ) -> dict:
     r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId responded in the site_list query.
 
@@ -142,32 +150,39 @@ async def get_device_parm(
             {\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":20}]}],
     \"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"}
     """
-    data = {"site_id": siteId, "param_type": paramType}
-    if fromFile:
-        resp = await self.apisession.loadFromFile(
-            Path(self._testdir)
-            / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
-        )
-        # ensure backward filename compatibility without parm type in name
-        if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
+    if not isinstance(testSchedule,dict):
+        testSchedule = None
+    if testSchedule is None:
+        data = {"site_id": siteId, "param_type": paramType}
+        if fromFile:
             resp = await self.apisession.loadFromFile(
                 Path(self._testdir)
-                / f"{API_FILEPREFIXES['get_device_parm']}_{siteId}.json"
+                / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
             )
-    else:
-        resp = await self.apisession.request(
-            "post", API_ENDPOINTS["get_device_parm"], json=data
-        )
-    # The home_load_data is provided as string instead of object...Convert into object for proper handling
-    # It must be converted back to a string when passing this as input to set home load
-    string_data = (resp.get("data", {})).get("param_data", {})
-    if isinstance(string_data, str):
-        resp["data"].update({"param_data": json.loads(string_data)})
+            # ensure backward filename compatibility without parm type in name
+            if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
+                resp = await self.apisession.loadFromFile(
+                    Path(self._testdir)
+                    / f"{API_FILEPREFIXES['get_device_parm']}_{siteId}.json"
+                )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_device_parm"], json=data
+            )
+        # The home_load_data is provided as string instead of object...Convert into object for proper handling
+        # It must be converted back to a string when passing this as input to set home load
+        string_data = (resp.get("data", {})).get("param_data", {})
+        if isinstance(string_data, str):
+            resp["data"].update({"param_data": json.loads(string_data)})
 
-    # update api device dict with latest data if optional device SN was provided, e.g. when called by set_device_parm for device details update
-    data = resp.get("data") or {}
-    # update schedule also for other device serials found in Solarbank 1 schedules
-    schedule = data.get("param_data") or {}
+        # update api device dict with latest data if optional device SN was provided, e.g. when called by set_device_parm for device details update
+        data = resp.get("data") or {}
+        # update schedule also for other device serials found in Solarbank 1 schedules
+        schedule = data.get("param_data") or {}
+    else:
+        # For testing purpose only, use test schedule to update dependent fields in device cache
+        schedule = testSchedule
+        data = {}
     dev_serials = []
     for slot in schedule.get("ranges") or []:
         for dev in slot.get("device_power_loads") or []:
@@ -1031,6 +1046,11 @@ async def set_home_load(  # noqa: C901
     self._logger.debug("Schedule to apply: %s", schedule)
     # return resulting schedule for test purposes without Api call
     if test_count is not None or test_schedule is not None:
+        await self.get_device_parm(
+            siteId=siteId,
+            testSchedule=schedule,
+            deviceSn=deviceSn,
+        )
         return schedule
     # Make the Api call with final schedule and return result, the set call will also update api dict
     # NOTE: set_device_load does not seem to be usable yet for changing the home load, or is only usable in dual bank setups for changing the appliance load share as well?
@@ -1576,6 +1596,12 @@ async def set_sb2_home_load(  # noqa: C901
     self._logger.debug("Schedule to apply: %s", schedule)
     # return resulting schedule for test purposes without Api call
     if test_schedule is not None:
+        await self.get_device_parm(
+            siteId=siteId,
+            paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+            testSchedule=schedule,
+            deviceSn=deviceSn,
+        )
         return schedule
     # Make the Api call with final schedule and return result, the set call will also update api dict
     return await self.set_device_parm(
