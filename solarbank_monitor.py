@@ -257,23 +257,24 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Charge Power':<{col1}}: {dev.get('charging_power',''):>4} {unit:<{col2-5}} {'Device Preset':<{col3}}: {preset:>4} {unit}"
                         )
-                        demand = site.get("home_load_power") or ""
-                        load = (site.get("solarbank_info") or {}).get(
-                            "to_home_load"
-                        ) or ""
-                        diff = ""
-                        with contextlib.suppress(ValueError):
-                            if float(demand) > float(load):
-                                diff = "(-)"
-                            elif float(demand) < float(load):
-                                diff = "(+)"
-                        CONSOLE.info(
-                            f"{'Home Demand':<{col1}}: {demand or '---':>4} {unit:<{col2-5}} {'SB Home Load':<{col3}}: {load or '---':>4} {unit}  {diff}"
-                        )
-                        # Total smart plug power and other power?
-                        CONSOLE.info(
-                            f"{'Smart Plugs':<{col1}}: {(site.get('smart_plug_info') or {}).get("total_power") or '---':>4} {unit:<{col2-5}} {'Other (Plan)':<{col3}}: {site.get('other_loads_power') or '---':>4} {unit}"
-                        )
+                        if dev.get("generation", 0) > 1:
+                            demand = site.get("home_load_power") or ""
+                            load = (site.get("solarbank_info") or {}).get(
+                                "to_home_load"
+                            ) or ""
+                            diff = ""
+                            with contextlib.suppress(ValueError):
+                                if float(demand) > float(load):
+                                    diff = "(-)"
+                                elif float(demand) < float(load):
+                                    diff = "(+)"
+                            CONSOLE.info(
+                                f"{'Home Demand':<{col1}}: {demand or '---':>4} {unit:<{col2-5}} {'SB Home Load':<{col3}}: {load or '---':>4} {unit}  {diff}"
+                            )
+                            # Total smart plug power and other power?
+                            CONSOLE.info(
+                                f"{'Smart Plugs':<{col1}}: {(site.get('smart_plug_info') or {}).get("total_power") or '---':>4} {unit:<{col2-5}} {'Other (Plan)':<{col3}}: {site.get('other_loads_power') or '---':>4} {unit}"
+                            )
                         # update schedule with device details refresh and print it
                         CONSOLE.info(
                             f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
@@ -291,10 +292,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     getattr(SolarbankRatePlan, attr.name)
                                     for attr in SolarbankUsageMode
                                 }:
-                                    CONSOLE.info(
-                                        f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}   <== {plan}{' (Smart plugs)' if plan == SolarbankRatePlan.smartplugs else ''}"
-                                    )
-                                    for idx in data.get(plan) or [{}]:
+                                    if (schedule:= data.get(plan) or []):
+                                        CONSOLE.info(
+                                            f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}   <== {plan}{' (Smart plugs)' if plan == SolarbankRatePlan.smartplugs else ''}"
+                                        )
+                                    for idx in (schedule or {}):
                                         index = idx.get("index", "--")
                                         weekdays = [
                                             week[day] for day in idx.get("week") or []

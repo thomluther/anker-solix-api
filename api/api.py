@@ -153,7 +153,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # keys with string values that should only updated if value returned
                             "wifi_name",
                             "energy_today",
-                            "energy_last_period"
+                            "energy_last_period",
                         ]
                         and value
                     ):
@@ -168,9 +168,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # calculate the wifi_signal percentage if that is not provided for the device while rssi is available
                         with contextlib.suppress(ValueError):
                             if float(value) and str(devData.get("wifi_signal")) == "":
-                                # the percentage will be calculated in the range between -65 dBm (very good) and -95 dBm (no connection) as following.
-                                dbmmax = -65
-                                dbmmin = -95
+                                # the percentage will be calculated in the range between -50 dBm (very good) and -85 dBm (no connection) as following.
+                                dbmmax = -50
+                                dbmmin = -85
                                 device.update(
                                     {
                                         "wifi_signal": str(
@@ -361,18 +361,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         cnt = device.get("solarbank_count", 0)
                         if generation >= 2:
                             # Solarbank 2 schedule
+                            mode_type = (
+                                value.get("mode_type") or SolixDefaults.USAGE_MODE
+                            )
+                            # define default presets, will be updated if active slot found
                             device.update(
                                 {
-                                    "preset_system_output_power": value.get(
-                                        "default_home_load"
-                                    )
+                                    "preset_usage_mode": mode_type,
+                                    "preset_system_output_power": 0
+                                    if mode_type == SolarbankUsageMode.smartplugs.value
+                                    else value.get("default_home_load")
                                     or SolixDefaults.PRESET_NOSCHEDULE,
-                                    "preset_usage_mode": value.get("mode_type")
-                                    or SolixDefaults.USAGE_MODE,
                                 }
                             )
                         else:
                             # Solarbank 1 schedule
+                            # define default presets, will be updated if active slot found
                             device.update(
                                 {
                                     "preset_system_output_power": SolixDefaults.PRESET_NOSCHEDULE,
@@ -401,26 +405,24 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             weekday = int(datetime.now().strftime("%w"))
                             # get rate_plan_name depending on use usage mode_type
                             rate_plan_name = getattr(
-                                    SolarbankRatePlan,
-                                    next(
-                                        iter(
-                                            [
-                                                item.name
-                                                for item in SolarbankUsageMode
-                                                if item.value == value.get("mode_type")
-                                            ]
-                                        ),
-                                        SolarbankUsageMode.manual.name,
+                                SolarbankRatePlan,
+                                next(
+                                    iter(
+                                        [
+                                            item.name
+                                            for item in SolarbankUsageMode
+                                            if item.value == mode_type
+                                        ]
                                     ),
-                                    SolarbankRatePlan.manual,
-                                )
+                                    SolarbankUsageMode.manual.name,
+                                ),
+                                SolarbankRatePlan.manual,
+                            )
                             day_ranges = next(
                                 iter(
                                     [
                                         day.get("ranges") or []
-                                        for day in (
-                                            value.get(rate_plan_name) or [{}]
-                                        )
+                                        for day in (value.get(rate_plan_name) or [{}])
                                         if weekday in (day.get("week") or [])
                                     ]
                                 ),
@@ -453,8 +455,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # Active Preset must only be considered if usage mode is manual
                             sys_power = (
                                 str(device.get("preset_system_output_power") or "")
-                                if (value.get("mode_type") or 0)
-                                == SolarbankUsageMode.manual.value
+                                if (mode_type or 0) == SolarbankUsageMode.manual.value
                                 else None
                             )
                             dev_power = sys_power
