@@ -79,7 +79,7 @@ async def main() -> bool:
                 services if services else "Discover automatically",
             )
             resp = input(
-                f"INPUT: Do you want to randomize unique IDs and SNs in exported files? (default: {'YES' if randomize else 'NO'}) (Y/N): "
+                f"INPUT: Do you want to randomize unique IDs and SNs in exported files? [Y]es{' (default)' if randomize else ''} / [N]o{' (default)' if not randomize else ''}: "
             )
             if resp != "" or not isinstance(randomize, bool):
                 randomize = resp.upper() in ["Y", "YES", "TRUE", 1]
@@ -96,10 +96,10 @@ async def main() -> bool:
 
             zipped: bool = True
             resp = input(
-                "INPUT: Do you want to zip the output folder? (default: YES) (Y/N): "
+                "INPUT: Do you want to zip the output folder? [Y]es (default) / [N]o: "
             )
             if resp != "":
-                zipped = resp.upper() in ["Y", "YES", "TRUE", 1]
+                zipped = resp.upper() not in ["N", "NO", "FALSE", 0]
             CONSOLE.info("Zip output folder: %s", zipped)
 
             myexport = export.AnkerSolixApiExport(
@@ -115,7 +115,7 @@ async def main() -> bool:
             if result and randomize:
                 CONSOLE.info("")
                 CONSOLE.info(
-                    "Following trace or site IDs, SNs and MAC addresses have been randomized in files (from -> to):\n%s",
+                    "Following trace or site IDs, Tokens, SNs, MAC or eMail addresses have been randomized in files (from -> to):\n%s",
                     json.dumps(myexport.get_random_mapping(), indent=2),
                 )
             return result
