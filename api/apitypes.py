@@ -402,14 +402,14 @@ class SolixParmType(Enum):
 
 
 class SolarbankPowerMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank Power setting modes."""
+    """Enumeration for Anker Solix Solarbank 1 Power setting modes."""
 
     normal = 1
     advanced = 2
 
 
 class SolarbankUsageMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank Power Usage modes."""
+    """Enumeration for Anker Solix Solarbank 2 Power Usage modes."""
 
     smartmeter = 1
     smartplugs = 2
@@ -417,7 +417,7 @@ class SolarbankUsageMode(IntEnum):
 
 @dataclass(frozen=True)
 class SolarbankRatePlan:
-    """Dataclass for Anker Solix Solarbank rate plan types."""
+    """Dataclass for Anker Solix Solarbank 2 rate plan types."""
 
     # rate plan per usage mode
     smartmeter: str = "custom_rate_plan" # used for default output setting on connection loss
@@ -449,6 +449,7 @@ class ApiCategories:
     solarbank_solar_info: str = "solarbank_solar_info"
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
+    powerpanel_energy: str = "powerpanel_energy"
 
 
 @dataclass(frozen=True)
@@ -457,7 +458,7 @@ class SolixDeviceCapacity:
 
     A17C0: int = 1600  # SOLIX E1600 Solarbank
     A17C1: int = 1600  # SOLIX E1600 Solarbank 2 Pro
-    A17C2: int = 1600  # SOLIX E1600 Solarbank 2
+    A17C2: int = 1600  # SOLIX E1600 Solarbank 2 AC
     A17C3: int = 1600  # SOLIX E1600 Solarbank 2 Plus
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
@@ -498,7 +499,7 @@ class SolixDeviceCategory:
     )  # SOLIX E1600 Solarbank 2 Pro, generation 2
     A17C2: str = (
         SolixDeviceType.SOLARBANK.value + "_2"
-    )  # SOLIX E1600 Solarbank 2, generation 2
+    )  # SOLIX E1600 Solarbank 2 AC, generation 2
     A17C3: str = (
         SolixDeviceType.SOLARBANK.value + "_2"
     )  # SOLIX E1600 Solarbank 2 Plus, generation 2
@@ -577,8 +578,11 @@ class SolarbankDeviceMetrics:
     }  # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting and AC socket
     A17C2: ClassVar[set[str]] = {
         "sub_package_num",
+        "solar_power_1",
+        "solar_power_2",
+        "ac_power",
         "to_home_load",
-    }  # SOLIX E1600 Solarbank 2, without MPPT
+    }  # SOLIX E1600 Solarbank 2 AC, witho 2 MPPT channel and AC socket
     A17C3: ClassVar[set[str]] = {
         "sub_package_num",
         "solar_power_1",
@@ -640,6 +644,7 @@ class SolarbankStatus(Enum):
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
     standby = "7"
     unknown = "unknown"
+    # TODO: Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
 class SmartmeterStatus(Enum):

@@ -36,6 +36,7 @@ from .poller import (
     poll_site_details,
     poll_sites,
 )
+from .powerpanel import AnkerSolixPowerpanelApi
 from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -80,6 +81,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         # link previous api methods to apisession for refactoring backward compatibility
         self.request_count = self.apisession.request_count
         self.async_authenticate = self.apisession.async_authenticate
+        self.powerpanelApi: AnkerSolixPowerpanelApi | None = None
 
     def _update_dev(  # noqa: C901
         self,
@@ -125,6 +127,19 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update({"name": str(value)})
                     elif key in ["alias_name"] and value:
                         device.update({"alias": str(value)})
+                        # preset default device name if only alias provided
+                        if (pn := device.get("device_pn") or None) and (
+                            not device.get("name") or not devData.get("device_name")
+                        ):
+                            device.update(
+                                {
+                                    "name": (
+                                        (self.account.get("products") or {}).get(pn)
+                                        or {}
+                                    ).get("name")
+                                    or ""
+                                }
+                            )
                     elif key in ["device_sw_version"] and value:
                         device.update({"sw_version": str(value)})
                     elif key in [
@@ -690,7 +705,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['homepage']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['homepage']}.json"
             )
         else:
             resp = await self.apisession.request("post", API_ENDPOINTS["homepage"])
@@ -707,7 +722,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['user_devices']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['user_devices']}.json"
             )
         else:
             resp = await self.apisession.request("post", API_ENDPOINTS["user_devices"])
@@ -721,7 +736,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['charging_devices']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['charging_devices']}.json"
             )
         else:
             resp = await self.apisession.request(
@@ -738,7 +753,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['solar_info']}_{solarbankSn}.json"
             )
         else:
@@ -764,7 +779,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"solarbank_sn": solarbankSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['compatible_process']}_{solarbankSn}.json"
             )
         else:
@@ -789,7 +804,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_cutoff']}_{deviceSn}.json"
             )
         else:
@@ -847,7 +862,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"site_id": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
             )
         else:
@@ -928,7 +943,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_device_fittings']}_{deviceSn}.json"
             )
         else:
@@ -964,7 +979,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"solar_bank_sn": solarbankSn, "solar_sn": inverterSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_ota_info']}_{solarbankSn or inverterSn}.json"
             )
         else:
@@ -984,7 +999,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"device_sn": deviceSn, "insert_sn": insertSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_ota_update']}_{deviceSn}.json"
             )
         else:
@@ -1012,7 +1027,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = {"type": recordType}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['check_upgrade_record']}_{recordType}.json"
             )
         else:
@@ -1052,7 +1067,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if fromFile:
             resp = await self.apisession.loadFromFile(
                 Path(
-                    self._testdir
+                    self.testDir()
                     / f"{API_FILEPREFIXES['get_upgrade_record']}_{recordType}_{deviceSn if deviceSn else siteId if siteId else recordType}.json"
                 )
             )

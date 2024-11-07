@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 
 from cryptography.hazmat.primitives import hashes
+from numpy import isin
 
 
 class RequestCounter:
@@ -53,3 +54,25 @@ def getTimezoneGMTString() -> str:
     tzo = datetime.now().astimezone().strftime("%z")
     return f"GMT{tzo[:3]}:{tzo[3:5]}"
 
+
+def convertToKwh(val: str | float, unit: str) -> str | float | None:
+    """Convert a given value to kWh depending on unit."""
+    try:
+        result = None
+        if isinstance(val, str):
+            result = float(val)
+        elif isinstance(val, int | float):
+            result = val
+        if result is None or not isinstance(unit, str):
+            return None
+        if (unit := unit.lower()) == "wh":
+            result = round(result / 1000, 2)
+        elif unit == "mwh":
+            result = round(result * 1000, 2)
+        elif unit == "gwh":
+            result = round(result * 1000 * 1000, 2)
+        else:
+            return val
+        return str(result) if isinstance(val, str) else result
+    except ValueError:
+        return None

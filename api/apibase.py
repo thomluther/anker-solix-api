@@ -49,7 +49,6 @@ class AnkerSolixBaseApi:
                 websession=websession,
                 logger=logger,
             )
-        self._testdir: str = self.apisession.testDir()
         self._logger: logging.Logger = self.apisession.logger()
 
         # track active devices bound to any site
@@ -60,10 +59,8 @@ class AnkerSolixBaseApi:
         self.devices: dict = {}
 
     def testDir(self, subfolder: str | None = None) -> str:
-        """Get or set the subfolder for local API test files."""
-        if subfolder is not None:
-            self._testdir = self.apisession.testDir(subfolder)
-        return self._testdir
+        """Get or set the subfolder for local API test files in the api session."""
+        return self.apisession.testDir(subfolder)
 
     def logLevel(self, level: int | None = None) -> int:
         """Get or set the logger log level."""
@@ -85,7 +82,8 @@ class AnkerSolixBaseApi:
         # lookup old account details if any or update account info if nickname is different (e.g. after authentication)
         if (
             not (
-                account_details := self.account.get(SolixDeviceType.ACCOUNT.value) or {}
+                #account_details := self.account.get(SolixDeviceType.ACCOUNT.value) or {}
+                account_details := self.account or {}
             )
             or account_details.get("nickname") != self.apisession.nickname
         ):
@@ -107,7 +105,8 @@ class AnkerSolixBaseApi:
                 "requests_last_hour": self.apisession.request_count.last_hour(),
             }
         )
-        self.account[SolixDeviceType.ACCOUNT.value] = account_details
+        #self.account[SolixDeviceType.ACCOUNT.value] = account_details
+        self.account = account_details
 
     def _update_site(  # noqa: C901
         self,
@@ -337,7 +336,7 @@ class AnkerSolixBaseApi:
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['site_rules']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['site_rules']}.json"
             )
         else:
             resp = await self.apisession.request("post", API_ENDPOINTS["site_rules"])
@@ -351,7 +350,7 @@ class AnkerSolixBaseApi:
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['site_list']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['site_list']}.json"
             )
         else:
             resp = await self.apisession.request("post", API_ENDPOINTS["site_list"])
@@ -376,7 +375,7 @@ class AnkerSolixBaseApi:
         data = {"site_id": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['scene_info']}_{siteId}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['scene_info']}_{siteId}.json"
             )
         else:
             resp = await self.apisession.request(
@@ -394,13 +393,18 @@ class AnkerSolixBaseApi:
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['bind_devices']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['bind_devices']}.json"
             )
         else:
             resp = await self.apisession.request("post", API_ENDPOINTS["bind_devices"])
         data = resp.get("data") or {}
         active_devices = set()
         for device in data.get("data") or []:
+            # ensure to get product list once if needed if no device name in response
+            if not device.get("device_name") and "products" not in self.account:
+                self._update_account(
+                    {"products": await self.get_products(fromFile=fromFile)}
+                )
             if sn := self._update_dev(device):
                 active_devices.add(sn)
         # recycle api device list and remove devices no longer used in sites or bind devices
@@ -422,7 +426,7 @@ class AnkerSolixBaseApi:
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['get_auto_upgrade']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['get_auto_upgrade']}.json"
             )
         else:
             resp = await self.apisession.request(
@@ -501,7 +505,7 @@ class AnkerSolixBaseApi:
         data = {"site_id": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['wifi_list']}_{siteId}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['wifi_list']}_{siteId}.json"
             )
         else:
             resp = await self.apisession.request(
@@ -531,7 +535,7 @@ class AnkerSolixBaseApi:
             ]
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['get_ota_batch']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['get_ota_batch']}.json"
             )
         else:
             data = {
@@ -566,7 +570,7 @@ class AnkerSolixBaseApi:
         """
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir) / f"{API_FILEPREFIXES['get_message_unread']}.json"
+                Path(self.testDir()) / f"{API_FILEPREFIXES['get_message_unread']}.json"
             )
         else:
             resp = await self.apisession.request(
@@ -580,3 +584,87 @@ class AnkerSolixBaseApi:
         # New method: Save unread msg flag in account dictionary
         self._update_account(data)
         return data
+
+    async def get_product_platforms_list(self, fromFile: bool = False) -> list:
+        r"""Get the product list. The response fields will show all supported Anker devices including model type, device name and image url.
+
+        Example data:
+        [{"name": "Balcony Solar Power System","img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/29f0b6a3-6ba5-40cb-b1b8-94cf39784433/20230731-103020.jpeg",
+          "index": 2,"products": [
+          {"name": "MI60 Microinverter","img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/2e60fc1a-f1c2-4574-8e00-a50689c87f72/picl_A5140_normal.png",
+            "index": 1,"product_code": "A5140","net_img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e75905fc-4cce-4533-bece-8bd7f9464e6f/A5140_guide.png",
+            "net_guideline": "<div style=\"margin-bottom:12px;\"><font face=\"DingNextLTProRegular\" style=\"font-size: 16px\";>The Schuko cable should not be connected to your home grid yet!</font></div><br>\n\n<div style=\"margin-bottom:12px;\"><font face=\"DingNextLTProRegular\" style=\"font-size: 16px\";>Step 1: Please make sure the DC power supply (cable solar panel to inverter) is connected.</font></div><br>\n\n<div style=\"margin-bottom:12px;\"><font face=\"DingNextLTProRegular\" style=\"font-size: 16px\";>Step 2: Wait 90 seconds when the indicator light of the inverter</font><font face=\"DingNextLTProRegular\" color=\"#00A9E0\" style=\"font-size: 16px\"> blink red</font>.</div><br>\n\n<div style=\"margin-bottom:12px;\"><font face=\"DingNextLTProRegular\" style=\"font-size: 16px\";>Step 3: Connect your phone to the Wi-Fi of the Microinverter</font><font face=\"DingNextLTProRegular\" color=\"#00A9E0\" style=\"font-size: 16px\"> MI-XXXXXXXX</font><font face=\"DingNextLTProRegular\" style=\"font-size: 16px\";> and return to the Anker App.</font></div><br>\n\n<div style=\"margin-bottom:12px;\"><font face=\"DingNextLTProRegular\" style=\"font-size: 16px\";>Password:</font><font face=\"DingNextLTProRegular\" color=\"#00A9E0\" style=\"font-size: 16px\">12345678</font></div>",
+            "p_codes": []},
+          {"name": "Solarbank 2 E1600 Pro","img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/5iJoq1dk63i47HuR/picl_A17C1_normal%281%29.png",
+            "index": 1,"product_code": "A17C1","net_img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2024/05/24/iot-admin/xCw8DYNcDGk35wxs/A17C1_guide.gif",
+            "net_guideline": "Press the IoT button for 2 seconds until the IoT button starts flashing.","p_codes": [
+              {"p_code": "A17C13Z1","img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/05/24/iot-admin/SC9Wa8mzqhkLFMjt/picl_A17C1_normal.png"},
+              {"p_code": "A17C1IZ1","img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/05/24/iot-admin/SC9Wa8mzqhkLFMjt/picl_A17C1_normal.png"}]},
+          {"name": "Solarbank E1600","img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/e9478c2d-e665-4d84-95d7-dd4844f82055/20230719-144818.png",
+            "index": 2,"product_code": "A17C0","net_img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/a901a1c3-a2ba-46ec-8eb6-f644eb29489b/A17C0_guide_generic.gif",
+            "net_guideline": "Press the button and the IoT button is blinking green light.","p_codes": [
+              {"p_code": "6Y6","img_url": "https://public-aiot-fra-prod.s3.eu-central-1.amazonaws.com/anker-power/public/banner/2023/08/21/iot-admin/2ZacNVApQvHbpyFe/picl_A17C0_normal.png"},
+              {"p_code": "V6Y","img_url": "https://public-aiot-fra-prod.s3.eu-central-1.amazonaws.com/anker-power/public/banner/2023/08/21/iot-admin/2ZacNVApQvHbpyFe/picl_A17C0_normal.png"},
+              {"p_code": "T90","img_url": "https://public-aiot-fra-prod.s3.eu-central-1.amazonaws.com/anker-power/public/banner/2023/08/21/iot-admin/2ZacNVApQvHbpyFe/picl_A17C0_normal.png"}]}]
+        """
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_product_categories']}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "get", API_ENDPOINTS["get_product_categories"]
+            )
+        return resp.get("data") or []
+
+    async def get_third_platforms_list(self, fromFile: bool = False) -> list:
+        r"""Get the 3rd party platform list. The response fields will show all supported 3rd party platforms with their products, including model type, device name and image url.
+
+        Example data:
+        {"data":[{"index": 0,"name": "Shelly",
+          "content": "Shelly\u662f\u4e00\u5bb6\u4e13\u6ce8\u4e8e\u667a\u80fd\u5bb6\u5c45\u8bbe\u5907\u7684\u516c\u53f8\uff0c\u63d0\u4f9b\u9ad8\u6027\u80fd\u3001\u6613\u7528\u7684\u667a\u80fd\u5f00\u5173\u3001\u63d2\u5ea7\u3001\u4f20\u611f\u5668\u548c\u63a7\u5236\u5668\uff0c\u517c\u5bb9\u5176\u4ed6\u667a\u80fd\u5bb6\u5c45\u7cfb\u7edf\uff0c\u63d0\u5347\u7528\u6237\u4f53\u9a8c\u3002",
+          "logo": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/08/29/iot-admin/isCjeqQviU5L4O7D/20240829-102526.jpg",
+          "tag": "shelly","url": "https://my.shelly.cloud/integrator.html","callback_url": "https://ankerpower-api-eu.anker.com/cloud/powerservice/shelly_callback","tag_code": "ITG_AIN2",
+          "products": [
+            {"name": "3EM","img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/08/29/iot-admin/5lyJ9NmYG5pD7NIA/3em.png",
+            "index": 0,"product_code": "SHEM3","net_img_url": "","net_guideline": "","p_codes": null},
+            {"name": "Pro 3EM","img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/banner/2024/09/02/iot-admin/I8dV8ONUfEm4iXSc/3em%20pro.png",
+            "index": 0,"product_code": "SHEMP3","net_img_url": "","net_guideline": "","p_codes": null}],
+          "countries": "DE,AT,FR,IT"}]}
+        """
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir()) / f"{API_FILEPREFIXES['get_third_platforms']}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_third_platforms"]
+            )
+        return (resp.get("data") or {}).get("data") or []
+
+    async def get_products(self, fromFile: bool = False) -> dict:
+        """Compose the supported Anker and third platform products into a condensed dictionary."""
+
+        products = {}
+        self._logger.debug("Getting Anker platform list")
+        for platform in await self.get_product_platforms_list(fromFile=fromFile):
+            plat_name = platform.get("name") or ""
+            for prod in platform.get("products") or []:
+                products[prod.get("product_code") or ""] = {
+                    "name": prod.get("name"),
+                    "platform": plat_name,
+                    #"img_url": prod.get("img_url"),
+                }
+        self._logger.debug("Getting 3rd party platform list")
+        for platform in await self.get_third_platforms_list(fromFile=fromFile):
+            plat_name = platform.get("name") or ""
+            countries = platform.get("countries") or ""
+            for prod in platform.get("products") or []:
+                products[prod.get("product_code") or ""] = {
+                    "name": " ".join([plat_name,prod.get("name")]),
+                    "platform": plat_name,
+                    "countries": countries,
+                    #"img_url": prod.get("img_url"),
+                }
+        return products

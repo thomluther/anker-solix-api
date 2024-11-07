@@ -166,6 +166,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     # run also energy refresh if requested
                     if energy_stats:
                         CONSOLE.info("Running energy details refresh...")
+                        await myapi.update_site_details(fromFile=use_file)
                         await myapi.update_device_energy(fromFile=use_file)
                     next_dev_refr = next_refr + timedelta(
                         seconds=max((not use_file) * 120, REFRESH * 9)
@@ -292,11 +293,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     getattr(SolarbankRatePlan, attr.name)
                                     for attr in SolarbankUsageMode
                                 }:
-                                    if (schedule:= data.get(plan) or []):
+                                    if schedule := data.get(plan) or []:
                                         CONSOLE.info(
                                             f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}   <== {plan}{' (Smart plugs)' if plan == SolarbankRatePlan.smartplugs else ''}"
                                         )
-                                    for idx in (schedule or {}):
+                                    for idx in schedule or {}:
                                         index = idx.get("index", "--")
                                         weekdays = [
                                             week[day] for day in idx.get("week") or []
@@ -355,7 +356,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Plug Power':<{col1}}: {dev.get('current_power',''):>4} {unit:<{col2-5}} {'Tag':<{col3}}: {dev.get('tag','')}"
                         )
-                        if dev.get('energy_today'):
+                        if dev.get("energy_today"):
                             CONSOLE.info(
                                 f"{'Energy today':<{col1}}: {dev.get('energy_today','-.--'):>4} {'kWh':<{col2-5}} {'Last Period':<{col3}}: {dev.get('energy_last_period','-.--'):>4} kWh"
                             )
@@ -373,67 +374,92 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     CONSOLE.info("-" * 80)
                 # print optional energy details
                 if energy_stats:
-                    unit = "kWh"
                     for site_id, site in myapi.sites.items():
+                        CONSOLE.info(
+                            f"Energy details for System {(site.get('site_info') or {}).get('site_name','Unknown')} (Site ID: {site_id}):"
+                        )
+                        if len(totals := site.get("statistics") or []) >= 3:
+                            CONSOLE.info(
+                                f"{'Total Produced':<{col1}}: {totals[0].get('total','---.--'):>7} {str(totals[0].get('unit','')).upper():<{col2-9}}  {'Carbon saved':<{col3}}: {totals[1].get('total','---.--'):>7} {str(totals[1].get('unit','')).upper()}"
+                            )
+                            price = (site.get("site_details") or {}).get("price") or "--.--"
+                            unit = (site.get("site_details") or {}).get("site_price_unit") or ""
+                            CONSOLE.info(
+                                f"{'Max savings':<{col1}}: {totals[2].get('total','---.--'):>7} {totals[2].get('unit',''):<{col2-9}}  {'Price kWh':<{col3}}: {price:>7} {unit}"
+                            )
                         if energy := site.get("energy_details") or {}:
                             today: dict = energy.get("today")
                             yesterday: dict = energy.get("last_period")
-                            CONSOLE.info(
-                                f"Energy details for System {(site.get('site_info') or {}).get('site_name','Unknown')} (Site ID: {site_id}):"
-                            )
+                            unit = "kWh"
                             CONSOLE.info(
                                 f"{'Today':<{col1}}: {today.get('date','----------'):<{col2}} {'Yesterday':<{col3}}: {yesterday.get('date','----------')!s}"
                             )
                             CONSOLE.info(
-                                f"{'Solar Energy':<{col1}}: {today.get('solar_production','-.--'):>5} {unit:<{col2-6}} {'Solar Energy':<{col3}}: {yesterday.get('solar_production','-.--'):>5} {unit}"
+                                f"{'Solar Energy':<{col1}}: {today.get('solar_production','-.--'):>6} {unit:<{col2-7}} {'Solar Energy':<{col3}}: {yesterday.get('solar_production','-.--'):>6} {unit}"
                             )
                             if value := today.get("solar_production_pv1"):
                                 CONSOLE.info(
-                                    f"{'Solar Ch 1/2':<{col1}}: {today.get('solar_production_pv1','-.--'):>5} / {today.get('solar_production_pv2','-.--'):>4} {unit:<{col2-13}} {'Solar Ch 1/2':<{col3}}: {yesterday.get('solar_production_pv1','-.--'):>5} / {yesterday.get('solar_production_pv2','-.--'):>4} {unit}"
+                                    f"{'Solar Ch 1/2':<{col1}}: {today.get('solar_production_pv1','-.--'):>6} / {today.get('solar_production_pv2','-.--'):>5} {unit:<{col2-15}} {'Solar Ch 1/2':<{col3}}: {yesterday.get('solar_production_pv1','-.--'):>6} / {yesterday.get('solar_production_pv2','-.--'):>5} {unit}"
                                 )
                             if value := today.get("solar_production_pv3"):
                                 CONSOLE.info(
-                                    f"{'Solar Ch 3/4':<{col1}}: {today.get('solar_production_pv3','-.--'):>5} / {today.get('solar_production_pv4','-.--'):>4} {unit:<{col2-13}} {'Solar Ch 3/4':<{col3}}: {yesterday.get('solar_production_pv3','-.--'):>5} / {yesterday.get('solar_production_pv4','-.--'):>4} {unit}"
+                                    f"{'Solar Ch 3/4':<{col1}}: {today.get('solar_production_pv3','-.--'):>6} / {today.get('solar_production_pv4','-.--'):>5} {unit:<{col2-15}} {'Solar Ch 3/4':<{col3}}: {yesterday.get('solar_production_pv3','-.--'):>6} / {yesterday.get('solar_production_pv4','-.--'):>5} {unit}"
                                 )
                             CONSOLE.info(
-                                f"{'SB Charged':<{col1}}: {today.get('solarbank_charge','-.--'):>5} {unit:<{col2-6}} {'SB Charged':<{col3}}: {yesterday.get('solarbank_charge','-.--'):>5} {unit}"
+                                f"{'Charged':<{col1}}: {today.get('battery_charge','-.--'):>6} {unit:<{col2-7}} {'Charged':<{col3}}: {yesterday.get('battery_charge','-.--'):>6} {unit}"
                             )
-                            CONSOLE.info(
-                                f"{'SB Discharged':<{col1}}: {today.get('solarbank_discharge','-.--'):>5} {unit:<{col2-6}} {'SB Discharged':<{col3}}: {yesterday.get('solarbank_discharge','-.--'):>5} {unit}"
-                            )
-                            if value := today.get("battery_to_home"):
+                            if value := today.get("solar_to_battery"):
                                 CONSOLE.info(
-                                    f"{'House Feed':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'House Feed':<{col3}}: {yesterday.get('battery_to_home','-.--'):>5} {unit}"
+                                    f"{'Charged Solar':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Charged Solar':<{col3}}: {yesterday.get('solar_to_battery','-.--'):>6} {unit}"
                                 )
+                            if value := today.get("grid_to_battery"):
+                                CONSOLE.info(
+                                    f"{'Charged Grid':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Charged Grid':<{col3}}: {yesterday.get('grid_to_battery','-.--'):>6} {unit}"
+                                )
+                            CONSOLE.info(
+                                f"{'Discharged':<{col1}}: {today.get('battery_discharge','-.--'):>6} {unit:<{col2-7}} {'Discharged':<{col3}}: {yesterday.get('battery_discharge','-.--'):>6} {unit}"
+                            )
                             if value := today.get("home_usage"):
                                 CONSOLE.info(
-                                    f"{'House Usage':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'House Usage':<{col3}}: {yesterday.get('home_usage','-.--'):>5} {unit}"
+                                    f"{'House Usage':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'House Usage':<{col3}}: {yesterday.get('home_usage','-.--'):>6} {unit}"
+                                )
+                            if value := today.get("solar_to_home"):
+                                CONSOLE.info(
+                                    f"{'Solar Usage':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Solar Usage':<{col3}}: {yesterday.get('solar_to_home','-.--'):>6} {unit}"
+                                )
+                            if value := today.get("battery_to_home"):
+                                CONSOLE.info(
+                                    f"{'Battery Usage':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Battery Usage':<{col3}}: {yesterday.get('battery_to_home','-.--'):>6} {unit}"
                                 )
                             if value := today.get("grid_to_home"):
                                 CONSOLE.info(
-                                    f"{'Grid Import':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'Grid Import':<{col3}}: {yesterday.get('grid_to_home','-.--'):>5} {unit}"
+                                    f"{'Grid Usage':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Grid Usage':<{col3}}: {yesterday.get('grid_to_home','-.--'):>6} {unit}"
+                                )
+                            if value := today.get("grid_import"):
+                                CONSOLE.info(
+                                    f"{'Grid Import':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Grid Import':<{col3}}: {yesterday.get('grid_import','-.--'):>6} {unit}"
                                 )
                             if value := today.get("solar_to_grid"):
                                 CONSOLE.info(
-                                    f"{'Grid Export':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'Grid Export':<{col3}}: {yesterday.get('solar_to_grid','-.--'):>5} {unit}"
+                                    f"{'Grid Export':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Grid Export':<{col3}}: {yesterday.get('solar_to_grid','-.--'):>6} {unit}"
                                 )
                             if value := today.get("ac_socket"):
                                 CONSOLE.info(
-                                    f"{'AC Socket':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'AC Socket':<{col3}}: {yesterday.get('ac_socket','-.--'):>5} {unit}"
+                                    f"{'AC Socket':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'AC Socket':<{col3}}: {yesterday.get('ac_socket','-.--'):>6} {unit}"
                                 )
                             if value := today.get("smartplugs_total"):
                                 CONSOLE.info(
-                                    f"{'Smartplugs':<{col1}}: {value or '-.--':>5} {unit:<{col2-6}} {'Smartplugs':<{col3}}: {yesterday.get('smartplugs_total','-.--'):>5} {unit}"
+                                    f"{'Smartplugs':<{col1}}: {value or '-.--':>6} {unit:<{col2-7}} {'Smartplugs':<{col3}}: {yesterday.get('smartplugs_total','-.--'):>6} {unit}"
                                 )
                             for idx, plug_t in enumerate(
                                 today.get("smartplug_list") or []
                             ):
                                 plug_y = (yesterday.get("smartplug_list") or [])[idx]
                                 CONSOLE.info(
-                                    f"{'-'+plug_t.get('alias','Plug '+str(idx+1)):<{col1}}: {plug_t.get('energy') or '-.--':>5} {unit:<{col2-6}} {'-'+plug_y.get('alias','Plug '+str(idx+1)):<{col3}}: {plug_y.get('energy','-.--'):>5} {unit}"
+                                    f"{'-'+plug_t.get('alias','Plug '+str(idx+1)):<{col1}}: {plug_t.get('energy') or '-.--':>6} {unit:<{col2-7}} {'-'+plug_y.get('alias','Plug '+str(idx+1)):<{col3}}: {plug_y.get('energy','-.--'):>6} {unit}"
                                 )
                             CONSOLE.info(
-                                f"{'Sol/Bat/Gri %':<{col1}}: {float(today.get('solar_percentage',''))*100:>3.0f}/{float(today.get('battery_percentage',''))*100:>3.0f}/{float(today.get('other_percentage',''))*100:>3.0f} {'%':<{col2-12}} {'Sol/Bat/Gri %':<{col3}}: {float(yesterday.get('solar_percentage',''))*100:>3.0f}/{float(yesterday.get('battery_percentage',''))*100:>3.0f}/{float(yesterday.get('other_percentage',''))*100:>3.0f} %"
+                                f"{'Sol/Bat/Gri %':<{col1}}: {float(today.get('solar_percentage') or '0')*100:>3.0f}/{float(today.get('battery_percentage') or '0')*100:>3.0f}/{float(today.get('other_percentage') or '0')*100:>3.0f} {'%':<{col2-12}} {'Sol/Bat/Gri %':<{col3}}: {float(yesterday.get('solar_percentage') or '0')*100:>3.0f}/{float(yesterday.get('battery_percentage') or '0')*100:>3.0f}/{float(yesterday.get('other_percentage') or '0')*100:>3.0f} %"
                             )
                             CONSOLE.info("-" * 80)
 

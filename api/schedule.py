@@ -42,7 +42,7 @@ async def get_device_load(
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
             )
         else:
@@ -156,13 +156,13 @@ async def get_device_parm(
         data = {"site_id": siteId, "param_type": paramType}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
             )
             # ensure backward filename compatibility without parm type in name
             if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
                 resp = await self.apisession.loadFromFile(
-                    Path(self._testdir)
+                    Path(self.testDir())
                     / f"{API_FILEPREFIXES['get_device_parm']}_{siteId}.json"
                 )
         else:

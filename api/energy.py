@@ -21,8 +21,8 @@ async def energy_daily(  # noqa: C901
     Solar production data is always queried. Additional energy data will be queried for devtypes 'solarbank' or 'smartmeter'. The number of
     queries is optimized if dayTotals is True
     Example:
-    {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21", "solarbank_discharge": "0.47", "solarbank_charge": "0.56"},
-        "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "solarbank_discharge": "1.06", "solarbank_charge": "1.39"}}
+    {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21", "battery_discharge": "0.47", "battery_charge": "0.56"},
+     "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "battery_discharge": "1.06", "battery_charge": "1.39"}}
     """  # noqa: D413
     table = {}
     if not devTypes or not isinstance(devTypes, set):
@@ -41,7 +41,7 @@ async def energy_daily(  # noqa: C901
         if fromFile:
             resp = (
                 await self.apisession.loadFromFile(
-                    Path(self._testdir)
+                    Path(self.testDir())
                     / f"{API_FILEPREFIXES['energy_solarbank']}_{siteId}.json"
                 )
             ).get("data", {})
@@ -67,7 +67,7 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "solarbank_discharge": item.get("value") or None,
+                        "battery_discharge": item.get("value") or None,
                     }
                 )
                 table.update({daystr: entry})
@@ -130,7 +130,7 @@ async def energy_daily(  # noqa: C901
         if fromFile:
             resp = (
                 await self.apisession.loadFromFile(
-                    Path(self._testdir)
+                    Path(self.testDir())
                     / f"{API_FILEPREFIXES['energy_home_usage']}_{siteId}.json"
                 )
             ).get("data", {})
@@ -258,7 +258,7 @@ async def energy_daily(  # noqa: C901
         if fromFile:
             resp = (
                 await self.apisession.loadFromFile(
-                    Path(self._testdir)
+                    Path(self.testDir())
                     / f"{API_FILEPREFIXES['energy_grid']}_{siteId}.json"
                 )
             ).get("data", {})
@@ -309,7 +309,7 @@ async def energy_daily(  # noqa: C901
                 if fromFile:
                     resp = (
                         await self.apisession.loadFromFile(
-                            Path(self._testdir)
+                            Path(self.testDir())
                             / f"{API_FILEPREFIXES['energy_solar_production_pv']}{ch}_{siteId}.json"
                         )
                     ).get("data") or {}
@@ -344,7 +344,7 @@ async def energy_daily(  # noqa: C901
     if fromFile:
         resp = (
             await self.apisession.loadFromFile(
-                Path(self._testdir)
+                Path(self.testDir())
                 / f"{API_FILEPREFIXES['energy_solar_production']}_{siteId}.json"
             )
         ).get("data", {})
@@ -382,7 +382,7 @@ async def energy_daily(  # noqa: C901
             entry.update(
                 {
                     "date": daystr,
-                    "solarbank_charge": resp.get("charge_total") or None,
+                    "battery_charge": resp.get("charge_total") or None,
                     "solar_to_grid": resp.get("solar_to_grid_total") or None,
                     "battery_percentage": resp.get("charging_pre") or None,
                     "solar_percentage": resp.get("electricity_pre") or None,
@@ -414,7 +414,7 @@ async def energy_daily(  # noqa: C901
                 entry.update(
                     {
                         "date": daystr,
-                        "solarbank_charge": resp.get("charge_total") or None,
+                        "battery_charge": resp.get("charge_total") or None,
                         "solar_to_grid": resp.get("solar_to_grid_total") or None,
                         "battery_percentage": resp.get("charging_pre") or None,
                         "solar_percentage": resp.get("electricity_pre") or None,
@@ -441,7 +441,8 @@ async def energy_analysis(
     rangeType: "day" | "week" | "year"
     startTime: optional start Date and time
     endTime: optional end Date and time
-    devType: "solar_production" | "solar_production_pv[1-4]" | "solarbank" | "home_usage" | "grid"Example Data for solar_production:
+    devType: "solar_production" | "solar_production_pv[1-4]" | "solarbank" | "home_usage" | "grid"
+    Example Data for solar_production:
     {'power': [{'time': '2023-10-01', 'value': '3.67'}, {'time': '2023-10-02', 'value': '3.29'}, {'time': '2023-10-03', 'value': '0.55'}],
     'charge_trend': None, 'charge_level': [], 'power_unit': 'wh', 'charge_total': '3.67', 'charge_unit': 'kwh', 'discharge_total': '3.11', 'discharge_unit': 'kwh',
     'charging_pre': '0.49', 'electricity_pre': '0.51', 'others_pre': '0',
