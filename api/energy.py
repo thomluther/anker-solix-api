@@ -38,6 +38,11 @@ async def energy_daily(  # noqa: C901
 
     # first get solarbank export
     if SolixDeviceType.SOLARBANK.value in devTypes:
+        # get first data period from file or api
+        justify_daytotals = bool(
+            dayTotals
+            and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
+        )
         if fromFile:
             resp = (
                 await self.apisession.loadFromFile(
@@ -51,7 +56,9 @@ async def energy_daily(  # noqa: C901
                 deviceSn=deviceSn,
                 rangeType="week",
                 startDay=startDay,
-                endDay=startDay + timedelta(days=numDays - 1),
+                endDay=startDay
+                if justify_daytotals
+                else startDay + timedelta(days=numDays - 1),
                 devType="solarbank",
             )
         fileNumDays = 0
@@ -63,7 +70,7 @@ async def energy_daily(  # noqa: C901
                     if fileStartDay is None:
                         fileStartDay = daystr
                     fileNumDays += 1
-                entry = table.get(daystr, {})
+                entry = table.get(daystr, {"date": daystr})
                 entry.update(
                     {
                         "date": daystr,
@@ -72,17 +79,36 @@ async def energy_daily(  # noqa: C901
                 )
                 table.update({daystr: entry})
         # Solarbank 2 has AC socket output and battery to home related totals for given interval. If requested, make daily queries for given interval
-        if (
-            dayTotals
-            and table
-            and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
-        ):
-            if max(numDays, fileNumDays) == 1:
-                if fromFile:
-                    daystr = fileStartDay
-                else:
-                    daystr = startDay.strftime("%Y-%m-%d")
-                entry = table.get(daystr, {})
+        if justify_daytotals and table:
+            if fromFile:
+                daylist = [
+                    datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
+                    for x in range(fileNumDays)
+                ]
+            else:
+                daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+            for day in daylist:
+                daystr = day.strftime("%Y-%m-%d")
+                entry = table.get(daystr, {"date": daystr})
+                # update response only for real requests if not first day which was already queried
+                if not fromFile and day != startDay:
+                    resp = await self.energy_analysis(
+                        siteId=siteId,
+                        deviceSn=deviceSn,
+                        rangeType="week",
+                        startDay=day,
+                        endDay=day,
+                        devType="solarbank",
+                    )
+                    # get first item from breakdown list for single day queries
+                    item = next(iter(resp.get("power") or []), {})
+                    if daystr == item.get("time"):
+                        entry.update(
+                            {
+                                "date": daystr,
+                                "battery_discharge": item.get("value") or None,
+                            }
+                        )
                 entry.update(
                     {
                         "date": daystr,
@@ -91,42 +117,16 @@ async def energy_daily(  # noqa: C901
                     }
                 )
                 table.update({daystr: entry})
-            else:
-                if fromFile:
-                    daylist = [
-                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                        for x in range(fileNumDays)
-                    ]
-                else:
-                    daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                for day in daylist:
-                    daystr = day.strftime("%Y-%m-%d")
-                    # update response only for real requests
-                    if not fromFile:
-                        resp = await self.energy_analysis(
-                            siteId=siteId,
-                            deviceSn=deviceSn,
-                            rangeType="week",
-                            startDay=day,
-                            endDay=day,
-                            devType="solarbank",
-                        )
-                    entry = table.get(daystr, {})
-                    entry.update(
-                        {
-                            "date": daystr,
-                            "ac_socket": resp.get("ac_out_put_total") or None,
-                            "battery_to_home": resp.get("battery_to_home_total")
-                            or None,
-                        }
-                    )
-                    table.update({daystr: entry})
 
     # Get home usage energy types if device is solarbank generation 2 or smart meter or smart plugs
     if (
         SolixDeviceType.SOLARBANK.value in devTypes
         and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
-    ) or ({SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG.value} & devTypes):
+    ) or (
+        {SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG.value} & devTypes
+    ):
+        # get first data period from file or api
+        justify_daytotals = bool(dayTotals)
         if fromFile:
             resp = (
                 await self.apisession.loadFromFile(
@@ -140,7 +140,9 @@ async def energy_daily(  # noqa: C901
                 deviceSn=deviceSn,
                 rangeType="week",
                 startDay=startDay,
-                endDay=startDay + timedelta(days=numDays - 1),
+                endDay=startDay
+                if justify_daytotals
+                else startDay + timedelta(days=numDays - 1),
                 devType="home_usage",
             )
         fileNumDays = 0
@@ -152,7 +154,7 @@ async def energy_daily(  # noqa: C901
                     if fileStartDay is None:
                         fileStartDay = daystr
                     fileNumDays += 1
-                entry = table.get(daystr, {})
+                entry = table.get(daystr, {"date": daystr})
                 entry.update(
                     {
                         "date": daystr,
@@ -161,13 +163,36 @@ async def energy_daily(  # noqa: C901
                 )
                 table.update({daystr: entry})
         # Home usage has Grid import and smart plug related totals for given interval. If requested, make daily queries for given interval
-        if dayTotals and table:
-            if max(numDays, fileNumDays) == 1:
-                if fromFile:
-                    daystr = fileStartDay
-                else:
-                    daystr = startDay.strftime("%Y-%m-%d")
-                entry = table.get(daystr, {})
+        if justify_daytotals and table:
+            if fromFile:
+                daylist = [
+                    datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
+                    for x in range(fileNumDays)
+                ]
+            else:
+                daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+            for day in daylist:
+                daystr = day.strftime("%Y-%m-%d")
+                entry = table.get(daystr, {"date": daystr})
+                # update response only for real requests if not first day which was already queried
+                if not fromFile and day != startDay:
+                    resp = await self.energy_analysis(
+                        siteId=siteId,
+                        deviceSn=deviceSn,
+                        rangeType="week",
+                        startDay=day,
+                        endDay=day,
+                        devType="home_usage",
+                    )
+                    # get first item from breakdown list for single day queries
+                    item = next(iter(resp.get("power") or []), {})
+                    if daystr == item.get("time"):
+                        entry.update(
+                            {
+                                "date": daystr,
+                                "home_usage": item.get("value") or None,
+                            }
+                        )
                 entry.update(
                     {
                         "date": daystr,
@@ -198,57 +223,6 @@ async def energy_daily(  # noqa: C901
                         }
                     )
                 table.update({daystr: entry})
-            else:
-                if fromFile:
-                    daylist = [
-                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                        for x in range(fileNumDays)
-                    ]
-                else:
-                    daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                for day in daylist:
-                    daystr = day.strftime("%Y-%m-%d")
-                    # update response only for real requests
-                    if not fromFile:
-                        resp = await self.energy_analysis(
-                            siteId=siteId,
-                            deviceSn=deviceSn,
-                            rangeType="week",
-                            startDay=day,
-                            endDay=day,
-                            devType="home_usage",
-                        )
-                    entry = table.get(daystr, {})
-                    entry.update(
-                        {
-                            "date": daystr,
-                            "grid_to_home": resp.get("grid_to_home_total") or None,
-                            "smartplugs_total": (resp.get("smart_plug_info") or {}).get(
-                                "total_power"
-                            )
-                            or None,
-                        }
-                    )
-                    # Add Smart Plug details if available
-                    if (
-                        plug_list := (resp.get("smart_plug_info") or {}).get(
-                            "smartplug_list"
-                        )
-                        or []
-                    ):
-                        entry.update(
-                            {
-                                "smartplug_list": [
-                                    {
-                                        "device_sn": plug.get("device_sn"),
-                                        "alias": plug.get("device_name"),
-                                        "energy": plug.get("total_power"),
-                                    }
-                                    for plug in plug_list
-                                ]
-                            }
-                        )
-                    table.update({daystr: entry})
 
     # Add grid stats from smart reader only if solarbank not requested, otherwise grid data available in solarbank and solar responses
     if (
@@ -280,19 +254,19 @@ async def energy_daily(  # noqa: C901
                     if fileStartDay is None:
                         fileStartDay = daystr
                     fileNumDays += 1
-                entry = table.get(daystr, {})
+                entry = table.get(daystr, {"date": daystr})
                 entry.update(
                     {
                         "date": daystr,
-                        "solar_to_grid": item.get("value", "").replace("-", "")
-                        or None,  # grid export is negative, convert to re-use as solar_to_grid value
+                        # grid export is negative, convert to re-use as solar_to_grid value
+                        "solar_to_grid": item.get("value", "").replace("-", "") or None,
                     }
                 )
                 table.update({daystr: entry})
         for item in resp.get("charge_trend", []):
             daystr = item.get("time", None)
             if daystr:
-                entry = table.get(daystr, {})
+                entry = table.get(daystr, {"date": daystr})
                 entry.update(
                     {
                         "date": daystr,
@@ -331,7 +305,7 @@ async def energy_daily(  # noqa: C901
                             if fileStartDay is None:
                                 fileStartDay = daystr
                             fileNumDays += 1
-                        entry = table.get(daystr, {})
+                        entry = table.get(daystr, {"date": daystr})
                         entry.update(
                             {
                                 "date": daystr,
@@ -341,6 +315,8 @@ async def energy_daily(  # noqa: C901
                         table.update({daystr: entry})
 
     # Always Add solar production which contains percentages
+    # get first data period from file or api
+    justify_daytotals = bool(dayTotals)
     if fromFile:
         resp = (
             await self.apisession.loadFromFile(
@@ -354,7 +330,9 @@ async def energy_daily(  # noqa: C901
             deviceSn=deviceSn,
             rangeType="week",
             startDay=startDay,
-            endDay=startDay + timedelta(days=numDays - 1),
+            endDay=startDay
+            if justify_daytotals
+            else startDay + timedelta(days=numDays - 1),
             devType="solar_production",
         )
     fileNumDays = 0
@@ -366,19 +344,42 @@ async def energy_daily(  # noqa: C901
                 if fileStartDay is None:
                     fileStartDay = daystr
                 fileNumDays += 1
-            entry = table.get(daystr, {})
+            entry = table.get(daystr, {"date": daystr})
             entry.update(
                 {"date": daystr, "solar_production": item.get("value") or None}
             )
             table.update({daystr: entry})
     # Solarbank charge and percentages are only received as total value for given interval. If requested, make daily queries for given interval
-    if dayTotals and table:
-        if max(numDays, fileNumDays) == 1:
-            if fromFile:
-                daystr = fileStartDay
-            else:
-                daystr = startDay.strftime("%Y-%m-%d")
-            entry = table.get(daystr, {})
+    if justify_daytotals and table:
+        if fromFile:
+            daylist = [
+                datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
+                for x in range(fileNumDays)
+            ]
+        else:
+            daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+        for day in daylist:
+            daystr = day.strftime("%Y-%m-%d")
+            entry = table.get(daystr, {"date": daystr})
+            # update response only for real requests if not first day which was already queried
+            if not fromFile and day != startDay:
+                resp = await self.energy_analysis(
+                    siteId=siteId,
+                    deviceSn=deviceSn,
+                    rangeType="week",
+                    startDay=day,
+                    endDay=day,
+                    devType="solar_production",
+                )
+                # get first item from breakdown list for single day queries
+                item = next(iter(resp.get("power") or []), {})
+                if daystr == item.get("time"):
+                    entry.update(
+                        {
+                            "date": daystr,
+                            "solar_production": item.get("value") or None,
+                        }
+                    )
             entry.update(
                 {
                     "date": daystr,
@@ -390,38 +391,6 @@ async def energy_daily(  # noqa: C901
                 }
             )
             table.update({daystr: entry})
-        else:
-            if fromFile:
-                daylist = [
-                    datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                    for x in range(fileNumDays)
-                ]
-            else:
-                daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-            for day in daylist:
-                daystr = day.strftime("%Y-%m-%d")
-                # update response only for real requests
-                if not fromFile:
-                    resp = await self.energy_analysis(
-                        siteId=siteId,
-                        deviceSn=deviceSn,
-                        rangeType="week",
-                        startDay=day,
-                        endDay=day,
-                        devType="solar_production",
-                    )
-                entry = table.get(daystr, {})
-                entry.update(
-                    {
-                        "date": daystr,
-                        "battery_charge": resp.get("charge_total") or None,
-                        "solar_to_grid": resp.get("solar_to_grid_total") or None,
-                        "battery_percentage": resp.get("charging_pre") or None,
-                        "solar_percentage": resp.get("electricity_pre") or None,
-                        "other_percentage": resp.get("others_pre") or None,
-                    }
-                )
-                table.update({daystr: entry})
     return table
 
 

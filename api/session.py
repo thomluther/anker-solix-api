@@ -339,7 +339,7 @@ class AnkerSolixClientSession:
             #     ),  # Unix Timestamp in ms as string
             # })
 
-        self._logger.info("Request Url: %s %s", method.upper(), url)
+        self._logger.debug("Request Url: %s %s", method.upper(), url)
         self._logger.debug(
             "Request Headers: %s",
             self.mask_values(mergedHeaders, "x-auth-token", "gtoken"),
@@ -356,7 +356,7 @@ class AnkerSolixClientSession:
                 ),
             )
         else:
-            self._logger.info("Request Body: %s", json)
+            self._logger.debug("Request Body: %s", json)
         body_text = ""
         # enforce configured delay between any subsequent request
         await self._wait_delay()
@@ -365,7 +365,7 @@ class AnkerSolixClientSession:
         ) as resp:
             try:
                 self._last_request_time = datetime.now()
-                self.request_count.add(self._last_request_time)
+                self.request_count.add(request_time=self._last_request_time,request_info=" ".join([method.upper(),url,str(json)]))
                 self._logger.debug(
                     "%s request %s %s response received", self.nickname, method, url
                 )

@@ -56,7 +56,15 @@ async def main() -> bool:
 
             for site_id, site in myapi.sites.items():
                 site_name = (site.get("site_info") or {}).get("site_name") or ""
+                powerpanel = bool(
+                    myapi.powerpanelApi and site_id in myapi.powerpanelApi.sites
+                )
                 CONSOLE.info("Found site %s ID %s", site_name, site_id)
+                CONSOLE.info(
+                    "Site Type %s: %s",
+                    (site.get("site_info") or {}).get("power_site_type") or "??",
+                    "Power Panel" if powerpanel else "Balcony Power",
+                )
                 try:
                     daystr = input(
                         "\nEnter start day for daily energy data (yyyy-mm-dd) or enter to skip site: "
@@ -69,7 +77,7 @@ async def main() -> bool:
                     startday = datetime.fromisoformat(daystr)
                     numdays = int(input("How many days to query (1-366): "))
                     daytotals = input(
-                        "Do you want to include daily total data (e.g. solarbank charge, grid import/export) which may require several API queries per day? (Y/N): "
+                        "Do you want to include daily total data (e.g. battery charge, grid import/export) which may require several API queries per day? (Y/N): "
                     )
                     daytotals = daytotals.upper() in ["Y", "YES", "TRUE", 1]
                     prefix = input(
@@ -87,23 +95,36 @@ async def main() -> bool:
                     myapi.apisession.requestDelay(0.3)
                 CONSOLE.info(
                     "Queries may take up to %s seconds with %.1f seconds delay...please wait...",
-                    round((2 * numdays * daytotals + 5) * myapi.apisession.requestDelay()),
+                    round(
+                        ((4 * (numdays-1) * daytotals + 4) if powerpanel else (2 * numdays * daytotals + 5)) * myapi.apisession.requestDelay()
+                    ),
                     myapi.apisession.requestDelay(),
                 )
-                data = await myapi.energy_daily(
-                    siteId=site_id,
-                    deviceSn="",  # mandatory parameter but can be empty since not distinguished for site energy stats
-                    startDay=startday,
-                    numDays=numdays,
-                    dayTotals=daytotals,
-                    # include all possible energy stats per site
-                    devTypes={
-                        api.SolixDeviceType.INVERTER.value,
-                        api.SolixDeviceType.SOLARBANK.value,
-                        api.SolixDeviceType.SMARTMETER.value,
-                        api.SolixDeviceType.SMARTPLUG.value,
-                    },
-                )
+                if powerpanel:
+                    data = await myapi.powerpanelApi.energy_daily(
+                        siteId=site_id,
+                        startDay=startday,
+                        numDays=numdays,
+                        dayTotals=daytotals,
+                        devTypes={
+                            api.SolixDeviceType.POWERPANEL.value,
+                        },
+                    )
+                else:
+                    data = await myapi.energy_daily(
+                        siteId=site_id,
+                        deviceSn="",  # mandatory parameter but can be empty since not distinguished for site energy stats
+                        startDay=startday,
+                        numDays=numdays,
+                        dayTotals=daytotals,
+                        # include all possible energy stats per site
+                        devTypes={
+                            api.SolixDeviceType.INVERTER.value,
+                            api.SolixDeviceType.SOLARBANK.value,
+                            api.SolixDeviceType.SMARTMETER.value,
+                            api.SolixDeviceType.SMARTPLUG.value,
+                        },
+                    )
                 CONSOLE.debug(json.dumps(data, indent=2))
                 # Write csv file
                 if len(data) > 0:
@@ -123,6 +144,8 @@ async def main() -> bool:
                         "No data received for site %s ID %s", site_name, site_id
                     )
                     return False
+                #CONSOLE.info(myapi.apisession.request_count.get_details())
+                CONSOLE.info(f"Api Requests: {myapi.request_count}")
             return True
 
     except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001

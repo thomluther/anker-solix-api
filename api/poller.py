@@ -555,8 +555,11 @@ async def poll_device_energy(
                 api._logger.debug("Getting Energy details for site")
                 # obtain previous energy details to check if yesterday must be queried as well
                 energy = site.get("energy_details") or {}
-                today = datetime.today().strftime("%Y-%m-%d")
-                yesterday = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+                # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
+                # Cloud server energy stat updates may be delayed by 3 minutes for power panels
+                time: datetime = datetime.now() - timedelta(minutes=5)
+                today = time.strftime("%Y-%m-%d")
+                yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today or both days
                 data: dict = {}
                 if yesterday != (energy.get("last_period") or {}).get("date"):
@@ -565,23 +568,24 @@ async def poll_device_energy(
                             siteId=site_id,
                             deviceSn=query_sn,
                             startDay=datetime.fromisoformat(yesterday),
+                            numDays=2,
+                            dayTotals=True,
+                            devTypes=query_types,
+                            fromFile=fromFile,
+                        )
+                    )
+                else:
+                    data.update(
+                        await api.energy_daily(
+                            siteId=site_id,
+                            deviceSn=query_sn,
+                            startDay=datetime.fromisoformat(today),
                             numDays=1,
                             dayTotals=True,
                             devTypes=query_types,
                             fromFile=fromFile,
                         )
                     )
-                data.update(
-                    await api.energy_daily(
-                        siteId=site_id,
-                        deviceSn=query_sn,
-                        startDay=datetime.fromisoformat(today),
-                        numDays=1,
-                        dayTotals=True,
-                        devTypes=query_types,
-                        fromFile=fromFile,
-                    )
-                )
                 if fromFile:
                     # get last date entries from file and replace date with yesterday and today for testing
                     days = len(data)

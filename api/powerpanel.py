@@ -234,8 +234,11 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             self._logger.debug("Getting Power Panel energy details for site")
             # obtain previous energy details to check if yesterday must be queried as well
             energy = site.get("energy_details") or {}
-            today = datetime.today().strftime("%Y-%m-%d")
-            yesterday = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+            # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
+            # Cloud server energy stat updates may be delayed by 3 minutes for power panels
+            time: datetime = datetime.now() - timedelta(minutes=5)
+            today = time.strftime("%Y-%m-%d")
+            yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
             # Fetch energy from today or both days
             data: dict = {}
             if yesterday != (energy.get("last_period") or {}).get("date"):
@@ -243,22 +246,23 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     await self.energy_daily(
                         siteId=site_id,
                         startDay=datetime.fromisoformat(yesterday),
+                        numDays=2,
+                        dayTotals=True,
+                        devTypes=query_types,
+                        fromFile=fromFile,
+                    )
+                )
+            else:
+                data.update(
+                    await self.energy_daily(
+                        siteId=site_id,
+                        startDay=datetime.fromisoformat(today),
                         numDays=1,
                         dayTotals=True,
                         devTypes=query_types,
                         fromFile=fromFile,
                     )
                 )
-            data.update(
-                await self.energy_daily(
-                    siteId=site_id,
-                    startDay=datetime.fromisoformat(today),
-                    numDays=1,
-                    dayTotals=True,
-                    devTypes=query_types,
-                    fromFile=fromFile,
-                )
-            )
             if fromFile:
                 # get last date entries from file and replace date with yesterday and today for testing
                 days = len(data)
@@ -386,16 +390,16 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             {"title": "Load power consumption","value": "6.33","unit": "KWh","type": "home","percent": "17%","imported": false},
             {"title": "Sold power","value": "4.90","unit": "KWh","type": "grid","percent": "14%","imported": false}]}
 
-        Responses for solar_production:
-        Daily: Solar Energy, Extra Totals: charge, discharge, overall stats (Energy, CO2, Money), 3 x percentage share, solar_to_grid
-        Responses for solar_production_pv*:
-        Daily: Solar Energy
-        Responses for solarbank:
-        Daily: Discharge Energy, Extra Totals: charge, discharge, ac_socket, battery_to_home
+        Responses for solar:
+        Daily: Solar Energy, Extra Totals: PV charged, PV usage, PV to grid, 3 x percentage share solar usage
+        Responses for pps:
+        Daily: Discharge Energy, Extra Totals: charge
+        Responses for hes:
+        Daily: Discharge Energy, Extra Totals: charge
         Responses for home_usage:
-        Daily: Home Usage Energy, Extra Totals: discharge, grid_to_home, battery_to_home, smart_plugs
+        Daily: Home Usage Energy, Extra Totals: grid_to_home, battery_to_home, pv_to_home, 3 x percentage share home usage source
         Responses for grid:
-        Daily: solar_to_grid, grid_to_home, Extra Totals:
+        Daily: Grid import, Extra Totals: solar_to_grid, grid_to_home, grid_to_battery, 2 x percentage share how import used
         """
         data = {
             "siteId": siteId,
@@ -448,6 +452,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
 
         # first get HES export
         if SolixDeviceType.POWERPANEL.value in devTypes:
+            # get first data period from file or api
             if fromFile:
                 resp = (
                     await self.apisession.loadFromFile(
@@ -460,7 +465,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     siteId=siteId,
                     rangeType="week",
                     startDay=startDay,
-                    endDay=startDay + timedelta(days=numDays - 1),
+                    # query only 1 day if daytotals requested
+                    endDay=startDay
+                    if dayTotals
+                    else startDay + timedelta(days=numDays - 1),
                     sourceType="hes",
                 )
             fileNumDays = 0
@@ -486,12 +494,35 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     table.update({daystr: entry})
             # Power Panel HES has total charge energy for given interval. If requested, make daily queries for given interval
             if dayTotals and table:
-                if max(numDays, fileNumDays) == 1:
-                    if fromFile:
-                        daystr = fileStartDay
-                    else:
-                        daystr = startDay.strftime("%Y-%m-%d")
+                if fromFile:
+                    daylist = [
+                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
+                        for x in range(fileNumDays)
+                    ]
+                else:
+                    daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+                for day in daylist:
+                    daystr = day.strftime("%Y-%m-%d")
                     entry = table.get(daystr, {"date": daystr})
+                    # update response only for real requests if not first day which was already queried
+                    if not fromFile and day != startDay:
+                        resp = await self.energy_statistics(
+                            siteId=siteId,
+                            rangeType="week",
+                            startDay=day,
+                            endDay=day,
+                            sourceType="hes",
+                        )
+                        # get first item from breakdown list for single day queries
+                        item = next(iter(resp.get("energy") or []), {})
+                        unit = resp.get("energyUnit") or ""
+                        entry.update(
+                            {
+                                "battery_discharge": convertToKwh(
+                                    val=item.get("value") or None, unit=unit
+                                ),
+                            }
+                        )
                     entry.update(
                         {
                             "battery_charge": convertToKwh(
@@ -501,39 +532,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         }
                     )
                     table.update({daystr: entry})
-                else:
-                    if fromFile:
-                        daylist = [
-                            datetime.strptime(fileStartDay, "%Y-%m-%d")
-                            + timedelta(days=x)
-                            for x in range(fileNumDays)
-                        ]
-                    else:
-                        daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                    for day in daylist:
-                        daystr = day.strftime("%Y-%m-%d")
-                        # update response only for real requests
-                        if not fromFile:
-                            resp = await self.energy_statistics(
-                                siteId=siteId,
-                                rangeType="week",
-                                startDay=day,
-                                endDay=day,
-                                sourceType="hes",
-                            )
-                        entry = table.get(daystr, {"date": daystr})
-                        entry.update(
-                            {
-                                "battery_charge": convertToKwh(
-                                    val=resp.get("totalImportedEnergy") or None,
-                                    unit=resp.get("totalImportedEnergyUnit"),
-                                ),
-                            }
-                        )
-                        table.update({daystr: entry})
 
         # Get home usage energy types
         if SolixDeviceType.POWERPANEL.value in devTypes:
+            # get first data period from file or api
             if fromFile:
                 resp = (
                     await self.apisession.loadFromFile(
@@ -546,7 +548,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     siteId=siteId,
                     rangeType="week",
                     startDay=startDay,
-                    endDay=startDay + timedelta(days=numDays - 1),
+                    # query only 1 day if daytotals requested
+                    endDay=startDay
+                    if dayTotals
+                    else startDay + timedelta(days=numDays - 1),
                     sourceType="home",
                 )
             fileNumDays = 0
@@ -572,12 +577,35 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     table.update({daystr: entry})
             # Home has consumption breakdown and shares for given interval. If requested, make daily queries for given interval
             if dayTotals and table:
-                if max(numDays, fileNumDays) == 1:
-                    if fromFile:
-                        daystr = fileStartDay
-                    else:
-                        daystr = startDay.strftime("%Y-%m-%d")
+                if fromFile:
+                    daylist = [
+                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
+                        for x in range(fileNumDays)
+                    ]
+                else:
+                    daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+                for day in daylist:
+                    daystr = day.strftime("%Y-%m-%d")
                     entry = table.get(daystr, {"date": daystr})
+                    # update response only for real requests if not first day which was already queried
+                    if not fromFile and day != startDay:
+                        resp = await self.energy_statistics(
+                            siteId=siteId,
+                            rangeType="week",
+                            startDay=day,
+                            endDay=day,
+                            sourceType="home",
+                        )
+                        # get first item from breakdown list for single day queries
+                        item = next(iter(resp.get("energy") or []), {})
+                        unit = resp.get("energyUnit") or ""
+                        entry.update(
+                            {
+                                "home_usage": convertToKwh(
+                                    val=item.get("value") or None, unit=unit
+                                ),
+                            }
+                        )
                     for item in resp.get("aggregates") or []:
                         itemtype = str(item.get("type") or "").lower()
                         if itemtype == "hes":
@@ -629,81 +657,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 }
                             )
                     table.update({daystr: entry})
-                else:
-                    if fromFile:
-                        daylist = [
-                            datetime.strptime(fileStartDay, "%Y-%m-%d")
-                            + timedelta(days=x)
-                            for x in range(fileNumDays)
-                        ]
-                    else:
-                        daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                    for day in daylist:
-                        daystr = day.strftime("%Y-%m-%d")
-                        # update response only for real requests
-                        if not fromFile:
-                            resp = await self.energy_statistics(
-                                siteId=siteId,
-                                rangeType="week",
-                                startDay=day,
-                                endDay=day,
-                                sourceType="home",
-                            )
-                        entry = table.get(daystr, {"date": daystr})
-                        for item in resp.get("aggregates") or []:
-                            itemtype = str(item.get("type") or "").lower()
-                            if itemtype == "hes":
-                                if (
-                                    percent := str(item.get("percent") or "").replace(
-                                        "%", ""
-                                    )
-                                ) and percent.isdigit():
-                                    percent = str(float(percent) / 100)
-                                entry.update(
-                                    {
-                                        "battery_to_home": convertToKwh(
-                                            val=item.get("value") or None,
-                                            unit=item.get("unit"),
-                                        ),
-                                        "battery_percentage": percent,
-                                    }
-                                )
-                            elif itemtype == "solar":
-                                if (
-                                    percent := str(item.get("percent") or "").replace(
-                                        "%", ""
-                                    )
-                                ) and percent.isdigit():
-                                    percent = str(float(percent) / 100)
-                                entry.update(
-                                    {
-                                        "solar_to_home": convertToKwh(
-                                            val=item.get("value") or None,
-                                            unit=item.get("unit"),
-                                        ),
-                                        "solar_percentage": percent,
-                                    }
-                                )
-                            elif itemtype == "grid":
-                                if (
-                                    percent := str(item.get("percent") or "").replace(
-                                        "%", ""
-                                    )
-                                ) and percent.isdigit():
-                                    percent = str(float(percent) / 100)
-                                entry.update(
-                                    {
-                                        "grid_to_home": convertToKwh(
-                                            val=item.get("value") or None,
-                                            unit=item.get("unit"),
-                                        ),
-                                        "other_percentage": percent,
-                                    }
-                                )
-                        table.update({daystr: entry})
 
         # Add grid import, totals contain export and battery charging from grid for given interval
         if SolixDeviceType.POWERPANEL.value in devTypes:
+            # get first data period from file or api
             if fromFile:
                 resp = (
                     await self.apisession.loadFromFile(
@@ -716,7 +673,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     siteId=siteId,
                     rangeType="week",
                     startDay=startDay,
-                    endDay=startDay + timedelta(days=numDays - 1),
+                    # query only 1 day if daytotals requested
+                    endDay=startDay
+                    if dayTotals
+                    else startDay + timedelta(days=numDays - 1),
                     sourceType="grid",
                 )
             fileNumDays = 0
@@ -742,12 +702,35 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     table.update({daystr: entry})
             # Grid import and battery charge from grid totals for given interval. If requested, make daily queries for given interval
             if dayTotals and table:
-                if max(numDays, fileNumDays) == 1:
-                    if fromFile:
-                        daystr = fileStartDay
-                    else:
-                        daystr = startDay.strftime("%Y-%m-%d")
+                if fromFile:
+                    daylist = [
+                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
+                        for x in range(fileNumDays)
+                    ]
+                else:
+                    daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+                for day in daylist:
+                    daystr = day.strftime("%Y-%m-%d")
                     entry = table.get(daystr, {"date": daystr})
+                    # update response only for real requests if not first day which was already queried
+                    if not fromFile and day != startDay:
+                        resp = await self.energy_statistics(
+                            siteId=siteId,
+                            rangeType="week",
+                            startDay=day,
+                            endDay=day,
+                            sourceType="grid",
+                        )
+                        # get first item from breakdown list for single day queries
+                        item = next(iter(resp.get("energy") or []), {})
+                        unit = resp.get("energyUnit") or ""
+                        entry.update(
+                            {
+                                "grid_import": convertToKwh(
+                                    val=item.get("value") or None, unit=unit
+                                ),
+                            }
+                        )
                     entry.update(
                         {
                             "solar_to_grid": convertToKwh(
@@ -768,49 +751,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 }
                             )
                     table.update({daystr: entry})
-                else:
-                    if fromFile:
-                        daylist = [
-                            datetime.strptime(fileStartDay, "%Y-%m-%d")
-                            + timedelta(days=x)
-                            for x in range(fileNumDays)
-                        ]
-                    else:
-                        daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                    for day in daylist:
-                        daystr = day.strftime("%Y-%m-%d")
-                        # update response only for real requests
-                        if not fromFile:
-                            resp = await self.energy_statistics(
-                                siteId=siteId,
-                                rangeType="week",
-                                startDay=day,
-                                endDay=day,
-                                sourceType="home",
-                            )
-                        entry = table.get(daystr, {"date": daystr})
-                        entry.update(
-                            {
-                                "solar_to_grid": convertToKwh(
-                                    val=resp.get("totalExportedEnergy") or None,
-                                    unit=resp.get("totalExportedEnergyUnit"),
-                                ),
-                            }
-                        )
-                        for item in resp.get("aggregates") or []:
-                            itemtype = str(item.get("type") or "").lower()
-                            if itemtype == "hes":
-                                entry.update(
-                                    {
-                                        "grid_to_battery": convertToKwh(
-                                            val=item.get("value") or None,
-                                            unit=item.get("unit"),
-                                        ),
-                                    }
-                                )
-                        table.update({daystr: entry})
 
         # Always Add solar production which contains percentages
+        # get first data period from file or api
         if fromFile:
             resp = (
                 await self.apisession.loadFromFile(
@@ -823,7 +766,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 siteId=siteId,
                 rangeType="week",
                 startDay=startDay,
-                endDay=startDay + timedelta(days=numDays - 1),
+                # query only 1 day if daytotals requested
+                endDay=startDay
+                if dayTotals
+                else startDay + timedelta(days=numDays - 1),
                 sourceType="solar",
             )
         fileNumDays = 0
@@ -847,12 +793,35 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 table.update({daystr: entry})
         # Solar charge and is only received as total value for given interval. If requested, make daily queries for given interval
         if dayTotals and table:
-            if max(numDays, fileNumDays) == 1:
-                if fromFile:
-                    daystr = fileStartDay
-                else:
-                    daystr = startDay.strftime("%Y-%m-%d")
+            if fromFile:
+                daylist = [
+                    datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
+                    for x in range(fileNumDays)
+                ]
+            else:
+                daylist = [startDay + timedelta(days=x) for x in range(numDays)]
+            for day in daylist:
+                daystr = day.strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
+                # update response only for real requests if not first day which was already queried
+                if not fromFile and day != startDay:
+                    resp = await self.energy_statistics(
+                        siteId=siteId,
+                        rangeType="week",
+                        startDay=day,
+                        endDay=day,
+                        sourceType="solar",
+                    )
+                    # get first item from breakdown list for single day queries
+                    item = next(iter(resp.get("energy") or []), {})
+                    unit = resp.get("energyUnit") or ""
+                    entry.update(
+                        {
+                            "solar_production": convertToKwh(
+                                val=item.get("value") or None, unit=unit
+                            ),
+                        }
+                    )
                 for item in resp.get("aggregates") or []:
                     itemtype = str(item.get("type") or "").lower()
                     if itemtype == "hes":
@@ -865,36 +834,4 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             }
                         )
                 table.update({daystr: entry})
-            else:
-                if fromFile:
-                    daylist = [
-                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                        for x in range(fileNumDays)
-                    ]
-                else:
-                    daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                for day in daylist:
-                    daystr = day.strftime("%Y-%m-%d")
-                    # update response only for real requests
-                    if not fromFile:
-                        resp = await self.energy_statistics(
-                            siteId=siteId,
-                            rangeType="week",
-                            startDay=day,
-                            endDay=day,
-                            sourceType="solar",
-                        )
-                    entry = table.get(daystr, {"date": daystr})
-                    for item in resp.get("aggregates") or []:
-                        itemtype = str(item.get("type") or "").lower()
-                        if itemtype == "hes":
-                            entry.update(
-                                {
-                                    "solar_to_battery": convertToKwh(
-                                        val=item.get("value") or None,
-                                        unit=item.get("unit"),
-                                    ),
-                                }
-                            )
-                    table.update({daystr: entry})
         return table
