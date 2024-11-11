@@ -3,7 +3,6 @@
 from datetime import datetime, timedelta
 
 from cryptography.hazmat.primitives import hashes
-from numpy import isin
 
 
 class RequestCounter:
@@ -20,10 +19,10 @@ class RequestCounter:
         return f"{self.last_hour()} last hour, {self.last_minute()} last minute"
 
     def add(
-        self, request_time: datetime = datetime.now(), request_info: str = ""
+        self, request_time: datetime | None = None, request_info: str = ""
     ) -> None:
-        """Add new tupple with timestamp and optional request info to end of counter."""
-        self.elements.append((request_time, request_info))
+        """Add new tuple with timestamp and optional request info to end of counter."""
+        self.elements.append((request_time or datetime.now(), request_info))
         # limit the counter entries to 1 hour when adding new
         self.recycle()
 

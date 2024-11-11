@@ -360,13 +360,29 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Energy today':<{col1}}: {dev.get('energy_today','-.--'):>4} {'kWh':<{col2-5}} {'Last Period':<{col3}}: {dev.get('energy_last_period','-.--'):>4} kWh"
                             )
-                    elif devtype in [
-                        api.SolixDeviceType.POWERPANEL.value,
-                        api.SolixDeviceType.HES.value,
-                    ]:
+                    elif devtype in [api.SolixDeviceType.POWERPANEL.value]:
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
                         )
+                        if avg := (site.get("powerpanel_info") or {}).get("average_power") or {}:
+                            unit = avg.get("power_unit") or ""
+                            CONSOLE.info(
+                                f"{'Last Check ⌀':<{col1}}: {avg.get('last_check','Unknown'):<{col2}} {'Valid before':<{col3}}: {avg.get('valid_time','Unknown')!s}"
+                            )
+                            CONSOLE.info(
+                                f"{'Solar Power ⌀':<{col1}}: {avg.get('solar_power_avg','-.--'):>4} {unit:<{col2-5}} {'Battery SOC':<{col3}}: {avg.get('state_of_charge','-.--'):>4} %"
+                            )
+                            CONSOLE.info(
+                                f"{'Charge Power ⌀':<{col1}}: {avg.get('charge_power_avg','-.--'):>4} {unit:<{col2-5}} {'Discharge ⌀':<{col3}}: {avg.get('discharge_power_avg','-.--'):>4} {unit}"
+                            )
+                            CONSOLE.info(
+                                f"{'Home Usage ⌀':<{col1}}: {avg.get('home_usage_avg','-.--'):>4} {unit:<{col2-5}} {'Grid Import ⌀':<{col3}}: {avg.get('grid_import_avg','-.--'):>4} {unit}"
+                            )
+                    elif devtype in [api.SolixDeviceType.HES.value]:
+                        CONSOLE.info(
+                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
+                        )
+
                     else:
                         CONSOLE.warning(
                             "No Solarbank, Inverter, Smart Meter, Smart Plug, Power Panel or HES device, further device details will be skipped"
@@ -461,11 +477,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Sol/Bat/Gri %':<{col1}}: {float(today.get('solar_percentage') or '0')*100:>3.0f}/{float(today.get('battery_percentage') or '0')*100:>3.0f}/{float(today.get('other_percentage') or '0')*100:>3.0f} {'%':<{col2-12}} {'Sol/Bat/Gri %':<{col3}}: {float(yesterday.get('solar_percentage') or '0')*100:>3.0f}/{float(yesterday.get('battery_percentage') or '0')*100:>3.0f}/{float(yesterday.get('other_percentage') or '0')*100:>3.0f} %"
                             )
-                            CONSOLE.info("-" * 80)
+                        CONSOLE.info("-" * 80)
 
                 # ask to reload or switch to next file or wait for refresh cycle of real time monitoring
                 if use_file:
                     while use_file:
+                        CONSOLE.info("Api Requests: %s", myapi.request_count)
+                        CONSOLE.info(myapi.request_count.get_details())
+                        myapi.request_count.recycle(last_time=datetime.now())
                         resp = input(
                             "[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file or [Q]uit: "
                         )
@@ -513,6 +532,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             return True
                 else:
                     CONSOLE.info("Api Requests: %s", myapi.request_count)
+                    #CONSOLE.info(myapi.request_count.get_details())
                     CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                     for sec in range(REFRESH):
                         now = datetime.now().astimezone()

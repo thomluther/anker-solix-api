@@ -120,13 +120,14 @@ async def poll_sites(  # noqa: C901
                     api.powerpanelApi = AnkerSolixPowerpanelApi(
                         apisession=api.apisession
                     )
-                # check if site already in cache, otherwise trigger site update once
-                if myid not in api.powerpanelApi.sites:
-                    # pass the site ID and site info for initial setup to avoid site list query
-                    await api.powerpanelApi.update_sites(siteId=myid, siteInfo=siteInfo)
                 # keep previous statistics since it should not overwrite stats updated by power panel site details update
                 if "statistics" in mysite:
                     scene["statistics"] = mysite.get("statistics")
+                # pass the site ID and site info to avoid another site list query
+                await api.powerpanelApi.update_sites(
+                    siteId=myid, siteData=mysite | scene, fromFile=fromFile
+                )
+                scene.update(api.powerpanelApi.sites.get(myid) or {})
             mysite.update(scene)
             new_sites.update({myid: mysite})
             # Update device details from scene info
@@ -382,6 +383,9 @@ async def poll_device_details(
         # Get the OTA batch info for firmware updates of owning devices
         api._logger.debug("Getting OTA update info for devices")
         await api.get_ota_batch(fromFile=fromFile)
+    # Get Power Panel device specific updates
+    if api.powerpanelApi:
+        await api.powerpanelApi.update_device_details(fromFile=fromFile, exclude=exclude)
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
     for sn, device in api.devices.items():
@@ -454,10 +458,15 @@ async def poll_device_details(
                         deviceSn=sn,
                         fromFile=fromFile,
                     )
-            # update entry in devices
-            api.devices.update({sn: device})
+
+        # Merge additional powerpanel data
+        if api.powerpanelApi:
+            device.update(api.powerpanelApi.devices.get(sn) or {})
 
         # TODO(#0): Fetch other details of specific device types as known and relevant
+
+        # update entry in devices
+        api.devices.update({sn: device})
 
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})

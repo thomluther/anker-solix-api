@@ -504,6 +504,7 @@ class AnkerSolixClientSession:
                             data, "user_id", "auth_token", "email", "geo_key", "token"
                         ),
                     )
+                    self.request_count.add(request_info=f"LOAD {masked_filename}")
                     return data
         except OSError as err:
             self._logger.error(

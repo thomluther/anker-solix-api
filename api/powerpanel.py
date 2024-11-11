@@ -15,7 +15,13 @@ from pathlib import Path
 from aiohttp import ClientSession
 
 from .apibase import AnkerSolixBaseApi
-from .apitypes import API_CHARGING_ENDPOINTS, API_FILEPREFIXES, SolixDeviceType
+from .apitypes import (
+    API_CHARGING_ENDPOINTS,
+    API_FILEPREFIXES,
+    SolixDeviceCategory,
+    SolixDeviceStatus,
+    SolixDeviceType,
+)
 from .helpers import convertToKwh
 from .session import AnkerSolixClientSession
 
@@ -102,23 +108,38 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 device.update({"is_admin": False})
             for key, value in devData.items():
                 try:
-                    #
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
-                    #
-                    if key in ["device_sw_version"] and value:
-                        # Example for key name conversion when value is given
-                        device.update({"sw_version": str(value)})
+                    if key in ["product_code", "device_pn"] and value:
+                        device.update({"device_pn": str(value)})
+                        # try to get type for standalone device from category definitions if not defined yet
+                        if hasattr(SolixDeviceCategory, str(value)):
+                            dev_type = str(
+                                getattr(SolixDeviceCategory, str(value))
+                            ).split("_")
+                            if "type" not in device:
+                                device.update({"type": dev_type[0]})
+                            # update generation if specified in device type definitions
+                            if len(dev_type) > 1:
+                                device.update({"generation": int(dev_type[1])})
+                    elif key in ["alias_name"] and value:
+                        device.update({"alias": str(value)})
+                    elif key in ["status"]:
+                        device.update({"status": str(value)})
+                        # decode the status into a description
+                        description = SolixDeviceStatus.unknown.name
+                        for status in SolixDeviceStatus:
+                            if str(value) == status.value:
+                                description = status.name
+                                break
+                        device.update({"status_desc": description})
                     elif key in [
                         # Examples for boolean key values
-                        "wifi_online",
                         "auto_upgrade",
-                        "is_ota_update",
                     ]:
                         device.update({key: bool(value)})
                     elif key in [
-                        # Example for key with string values
+                        # key with string values
                         "wireless_type",
-                        "ota_version",
                     ] or (
                         key
                         in [
@@ -128,9 +149,6 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         and value
                     ):
                         device.update({key: str(value)})
-                    else:
-                        # Example for all other keys not filtered or converted
-                        device.update({key: value})
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
@@ -148,14 +166,16 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         self,
         siteId: str | None = None,
         fromFile: bool = False,
-        siteInfo: dict | None = None,
+        siteData: dict | None = None,
     ) -> dict:  # noqa: C901
         """Create/Update api sites cache structure.
 
         Implement this method to get the latest info for all power panel sites or only the provided siteId and update class cache dictionaries.
         """
+        if not siteData or not isinstance(siteData, dict):
+            siteData = {}
         if siteId and (
-            site_info := siteInfo
+            (site_info := siteData.pop("site_info", {}))
             or (self.sites.get(siteId) or {}).get("site_info")
             or {}
         ):
@@ -180,12 +200,46 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 # check if power panel site type 4
                 if (site_info.get("power_site_type") or 0) in [4]:
                     mysite.update(
-                        {"type": SolixDeviceType.SYSTEM.value, "site_info": site_info}
+                        {
+                            "site_id": myid,
+                            "type": SolixDeviceType.SYSTEM.value,
+                            "site_info": site_info,
+                        }
                     )
-                    admin = (
-                        site_info.get("ms_type", 0) in [0, 1]
-                    )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
+                    # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
+                    admin = site_info.get("ms_type", 0) in [0, 1]
                     mysite.update({"site_admin": admin})
+                    # query scene info if not provided in site Data
+                    if not (scene := siteData):
+                        self._logger.debug("Getting scene info for site")
+                        scene = await self.get_scene_info(myid, fromFile=fromFile)
+                    # add extra site data to my site
+                    if scene:
+                        mysite["powerpanel_list"] = scene.get("powerpanel_list") or []
+                    for powerpanel in mysite.get("powerpanel_list") or []:
+                        # work around for device_name which is actually the device_alias in scene info
+                        if "device_name" in powerpanel:
+                            # modify only a copy of the device dict to prevent changing the scene info dict
+                            powerpanel = dict(powerpanel).copy()
+                            powerpanel.update(
+                                {"alias_name": powerpanel.pop("device_name")}
+                            )
+                        if sn := self._update_dev(
+                            powerpanel,
+                            devType=SolixDeviceType.POWERPANEL.value,
+                            siteId=myid,
+                            isAdmin=admin,
+                        ):
+                            self._site_devices.add(sn)
+
+                    # Query 5 min avg power and soc from energy stats as work around since no current power values found for power panels in cloud server yet
+                    if avg_data := await self.get_avg_power_from_energy(
+                        siteId=myid, fromFile=fromFile
+                    ):
+                        mypanel = mysite.get("powerpanel_info") or {}
+                        mypanel["average_power"] = avg_data
+                        mysite["powerpanel_info"] = mypanel
+
                     new_sites.update({myid: mysite})
 
         # Write back the updated sites
@@ -295,7 +349,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         # define excluded device types or categories to skip for queries
         if not exclude or not isinstance(exclude, set):
             exclude = set()
-        self._logger.debug("Updating Device Details")
+        self._logger.debug("Updating Power Panel Device Details")
         #
         # Implement required queries according to exclusion set
         #
@@ -359,6 +413,208 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             )
             self.sites[siteId] = mysite
         return data
+
+    async def get_avg_power_from_energy(
+        self, siteId: str, fromFile: bool = False
+    ) -> dict:
+        """Get the last 5 min average power from energy statistics.
+
+        Example data:
+        """
+        mysite = self.sites.get(siteId) or {}
+        mypanel = mysite.get("powerpanel_info") or {}
+        avg_data = mypanel.get("average_power") or {}
+        # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
+        if not (timestring := avg_data.get("last_check")) or (
+            datetime.now() - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S")
+        ) >= timedelta(minutes=4, seconds=50):
+            self._logger.debug(
+                "Updating Power average values from energy statistics of Panel Site ID %s",
+                siteId,
+            )
+            offset = timedelta(seconds=avg_data.get("offset_seconds") or 0)
+            validtime = datetime.now() + offset
+            validdata = {}
+            for source in ["hes", "solar", "home", "grid"]:
+                # check for initial or updated min offset, using SOC value in hes data because that should never be 0 for a valid timestamp
+                if source == "hes":
+                    future = ""
+                    for diff in (
+                        [-1, 0, 1]
+                        if offset.total_seconds() == 0 and not fromFile
+                        else [0]
+                    ):
+                        # check -/+ 1 day to find initial last valid SOC timestamp in real data before invalid SOC entry of 0 %
+                        checkdate = validtime + timedelta(days=diff)
+                        self._logger.debug(
+                            "Checking %s data of %s",
+                            source,
+                            checkdate.strftime("%Y-%m-%d"),
+                        )
+                        if fromFile:
+                            data = (
+                                await self.apisession.loadFromFile(
+                                    Path(self.testDir())
+                                    / f"{API_FILEPREFIXES[f'charging_energy_{source}_today']}_{siteId}.json"
+                                )
+                            ).get("data") or {}
+                        else:
+                            data = await self.energy_statistics(
+                                siteId=siteId,
+                                rangeType="day",
+                                sourceType=source,
+                                startDay=checkdate,
+                                endDay=checkdate,
+                            )
+                        if soclist := [
+                            item
+                            for item in (data.get("chargeLevel") or [])
+                            if (item.get("value") or "") == "0"
+                        ]:
+                            if not future:
+                                future = datetime.strptime(
+                                    checkdate.strftime("%Y-%m-%d")
+                                    + soclist[0].get("time")
+                                    or "00:00",
+                                    "%Y-%m-%d%H:%M",
+                                )
+                                # keep actual or previous day depending on first invalid timestamp
+                                validdata = (
+                                    validdata
+                                    if soclist[0].get("time") == "00:00"
+                                    else data
+                                )
+                            # check future SOC values are all 0
+                            checktime = (
+                                future.strftime("%H:%M")
+                                if future.day == checkdate.day
+                                else "00:00"
+                            )
+                            if soclist := [
+                                item
+                                for item in (data.get("chargeLevel") or [])
+                                if (item.get("value") or "") != "0"
+                                and (item.get("time") or "24:00") > checktime
+                            ]:
+                                # Found another value in future timestamp, reset previous timestamp
+                                future = ""
+                                validdata = {}
+                        else:
+                            # No or only valid timestamps in day, keep data if the last entry is last valid timestamp
+                            validdata = data
+                    # get min offset to first invalid timestamp
+                    if future:
+                        offset = min(
+                            offset,
+                            future - datetime.now() - timedelta(seconds=2),
+                        )
+                        validtime = datetime.now() + offset
+                        # reuse last valid data from timestamp check to get values
+                        data = validdata
+                        self._logger.debug(
+                            "Found valid %s entries until %s",
+                            source,
+                            validtime.strftime("%Y-%m-%d %H:%M:%S"),
+                        )
+                elif fromFile:
+                    self._logger.debug(
+                        "Reading %s data of %s",
+                        source,
+                        validtime.strftime("%Y-%m-%d"),
+                    )
+                    data = (
+                        await self.apisession.loadFromFile(
+                            Path(self.testDir())
+                            / f"{API_FILEPREFIXES[f'charging_energy_{source}_today']}_{siteId}.json"
+                        )
+                    ).get("data") or {}
+                else:
+                    self._logger.debug(
+                        "Querying %s data of %s",
+                        source,
+                        validtime.strftime("%Y-%m-%d"),
+                    )
+                    data = await self.energy_statistics(
+                        siteId=siteId,
+                        rangeType="day",
+                        sourceType=source,
+                        startDay=validtime,
+                    )
+                # set last check time more into past to ensure each run verifies until offset no longer increases
+                if (
+                    future
+                    and not fromFile
+                    and (
+                        future - datetime.now() - timedelta(seconds=2) < offset
+                        or offset.total_seconds == 0
+                    )
+                ):
+                    avg_data["last_check"] = (
+                        datetime.now() - timedelta(minutes=5)
+                    ).strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    avg_data["last_check"] = datetime.now().strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                avg_data["valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
+                avg_data["offset_seconds"] = round(offset.total_seconds())
+                avg_data["power_unit"] = data.get("powerUnit")
+                if powerlist := [
+                    item
+                    for item in (data.get("power") or [])
+                    if (item.get("time") or "24:00") <= validtime.strftime("%H:%M")
+                ]:
+                    if source == "hes":
+                        for idx, power in enumerate(
+                            powerlist[-1].get("powerInfos") or [], start=1
+                        ):
+                            if idx == 1:
+                                avg_data["charge_power_avg"] = str(
+                                    power.get("value") or ""
+                                ).replace("-", "")
+                            else:
+                                avg_data["discharge_power_avg"] = str(
+                                    power.get("value") or ""
+                                ).replace("-", "")
+                        if soclist := [
+                            item
+                            for item in (data.get("chargeLevel") or [])
+                            if (item.get("time") or "24:00")
+                            <= validtime.strftime("%H:%M")
+                        ]:
+                            avg_data["state_of_charge"] = soclist[-1].get("value") or ""
+                    elif source == "solar":
+                        avg_data["solar_power_avg"] = (
+                            next(
+                                iter(powerlist[-1].get("powerInfos") or []),
+                                {},
+                            ).get("value")
+                            or ""
+                        )
+                    elif source == "home":
+                        avg_data["home_usage_avg"] = (
+                            next(
+                                iter(powerlist[-1].get("powerInfos") or []),
+                                {},
+                            ).get("value")
+                            or ""
+                        )
+                    elif source == "grid":
+                        avg_data["grid_import_avg"] = (
+                            next(
+                                iter(powerlist[-1].get("powerInfos") or []),
+                                {},
+                            ).get("value")
+                            or ""
+                        )
+            # update sites dict with relevant info and with required structure
+            if avg_data:
+                # create powerpanel_info dictionary to add directly into scene_info of site
+                mypanel["average_power"] = avg_data
+                mysite["powerpanel_info"] = mypanel
+                self.sites[siteId] = mysite
+
+        return avg_data
 
     async def energy_statistics(
         self,
