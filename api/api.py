@@ -347,8 +347,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         and str(value).isdigit()
                     ):
                         device.update({"power_cutoff": int(value)})
-                    elif key in ["power_cutoff_data"] and value:
-                        device.update({"power_cutoff_data": list(value)})
+                    elif key in ["power_cutoff_data","ota_children"] and value:
+                        # list items with value
+                        device.update({key: list(value)})
                     elif key in ["fittings"]:
                         # update nested dictionary
                         if "fittings" in device:

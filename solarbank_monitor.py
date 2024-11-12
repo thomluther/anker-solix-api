@@ -218,6 +218,13 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     CONSOLE.info(
                         f"{'SW Version':<{col1}}: {dev.get('sw_version','Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'} (OTA {dev.get('ota_version') or 'Unknown'})"
                     )
+                    for item in dev.get("ota_children") or []:
+                        ota = item.get("need_update")
+                        forced = item.get("force_upgrade")
+                        CONSOLE.info(
+                            f"{' -Component':<{col1}}: {item.get('device_type','Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} {' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
+                        )
+
                     if devtype == api.SolixDeviceType.SOLARBANK.value:
                         CONSOLE.info(
                             f"{'Cloud-Updated':<{col1}}: {update_time:<{col2}} {'Valid Data':<{col3}}: {'YES' if dev.get('data_valid') else 'NO'} (Requeries: {site.get('requeries')})"
@@ -483,7 +490,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if use_file:
                     while use_file:
                         CONSOLE.info("Api Requests: %s", myapi.request_count)
-                        CONSOLE.info(myapi.request_count.get_details())
+                        # CONSOLE.info(myapi.request_count.get_details(last_hour=True)))
                         myapi.request_count.recycle(last_time=datetime.now())
                         resp = input(
                             "[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file or [Q]uit: "
@@ -532,7 +539,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             return True
                 else:
                     CONSOLE.info("Api Requests: %s", myapi.request_count)
-                    #CONSOLE.info(myapi.request_count.get_details())
+                    #CONSOLE.info(myapi.request_count.get_details(last_hour=True))
                     CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                     for sec in range(REFRESH):
                         now = datetime.now().astimezone()

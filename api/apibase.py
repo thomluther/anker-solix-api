@@ -69,7 +69,9 @@ class AnkerSolixBaseApi:
             self._logger.info("Set log level to: %s", level)
         return self._logger.getEffectiveLevel()
 
-    def recycleDevices(self, extraDevices: set | None = None, activeDevices: set | None = None) -> None:
+    def recycleDevices(
+        self, extraDevices: set | None = None, activeDevices: set | None = None
+    ) -> None:
         """Recycle api device list and remove devices no longer used in sites cache or extra devices."""
         if not extraDevices or not isinstance(extraDevices, set):
             extraDevices = set()
@@ -96,11 +98,7 @@ class AnkerSolixBaseApi:
     def recycleSites(self, activeSites: set | None = None) -> None:
         """Recycle api site cache and remove sites no longer active according provided activeSites."""
         if activeSites and isinstance(activeSites, set):
-            rem_sites = [
-                site
-                for site in self.sites
-                if site not in activeSites
-            ]
+            rem_sites = [site for site in self.sites if site not in activeSites]
             for site in rem_sites:
                 self.sites.pop(site, None)
 
@@ -561,7 +559,19 @@ class AnkerSolixBaseApi:
         Example data:
         {"update_infos": [{"device_sn": "9JVB42LJK8J0P5RY","need_update": false,"upgrade_type": 0,"lastPackage": {
                 "product_code": "","product_component": "","version": "","is_forced": false,"md5": "","url": "","size": 0},
-            "change_log": "","current_version": "v1.6.3","children": null}]}
+        "change_log": "","current_version": "v1.6.3","children": [
+            {"needUpdate": false,"device_type": "A17C1_esp32","rom_version_name": "v0.1.5.1","force_upgrade": false,"full_package": {
+                "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/09/06/iot-admin/J7lALfvEQZIiqHyD/A17C1-A17C3_EUOTAWIFI_V0.1.5.1_20240828.bin",
+                "file_size": 1270256,"file_md5": "578ac26febb55ee55ffe9dc6819b6c4a"},
+            "change_log": "","sub_current_version": ""},
+            {"needUpdate": false,"device_type": "A17C1_mcu","rom_version_name": "v1.0.5.16","force_upgrade": false,"full_package": {
+                "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/09/06/iot-admin/w3ofT0NcpGF3IUcC/A17C1-A17C3_EUOTA_V1.0.5.16_20240904.bin",
+                "file_size": 694272,"file_md5": "40913018b3e542c0350e8815951e4a9c"},
+            "change_log": "","sub_current_version": ""},
+            {"needUpdate": false,"device_type": "A17C1_100Ah","rom_version_name": "v0.1.9.1","force_upgrade": false,"full_package": {
+                "file_path": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/ota/2024/09/06/iot-admin/mmCg3IkHt2YpF8TR/A17C1-A17C3_EUOTA_V0.1.9.1_20240904.bin",
+                "file_size": 694272,"file_md5": "40913018b3e542c0350e8815951e4a9c"},
+            "change_log": "","sub_current_version": ""}]]}]}
         """
         # default to all admin devices in devices dict if no device serial list provided
         if not deviceSns or not isinstance(deviceSns, list):
@@ -586,13 +596,27 @@ class AnkerSolixBaseApi:
             # update devices dict with new ota data
             for dev in data.get("update_infos") or []:
                 if deviceSn := dev.get("device_sn"):
+                    need_update = bool(dev.get("need_update"))
+                    is_forced = bool(dev.get("is_forced"))
+                    children: list = []
+                    for child in dev.get("children") or []:
+                        need_update = need_update or bool(child.get("needUpdate"))
+                        is_forced = is_forced or bool(child.get("needUpdate"))
+                        children.append({
+                            "device_type": child.get("device_type"),
+                            "need_update": bool(child.get("needUpdate")),
+                            "force_upgrade": bool(child.get("force_upgrade")),
+                            "rom_version_name": child.get("rom_version_name"),
+                        })
                     self._update_dev(
                         {
                             "device_sn": deviceSn,
-                            "is_ota_update": dev.get("need_update"),
+                            "is_ota_update": need_update,
+                            "ota_forced": need_update,
                             "ota_version": (dev.get("lastPackage") or {}).get("version")
                             or dev.get("current_version")
                             or "",
+                            "ota_children": children,
                         }
                     )
         return resp.get("data") or {}
