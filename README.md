@@ -14,9 +14,8 @@
 
 This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter etc).
 
-🚨 This is by no means an official Anker Api. 🚨
-
-🚨 It can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
+🚨 This is by no means an official Anker Api.
+It can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
 
 # Python Versions
 
@@ -32,6 +31,13 @@ This project uses `pipenv` for Python dependency management
 pip install pipenv
 pipenv sync -d
 pipenv run python [...]
+```
+
+If you get path errors during `pipenv synd -d`, delete your local `Pipenv.lock` file and re-run the lock and sync process.
+```bash
+rm Pipfile.lock
+pipenv lock
+pipenv sync -d
 ```
 
 # Anker Account Information
