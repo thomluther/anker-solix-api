@@ -674,7 +674,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         resp = await poll_sites(self, siteId=siteId, fromFile=fromFile, exclude=exclude)
         # Clean up powerpanel api sites cache if used
         if self.powerpanelApi:
-            self.powerpanelApi.recycleSites(activeSites={self.sites.keys()})
+            self.powerpanelApi.recycleSites(activeSites=set(self.sites.keys()))
         return resp
 
     async def update_site_details(
@@ -696,7 +696,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         resp = await poll_device_details(self, fromFile=fromFile, exclude=exclude)
         # Clean up powerpanel devices cache if used
         if self.powerpanelApi:
-            self.powerpanelApi.recycleDevices(activeDevices={self.devices.keys()})
+            self.powerpanelApi.recycleDevices(activeDevices=set(self.sites.keys()))
         return resp
 
     async def get_homepage(self, fromFile: bool = False) -> dict:

@@ -439,7 +439,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
         if not (timestring := avg_data.get("last_check")) or (
             datetime.now() - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S")
-        ) >= timedelta(minutes=4, seconds=50):
+        ) >= timedelta(minutes=5):
             self._logger.debug(
                 "Updating Power average values from energy statistics of Panel Site ID %s",
                 siteId,
@@ -514,10 +514,12 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         else:
                             # No or only valid timestamps in day, keep data if the last entry is last valid timestamp
                             validdata = data
-                    # get min offset to first invalid timestamp
+                    # get min offset to first invalid timestamp, use default offset 2 days for first calculation
                     if future:
                         offset = min(
-                            offset,
+                            timedelta(days=2)
+                            if offset.total_seconds() == 0
+                            else offset,
                             future - datetime.now() - timedelta(seconds=2),
                         )
                         validtime = datetime.now() + offset
