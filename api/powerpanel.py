@@ -18,6 +18,7 @@ from .apibase import AnkerSolixBaseApi
 from .apitypes import (
     API_CHARGING_ENDPOINTS,
     API_FILEPREFIXES,
+    ApiCategories,
     SolixDeviceCategory,
     SolixDeviceStatus,
     SolixDeviceType,
@@ -166,12 +167,16 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         self,
         siteId: str | None = None,
         fromFile: bool = False,
+        exclude: set | None = None,
         siteData: dict | None = None,
     ) -> dict:  # noqa: C901
         """Create/Update api sites cache structure.
 
         Implement this method to get the latest info for all power panel sites or only the provided siteId and update class cache dictionaries.
         """
+        # define excluded categories to skip for queries
+        if not exclude or not isinstance(exclude, set):
+            exclude = set()
         if not siteData or not isinstance(siteData, dict):
             siteData = {}
         if siteId and (
@@ -233,12 +238,19 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             self._site_devices.add(sn)
 
                     # Query 5 min avg power and soc from energy stats as work around since no current power values found for power panels in cloud server yet
-                    if avg_data := await self.get_avg_power_from_energy(
-                        siteId=myid, fromFile=fromFile
+                    if not (
+                        {
+                            SolixDeviceType.POWERPANEL.value,
+                            ApiCategories.powerpanel_energy,
+                        }
+                        & exclude
                     ):
-                        mypanel = mysite.get("powerpanel_info") or {}
-                        mypanel["average_power"] = avg_data
-                        mysite["powerpanel_info"] = mypanel
+                        if avg_data := await self.get_avg_power_from_energy(
+                            siteId=myid, fromFile=fromFile
+                        ):
+                            mypanel = mysite.get("powerpanel_info") or {}
+                            mypanel["average_power"] = avg_data
+                            mysite["powerpanel_info"] = mypanel
 
                     new_sites.update({myid: mysite})
 
@@ -261,15 +273,15 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             exclude = set()
         self._logger.debug("Updating Power Panel Sites Details")
         for site_id, site in self.sites.items():
+            # Fetch overall statistic totals for powerpanel site that should not be excluded since merged to overall site cache
+            self._logger.debug("Getting system running totals information")
+            await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
             # Fetch details that work for all account types
             if {SolixDeviceType.POWERPANEL.value} - exclude:
-                self._logger.debug("Getting system running totals information")
-                await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
-            # Fetch details that only work for site admins
-            if site.get("site_admin", False):
-                # Add extra power panel site polling that may make sense
-                pass
-
+                # Fetch details that only work for site admins
+                if site.get("site_admin", False):
+                    # Add extra power panel site polling that may make sense
+                    pass
         return self.sites
 
     async def update_device_energy(

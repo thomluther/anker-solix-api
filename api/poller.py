@@ -12,7 +12,7 @@ from .powerpanel import AnkerSolixPowerpanelApi
 
 
 async def poll_sites(  # noqa: C901
-    api: AnkerSolixBaseApi, siteId: str | None = None, fromFile: bool = False
+    api: AnkerSolixBaseApi, siteId: str | None = None, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the latest info for all accessible sites or only the provided siteId and update class sites and devices dictionaries used as cache.
 
@@ -37,6 +37,9 @@ async def poll_sites(  # noqa: C901
         'site_id': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c',
         'powerpanel_list': []}}
     """
+    # define excluded categories to skip for queries
+    if not exclude or not isinstance(exclude, set):
+        exclude = set()
     if siteId and (api.sites.get(siteId) or {}):
         # update only the provided site ID
         api._logger.debug("Updating Sites data for site ID %s", siteId)
@@ -125,7 +128,7 @@ async def poll_sites(  # noqa: C901
                     scene["statistics"] = mysite.get("statistics")
                 # pass the site ID and site info to avoid another site list query
                 await api.powerpanelApi.update_sites(
-                    siteId=myid, siteData=mysite | scene, fromFile=fromFile
+                    siteId=myid, siteData=mysite | scene, fromFile=fromFile, exclude=exclude
                 )
                 scene.update(api.powerpanelApi.sites.get(myid) or {})
             mysite.update(scene)

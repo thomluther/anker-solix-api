@@ -69,6 +69,41 @@ class AnkerSolixBaseApi:
             self._logger.info("Set log level to: %s", level)
         return self._logger.getEffectiveLevel()
 
+    def recycleDevices(self, extraDevices: set | None = None, activeDevices: set | None = None) -> None:
+        """Recycle api device list and remove devices no longer used in sites cache or extra devices."""
+        if not extraDevices or not isinstance(extraDevices, set):
+            extraDevices = set()
+        if not activeDevices or not isinstance(activeDevices, set):
+            activeDevices = set()
+        # first clear internal site devices cache if active devices are provided
+        if activeDevices:
+            rem_devices = [
+                dev
+                for dev in self._site_devices
+                if dev not in (activeDevices | extraDevices)
+            ]
+            for dev in rem_devices:
+                self._site_devices.discard(dev)
+        # Clear device cache to maintain only active and extra devices
+        rem_devices = [
+            dev
+            for dev in self.devices
+            if dev not in (self._site_devices | extraDevices)
+        ]
+        for dev in rem_devices:
+            self.devices.pop(dev, None)
+
+    def recycleSites(self, activeSites: set | None = None) -> None:
+        """Recycle api site cache and remove sites no longer active according provided activeSites."""
+        if activeSites and isinstance(activeSites, set):
+            rem_sites = [
+                site
+                for site in self.sites
+                if site not in activeSites
+            ]
+            for site in rem_sites:
+                self.sites.pop(site, None)
+
     def _update_account(  # noqa: C901
         self,
         details: dict | None = None,
@@ -82,7 +117,7 @@ class AnkerSolixBaseApi:
         # lookup old account details if any or update account info if nickname is different (e.g. after authentication)
         if (
             not (
-                #account_details := self.account.get(SolixDeviceType.ACCOUNT.value) or {}
+                # account_details := self.account.get(SolixDeviceType.ACCOUNT.value) or {}
                 account_details := self.account or {}
             )
             or account_details.get("nickname") != self.apisession.nickname
@@ -105,7 +140,7 @@ class AnkerSolixBaseApi:
                 "requests_last_hour": self.apisession.request_count.last_hour(),
             }
         )
-        #self.account[SolixDeviceType.ACCOUNT.value] = account_details
+        # self.account[SolixDeviceType.ACCOUNT.value] = account_details
         self.account = account_details
 
     def _update_site(  # noqa: C901
@@ -195,12 +230,18 @@ class AnkerSolixBaseApi:
         return sn
 
     async def update_sites(
-        self, siteId: str | None = None, fromFile: bool = False
+        self,
+        siteId: str | None = None,
+        fromFile: bool = False,
+        exclude: set | None = None,
     ) -> dict:  # noqa: C901
         """Create/Update api sites cache structure.
 
         Implement this method to get the latest info for all accessible sites or only the provided siteId and update class cache dictionaries.
         """
+        # define excluded categories to skip for queries
+        if not exclude or not isinstance(exclude, set):
+            exclude = set()
         if siteId and (self.sites.get(siteId) or {}):
             # update only the provided site ID
             self._logger.debug("Updating Sites data for site ID %s", siteId)
@@ -408,13 +449,7 @@ class AnkerSolixBaseApi:
             if sn := self._update_dev(device):
                 active_devices.add(sn)
         # recycle api device list and remove devices no longer used in sites or bind devices
-        rem_devices = [
-            dev
-            for dev in self.devices
-            if dev not in (self._site_devices | active_devices)
-        ]
-        for dev in rem_devices:
-            self.devices.pop(dev, None)
+        self.recycleDevices(extraDevices=active_devices)
         return data
 
     async def get_auto_upgrade(self, fromFile: bool = False) -> dict:
@@ -654,7 +689,7 @@ class AnkerSolixBaseApi:
                 products[prod.get("product_code") or ""] = {
                     "name": prod.get("name"),
                     "platform": plat_name,
-                    #"img_url": prod.get("img_url"),
+                    # "img_url": prod.get("img_url"),
                 }
         self._logger.debug("Getting 3rd party platform list")
         for platform in await self.get_third_platforms_list(fromFile=fromFile):
@@ -662,9 +697,9 @@ class AnkerSolixBaseApi:
             countries = platform.get("countries") or ""
             for prod in platform.get("products") or []:
                 products[prod.get("product_code") or ""] = {
-                    "name": " ".join([plat_name,prod.get("name")]),
+                    "name": " ".join([plat_name, prod.get("name")]),
                     "platform": plat_name,
                     "countries": countries,
-                    #"img_url": prod.get("img_url"),
+                    # "img_url": prod.get("img_url"),
                 }
         return products
