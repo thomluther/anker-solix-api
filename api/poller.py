@@ -12,7 +12,10 @@ from .powerpanel import AnkerSolixPowerpanelApi
 
 
 async def poll_sites(  # noqa: C901
-    api: AnkerSolixBaseApi, siteId: str | None = None, fromFile: bool = False, exclude: set | None = None
+    api: AnkerSolixBaseApi,
+    siteId: str | None = None,
+    fromFile: bool = False,
+    exclude: set | None = None,
 ) -> dict:
     """Get the latest info for all accessible sites or only the provided siteId and update class sites and devices dictionaries used as cache.
 
@@ -128,7 +131,10 @@ async def poll_sites(  # noqa: C901
                     scene["statistics"] = mysite.get("statistics")
                 # pass the site ID and site info to avoid another site list query
                 await api.powerpanelApi.update_sites(
-                    siteId=myid, siteData=mysite | scene, fromFile=fromFile, exclude=exclude
+                    siteId=myid,
+                    siteData=mysite | scene,
+                    fromFile=fromFile,
+                    exclude=exclude,
                 )
                 scene.update(api.powerpanelApi.sites.get(myid) or {})
             mysite.update(scene)
@@ -388,7 +394,9 @@ async def poll_device_details(
         await api.get_ota_batch(fromFile=fromFile)
     # Get Power Panel device specific updates
     if api.powerpanelApi:
-        await api.powerpanelApi.update_device_details(fromFile=fromFile, exclude=exclude)
+        await api.powerpanelApi.update_device_details(
+            fromFile=fromFile, exclude=exclude
+        )
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
     for sn, device in api.devices.items():

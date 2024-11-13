@@ -178,7 +178,6 @@ class AnkerSolixApiExport:
 
             # Export common data for all service types and skip rest on error
             if await self.export_common_data():
-
                 # Export power_service endpoint data
                 if {
                     ApiEndpointServices.power
@@ -333,7 +332,7 @@ class AnkerSolixApiExport:
         self._logger.info("")
         self._logger.info("Querying common endpoint data...")
         # first update Api caches if still empty
-        if not (self.api_power.sites | self.api_power.devices):
+        if not self.api_power.sites | self.api_power.devices:
             self._logger.info("Querying site information...")
             await self.api_power.update_sites()
             # Run bind devices to get also standalone devices for data export
@@ -408,7 +407,7 @@ class AnkerSolixApiExport:
                     filename=f"{API_FILEPREFIXES['scene_info']}_{self._randomize(siteId,'site_id')}.json",
                     payload={"site_id": siteId},
                     replace=[(siteId, "<siteId>")],
-                catch=False,
+                    catch=False,
                 )
 
         except (errors.AnkerSolixError, ClientError) as err:
@@ -421,7 +420,6 @@ class AnkerSolixApiExport:
                 self._logger.error("%s: %s", type(err), err)
             self._logger.warning(
                 "Skipping remaining data queries.",
-                ApiEndpointServices.power,
             )
             return False
         return True

@@ -115,7 +115,6 @@ class AnkerSolixBaseApi:
         # lookup old account details if any or update account info if nickname is different (e.g. after authentication)
         if (
             not (
-                # account_details := self.account.get(SolixDeviceType.ACCOUNT.value) or {}
                 account_details := self.account or {}
             )
             or account_details.get("nickname") != self.apisession.nickname
@@ -138,7 +137,6 @@ class AnkerSolixBaseApi:
                 "requests_last_hour": self.apisession.request_count.last_hour(),
             }
         )
-        # self.account[SolixDeviceType.ACCOUNT.value] = account_details
         self.account = account_details
 
     def _update_site(  # noqa: C901
@@ -635,11 +633,7 @@ class AnkerSolixBaseApi:
             resp = await self.apisession.request(
                 "get", API_ENDPOINTS["get_message_unread"]
             )
-        # TODO: Get rid of old method once new account dictionary was picked up by HA integration in a new Account device type
-        # Old Method: save unread msg flag in each known site
         data = resp.get("data") or {}
-        for siteId in self.sites:
-            self._update_site(siteId, data)
         # New method: Save unread msg flag in account dictionary
         self._update_account(data)
         return data

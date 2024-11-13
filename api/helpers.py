@@ -18,9 +18,7 @@ class RequestCounter:
         """Print the counters."""
         return f"{self.last_hour()} last hour, {self.last_minute()} last minute"
 
-    def add(
-        self, request_time: datetime | None = None, request_info: str = ""
-    ) -> None:
+    def add(self, request_time: datetime | None = None, request_info: str = "") -> None:
         """Add new tuple with timestamp and optional request info to end of counter."""
         self.elements.append((request_time or datetime.now(), request_info))
         # limit the counter entries to 1 hour when adding new

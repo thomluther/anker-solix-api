@@ -347,7 +347,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         and str(value).isdigit()
                     ):
                         device.update({"power_cutoff": int(value)})
-                    elif key in ["power_cutoff_data","ota_children"] and value:
+                    elif key in ["power_cutoff_data", "ota_children"] and value:
                         # list items with value
                         device.update({key: list(value)})
                     elif key in ["fittings"]:
@@ -669,7 +669,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         return sn
 
     async def update_sites(
-        self, siteId: str | None = None, fromFile: bool = False, exclude: set | None = None
+        self,
+        siteId: str | None = None,
+        fromFile: bool = False,
+        exclude: set | None = None,
     ) -> dict:  # noqa: C901
         """Create/Update api sites cache structure."""
         resp = await poll_sites(self, siteId=siteId, fromFile=fromFile, exclude=exclude)
