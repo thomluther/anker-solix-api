@@ -13,6 +13,8 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
+from api import AnkerSolixApi
+
 from .apitypes import API_ENDPOINTS, API_FILEPREFIXES, SolixDeviceType
 from .session import AnkerSolixClientSession
 
@@ -68,6 +70,10 @@ class AnkerSolixBaseApi:
             self._logger.setLevel(level)
             self._logger.info("Set log level to: %s", level)
         return self._logger.getEffectiveLevel()
+
+    def getCaches(self) -> dict:
+        """Return a merged dictionary with api cache dictionaries."""
+        return self.sites | self.devices | {self.apisession.nickname: self.account}
 
     def recycleDevices(
         self, extraDevices: set | None = None, activeDevices: set | None = None
