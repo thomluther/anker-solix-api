@@ -13,8 +13,6 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
-from api import AnkerSolixApi
-
 from .apitypes import API_ENDPOINTS, API_FILEPREFIXES, SolixDeviceType
 from .session import AnkerSolixClientSession
 
@@ -73,7 +71,7 @@ class AnkerSolixBaseApi:
 
     def getCaches(self) -> dict:
         """Return a merged dictionary with api cache dictionaries."""
-        return self.sites | self.devices | {self.apisession.nickname: self.account}
+        return self.sites | self.devices | {self.apisession.email: self.account}
 
     def recycleDevices(
         self, extraDevices: set | None = None, activeDevices: set | None = None
@@ -120,9 +118,7 @@ class AnkerSolixBaseApi:
             details = {}
         # lookup old account details if any or update account info if nickname is different (e.g. after authentication)
         if (
-            not (
-                account_details := self.account or {}
-            )
+            not (account_details := self.account or {})
             or account_details.get("nickname") != self.apisession.nickname
         ):
             # init or update the account details
@@ -606,12 +602,14 @@ class AnkerSolixBaseApi:
                     for child in dev.get("children") or []:
                         need_update = need_update or bool(child.get("needUpdate"))
                         is_forced = is_forced or bool(child.get("needUpdate"))
-                        children.append({
-                            "device_type": child.get("device_type"),
-                            "need_update": bool(child.get("needUpdate")),
-                            "force_upgrade": bool(child.get("force_upgrade")),
-                            "rom_version_name": child.get("rom_version_name"),
-                        })
+                        children.append(
+                            {
+                                "device_type": child.get("device_type"),
+                                "need_update": bool(child.get("needUpdate")),
+                                "force_upgrade": bool(child.get("force_upgrade")),
+                                "rom_version_name": child.get("rom_version_name"),
+                            }
+                        )
                     self._update_dev(
                         {
                             "device_sn": deviceSn,

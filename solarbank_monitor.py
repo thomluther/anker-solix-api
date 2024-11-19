@@ -143,7 +143,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             next_dev_refr = now
             col1 = 15
             col2 = 23
-            col3 = 14
+            col3 = 15
             t1 = 2
             t2 = 5
             t3 = 5
@@ -249,21 +249,33 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Exp. Batteries':<{col1}}: {dev.get('sub_package_num',''):>4} {'Pcs':<{col2-5}} {'AC socket':<{col3}}: {dev.get('ac_power','---'):>4} {unit}"
                             )
                         CONSOLE.info(
-                            f"{'Solar Power':<{col1}}: {dev.get('input_power',''):>4} {unit:<{col2-5}} {'Output Power':<{col3}}: {dev.get('output_power',''):>4} {unit}"
+                            f"{'Solar Power':<{col1}}: {dev.get('input_power','---'):>4} {unit:<{col2-5}} {'Output Power':<{col3}}: {dev.get('output_power','---'):>4} {unit}"
                         )
                         # show each MPPT for Solarbank 2
                         if "solar_power_1" in dev:
                             CONSOLE.info(
-                                f"{'Solar Ch_1':<{col1}}: {dev.get('solar_power_1',''):>4} {unit:<{col2-5}} {'Solar Ch_2':<{col3}}: {dev.get('solar_power_2',''):>4} {unit}"
+                                f"{'Solar Ch_1':<{col1}}: {dev.get('solar_power_1','---'):>4} {unit:<{col2-5}} {'Solar Ch_2':<{col3}}: {dev.get('solar_power_2','---'):>4} {unit}"
                             )
                             if "solar_power_3" in dev:
                                 CONSOLE.info(
-                                    f"{'Solar Ch_3':<{col1}}: {dev.get('solar_power_3',''):>4} {unit:<{col2-5}} {'Solar Ch_4':<{col3}}: {dev.get('solar_power_4',''):>4} {unit}"
+                                    f"{'Solar Ch_3':<{col1}}: {dev.get('solar_power_3','---'):>4} {unit:<{col2-5}} {'Solar Ch_4':<{col3}}: {dev.get('solar_power_4','---'):>4} {unit}"
                                 )
+                        if "pei_heating_power" in dev:
+                            CONSOLE.info(
+                                f"{'Other Input':<{col1}}: {dev.get('other_input_power','---'):>4} {unit:<{col2-5}} {'Heating Power':<{col3}}: {dev.get('pei_heating_power','---'):>4} {unit}"
+                            )
+                        if "micro_inverter_power" in dev:
+                            CONSOLE.info(
+                                f"{'Inverter Power':<{col1}}: {dev.get('micro_inverter_power','---'):>4} {unit:<{col2-5}} {'Grid to Battery':<{col3}}: {dev.get('grid_to_battery_power','---'):>4} {unit}"
+                            )
+                        if "micro_inverter_power_limit" in dev:
+                            CONSOLE.info(
+                                f"{'Inverter Limit':<{col1}}: {dev.get('micro_inverter_power_limit','---'):>4} {unit:<{col2-5}} {'Low Limit':<{col3}}: {dev.get('micro_inverter_low_power_limit','---'):>4} {unit}"
+                            )
                         preset = dev.get("set_output_power") or "---"
                         site_preset = dev.get("set_system_output_power") or "---"
                         CONSOLE.info(
-                            f"{'Charge Power':<{col1}}: {dev.get('charging_power',''):>4} {unit:<{col2-5}} {'Device Preset':<{col3}}: {preset:>4} {unit}"
+                            f"{'Charge Power':<{col1}}: {dev.get('charging_power','---'):>4} {unit:<{col2-5}} {'Device Preset':<{col3}}: {preset:>4} {unit}"
                         )
                         if dev.get("generation", 0) > 1:
                             demand = site.get("home_load_power") or ""
@@ -371,7 +383,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"
                         )
-                        if avg := (site.get("powerpanel_info") or {}).get("average_power") or {}:
+                        if avg := dev.get("average_power") or {}:
                             unit = avg.get("power_unit") or ""
                             CONSOLE.info(
                                 f"{'Last Check ⌀':<{col1}}: {avg.get('last_check','Unknown'):<{col2}} {'Valid before':<{col3}}: {avg.get('valid_time','Unknown')!s}"

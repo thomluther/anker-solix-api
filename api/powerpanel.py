@@ -22,6 +22,7 @@ from .apitypes import (
     SolixDeviceCategory,
     SolixDeviceStatus,
     SolixDeviceType,
+    SolixSiteType,
 )
 from .helpers import convertToKwh
 from .session import AnkerSolixClientSession
@@ -202,8 +203,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 mysite: dict = self.sites.get(myid, {})
                 site_info: dict = mysite.get("site_info", {})
                 site_info.update(site)
-                # check if power panel site type 4
-                if (site_info.get("power_site_type") or 0) in [4]:
+                if hasattr(
+                    SolixSiteType,
+                    item := "t_" + str(site_info.get("power_site_type") or ""),
+                ):
+                    mysite["site_type"] = getattr(SolixSiteType, item)
+                # check if power panel site type
+                if mysite.get("site_type") == SolixDeviceType.POWERPANEL.value:
                     mysite.update(
                         {
                             "site_id": myid,
@@ -213,7 +219,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     )
                     # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
                     admin = site_info.get("ms_type", 0) in [0, 1]
-                    mysite.update({"site_admin": admin})
+                    mysite["site_admin"] = admin
                     # query scene info if not provided in site Data
                     if not (scene := siteData):
                         self._logger.debug("Getting scene info for site")
@@ -245,13 +251,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         }
                         & exclude
                     ):
-                        if avg_data := await self.get_avg_power_from_energy(
+                        await self.get_avg_power_from_energy(
                             siteId=myid, fromFile=fromFile
-                        ):
-                            mypanel = mysite.get("powerpanel_info") or {}
-                            mypanel["average_power"] = avg_data
-                            mysite["powerpanel_info"] = mypanel
-
+                        )
                     new_sites.update({myid: mysite})
 
         # Write back the updated sites
@@ -295,58 +297,69 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         # check exclusion list, default to all energy data
         if not exclude or not isinstance(exclude, set):
             exclude = set()
-        query_types: set = {SolixDeviceType.POWERPANEL.value}
         for site_id, site in self.sites.items():
-            self._logger.debug("Getting Power Panel energy details for site")
-            # obtain previous energy details to check if yesterday must be queried as well
-            energy = site.get("energy_details") or {}
-            # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
-            # Cloud server energy stat updates may be delayed by 3 minutes for power panels
-            time: datetime = datetime.now() - timedelta(minutes=5)
-            today = time.strftime("%Y-%m-%d")
-            yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
-            # Fetch energy from today or both days
-            data: dict = {}
-            if yesterday != (energy.get("last_period") or {}).get("date"):
-                data.update(
-                    await self.energy_daily(
-                        siteId=site_id,
-                        startDay=datetime.fromisoformat(yesterday),
-                        numDays=2,
-                        dayTotals=True,
-                        devTypes=query_types,
-                        fromFile=fromFile,
+            query_types: set = set()
+            # build device types set for daily energy query, depending on device types found for site
+            # Powerpanel sites have no variations for enery metrics, either all or none can be queried
+            if not (
+                {
+                    SolixDeviceType.POWERPANEL.value,
+                    ApiCategories.powerpanel_energy,
+                }
+                & exclude
+            ):
+                query_types: set = {SolixDeviceType.POWERPANEL.value}
+            if query_types:
+                self._logger.debug("Getting Power Panel energy details for site")
+                # obtain previous energy details to check if yesterday must be queried as well
+                energy = site.get("energy_details") or {}
+                # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
+                # Cloud server energy stat updates may be delayed by 3 minutes for power panels
+                time: datetime = datetime.now() - timedelta(minutes=5)
+                today = time.strftime("%Y-%m-%d")
+                yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
+                # Fetch energy from today or both days
+                data: dict = {}
+                if yesterday != (energy.get("last_period") or {}).get("date"):
+                    data.update(
+                        await self.energy_daily(
+                            siteId=site_id,
+                            startDay=datetime.fromisoformat(yesterday),
+                            numDays=2,
+                            dayTotals=True,
+                            devTypes=query_types,
+                            fromFile=fromFile,
+                        )
                     )
-                )
-            else:
-                data.update(
-                    await self.energy_daily(
-                        siteId=site_id,
-                        startDay=datetime.fromisoformat(today),
-                        numDays=1,
-                        dayTotals=True,
-                        devTypes=query_types,
-                        fromFile=fromFile,
+                else:
+                    data.update(
+                        await self.energy_daily(
+                            siteId=site_id,
+                            startDay=datetime.fromisoformat(today),
+                            numDays=1,
+                            dayTotals=True,
+                            devTypes=query_types,
+                            fromFile=fromFile,
+                        )
                     )
-                )
-            if fromFile:
-                # get last date entries from file and replace date with yesterday and today for testing
-                days = len(data)
-                if len(data) > 1:
-                    entry: dict = list(data.values())[days - 2]
-                    entry.update({"date": yesterday})
-                    energy["last_period"] = entry
-                if len(data) > 0:
-                    entry: dict = list(data.values())[days - 1]
-                    entry.update({"date": today})
-                    energy["today"] = entry
-            else:
-                energy["today"] = data.get(today) or {}
-                if data.get(yesterday):
-                    energy["last_period"] = data.get(yesterday) or {}
-            # save energy stats with sites dictionary
-            site["energy_details"] = energy
-            self.sites[site_id] = site
+                if fromFile:
+                    # get last date entries from file and replace date with yesterday and today for testing
+                    days = len(data)
+                    if len(data) > 1:
+                        entry: dict = list(data.values())[days - 2]
+                        entry.update({"date": yesterday})
+                        energy["last_period"] = entry
+                    if len(data) > 0:
+                        entry: dict = list(data.values())[days - 1]
+                        entry.update({"date": today})
+                        energy["today"] = entry
+                else:
+                    energy["today"] = data.get(today) or {}
+                    if data.get(yesterday):
+                        energy["last_period"] = data.get(yesterday) or {}
+                # save energy stats with sites dictionary
+                site["energy_details"] = energy
+                self.sites[site_id] = site
         return self.sites
 
     async def update_device_details(
@@ -433,9 +446,18 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
 
         Example data:
         """
-        mysite = self.sites.get(siteId) or {}
-        mypanel = mysite.get("powerpanel_info") or {}
-        avg_data = mypanel.get("average_power") or {}
+        # get existing data first from device detals to check if requery must be done
+        avg_data = next(
+            iter(
+                [
+                    (dev.get("average_power") or {})
+                    for dev in self.devices.values()
+                    if dev.get("type") == SolixDeviceType.POWERPANEL.value
+                    and dev.get("site_id") == siteId
+                ]
+            ),
+            {},
+        )
         # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
         if not (timestring := avg_data.get("last_check")) or (
             datetime.now() - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S")
@@ -621,12 +643,15 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             ).get("value")
                             or ""
                         )
-            # update sites dict with relevant info and with required structure
+            # update device dict with relevant info and with required structure
             if avg_data:
-                # create powerpanel_info dictionary to add directly into scene_info of site
-                mypanel["average_power"] = avg_data
-                mysite["powerpanel_info"] = mypanel
-                self.sites[siteId] = mysite
+                # Add average power to device details as work around if no other powerpanel usage data will be found in cloud
+                for sn, dev in self.devices.items():
+                    if (
+                        dev.get("type") == SolixDeviceType.POWERPANEL.value
+                        and dev.get("site_id") == siteId
+                    ):
+                        self.devices[sn]["average_power"] = avg_data
 
         return avg_data
 

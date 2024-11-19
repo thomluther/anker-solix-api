@@ -114,7 +114,6 @@ API_ENDPOINTS = {
     "bind_devices": "power_service/v1/app/get_relate_and_bind_devices",  # List with details of locally connected/bound devices, includes firmware version, works only for owner account
     "get_device_load": "power_service/v1/app/device/get_device_home_load",  # Get defined device schedule (same data as provided with device param query)
     "set_device_load": "power_service/v1/app/device/set_device_home_load",  # Set defined device schedule, Accepts the new schedule, but does NOT change it? Maybe future use for schedules per device
-    "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_ota_info": "power_service/v1/app/compatible/get_ota_info",  # Get OTA status for solarbank and/or inverter serials
     "get_ota_update": "power_service/v1/app/compatible/get_ota_update",  # Get info of available OTA update
     "solar_info": "power_service/v1/app/compatible/get_compatible_solar_info",  # Solar inverter definition for solarbanks, works only with owner account
@@ -128,7 +127,6 @@ API_ENDPOINTS = {
     "check_upgrade_record": "power_service/v1/app/check_upgrade_record",  # show an upgrade record for the device, types 1-3 show different info, only works for owner account
     "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
     "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
-    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
     "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
     "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
     "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smart meter? NOT IMPLEMENTED YET
@@ -138,6 +136,8 @@ API_ENDPOINTS = {
     "get_third_platforms": "power_service/v1/app/third/platform/list",  # list supported third party device models
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
     "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
+    "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
+    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -166,15 +166,15 @@ API_HES_SVC_ENDPOINTS = {
     "get_monetary_units": "charging_hes_svc/get_world_monetary_unit",  # monetary unit list for system, works with shared account
     "get_install_info": "charging_hes_svc/get_install_info",  # get system install info, works with shared account
     "get_wifi_info": "charging_hes_svc/get_wifi_info",  # get device wifi info, works with shared account
-    "get_installer_info": "charging_hes_svc/get_installer_info", # no shared account access, needs HES site?
-    "get_system_running_time": "charging_hes_svc/get_system_running_time", # no shared account access, needs HES site?
-    "get_mi_layout": "charging_hes_svc/get_mi_layout", # no shared account access, needs HES site?
-    "get_conn_net_tips": "charging_hes_svc/get_conn_net_tips", # no shared account access, needs HES site?
-    "get_hes_dev_info": "charging_hes_svc/get_hes_dev_info", # no shared account access, needs HES site?
-    "report_device_data": "charging_hes_svc/report_device_data", # no shared account access, needs HES site and installer system?
+    "get_installer_info": "charging_hes_svc/get_installer_info",  # no shared account access, needs HES site?
+    "get_system_running_time": "charging_hes_svc/get_system_running_time",  # no shared account access, needs HES site?
+    "get_mi_layout": "charging_hes_svc/get_mi_layout",  # no shared account access, needs HES site?
+    "get_conn_net_tips": "charging_hes_svc/get_conn_net_tips",  # no shared account access, needs HES site?
+    "get_hes_dev_info": "charging_hes_svc/get_hes_dev_info",  # no shared account access, needs HES site?
+    "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
 }
 
-""" Other endpoints neither implemented nor explored:
+""" Other endpoints neither implemented nor explored: 37 + 39 used => 76
     'power_service/v1/site/can_create_site',
     'power_service/v1/site/create_site',
     'power_service/v1/site/update_site',
@@ -204,7 +204,6 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/share_site/join_site',
     'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
     'power_service/v1/app/get_phonecode_list',
-    'power_service/v1/app/get_config', # shows empty config list, also for shared account
     'power_service/v1/app/device/set_device_attrs', # for solarbank 2 and/or smart meter?
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
@@ -213,6 +212,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/read_message',
     'power_service/v1/add_message',
     'power_service/v1/del_message',
+
+App related: 7 + 2 used => 9 total
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
     'app/logging/get_device_logging',
@@ -221,7 +222,7 @@ API_HES_SVC_ENDPOINTS = {
     'app/devicerelation/relate_device',
     'app/push/clear_count',
 
-PPS and Power Panel related:
+PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/sync_installation_inspection", #Unknown at this time
     "charging_energy_service/sync_config",
     "charging_energy_service/restart_peak_session",
@@ -229,7 +230,7 @@ PPS and Power Panel related:
     "charging_energy_service/ack_utility_rate_plan",
     "charging_energy_service/adjust_station_price_unit",
 
-Home Energy System related (X1):
+Home Energy System related (X1): 35 + 14 used => 49 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -240,7 +241,7 @@ Home Energy System related (X1):
     "charging_hes_svc/get_auto_disaster_prepare_status",
     "charging_hes_svc/get_auto_disaster_prepare_detail",
     "charging_hes_svc/get_back_up_history",
-    "charging_hes_svc/get_current_disaster_prepare_details",
+    "charging_hes_svc/get_current_disaster_prepare_detail",
     "charging_hes_svc/get_device_command",
     "charging_hes_svc/get_device_pn_info",
     "charging_hes_svc/get_device_card_list",
@@ -248,12 +249,17 @@ Home Energy System related (X1):
     "charging_hes_svc/get_external_device_config",
     "charging_hes_svc/get_site_mi_list",
     "charging_hes_svc/get_station_config_and_status",
+    "charging_hes_svc/get_system_device_time",
     "charging_hes_svc/get_system_profit_detail",
     "charging_hes_svc/get_tou_price_plan_detail",
     "charging_hes_svc/get_user_fault_info",
+    "charging_hes_svc/get_utility_rate_plan",
+    "charging_hes_svc/get_vpp_check_code",
+    "charging_hes_svc/update_device_info_by_app",
     "charging_hes_svc/update_hes_utility_rate_plan",
-    "charging_hes_svc/user_event_alarm",
     "charging_hes_svc/update_wifi_config",
+    "charging_hes_svc/user_event_alarm",
+    "charging_hes_svc/user_fault_alarm",
     "charging_hes_svc/ota",
     "charging_hes_svc/quit_auto_disaster_prepare",
     "charging_hes_svc/remove_user_fault_info",
@@ -420,12 +426,15 @@ class SolarbankUsageMode(IntEnum):
     smartplugs = 2
     manual = 3
 
+
 @dataclass(frozen=True)
 class SolarbankRatePlan:
     """Dataclass for Anker Solix Solarbank 2 rate plan types."""
 
     # rate plan per usage mode
-    smartmeter: str = "custom_rate_plan" # used for default output setting on connection loss
+    smartmeter: str = (
+        "custom_rate_plan"  # used for default output setting on connection loss
+    )
     smartplugs: str = "blend_plan"
     manual: str = "custom_rate_plan"
 
@@ -489,6 +498,22 @@ class SolixDeviceCapacity:
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
     A5220: int = 5000  # SOLIX X1 Battery module
+
+
+@dataclass(frozen=True)
+class SolixSiteType:
+    """Dataclass for Anker Solix System/Site types according to the main device in site rules."""
+
+    t_1 = SolixDeviceType.INVERTER.value  # Main A5143
+    t_2 = SolixDeviceType.SOLARBANK.value  # Main A17C0
+    t_4 = SolixDeviceType.POWERPANEL.value  # Main A17B1
+    t_5 = SolixDeviceType.SOLARBANK.value  # Main A17C1
+    t_6 = SolixDeviceType.HES.value  # Main A5341
+    t_7 = SolixDeviceType.HES.value  # Main A5101
+    t_8 = SolixDeviceType.HES.value  # Main A5102
+    t_9 = SolixDeviceType.HES.value  # Main A5103
+    t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3
+    t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2
 
 
 @dataclass(frozen=True)
@@ -569,9 +594,11 @@ class SolixDeviceCategory:
 class SolarbankDeviceMetrics:
     """Dataclass for Anker Solarbank metrics which should be tracked in device details cache depending on model type."""
 
+    # SOLIX E1600 Solarbank, single MPPT without channel reporting
     A17C0: ClassVar[set[str]] = (
         set()
-    )  # SOLIX E1600 Solarbank, single MPPT without channel reporting
+    )
+    # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting and AC socket
     A17C1: ClassVar[set[str]] = {
         "sub_package_num",
         "solar_power_1",
@@ -580,20 +607,41 @@ class SolarbankDeviceMetrics:
         "solar_power_4",
         "ac_power",
         "to_home_load",
-    }  # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting and AC socket
+        # TODO: Remove what is not used from the new fields
+        "pei_heating_power",
+        "micro_inverter_power",
+        "micro_inverter_power_limit",
+        "micro_inverter_low_power_limit",
+        "other_input_power",
+    }
+    # SOLIX E1600 Solarbank 2 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
         "sub_package_num",
         "solar_power_1",
         "solar_power_2",
         "ac_power",
         "to_home_load",
-    }  # SOLIX E1600 Solarbank 2 AC, witho 2 MPPT channel and AC socket
+        # TODO: Remove what is not used from the new fields
+        "pei_heating_power",
+        "micro_inverter_power",
+        "micro_inverter_power_limit",
+        "micro_inverter_low_power_limit",
+        "grid_to_battery_power",
+        "other_input_power",
+    }
+    # SOLIX E1600 Solarbank 2 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
         "sub_package_num",
         "solar_power_1",
         "solar_power_2",
         "to_home_load",
-    }  # SOLIX E1600 Solarbank 2 Plus, with 2 MPPT
+        # TODO: Remove what is not used from the new fields
+        "pei_heating_power",
+        "micro_inverter_power",
+        "micro_inverter_power_limit",
+        "micro_inverter_low_power_limit",
+        "other_input_power",
+    }
 
 
 @dataclass(frozen=True)

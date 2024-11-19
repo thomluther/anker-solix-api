@@ -175,7 +175,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update({key: str(value)})
                     elif key in ["wifi_signal"]:
                         # Make sure that key is added, but update only if new value provided to avoid deletion of value from rssi calculation
-                        if value or device.get("wifi_signal") is None:
+                        if value or device.get(key) is None:
                             device.update({key: str(value)})
                     elif key in ["rssi"]:
                         # This is actually not a relative rssi value (0-255), but a negative value and seems to be the absolute dBm of the signal strength
@@ -218,6 +218,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "solar_power_4",
                             "ac_power",
                             "to_home_load",
+                            "other_input_power",
+                            "micro_inverter_power",
+                            "micro_inverter_power_limit",
+                            "micro_inverter_low_power_limit",
+                            "grid_to_battery_power",
+                            "pei_heating_power",
                         ]
                         and value
                     ):
@@ -229,7 +235,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
-                            device.update({"sub_package_num": int(value)})
+                            device.update({key: int(value)})
                             calc_capacity = True
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
                     elif key in ["set_load_power", "parallel_home_load"] and value:
@@ -256,7 +262,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 }
                             )
                     elif key in ["status"]:
-                        device.update({"status": str(value)})
+                        device.update({key: str(value)})
                         # decode the status into a description
                         description = SolixDeviceStatus.unknown.name
                         for status in SolixDeviceStatus:
@@ -265,7 +271,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 break
                         device.update({"status_desc": description})
                     elif key in ["charging_status"]:
-                        device.update({"charging_status": str(value)})
+                        device.update({key: str(value)})
                         # decode the status into a description
                         description = SolarbankStatus.unknown.name
                         for status in SolarbankStatus:
@@ -352,26 +358,26 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update({key: list(value)})
                     elif key in ["fittings"]:
                         # update nested dictionary
-                        if "fittings" in device:
-                            device["fittings"].update(dict(value))
+                        if key in device:
+                            device[key].update(dict(value))
                         else:
-                            device["fittings"] = dict(value)
-                    elif key in ["solar_info"] and isinstance(value, dict) and value:
+                            device[key] = dict(value)
+                    elif key in ["solar_info"] and isinstance(value, dict):
                         # remove unnecessary keys from solar_info
                         keylist = value.keys()
-                        for key in [
+                        for extra in [
                             x
                             for x in ("brand_id", "model_img", "version", "ota_status")
                             if x in keylist
                         ]:
-                            value.pop(key, None)
-                        device.update({"solar_info": dict(value)})
+                            value.pop(extra, None)
+                        device.update({key: value})
                     elif key in ["solarbank_count"] and value:
-                        device.update({"solarbank_count": value})
+                        device.update({key: value})
                     # schedule is currently a site wide setting. However, we save this with device details to retain info across site updates
                     # When individual device schedules are supported in future, this info is needed per device anyway
                     elif key in ["schedule"] and isinstance(value, dict):
-                        device.update({"schedule": dict(value)})
+                        device.update({key: dict(value)})
                         # set default presets for no active schedule slot
                         generation = int(device.get("generation", 0))
                         cnt = device.get("solarbank_count", 0)
@@ -578,9 +584,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["generate_power"]:
                         device.update({key: str(value)})
 
+                    # Power Panel specific keys
+                    elif key in ["average_power"] and isinstance(value, dict):
+                        device.update({key: value})
+
                     # smartmeter specific keys
                     elif key in ["grid_status"]:
-                        device.update({"grid_status": str(value)})
+                        device.update({key: str(value)})
                         # decode the grid status into a description
                         description = SmartmeterStatus.unknown.name
                         for status in SmartmeterStatus:

@@ -7,7 +7,13 @@ import contextlib
 from datetime import datetime, timedelta
 
 from .apibase import AnkerSolixBaseApi
-from .apitypes import ApiCategories, SolarbankStatus, SolixDeviceType, SolixParmType
+from .apitypes import (
+    ApiCategories,
+    SolarbankStatus,
+    SolixDeviceType,
+    SolixParmType,
+    SolixSiteType,
+)
 from .powerpanel import AnkerSolixPowerpanelApi
 
 
@@ -64,10 +70,14 @@ async def poll_sites(  # noqa: C901
             siteInfo: dict = mysite.get("site_info", {})
             siteInfo.update(site)
             mysite.update({"type": SolixDeviceType.SYSTEM.value, "site_info": siteInfo})
+            if hasattr(
+                SolixSiteType, item := "t_" + str(siteInfo.get("power_site_type") or "")
+            ):
+                mysite["site_type"] = getattr(SolixSiteType, item)
             admin = (
                 siteInfo.get("ms_type", 0) in [0, 1]
             )  # add boolean key to indicate whether user is site admin (ms_type 1 or not known) and can query device details
-            mysite.update({"site_admin": admin})
+            mysite["site_admin"] = admin
             # Get product list once for device names if no admin and save it in account cache
             if not admin and "products" not in api.account:
                 api._update_account(
@@ -120,7 +130,7 @@ async def poll_sites(  # noqa: C901
                         else oldstamp
                     )
             # check if power panel site type to maintain statistic object which will be updated and replaced only during site details refresh
-            if (siteInfo.get("power_site_type") or 0) in [4]:
+            if mysite.get("site_type") == SolixDeviceType.POWERPANEL.value:
                 # initialize the powerpanel Api if not done yet
                 if not api.powerpanelApi:
                     api.powerpanelApi = AnkerSolixPowerpanelApi(
@@ -195,6 +205,12 @@ async def poll_sites(  # noqa: C901
                         "solar_power_4": sb_info.get("solar_power_4"),
                         "ac_power": sb_info.get("ac_power"),
                         "to_home_load": sb_info.get("to_home_load"),
+                        "other_input_power": sb_info.get("other_input_power"),
+                        "micro_inverter_power": sb_info.get("micro_inverter_power"),
+                        "micro_inverter_power_limit": sb_info.get("micro_inverter_power_limit"),
+                        "micro_inverter_low_power_limit": sb_info.get("micro_inverter_low_power_limit"),
+                        "grid_to_battery_power": sb_info.get("grid_to_battery_power"),
+                        "pei_heating_power": sb_info.get("pei_heating_power"),
                         # only passed to device for proper SB2 charge status update
                         "home_load_power": mysite.get("home_load_power"),
                     },
@@ -318,7 +334,8 @@ async def poll_sites(  # noqa: C901
                     powerpanel = dict(powerpanel).copy()
                     powerpanel.update({"alias_name": powerpanel.pop("device_name")})
                 if sn := api._update_dev(
-                    powerpanel,
+                    # merge powerpanel device details if available
+                    powerpanel | ((api.powerpanelApi.devices.get(powerpanel.get("device_sn") or "") or {}) if api.powerpanelApi else {}),
                     devType=SolixDeviceType.POWERPANEL.value,
                     siteId=myid,
                     isAdmin=admin,
@@ -496,8 +513,6 @@ async def poll_device_energy(
     # check exclusion list, default to all energy data
     if not exclude or not isinstance(exclude, set):
         exclude = set()
-    query_types: set = set()
-    query_sn: str = ""
     # First check if power panel sites available and use appropriate method to merge the energy stats at the end
     if api.powerpanelApi:
         await api.powerpanelApi.update_device_energy(fromFile=fromFile, exclude=exclude)
@@ -512,6 +527,8 @@ async def poll_device_energy(
             # build device types set for daily energy query, depending on device types found for site
             # solarinfo will always be queried by daily energy and required for general site statistics
             # However, daily energy should not be queried for solarbank, smartmeter or smart plug devices when they or their energy category is explicitly excluded
+            query_types: set = set()
+            query_sn: str = ""
             if (
                 (dev_list := site.get("solar_list") or [])
                 and isinstance(dev_list, list)
@@ -576,7 +593,7 @@ async def poll_device_energy(
                 # obtain previous energy details to check if yesterday must be queried as well
                 energy = site.get("energy_details") or {}
                 # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
-                # Cloud server energy stat updates may be delayed by 3 minutes for power panels
+                # Cloud server energy stat updates may be delayed by 2-3 minutes
                 time: datetime = datetime.now() - timedelta(minutes=5)
                 today = time.strftime("%Y-%m-%d")
                 yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
