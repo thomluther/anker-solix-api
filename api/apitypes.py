@@ -151,8 +151,8 @@ API_CHARGING_ENDPOINTS = {
     "get_installation_inspection": "charging_energy_service/get_installation_inspection",  # appears to say which page last viewed on App, needs owner account
     "get_utility_rate_plan": "charging_energy_service/get_utility_rate_plan",  # needs owner account
     "report_device_data": "charging_energy_service/report_device_data",  # ctrol [0 1], works but data is null (may need owner account?)
-    "get_configs": "charging_energy_service/get_configs",  # needs owner account
-    "get_sns": "charging_energy_service/get_sns",  # Displays Serial Numbers of attached PPS in Home, needs owner account
+    "get_configs": "charging_energy_service/get_configs",  # json={"siteId": "SITEID", "sn": "POWERPANELSN", "param_types": []})) # needs owner account, list of parm types not clear
+    "get_sns": "charging_energy_service/get_sns",  # json={"main_sn": "POWERPANELSN","macs": ["F38001MAC001","F38002MAC002"]})) # needs owner account, Displays Serial Numbers of attached PPS in Home
     "get_monetary_units": "charging_energy_service/get_world_monetary_unit",  # monetary unit list for system, needs owner account
 }
 
