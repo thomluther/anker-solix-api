@@ -752,7 +752,7 @@ class AnkerSolixApiExport:
                     replace=[(siteId, "<siteId>")],
                     randomkeys=True,
                 )
-                # check if valid HES data available for site and skip if not enforced
+                # check if valid charging data available for site and skip if not enforced
                 if not (
                     is_charging := len(site.get("powerpanel_list") or []) > 0
                 ) and not self.export_services & {ApiEndpointServices.charging}:
