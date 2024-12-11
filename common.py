@@ -59,21 +59,17 @@ def country() -> str:
 def print_schedule(schedule: dict) -> None:
     """Print the schedule ranges as table."""
 
-    t1 = 2
-    t2 = 5
-    t3 = 5
-    t4 = 6
-    t5 = 6
-    t6 = 10
-    t7 = 6
-    t8 = 6
-    t9 = 5
+    t2 = 2
+    t5 = 5
+    t6 = 6
+    t9 = 9
+    t10 = 10
     plan = schedule or {}
     if plan.get("mode_type", 0):
         # SB2 schedule
         usage_mode = plan.get("mode_type") or 0
         CONSOLE.info(
-            f"{'Usage Mode':<{t1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{t2+t3+t4}} {'Def. Preset':<{t3}}: {plan.get('default_home_load','----'):>4} W"
+            f"{'Usage Mode':<{t2}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{t5+t5+t6}} {'Def. Preset':<{t5}}: {plan.get('default_home_load','----'):>4} W"
         )
         week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         for rate_plan_name in {
@@ -81,27 +77,28 @@ def print_schedule(schedule: dict) -> None:
             for attr in SolarbankUsageMode
         }:
             CONSOLE.info(
-                f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}   <== {rate_plan_name}{' (Smart plugs)' if rate_plan_name == SolarbankRatePlan.smartplugs else ''}"
+                f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Output':<{t6}} {'Weekdays':<{t6}}   <== {rate_plan_name}{' (Smart plugs)' if rate_plan_name == SolarbankRatePlan.smartplugs else ''}"
             )
             for idx in plan.get(rate_plan_name) or [{}]:
                 index = idx.get("index", "--")
                 weekdays = [week[day] for day in idx.get("week") or []]
                 for slot in idx.get("ranges") or []:
                     CONSOLE.info(
-                        f"{index!s:>{t1}} {slot.get('start_time','')!s:<{t2}} {slot.get('end_time','')!s:<{t3}} {str(slot.get('power',''))+' W':>{t4}} {','.join(weekdays):<{t5}}"
+                        f"{index!s:>{t2}} {slot.get('start_time','')!s:<{t5}} {slot.get('end_time','')!s:<{t5}} {str(slot.get('power',''))+' W':>{t6}} {','.join(weekdays):<{t6}}"
                     )
     else:
         # SB1 schedule
         CONSOLE.info(
-            f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}} {'Mode':>{t9}} Name"
+            f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Export':<{t6}} {'Output':<{t6}} {'ChargePrio':<{t10}} {'DisChPrio':<{t9}} {'SB1':>{t6}} {'SB2':>{t6}} {'Mode':>{t5}} Name"
         )
-        for slot in (schedule or {}).get("ranges", []):
+        for slot in plan.get("ranges", []):
             enabled = slot.get("turn_on")
+            discharge = slot.get("priority_discharge_switch") if plan.get("is_show_priority_discharge") else None
             load = slot.get("appliance_loads", [])
             load = load[0] if len(load) > 0 else {}
             solarbanks = slot.get("device_power_loads", [])
             sb1 = str(solarbanks[0].get("power") if len(solarbanks) > 0 else "---")
             sb2 = str(solarbanks[1].get("power") if len(solarbanks) > 1 else "---")
             CONSOLE.info(
-                f"{slot.get('id','')!s:>{t1}} {slot.get('start_time','')!s:<{t2}} {slot.get('end_time','')!s:<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {slot.get('power_setting_mode','-')!s:^{t9}} {load.get('name','')!s}"
+                f"{slot.get('id','')!s:>{t2}} {slot.get('start_time','')!s:<{t5}} {slot.get('end_time','')!s:<{t5}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t6}} {str(load.get('power',''))+' W':>{t6}} {str(slot.get('charge_priority',''))+' %':>{t10}} {('---' if discharge is None else 'YES' if discharge else 'NO'):>{t9}} {sb1+' W':>{t6}} {sb2+' W':>{t6}} {slot.get('power_setting_mode','-')!s:^{t5}} {load.get('name','')!s}"
             )

@@ -144,15 +144,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             col1 = 15
             col2 = 23
             col3 = 15
-            t1 = 2
-            t2 = 5
-            t3 = 5
-            t4 = 6
-            t5 = 6
-            t6 = 10
-            t7 = 6
-            t8 = 6
-            t9 = 5
+            t2 = 2
+            t5 = 5
+            t6 = 6
+            t9 = 9
+            t10 = 10
             while True:
                 clearscreen()
                 now = datetime.now().astimezone()
@@ -314,7 +310,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 }:
                                     if schedule := data.get(plan) or []:
                                         CONSOLE.info(
-                                            f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Output':<{t4}} {'Weekdays':<{t5}}   <== {plan}{' (Smart plugs)' if plan == SolarbankRatePlan.smartplugs else ''}"
+                                            f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Output':<{t6}} {'Weekdays':<{t6}}   <== {plan}{' (Smart plugs)' if plan == SolarbankRatePlan.smartplugs else ''}"
                                         )
                                     for idx in schedule or {}:
                                         index = idx.get("index", "--")
@@ -323,15 +319,16 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                         ]
                                         for slot in idx.get("ranges") or []:
                                             CONSOLE.info(
-                                                f"{index!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {str(slot.get('power',''))+' W':>{t4}} {','.join(weekdays):<{t5}}"
+                                                f"{index!s:>{t2}} {slot.get('start_time',''):<{t5}} {slot.get('end_time',''):<{t5}} {str(slot.get('power',''))+' W':>{t6}} {','.join(weekdays):<{t6}}"
                                             )
                             else:
                                 # Solarbank 1 schedule
                                 CONSOLE.info(
-                                    f"{'ID':<{t1}} {'Start':<{t2}} {'End':<{t3}} {'Export':<{t4}} {'Output':<{t5}} {'ChargePrio':<{t6}} {'SB1':>{t7}} {'SB2':>{t8}} {'Mode':>{t9}} Name"
+                                    f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Export':<{t6}} {'Output':<{t6}} {'ChargePrio':<{t10}} {'DisChPrio':<{t9}} {'SB1':>{t6}} {'SB2':>{t6}} {'Mode':>{t5}} Name"
                                 )
                                 for slot in data.get("ranges") or []:
                                     enabled = slot.get("turn_on")
+                                    discharge = slot.get("priority_discharge_switch") if data.get("is_show_priority_discharge") else None
                                     load = slot.get("appliance_loads") or []
                                     load = load[0] if len(load) > 0 else {}
                                     solarbanks = slot.get("device_power_loads") or []
@@ -346,7 +343,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                         else "---"
                                     )
                                     CONSOLE.info(
-                                        f"{slot.get('id','')!s:>{t1}} {slot.get('start_time',''):<{t2}} {slot.get('end_time',''):<{t3}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t4}} {str(load.get('power',''))+' W':>{t5}} {str(slot.get('charge_priority',''))+' %':>{t6}} {sb1+' W':>{t7}} {sb2+' W':>{t8}} {slot.get('power_setting_mode') or '-'!s:^{t9}} {load.get('name','')!s}"
+                                        f"{slot.get('id','')!s:>{t2}} {slot.get('start_time',''):<{t5}} {slot.get('end_time',''):<{t5}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t6}} {str(load.get('power',''))+' W':>{t6}} {str(slot.get('charge_priority',''))+' %':>{t10}} {('---' if discharge is None else 'YES' if discharge else 'NO'):>{t9}} {sb1+' W':>{t6}} {sb2+' W':>{t6}} {slot.get('power_setting_mode','-')!s:^{t5}} {load.get('name','')!s}"
                                     )
                     elif devtype == api.SolixDeviceType.INVERTER.value:
                         CONSOLE.info(

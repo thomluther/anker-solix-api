@@ -419,6 +419,13 @@ class SolarbankPowerMode(IntEnum):
     advanced = 2
 
 
+class SolarbankDischargePriorityMode(IntEnum):
+    """Enumeration for Anker Solix Solarbank 1 Discharge priority setting modes."""
+
+    off = 0
+    on = 1
+
+
 class SolarbankUsageMode(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 Power Usage modes."""
 
@@ -663,6 +670,8 @@ class SolixDefaults:
     CHARGE_PRIORITY_MIN: int = 0
     CHARGE_PRIORITY_MAX: int = 100
     CHARGE_PRIORITY_DEF: int = 80
+    # Discharge Priority preset for Solarbank schedule timeslot settings
+    DISCHARGE_PRIORITY_DEF: int = SolarbankDischargePriorityMode.off.value
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
     REQUEST_DELAY_MIN: float = 0.0
     REQUEST_DELAY_MAX: float = 5.0
@@ -725,6 +734,7 @@ class SolarbankTimeslot:
     )
     allow_export: bool | None = None  # mapped to the turn_on boolean
     charge_priority_limit: int | None = None  # mapped to charge_priority setting
+    discharge_priority: int | None = None  # mapped to discharge priority setting
 
 
 @dataclass
