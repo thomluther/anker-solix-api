@@ -686,6 +686,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             self.devices.update({str(sn): device})
         return sn
 
+    def clearCaches(self) -> None:
+        """Clear the api cache dictionaries except the account cache."""
+        super().clearCaches()
+        if self.powerpanelApi:
+            self.powerpanelApi.clearCaches()
+
     async def update_sites(
         self,
         siteId: str | None = None,
