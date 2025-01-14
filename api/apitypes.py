@@ -144,7 +144,7 @@ API_ENDPOINTS = {
 API_CHARGING_ENDPOINTS = {
     "get_error_info": "charging_energy_service/get_error_infos",  # No input param needed, show errors for account?
     "get_system_running_info": "charging_energy_service/get_system_running_info",  # Cumulative Home/System Energy Savings since Home creation date
-    "energy_statistics": "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel, # source type [solar hes grid home pps]
+    "energy_statistics": "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel, # source type [solar hes grid home pps diesel]
     "get_rom_versions": "charging_energy_service/get_rom_versions",  # Check for firmware update and download available packages, needs owner account
     "get_device_info": "charging_energy_service/get_device_infos",  # Wifi and MAC infos for provided devices, needs owner account
     "get_wifi_info": "charging_energy_service/get_wifi_info",  # Displays WiFi network connected to Home Power Panel, needs owner account
@@ -330,11 +330,13 @@ API_FILEPREFIXES = {
     "charging_energy_pps": "charging_energy_pps",
     "charging_energy_home": "charging_energy_home",
     "charging_energy_grid": "charging_energy_grid",
+    "charging_energy_diesel": "charging_energy_diesel",
     "charging_energy_solar_today": "charging_energy_solar_today",
     "charging_energy_hes_today": "charging_energy_hes_today",
     "charging_energy_pps_today": "charging_energy_pps_today",
     "charging_energy_home_today": "charging_energy_home_today",
     "charging_energy_grid_today": "charging_energy_grid_today",
+    "charging_energy_diesel_today": "charging_energy_diesel_today",
     "charging_get_rom_versions": "charging_rom_versions",
     "charging_get_device_info": "charging_device_info",
     "charging_get_wifi_info": "charging_wifi_info",
@@ -429,9 +431,11 @@ class SolarbankDischargePriorityMode(IntEnum):
 class SolarbankUsageMode(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 Power Usage modes."""
 
-    smartmeter = 1
-    smartplugs = 2
-    manual = 3
+    smartmeter = 1  # AC output based on measured smart meter power
+    smartplugs = 2  # AC output based on measured smart plug power
+    manual = 3  # manual time plan for AC output
+    backup_power = 4  # TODO: Check code and naming with SB2 AC schedules
+    charge_time = 5  # TODO: Check code and naming with SB2 AC schedules
 
 
 @dataclass(frozen=True)
@@ -444,6 +448,8 @@ class SolarbankRatePlan:
     )
     smartplugs: str = "blend_plan"
     manual: str = "custom_rate_plan"
+    backup_power: str = "manual_backup"
+    charge_time: str = "use_time"
 
 
 @dataclass(frozen=True)
@@ -512,15 +518,15 @@ class SolixSiteType:
     """Dataclass for Anker Solix System/Site types according to the main device in site rules."""
 
     t_1 = SolixDeviceType.INVERTER.value  # Main A5143
-    t_2 = SolixDeviceType.SOLARBANK.value  # Main A17C0
+    t_2 = SolixDeviceType.SOLARBANK.value  # Main A17C0 SB1
     t_4 = SolixDeviceType.POWERPANEL.value  # Main A17B1
-    t_5 = SolixDeviceType.SOLARBANK.value  # Main A17C1
+    t_5 = SolixDeviceType.SOLARBANK.value  # Main A17C1 SB2 Pro, can also add SB1
     t_6 = SolixDeviceType.HES.value  # Main A5341
     t_7 = SolixDeviceType.HES.value  # Main A5101
     t_8 = SolixDeviceType.HES.value  # Main A5102
     t_9 = SolixDeviceType.HES.value  # Main A5103
-    t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3
-    t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2
+    t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
+    t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
 
 
 @dataclass(frozen=True)
@@ -602,9 +608,7 @@ class SolarbankDeviceMetrics:
     """Dataclass for Anker Solarbank metrics which should be tracked in device details cache depending on model type."""
 
     # SOLIX E1600 Solarbank, single MPPT without channel reporting
-    A17C0: ClassVar[set[str]] = (
-        set()
-    )
+    A17C0: ClassVar[set[str]] = set()
     # SOLIX E1600 Solarbank 2 Pro, with 4 MPPT channel reporting and AC socket
     A17C1: ClassVar[set[str]] = {
         "sub_package_num",
@@ -624,6 +628,7 @@ class SolarbankDeviceMetrics:
     # SOLIX E1600 Solarbank 2 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
         "sub_package_num",
+        "bat_charge_power",
         "solar_power_1",
         "solar_power_2",
         "ac_power",
