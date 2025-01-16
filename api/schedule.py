@@ -1661,3 +1661,99 @@ async def set_sb2_home_load(  # noqa: C901
         paramData=schedule,
         deviceSn=deviceSn,
     )
+
+
+async def set_sb2_ac_charge(  # noqa: C901
+    self,
+    siteId: str,
+    deviceSn: str,
+    backup_start: datetime | None = None,
+    backup_end: datetime | None = None,
+    backup_switch: bool | None = None,
+    test_schedule: dict | None = None,  # used only for testing instead of real schedule
+) -> bool | dict:
+    """Set or change the AC charge parameters for a given site id and solarbank 2 AC device.
+
+    The is part of the device schedule object
+    manual_backup: Used for the manual backup period definition for max AC charge
+
+    Example schedule for Solarbank 2 AC as provided via Api:
+    Example data for provided site_id with param_type 6 for SB2:
+    "schedule": {
+        "mode_type": 3,
+        "custom_rate_plan": null,
+        "blend_plan": null,
+        "use_time": null,
+        "manual_backup": {
+            "ranges": [
+            {
+                "start_time": 1734693780,
+                "end_time": 1734700980
+            }
+            ],
+            "switch": true
+        "default_home_load": 200,"max_load": 800,"min_load": 0,"step": 10}
+    """
+    # fast quit if nothing to change
+    backup_start = backup_start if isinstance(backup_start, datetime) else None
+    backup_end = backup_end if isinstance(backup_end, datetime) else None
+    backup_switch = backup_switch if isinstance(backup_switch, bool) else None
+    # make sure backup start and end time are valid
+    if backup_start or backup_end:
+        backup_end = max(backup_start or backup_end, backup_end or backup_start)
+        backup_start = min(backup_start or backup_end, backup_end or backup_start)
+    rate_plan_name = (
+        "manual_backup" if backup_start or backup_switch is not None else None
+    )
+
+    if not rate_plan_name:
+        self._logger.error("No valid AC charge options provided")
+        return False
+
+    # obtain actual device schedule from internal dict or fetch via api
+    if test_schedule is not None:
+        schedule = test_schedule
+    elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
+        schedule = (
+            await self.get_device_parm(
+                siteId=siteId,
+                paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+                deviceSn=deviceSn,
+            )
+        ).get("param_data") or {}
+
+    # create new structure if none exists yet
+    if not (new_rate_plan := schedule.get(rate_plan_name) or {}):
+        new_rate_plan["ranges"] = []
+        new_rate_plan["switch"] = False
+
+    if backup_switch is not None:
+        new_rate_plan["switch"] = backup_switch
+
+    if backup_start:
+        # TODO(AC): Modify if more than one range supported for device
+        new_rate_plan["ranges"] = [
+            {
+                "start_time": int(backup_start.timestamp()),
+                "end_time": int(backup_end.timestamp()),
+            }
+        ]
+
+    schedule.update({rate_plan_name: new_rate_plan})
+    self._logger.debug("Schedule to apply: %s", schedule)
+    # return resulting schedule for test purposes without Api call
+    if test_schedule is not None:
+        await self.get_device_parm(
+            siteId=siteId,
+            paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+            testSchedule=schedule,
+            deviceSn=deviceSn,
+        )
+        return schedule
+    # Make the Api call with final schedule and return result, the set call will also update api dict
+    return await self.set_device_parm(
+        siteId=siteId,
+        paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+        paramData=schedule,
+        deviceSn=deviceSn,
+    )

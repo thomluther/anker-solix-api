@@ -434,8 +434,7 @@ class SolarbankUsageMode(IntEnum):
     smartmeter = 1  # AC output based on measured smart meter power
     smartplugs = 2  # AC output based on measured smart plug power
     manual = 3  # manual time plan for AC output
-    backup_power = 4  # TODO: Check code and naming with SB2 AC schedules
-    charge_time = 5  # TODO: Check code and naming with SB2 AC schedules
+    charge_time = 4  # TODO(AC): Check code and naming with SB2 AC schedules
 
 
 @dataclass(frozen=True)
@@ -448,7 +447,6 @@ class SolarbankRatePlan:
     )
     smartplugs: str = "blend_plan"
     manual: str = "custom_rate_plan"
-    backup_power: str = "manual_backup"
     charge_time: str = "use_time"
 
 
@@ -618,7 +616,7 @@ class SolarbankDeviceMetrics:
         "solar_power_4",
         "ac_power",
         "to_home_load",
-        # TODO: Remove what is not used from the new fields
+        # TODO(AC): Remove what is not used from the new fields
         "pei_heating_power",
         "micro_inverter_power",
         "micro_inverter_power_limit",
@@ -633,7 +631,7 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "ac_power",
         "to_home_load",
-        # TODO: Remove what is not used from the new fields
+        # TODO(AC): Remove what is not used from the new fields
         "pei_heating_power",
         "micro_inverter_power",
         "micro_inverter_power_limit",
@@ -647,7 +645,7 @@ class SolarbankDeviceMetrics:
         "solar_power_1",
         "solar_power_2",
         "to_home_load",
-        # TODO: Remove what is not used from the new fields
+        # TODO(AC): Remove what is not used from the new fields
         "pei_heating_power",
         "micro_inverter_power",
         "micro_inverter_power_limit",
@@ -712,7 +710,7 @@ class SolarbankStatus(Enum):
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
     standby = "7"
     unknown = "unknown"
-    # TODO: Is there a new mode for AC charging? Can it be distinguished from existing values?
+    # TODO(AC): Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
 class SmartmeterStatus(Enum):

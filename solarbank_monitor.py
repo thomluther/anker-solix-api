@@ -25,10 +25,6 @@ import sys
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from api import api, errors  # pylint: disable=no-name-in-module
-from api.apitypes import (  # pylint: disable=no-name-in-module
-    SolarbankRatePlan,
-    SolarbankUsageMode,
-)
 import common
 
 # use Console logger from common module
@@ -144,11 +140,6 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             col1 = 15
             col2 = 23
             col3 = 15
-            t2 = 2
-            t5 = 5
-            t6 = 6
-            t9 = 9
-            t10 = 10
             while True:
                 clearscreen()
                 now = datetime.now().astimezone()
@@ -296,55 +287,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W',''):>4} W"
                         )
                         if admin:
-                            data = dev.get("schedule") or {}
-                            if dev.get("generation", 0) > 1:
-                                # Solarbank 2 schedule
-                                usage_mode = dev.get("preset_usage_mode") or 0
-                                week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-                                CONSOLE.info(
-                                    f"{'Usage Mode':<{col1}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize()+' ('+str(usage_mode)+')':<{col2}} {'Sched. Preset':<{col3}}: {dev.get('preset_system_output_power','----'):>4} W"
-                                )
-                                for plan in {
-                                    getattr(SolarbankRatePlan, attr.name)
-                                    for attr in SolarbankUsageMode
-                                }:
-                                    if schedule := data.get(plan) or []:
-                                        CONSOLE.info(
-                                            f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Output':<{t6}} {'Weekdays':<{t6}}   <== {plan}{' (Smart plugs)' if plan == SolarbankRatePlan.smartplugs else ''}"
-                                        )
-                                    for idx in schedule or {}:
-                                        index = idx.get("index", "--")
-                                        weekdays = [
-                                            week[day] for day in idx.get("week") or []
-                                        ]
-                                        for slot in idx.get("ranges") or []:
-                                            CONSOLE.info(
-                                                f"{index!s:>{t2}} {slot.get('start_time',''):<{t5}} {slot.get('end_time',''):<{t5}} {str(slot.get('power',''))+' W':>{t6}} {','.join(weekdays):<{t6}}"
-                                            )
-                            else:
-                                # Solarbank 1 schedule
-                                CONSOLE.info(
-                                    f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Export':<{t6}} {'Output':<{t6}} {'ChargePrio':<{t10}} {'DisChPrio':<{t9}} {'SB1':>{t6}} {'SB2':>{t6}} {'Mode':>{t5}} Name"
-                                )
-                                for slot in data.get("ranges") or []:
-                                    enabled = slot.get("turn_on")
-                                    discharge = slot.get("priority_discharge_switch") if data.get("is_show_priority_discharge") else None
-                                    load = slot.get("appliance_loads") or []
-                                    load = load[0] if len(load) > 0 else {}
-                                    solarbanks = slot.get("device_power_loads") or []
-                                    sb1 = str(
-                                        solarbanks[0].get("power")
-                                        if len(solarbanks) > 0
-                                        else "---"
-                                    )
-                                    sb2 = str(
-                                        solarbanks[1].get("power")
-                                        if len(solarbanks) > 1
-                                        else "---"
-                                    )
-                                    CONSOLE.info(
-                                        f"{slot.get('id','')!s:>{t2}} {slot.get('start_time',''):<{t5}} {slot.get('end_time',''):<{t5}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t6}} {str(load.get('power',''))+' W':>{t6}} {str(slot.get('charge_priority',''))+' %':>{t10}} {('---' if discharge is None else 'YES' if discharge else 'NO'):>{t9}} {sb1+' W':>{t6}} {sb2+' W':>{t6}} {slot.get('power_setting_mode','-')!s:^{t5}} {load.get('name','')!s}"
-                                    )
+                            # print schedule
+                            common.print_schedule(dev.get("schedule") or {})
                     elif devtype == api.SolixDeviceType.INVERTER.value:
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc','Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status','-')!s}"

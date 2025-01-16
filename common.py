@@ -1,10 +1,14 @@
 """A collection of helper functions for pyscripts."""  # noqa: INP001
 
+import datetime
 import getpass
 import logging
 import os
 
-from api.apitypes import SolarbankUsageMode, SolarbankRatePlan  # pylint: disable=no-name-in-module
+from api.apitypes import (  # pylint: disable=no-name-in-module
+    SolarbankRatePlan,
+    SolarbankUsageMode,
+)
 
 # create logger
 CONSOLE: logging.Logger = logging.getLogger(__name__)
@@ -73,25 +77,36 @@ def print_schedule(schedule: dict) -> None:
         )
         week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         for rate_plan_name in {
-            getattr(SolarbankRatePlan, attr.name)
-            for attr in SolarbankUsageMode
+            getattr(SolarbankRatePlan, attr)
+            for attr in ['smartmeter', 'smartplugs']
         }:
-            CONSOLE.info(
-                f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Output':<{t6}} {'Weekdays':<{t6}}   <== {rate_plan_name}{' (Smart plugs)' if rate_plan_name == SolarbankRatePlan.smartplugs else ''}"
-            )
             for idx in plan.get(rate_plan_name) or [{}]:
                 index = idx.get("index", "--")
                 weekdays = [week[day] for day in idx.get("week") or []]
-                for slot in idx.get("ranges") or []:
+                if ranges := idx.get("ranges") or []:
+                    CONSOLE.info(
+                        f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Output':<{t6}} {'Weekdays':<{t6}}   <== {rate_plan_name}{' (Smart plugs)' if rate_plan_name == SolarbankRatePlan.smartplugs else ''}"
+                    )
+                for slot in ranges:
                     CONSOLE.info(
                         f"{index!s:>{t2}} {slot.get('start_time','')!s:<{t5}} {slot.get('end_time','')!s:<{t5}} {str(slot.get('power',''))+' W':>{t6}} {','.join(weekdays):<{t6}}"
                     )
+        # AC specific plans
+        if (rate_plan := plan.get('manual_backup') or {}) and (ranges := rate_plan.get("ranges") or []):
+            CONSOLE.info(
+                f"{'Backup Start':<{t10+t10}} {'Backup End':<{t10+t10}}  <== manual_backup (Switch {'ON' if rate_plan.get('switch') else 'OFF'})"
+            )
+            for slot in ranges:
+                CONSOLE.info(
+                    f"{datetime.datetime.fromtimestamp(slot.get('start_time',0),datetime.UTC).astimezone().strftime("%Y-%m-%d %H:%M:%S"):<{t10+t10}} {datetime.datetime.fromtimestamp(slot.get('end_time',0),datetime.UTC).astimezone().strftime("%Y-%m-%d %H:%M:%S"):<{t10+t10}}"
+                )
     else:
         # SB1 schedule
-        CONSOLE.info(
-            f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Export':<{t6}} {'Output':<{t6}} {'ChargePrio':<{t10}} {'DisChPrio':<{t9}} {'SB1':>{t6}} {'SB2':>{t6}} {'Mode':>{t5}} Name"
-        )
-        for slot in plan.get("ranges", []):
+        if ranges := plan.get("ranges") or []:
+            CONSOLE.info(
+                f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Export':<{t6}} {'Output':<{t6}} {'ChargePrio':<{t10}} {'DisChPrio':<{t9}} {'SB1':>{t6}} {'SB2':>{t6}} {'Mode':>{t5}} Name"
+            )
+        for slot in ranges:
             enabled = slot.get("turn_on")
             discharge = slot.get("priority_discharge_switch") if plan.get("is_show_priority_discharge") else None
             load = slot.get("appliance_loads", [])
