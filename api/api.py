@@ -128,28 +128,31 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update({"name": str(value)})
                     elif key in ["alias_name"] and value:
                         device.update({"alias": str(value)})
-                        # preset default device name if only alias provided
+                        # preset default device name if only alias provided, fallback to alias if product name not listed
                         if (pn := device.get("device_pn") or None) and (
-                            not device.get("name") or not devData.get("device_name")
+                            not device.get("name") or devData.get("device_name")
                         ):
                             device.update(
                                 {
-                                    "name": (
+                                    "name": devData.get("device_name")
+                                    or (
                                         (self.account.get("products") or {}).get(pn)
                                         or {}
                                     ).get("name")
-                                    or ""
+                                    or str(value)
                                 }
                             )
                     elif key in ["device_sw_version"] and value:
                         device.update({"sw_version": str(value)})
                     elif key in [
+                        # keys with boolean values that should only be updated if value returned
                         "wifi_online",
                         "data_valid",
                         "charge",
                         "auto_upgrade",
                         "is_ota_update",
-                    ]:
+                        "cascaded",
+                    ] and value is not None:
                         device.update({key: bool(value)})
                     elif key in [
                         # keys with string values
@@ -506,7 +509,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         )[0].get("power")
                                         export = slot.get("turn_on")
                                         prio = slot.get("charge_priority")
-                                        if bool(value.get("is_show_priority_discharge")):
+                                        if bool(
+                                            value.get("is_show_priority_discharge")
+                                        ):
                                             discharge_prio = slot.get(
                                                 "priority_discharge_switch"
                                             )

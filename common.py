@@ -111,7 +111,7 @@ def print_schedule(schedule: dict) -> None:
             discharge = slot.get("priority_discharge_switch") if plan.get("is_show_priority_discharge") else None
             load = slot.get("appliance_loads", [])
             load = load[0] if len(load) > 0 else {}
-            solarbanks = slot.get("device_power_loads", [])
+            solarbanks = slot.get("device_power_loads") or []
             sb1 = str(solarbanks[0].get("power") if len(solarbanks) > 0 else "---")
             sb2 = str(solarbanks[1].get("power") if len(solarbanks) > 1 else "---")
             CONSOLE.info(

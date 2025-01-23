@@ -22,6 +22,7 @@ It can break at any time, or Api requests can be removed/added/changed and break
 The library is currently supported on
 
 - Python 3.12
+- Python 3.13
 
 # Required libraries
 

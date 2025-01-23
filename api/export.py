@@ -34,7 +34,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "2.3.2.0"
+VERSION: str = "2.4.1.0"
 
 
 class AnkerSolixApiExport:

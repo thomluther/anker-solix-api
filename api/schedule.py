@@ -1055,6 +1055,7 @@ async def set_home_load(  # noqa: C901
                     )
                     or [{}]
                 )
+                if sb.get("device_pn") == "A17C0"
             }
             if len(solarbanks) == sb_count and deviceSn in solarbanks:
                 slot.update({"power_setting_mode": power_mode})

@@ -174,7 +174,7 @@ API_HES_SVC_ENDPOINTS = {
     "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
 }
 
-""" Other endpoints neither implemented nor explored: 37 + 39 used => 76
+""" Other endpoints neither implemented nor explored: 40 + 39 used => 79
     'power_service/v1/site/can_create_site',
     'power_service/v1/site/create_site',
     'power_service/v1/site/update_site',
@@ -197,6 +197,7 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/after_sale/check_popup',
     'power_service/v1/app/after_sale/check_sn',
     'power_service/v1/app/after_sale/mark_sn',
+    'power_service/v1/app/share_site/anonymous_join_site',
     'power_service/v1/app/share_site/delete_site_member',
     'power_service/v1/app/share_site/invite_member',
     'power_service/v1/app/share_site/delete_inviting_member',
@@ -204,6 +205,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/share_site/join_site',
     'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
     'power_service/v1/app/get_phonecode_list',
+    'power_service/v1/app/get_annual_report',  # new report starting Jan 2025?
+    'power_service/v1/app/device/remove_param_config_key'
     'power_service/v1/app/device/set_device_attrs', # for solarbank 2 and/or smart meter?
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
@@ -230,7 +233,7 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/ack_utility_rate_plan",
     "charging_energy_service/adjust_station_price_unit",
 
-Home Energy System related (X1): 35 + 14 used => 49 total
+Home Energy System related (X1): 36 + 14 used => 50 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -255,6 +258,7 @@ Home Energy System related (X1): 35 + 14 used => 49 total
     "charging_hes_svc/get_user_fault_info",
     "charging_hes_svc/get_utility_rate_plan",
     "charging_hes_svc/get_vpp_check_code",
+    "charging_hes_svc/get_vpp_service_policy_by_agg_user",
     "charging_hes_svc/update_device_info_by_app",
     "charging_hes_svc/update_hes_utility_rate_plan",
     "charging_hes_svc/update_wifi_config",
@@ -616,12 +620,12 @@ class SolarbankDeviceMetrics:
         "solar_power_4",
         "ac_power",
         "to_home_load",
-        # TODO(AC): Remove what is not used from the new fields
         "pei_heating_power",
-        "micro_inverter_power",
-        "micro_inverter_power_limit",
-        "micro_inverter_low_power_limit",
-        "other_input_power",
+        # Only used by AC model?
+        #"micro_inverter_power",
+        #"micro_inverter_power_limit",
+        #"micro_inverter_low_power_limit",
+        #"other_input_power",
     }
     # SOLIX E1600 Solarbank 2 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -631,7 +635,6 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "ac_power",
         "to_home_load",
-        # TODO(AC): Remove what is not used from the new fields
         "pei_heating_power",
         "micro_inverter_power",
         "micro_inverter_power_limit",
@@ -645,12 +648,12 @@ class SolarbankDeviceMetrics:
         "solar_power_1",
         "solar_power_2",
         "to_home_load",
-        # TODO(AC): Remove what is not used from the new fields
         "pei_heating_power",
-        "micro_inverter_power",
-        "micro_inverter_power_limit",
-        "micro_inverter_low_power_limit",
-        "other_input_power",
+        # Only used by AC model?
+        #"micro_inverter_power",
+        #"micro_inverter_power_limit",
+        #"micro_inverter_low_power_limit",
+        #"other_input_power",
     }
 
 
