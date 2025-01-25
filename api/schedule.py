@@ -247,8 +247,31 @@ async def set_device_parm(
     ).get("code")
     if not isinstance(code, int) or int(code) != 0:
         return False
-    # update the data in api dict
-    await self.get_device_parm(siteId=siteId, paramType=paramType, deviceSn=deviceSn)
+    # update the data in api dict, distinguish which schedule to query for updates
+    if (self.devices.get(deviceSn) or {}).get("device_pn") in ["A17C0"]:
+        # Active SB1 schedule data should be queried like on details refresh
+        data = await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
+    else:
+        # Other solarbank models
+        await self.get_device_parm(siteId=siteId, paramType=paramType, deviceSn=deviceSn)
+        data = {}
+    # update also cascaded solarbanks schedule
+    sb_info = (self.sites.get(siteId) or {}).get("solarbank_info") or {}
+    if sb_info.get("sb_cascaded"):
+        # Update schedule only for other SB1 that are cascaded
+        for casc_sn in [sb.get("device_sn") for sb in (sb_info.get("solarbank_list") or []) if sb.get("cascaded") and sb.get("device_sn") != deviceSn]:
+            # For two cascaded SB1, their enforced schedule may no longer list the other SB1 anymore when SB2 is in manual mode
+            if not data:
+                data = await self.get_device_load(siteId=siteId, deviceSn=casc_sn)
+            if data:
+                self._update_dev(
+                    {
+                        "device_sn": casc_sn,
+                        "schedule": data.get("home_load_data") or {},
+                        "current_home_load": data.get("current_home_load") or "",
+                        "parallel_home_load": data.get("parallel_home_load") or "",
+                    }
+                )
     return True
 
 
@@ -281,13 +304,20 @@ async def set_home_load(  # noqa: C901
         {"id":0,"start_time":"17:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":0}],
     "min_load":100,"max_load":800,"step":0,"is_charge_priority":0,default_charge_priority":0}
 
-    Newer ranges structure with individual device power loads:
+    New ranges structure with individual device power loads:
     {"ranges":[
         {"id":0,"start_time":"00:00","end_time":"08:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Custom","power":270,"number":1}],"charge_priority":10,
             "power_setting_mode":1,"device_power_loads":[{"device_sn":"W8Z0AY4TF8L03KMS","power":135},{"device_sn":"XGR9TZEI1N9OO8BN","power":135}]},
         {"id":0,"start_time":"08:00","end_time":"24:00","turn_on":true,"appliance_loads":[{"id":0,"name":"Custom","power":300,"number":1}],"charge_priority":10,
             "power_setting_mode":2,"device_power_loads":[{"device_sn":"W8Z0AY4TF8L03KMS","power":100},{"device_sn":"XGR9TZEI1N9OO8BN","power":200}]}],
     "min_load":100,"max_load":800,"step":0,"is_charge_priority":1,"default_charge_priority":80,"is_zero_output_tips":0,"display_advanced_mode":1,"advanced_mode_min_load":50}
+
+    Minimal ranges structure when enforced by SB2 manual mode in combined systems:
+    {"ranges":[
+        {"id":0,"start_time":"00:00","end_time":"24:00","turn_on":null,"appliance_loads":[{"id":0,"name":"Custom","power":0,"number":1}],
+          "charge_priority":0,"power_setting_mode":null,"device_power_loads":null,"priority_discharge_switch":0}],
+    "min_load":0,"max_load":800,"step":0,"is_charge_priority":0,"default_charge_priority":0,"is_zero_output_tips":0,"display_advanced_mode":0,"advanced_mode_min_load":0,
+    "is_show_install_mode":1,"display_priority_discharge_tips":0,"priority_discharge_upgrade_devices":"","default_home_load":200,"is_show_priority_discharge":0}
     """
     # fast quit if nothing to change
     charge_prio = (

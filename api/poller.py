@@ -293,6 +293,8 @@ async def poll_sites(  # noqa: C901
                         )
             # finally adjust solarbank totals for cascaded system in site cache since SB1 and SB2 combined systems report totals only for SB2 system from scene info
             if cascaded_system:
+                # Add info for cascaded solarbanks
+                mysite["solarbank_info"]["sb_cascaded"] = True
                 # subtract cascaded output total from pv total
                 mysite["solarbank_info"]["total_photovoltaic_power"] = str(
                     max(0, sb_total_solar_calc - sb_total_casc_out_calc)
@@ -561,6 +563,10 @@ async def poll_device_details(
                         api._logger.debug("Getting inverter settings for device")
                         await api.get_solar_info(solarbankSn=sn, fromFile=fromFile)
                     # Fetch schedule for Solarbank 1
+                    # Note: There may be different schedules for SB1 devices when used in combined system with SB2
+                    # It appears that get_device_load always provides the active schedule, which may be a minimalistic format when
+                    # SB2 is using Manual mode and sync its settings to SB1
+                    # get_device_parm with param for SB1 schedule seems to return always the full SB1 schedule, even if not active
                     api._logger.debug("Getting schedule details for device")
                     await api.get_device_load(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
@@ -573,6 +579,7 @@ async def poll_device_details(
                         )
                 else:
                     # Fetch schedule for Solarbank 2
+                    # Note: get_device_load always seems to return SB1 schedule format, which does not contain usefull values for the SB2
                     api._logger.debug("Getting schedule details for device")
                     await api.get_device_parm(
                         siteId=site_id,

@@ -438,7 +438,7 @@ class SolarbankUsageMode(IntEnum):
     smartmeter = 1  # AC output based on measured smart meter power
     smartplugs = 2  # AC output based on measured smart plug power
     manual = 3  # manual time plan for AC output
-    charge_time = 4  # TODO(AC): Check code and naming with SB2 AC schedules
+    use_time = 4  # TODO(AC): Check code and naming with SB2 AC schedules
 
 
 @dataclass(frozen=True)
@@ -451,7 +451,7 @@ class SolarbankRatePlan:
     )
     smartplugs: str = "blend_plan"
     manual: str = "custom_rate_plan"
-    charge_time: str = "use_time"
+    use_time: str = "use_time"
 
 
 @dataclass(frozen=True)
