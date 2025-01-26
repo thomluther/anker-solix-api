@@ -311,6 +311,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             in [
                                 SolarbankUsageMode.smartmeter.value,
                                 SolarbankUsageMode.smartplugs.value,
+                                SolarbankUsageMode.use_time.value,
                             ]
                         ):
                             preset = demand
@@ -356,7 +357,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         key in ["power_cutoff", "output_cutoff_data"]
                         and str(value).isdigit()
                     ):
-                        device.update({"power_cutoff": int(value)})
+                        device.update({key: int(value)})
                     elif key in ["power_cutoff_data", "ota_children"] and value:
                         # list items with value
                         device.update({key: list(value)})
@@ -384,6 +385,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update({key: dict(value)})
                         # set default presets for no active schedule slot
                         generation = int(device.get("generation", 0))
+                        ac_type = bool(device.get("grid_to_battery_power") or False)
                         cnt = device.get("solarbank_count", 0)
                         if generation >= 2:
                             # Solarbank 2 schedule
@@ -400,6 +402,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     or SolixDefaults.PRESET_NOSCHEDULE,
                                 }
                             )
+                            if ac_type:
+                                device.update(
+                                    {
+                                        "preset_manual_backup_start": 0,
+                                        "preset_manual_backup_end": 0,
+                                        "preset_backup_option": False
+                                    }
+                                )
                         else:
                             # Solarbank 1 schedule
                             # define default presets, will be updated if active slot found
@@ -429,6 +439,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         if generation >= 2:
                             # Solarbank 2 schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
+                            # TODO: Implement proper parsing for use_time plan of AC types
                             weekday = int(datetime.now().strftime("%w"))
                             # get rate_plan_name depending on use usage mode_type
                             rate_plan_name = getattr(
@@ -478,6 +489,16 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                             }
                                         )
                                         break
+                            if ac_type and (backup := value.get("manual_backup") or {}):
+                                # extract valid backup list item data
+                                device.update(
+                                    {
+                                        "preset_manual_backup_start": (backup.get("ranges") or [{}])[0].get("start_time") or 0,
+                                        "preset_manual_backup_end": (backup.get("ranges") or [{}])[0].get("end_time") or 0,
+                                        "preset_backup_option": backup.get("switch") or False
+                                    }
+                                )
+
                             # adjust schedule preset for eventual reuse as active presets
                             # Active Preset must only be considered if usage mode is manual
                             sys_power = (

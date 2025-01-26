@@ -3,7 +3,7 @@
 import contextlib
 import copy
 from dataclasses import fields
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 import json
 from pathlib import Path
 
@@ -1729,15 +1729,7 @@ async def set_sb2_ac_charge(  # noqa: C901
     backup_start = backup_start if isinstance(backup_start, datetime) else None
     backup_end = backup_end if isinstance(backup_end, datetime) else None
     backup_switch = backup_switch if isinstance(backup_switch, bool) else None
-    # make sure backup start and end time are valid
-    if backup_start or backup_end:
-        backup_end = max(backup_start or backup_end, backup_end or backup_start)
-        backup_start = min(backup_start or backup_end, backup_end or backup_start)
-    rate_plan_name = (
-        "manual_backup" if backup_start or backup_switch is not None else None
-    )
-
-    if not rate_plan_name:
+    if backup_start is None and backup_end is None and backup_switch is None:
         self._logger.error("No valid AC charge options provided")
         return False
 
@@ -1753,16 +1745,27 @@ async def set_sb2_ac_charge(  # noqa: C901
             )
         ).get("param_data") or {}
 
-    # create new structure if none exists yet
+    rate_plan_name = "manual_backup"
+    # create new structure if none exists yet or get old times if not provided for validation
     if not (new_rate_plan := schedule.get(rate_plan_name) or {}):
         new_rate_plan["ranges"] = []
         new_rate_plan["switch"] = False
+    else:
+        if not backup_start:
+            backup_start = datetime.fromtimestamp((new_rate_plan.get("ranges") or [{}])[0].get("start_time") or 0,UTC).astimezone()
+        if not backup_end:
+            backup_end = datetime.fromtimestamp((new_rate_plan.get("ranges") or [{}])[0].get("end_time") or 0,UTC).astimezone()
 
     if backup_switch is not None:
         new_rate_plan["switch"] = backup_switch
 
-    if backup_start:
+    # make sure backup start and end time are valid before applying them
+    if backup_start or backup_end:
         # TODO(AC): Modify if more than one range supported for device
+        backup_end = max(backup_start or backup_end, backup_end or backup_start)
+        backup_start = min(backup_start or backup_end, backup_end or backup_start)
+        if backup_start == backup_end:
+            backup_end = backup_start + timedelta(minutes=1)
         new_rate_plan["ranges"] = [
             {
                 "start_time": int(backup_start.timestamp()),
