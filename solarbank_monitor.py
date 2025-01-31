@@ -25,6 +25,7 @@ import sys
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from api import api, errors  # pylint: disable=no-name-in-module
+from api.apitypes import SolarbankUsageMode  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -188,9 +189,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Type ID':<{col1}}: {str((site.get('site_info') or {}).get('power_site_type', '--')) + (' (' + site_type.capitalize() + ')') if site_type else '':<{col2}} Device models  : {','.join((site.get('site_info') or {}).get('current_site_device_models', []))}"
                             )
-                            if (sb := site.get("solarbank_info") or {}) and len(sb.get("solarbank_list",[])) > 0:
+                            if (sb := site.get("solarbank_info") or {}) and len(
+                                sb.get("solarbank_list", [])
+                            ) > 0:
                                 # print solarbank totals
-                                soc = f"{int(float(sb.get('total_battery_power') or 0)*100)!s:>4} %"
+                                soc = f"{int(float(sb.get('total_battery_power') or 0) * 100)!s:>4} %"
                                 unit = sb.get("power_unit") or "W"
                                 update_time = sb.get("updated_time") or "Unknown"
                                 CONSOLE.info(
@@ -203,8 +206,32 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power', '---'):>4} {unit:<{col2 - 5}} {'Battery Pwr Tot':<{col3}}: {str(sb.get('total_charging_power')).split('.')[0]:>4} W"
                                 )
                                 CONSOLE.info(
-                                    f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '---')).split('.')[0]:>4} {unit:<{col2 - 5}} {'Home Load Tot':<{col3}}: {sb.get('to_home_load'):>4} W"
+                                    f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '---')).split('.')[0]:>4} {unit:<{col2 - 5}} {'Home Load Tot':<{col3}}: {sb.get('to_home_load') or '----':>4} W"
                                 )
+                                features = site.get('feature_switch') or {}
+                                if mode := site.get('scene_mode'):
+                                    mode_name = (
+                                        next(
+                                            iter(
+                                                [
+                                                    item.name
+                                                    for item in SolarbankUsageMode
+                                                    if item.value == mode
+                                                ]
+                                            ),
+                                            ('Unknown' if mode else None),
+                                        )
+                                    )
+                                    feat1 = features.get('heating')
+                                    CONSOLE.info(
+                                        f"{'Active Mode':<{col1}}: {str(mode_name).capitalize()+' ('+str(mode)+')' if mode_name else '---------':<{col2}} {'Heating':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF'}"
+                                    )
+                                if "offgrid_with_micro_inverter_alert" in features:
+                                    feat1 = features.get('offgrid_with_micro_inverter_alert')
+                                    feat2 = features.get('micro_inverter_power_exceed')
+                                    CONSOLE.info(
+                                        f"{'Offgrid Alert':<{col1}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':<{col2}} {'Inv. Pwr Exceed':<{col3}}: {'ON' if feat2 else '---' if feat2 is None else 'OFF'}"
+                                    )
                             CONSOLE.info("-" * 80)
                     else:
                         CONSOLE.info("-" * 80)
@@ -281,6 +308,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Inverter Limit':<{col1}}: {dev.get('micro_inverter_power_limit', '---'):>4} {unit:<{col2 - 5}} {'Low Limit':<{col3}}: {dev.get('micro_inverter_low_power_limit', '---'):>4} {unit}"
                             )
+
+                        CONSOLE.info(
+                            f"{'Battery charge':<{col1}}: {dev.get('bat_charge_power', '---'):>4} {unit:<{col2 - 5}}"
+                        )
                         preset = dev.get("set_output_power") or "---"
                         site_preset = dev.get("set_system_output_power") or "---"
                         CONSOLE.info(

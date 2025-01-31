@@ -34,7 +34,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "2.4.1.0"
+VERSION: str = "2.5.0.0"
 
 
 class AnkerSolixApiExport:
@@ -519,7 +519,7 @@ class AnkerSolixApiExport:
                     admin=admin,
                 )
 
-                for parmtype in ["4", "6"]:
+                for parmtype in ["4", "6", "9"]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
                     )

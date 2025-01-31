@@ -136,7 +136,7 @@ async def get_device_parm(
 ) -> dict:
     r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId responded in the site_list query.
 
-    Working paramType is 4 for SB1 schedules, 6 for SB2 schedules, but can be modified if necessary.
+    Working paramType is 4 for SB1 schedules, 6 for SB2 schedules, 9 for enforced SB1 schedules when in coupled SB2 system, but can be modified if necessary.
     Example data for provided site_id with param_type 4 for SB1:
     {"param_data": "{\"ranges\":[
         {\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},
@@ -153,6 +153,12 @@ async def get_device_parm(
         {\"index\":0,\"week\":[0,1,2,3,4,5,6],\"ranges\":[
             {\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"power\":20}]}],
     \"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"}
+    Example data for provided site_id with param_type 9 for SB1 in SB2 system:
+    "param_data": "{\"ranges\":[
+        {\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"24:00\",\"turn_on\":null,\"appliance_loads\":[{\"id\":0,\"name\":\"Custom\",\"power\":0,\"number\":1}],
+            \"charge_priority\":0,\"power_setting_mode\":null,\"device_power_loads\":null,\"priority_discharge_switch\":0}],
+        \"min_load\":0,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":0,\"display_advanced_mode\":0,\"advanced_mode_min_load\":0,
+        \"is_show_install_mode\":1,\"display_priority_discharge_tips\":0,\"priority_discharge_upgrade_devices\":\"\",\"default_home_load\":200,\"is_show_priority_discharge\":0}"
     """
     if not isinstance(testSchedule, dict):
         testSchedule = None
@@ -1167,8 +1173,10 @@ async def set_sb2_home_load(  # noqa: C901
     If rate_plan is specified, the changes will be applied to the given plan, otherwise the active plan according to active or provided usage mode will be modified.
     custom_rate_plan: Used for the Manual usage mode
     blend_plan: Used for the Smart Plug usage mode
+    custom_rate_plan: Used for smart plug mode to define additional base load
+    manual_backup: Used for SB2 AC emergency charge, use method set_sb2_ac_charge for changes
+    use_time: Used for SB2 AC Usage Time mode, use method set_sb2_use_time for changes
 
-    Example schedule for Solarbank 2 as provided via Api:
     Example data for provided site_id with param_type 6 for SB2:
     "schedule": {
         "mode_type": 3,
@@ -1180,6 +1188,8 @@ async def set_sb2_home_load(  # noqa: C901
                 {"start_time": "08:00","end_time": "22:00","power": 120},
                 {"start_time": "22:00","end_time": "24:00","power": 90}]}],
         "blend_plan": null,
+        "manual_backup": null,
+        "use_time": null,
         "default_home_load": 200,"max_load": 800,"min_load": 0,"step": 10}
     """
     # fast quit if nothing to change
@@ -1700,15 +1710,14 @@ async def set_sb2_ac_charge(  # noqa: C901
     deviceSn: str,
     backup_start: datetime | None = None,
     backup_end: datetime | None = None,
+    backup_duration: timedelta = timedelta(hours=1),
     backup_switch: bool | None = None,
     test_schedule: dict | None = None,  # used only for testing instead of real schedule
 ) -> bool | dict:
     """Set or change the AC charge parameters for a given site id and solarbank 2 AC device.
 
-    The is part of the device schedule object
-    manual_backup: Used for the manual backup period definition for max AC charge
-
-    Example schedule for Solarbank 2 AC as provided via Api:
+    The backup definition is part of the SB2 device schedule object. If no end_time or duration is specified, a default duration of 1 hour will be used
+    manual_backup: Used for the manual backup period definition for max AC charge.
     Example data for provided site_id with param_type 6 for SB2:
     "schedule": {
         "mode_type": 3,
@@ -1726,8 +1735,9 @@ async def set_sb2_ac_charge(  # noqa: C901
         "default_home_load": 200,"max_load": 800,"min_load": 0,"step": 10}
     """
     # fast quit if nothing to change
-    backup_start = backup_start if isinstance(backup_start, datetime) else None
-    backup_end = backup_end if isinstance(backup_end, datetime) else None
+    backup_start = backup_start.astimezone() if isinstance(backup_start, datetime) else None
+    backup_end = backup_end.astimezone() if isinstance(backup_end, datetime) else None
+    backup_duration = backup_duration if isinstance(backup_duration, timedelta) else timedelta(hours=1)
     backup_switch = backup_switch if isinstance(backup_switch, bool) else None
     if backup_start is None and backup_end is None and backup_switch is None:
         self._logger.error("No valid AC charge options provided")
@@ -1745,7 +1755,8 @@ async def set_sb2_ac_charge(  # noqa: C901
             )
         ).get("param_data") or {}
 
-    rate_plan_name = "manual_backup"
+    rate_plan_name = SolarbankRatePlan.backup
+    dtn = datetime.now().replace(second=0,microsecond=0).astimezone()
     # create new structure if none exists yet or get old times if not provided for validation
     if not (new_rate_plan := schedule.get(rate_plan_name) or {}):
         new_rate_plan["ranges"] = []
@@ -1756,22 +1767,107 @@ async def set_sb2_ac_charge(  # noqa: C901
         if not backup_end:
             backup_end = datetime.fromtimestamp((new_rate_plan.get("ranges") or [{}])[0].get("end_time") or 0,UTC).astimezone()
 
-    if backup_switch is not None:
+    if backup_switch is None:
+        backup_switch = bool(new_rate_plan.get("switch"))
+    else:
+        # switch provided as parameter, first ensure start time is set correctly if backup range will be activated
+        if backup_switch:
+            backup_start = backup_start or dtn
+            if not new_rate_plan.get("switch") and (backup_end or dtn) <= dtn:
+                # switch will be changed to enabled, ensure start time is at least now if now passed a previous interval
+                backup_start = dtn
         new_rate_plan["switch"] = backup_switch
 
-    # make sure backup start and end time are valid before applying them
+    # make sure backup start and end time are valid and merged with optional parameters before applying them
     if backup_start or backup_end:
         # TODO(AC): Modify if more than one range supported for device
         backup_end = max(backup_start or backup_end, backup_end or backup_start)
         backup_start = min(backup_start or backup_end, backup_end or backup_start)
         if backup_start == backup_end:
-            backup_end = backup_start + timedelta(minutes=1)
+            backup_end = backup_start + backup_duration
         new_rate_plan["ranges"] = [
             {
                 "start_time": int(backup_start.timestamp()),
                 "end_time": int(backup_end.timestamp()),
             }
         ]
+
+    schedule.update({rate_plan_name: new_rate_plan})
+    self._logger.debug("Schedule to apply: %s", schedule)
+    # return resulting schedule for test purposes without Api call
+    if test_schedule is not None:
+        await self.get_device_parm(
+            siteId=siteId,
+            paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+            testSchedule=schedule,
+            deviceSn=deviceSn,
+        )
+        return schedule
+    # Make the Api call with final schedule and return result, the set call will also update api dict
+    return await self.set_device_parm(
+        siteId=siteId,
+        paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+        paramData=schedule,
+        deviceSn=deviceSn,
+    )
+
+async def set_sb2_use_time(  # noqa: C901
+    self,
+    siteId: str,
+    deviceSn: str,
+    test_schedule: dict | None = None,  # used only for testing instead of real schedule
+) -> bool | dict:
+    r"""Set or change the AC use time parameters for a given site id and solarbank 2 AC device.
+
+    !!! THIS IS NOT IMPLEMENTED YET !!!
+
+    The is part of the device schedule object
+    Example schedule for Solarbank 2 AC as provided via Api:
+    "{"mode_type":3,
+    "custom_rate_plan":[{"index":0,"week":[0,1,2,3,4,5,6],"ranges":[{"start_time":"00:00","end_time":"24:00","power":0}]}],
+    "blend_plan":null,
+    "use_time":[
+        {"sea":{"start_month":1,"end_month":3},
+            "weekday":[
+                {"start_time":0,"end_time":6,"type":3},{"start_time":6,"end_time":11,"type":1},{"start_time":11,"end_time":14,"type":3},
+                {"start_time":14,"end_time":17,"type":2},{"start_time":17,"end_time":22,"type":3},{"start_time":22,"end_time":24,"type":4}],
+            "weekend":[{"start_time":0,"end_time":16,"type":3},{"start_time":16,"end_time":21,"type":1},{"start_time":21,"end_time":24,"type":3}],
+            "weekday_price":[{"price":"0.25","type":3},{"price":"0.5","type":1},{"price":"0.35","type":2},{"price":"0.2","type":4}],
+            "weekend_price":[{"price":"0.25","type":3},{"price":"0.5","type":1}],
+            "unit":"\u20ac","is_same":false},
+        {"sea":{"start_month":4,"end_month":9},
+            "weekday":[{"start_time":0,"end_time":16,"type":3},{"start_time":16,"end_time":21,"type":1},{"start_time":21,"end_time":24,"type":3}],
+            "weekend":[{"start_time":0,"end_time":6,"type":3},{"start_time":6,"end_time":13,"type":1},{"start_time":13,"end_time":16,"type":3},
+                {"start_time":16,"end_time":20,"type":2},{"start_time":20,"end_time":24,"type":3}],
+            "weekday_price":[{"price":"0.25","type":3},{"price":"0.35","type":1}],
+            "weekend_price":[{"price":"0.25","type":3},{"price":"0.35","type":1},{"price":"0.31","type":2}],
+            "unit":"\u20ac","is_same":false},
+        {"sea":{"start_month":10,"end_month":12},
+            "weekday":[{"start_time":0,"end_time":16,"type":3},{"start_time":16,"end_time":21,"type":1},{"start_time":21,"end_time":24,"type":3}],
+            "weekend":[{"start_time":0,"end_time":16,"type":3},{"start_time":16,"end_time":21,"type":1},{"start_time":21,"end_time":24,"type":3}],
+            "weekday_price":[{"price":"0.23","type":3},{"price":"0.38","type":1}],
+            "weekend_price":[{"price":"0.23","type":3},{"price":"0.38","type":1}],
+            "unit":"$","is_same":true}],
+    "manual_backup":null,
+    "default_home_load":200,"max_load":800,"min_load":0,"step":10}
+    """
+
+    # obtain actual device schedule from internal dict or fetch via api
+    if test_schedule is not None:
+        schedule = test_schedule
+    elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
+        schedule = (
+            await self.get_device_parm(
+                siteId=siteId,
+                paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+                deviceSn=deviceSn,
+            )
+        ).get("param_data") or {}
+
+    rate_plan_name = SolarbankRatePlan.use_time
+    new_rate_plan = schedule.get(rate_plan_name) or None
+
+    # TODO: Implement code to modify the use_time structures
 
     schedule.update({rate_plan_name: new_rate_plan})
     self._logger.debug("Schedule to apply: %s", schedule)

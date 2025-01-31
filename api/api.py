@@ -166,6 +166,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "tag",
                         "err_code",
                         "ota_version",
+                        "bat_charge_power",
                     ] or (
                         key
                         in [
@@ -387,6 +388,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         generation = int(device.get("generation", 0))
                         ac_type = bool(device.get("grid_to_battery_power") or False)
                         cnt = device.get("solarbank_count", 0)
+                        mysite = self.sites.get(device.get("site_id") or "") or {}
                         if generation >= 2:
                             # Solarbank 2 schedule
                             mode_type = (
@@ -419,15 +421,16 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     "preset_allow_export": SolixDefaults.ALLOW_EXPORT,
                                     "preset_discharge_priority": SolixDefaults.DISCHARGE_PRIORITY_DEF,
                                     "preset_charge_priority": SolixDefaults.CHARGE_PRIORITY_DEF,
-                                    "preset_power_mode": SolixDefaults.POWER_MODE
-                                    if cnt > 1
-                                    else None,
-                                    "preset_device_output_power": int(
-                                        SolixDefaults.PRESET_NOSCHEDULE / cnt
-                                    )
-                                    if cnt > 1
-                                    else None,
                                 }
+                            )
+                            if cnt > 1:
+                                device.update(
+                                    {
+                                        "preset_power_mode": SolixDefaults.POWER_MODE,
+                                        "preset_device_output_power": int(
+                                            SolixDefaults.PRESET_NOSCHEDULE / cnt
+                                        )
+                                    }
                             )
                         # get actual presets from current slot
                         now: datetime = datetime.now().time().replace(microsecond=0)
@@ -490,12 +493,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         )
                                         break
                             if ac_type and (backup := value.get("manual_backup") or {}):
-                                # extract valid backup list item data
+                                # check whether now in active backup interval to update usage mode info because active backup mode is not reflected in schedule object
+                                start = (backup.get("ranges") or [{}])[0].get("start_time") or 0
+                                end = (backup.get("ranges") or [{}])[0].get("end_time") or 0
+                                switch = backup.get("switch") or False
+                                # update valid backup list item data
                                 device.update(
                                     {
-                                        "preset_manual_backup_start": (backup.get("ranges") or [{}])[0].get("start_time") or 0,
-                                        "preset_manual_backup_end": (backup.get("ranges") or [{}])[0].get("end_time") or 0,
-                                        "preset_backup_option": backup.get("switch") or False
+                                        "preset_usage_mode": SolarbankUsageMode.backup if switch and start < datetime.now().timestamp() < end else mode_type,
+                                        "preset_manual_backup_start": start,
+                                        "preset_manual_backup_end": end,
+                                        "preset_backup_option": switch
                                     }
                                 )
 
@@ -538,12 +546,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                             )
                                         else:
                                             discharge_prio = None
+                                        # For enforced SB1 schedule by SB2, the export switch setting is None and all other will be set to None either
                                         device.update(
                                             {
-                                                "preset_system_output_power": preset_power,
-                                                "preset_allow_export": export,
-                                                "preset_discharge_priority": discharge_prio,
-                                                "preset_charge_priority": prio,
+                                                "preset_system_output_power": None if export is None else preset_power,
+                                                "preset_allow_export": None if export is None else export,
+                                                "preset_discharge_priority": None if export is None else discharge_prio,
+                                                "preset_charge_priority": None if export is None else prio,
                                             }
                                         )
                                         # add presets for dual solarbank setups, default to None if schedule does not support new keys yet
@@ -563,10 +572,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         )
                                         if cnt > 1:
                                             # adjust device power value for default share which is always using 50%, also for single solarbank setups
+                                            # For enforced SB1 schedule by SB2, the export switch setting is None and all other will be set to None either
                                             device.update(
                                                 {
-                                                    "preset_power_mode": power_mode,
-                                                    "preset_device_output_power": dev_power,
+                                                    "preset_power_mode": None if export is None else power_mode,
+                                                    "preset_device_output_power": None if export is None else dev_power,
                                                 }
                                             )
                                         break
@@ -602,10 +612,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # update appliance load in site cache upon device details or schedule updates not triggered by sites update
                         if (
                             not devData.get("retain_load")
-                            and (
-                                mysite := self.sites.get(device.get("site_id") or "")
-                                or {}
-                            )
+                            and mysite
                             and sys_power
                         ):
                             mysite.update({"retain_load": sys_power})

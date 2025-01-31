@@ -416,6 +416,7 @@ class SolixParmType(Enum):
 
     SOLARBANK_SCHEDULE = "4"
     SOLARBANK_2_SCHEDULE = "6"
+    SOLARBANK_SCHEDULE_ENFORCED = "9"
 
 
 class SolarbankPowerMode(IntEnum):
@@ -437,8 +438,17 @@ class SolarbankUsageMode(IntEnum):
 
     smartmeter = 1  # AC output based on measured smart meter power
     smartplugs = 2  # AC output based on measured smart plug power
-    manual = 3  # manual time plan for AC output
-    use_time = 4  # TODO(AC): Check code and naming with SB2 AC schedules
+    manual = 3  # manual time plan for home load output
+    backup = 4 # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
+    use_time = 5  # Use Time plan with SB2 AC and smart meter
+
+class SolarbankTariffTypes(IntEnum):
+    """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
+
+    PEEK = 1
+    MID_PEEK = 2
+    OFF_PEEK = 3
+    OTHER = 4
 
 
 @dataclass(frozen=True)
@@ -451,6 +461,7 @@ class SolarbankRatePlan:
     )
     smartplugs: str = "blend_plan"
     manual: str = "custom_rate_plan"
+    backup: str = "manual_backup"
     use_time: str = "use_time"
 
 

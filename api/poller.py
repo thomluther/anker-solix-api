@@ -223,9 +223,12 @@ async def poll_sites(  # noqa: C901
                     power_out = int(solarbank.get("output_power"))
                     soc = int(solarbank.get("battery_power"))
                     # power_charge = int(solarbank.get("charging_power", "")) # This value seems to reflect the output or discharge power, which is correct for status 2, but may be wrong for other states
-                    # The cloud introduced new solarbank field bat_charge_power which seems to reflect the positive charging power
                     # charge and discharge power will be combined into charging_power field to eliminate cloud field inconsistency and use negative values for discharge power
-                    charge_calc = power_in - power_out
+                    # The cloud introduced new solarbank field bat_charge_power which seems to reflect the positive charging power. It will be used if larger than calculated power
+                    batt_charge = int(solarbank.get("bat_charge_power") or 0)
+                    if (charge_calc := power_in - power_out) >= 0:
+                        # No discharging, use the bat charge value if available in response
+                        charge_calc = max(charge_calc,batt_charge)
                     solarbank["charging_power"] = str(
                         charge_calc
                     )  # allow negative values
