@@ -66,7 +66,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             self._logger.info("Set log level to: %s", level)
         return self._logger.getEffectiveLevel()
 
-    def _update_site(  # noqa: C901
+    def _update_site(
         self,
         siteId: str,
         details: dict,
@@ -84,7 +84,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             self.sites[siteId] = {}
         self.sites[siteId]["site_details"] = site_details
 
-    def _update_dev(  # noqa: C901
+    def _update_dev(
         self,
         devData: dict,
         devType: str | None = None,
@@ -170,7 +170,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         fromFile: bool = False,
         exclude: set | None = None,
         siteData: dict | None = None,
-    ) -> dict:  # noqa: C901
+    ) -> dict:
         """Create/Update api sites cache structure.
 
         Implement this method to get the latest info for all power panel sites or only the provided siteId and update class cache dictionaries.
@@ -720,7 +720,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         Example:
         {"2023-09-29": {"date": "2023-09-29", "solar_production": "1.21", "battery_discharge": "0.47", "battery_charge": "0.56"},
         "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "battery_discharge": "1.06", "battery_charge": "1.39"}}
-        """  # noqa: D413
+        """
         table = {}
         if not devTypes or not isinstance(devTypes, set):
             devTypes = set()

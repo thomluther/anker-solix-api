@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 cryptography = "*"
-aiohttp = ">=3.10.11"
+aiohttp = "*"
 aiofiles = "*"
 
 [dev-packages]

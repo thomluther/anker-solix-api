@@ -731,7 +731,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         siteId: str | None = None,
         fromFile: bool = False,
         exclude: set | None = None,
-    ) -> dict:  # noqa: C901
+    ) -> dict:
         """Create/Update api sites cache structure."""
         resp = await poll_sites(self, siteId=siteId, fromFile=fromFile, exclude=exclude)
         # Clean up powerpanel api sites cache if used

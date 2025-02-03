@@ -259,13 +259,19 @@ async def set_device_parm(
         data = await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
     else:
         # Other solarbank models
-        await self.get_device_parm(siteId=siteId, paramType=paramType, deviceSn=deviceSn)
+        await self.get_device_parm(
+            siteId=siteId, paramType=paramType, deviceSn=deviceSn
+        )
         data = {}
     # update also cascaded solarbanks schedule
     sb_info = (self.sites.get(siteId) or {}).get("solarbank_info") or {}
     if sb_info.get("sb_cascaded"):
         # Update schedule only for other SB1 that are cascaded
-        for casc_sn in [sb.get("device_sn") for sb in (sb_info.get("solarbank_list") or []) if sb.get("cascaded") and sb.get("device_sn") != deviceSn]:
+        for casc_sn in [
+            sb.get("device_sn")
+            for sb in (sb_info.get("solarbank_list") or [])
+            if sb.get("cascaded") and sb.get("device_sn") != deviceSn
+        ]:
             # For two cascaded SB1, their enforced schedule may no longer list the other SB1 anymore when SB2 is in manual mode
             if not data:
                 data = await self.get_device_load(siteId=siteId, deviceSn=casc_sn)
@@ -1158,7 +1164,7 @@ async def set_sb2_home_load(  # noqa: C901
     plan_name: str | None = None,
     set_slot: Solarbank2Timeslot | None = None,
     insert_slot: Solarbank2Timeslot | None = None,
-    test_schedule: dict | None = None,  # used only for testing instead of real schedule
+    test_schedule: dict | None = None,  # used for testing or to apply changes only to api cache
 ) -> bool | dict:
     """Set or change the home load parameters for a given site id and solarbank 2 device for any slot in the existing schedule.
 
@@ -1344,7 +1350,9 @@ async def set_sb2_home_load(  # noqa: C901
     # When existing weekdays are partial subset of provided weekdays, clone first plan with most matching days as new plan for the defined weekdays to separate them from existing plan
     matched_days = set()
     index = None
-    if preset is not None or set_slot or insert_slot:
+    if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs} and (
+        preset is not None or set_slot or insert_slot
+    ):
         if not delete_plan:
             for idx in rate_plan:
                 if len((days := set(idx.get("week") or [])) & weekdays) > len(
@@ -1408,7 +1416,9 @@ async def set_sb2_home_load(  # noqa: C901
         set_slot = insert_slot
 
     # update individual values in current slot or insert SolarbankTimeslot and adjust adjacent slots
-    if preset is not None or pending_insert:
+    if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs} and (
+        preset is not None or pending_insert
+    ):
         now = datetime.now().time().replace(microsecond=0)
         last_time = datetime.strptime("00:00", "%H:%M").time()
         # set now to new daytime if close to end of day to determine which slot to modify
@@ -1654,6 +1664,7 @@ async def set_sb2_home_load(  # noqa: C901
         (not new_rate_plan or not new_ranges)
         and (set_slot or preset is not None)
         and not delete_plan
+        and rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}
     ):
         if not set_slot:
             # fill set_slot with given parameters
@@ -1676,7 +1687,10 @@ async def set_sb2_home_load(  # noqa: C901
     if new_rate_plan:
         if index is not None:
             new_rate_plan[index].update({"ranges": new_ranges})
-    elif not delete_plan:
+    elif (
+        rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}
+        and not delete_plan
+    ):
         new_rate_plan: list = [
             {
                 "index": 0,
@@ -1704,7 +1718,7 @@ async def set_sb2_home_load(  # noqa: C901
     )
 
 
-async def set_sb2_ac_charge(  # noqa: C901
+async def set_sb2_ac_charge(
     self,
     siteId: str,
     deviceSn: str,
@@ -1712,7 +1726,7 @@ async def set_sb2_ac_charge(  # noqa: C901
     backup_end: datetime | None = None,
     backup_duration: timedelta = timedelta(hours=1),
     backup_switch: bool | None = None,
-    test_schedule: dict | None = None,  # used only for testing instead of real schedule
+    test_schedule: dict | None = None,  # used for testing or to apply changes only to api cache
 ) -> bool | dict:
     """Set or change the AC charge parameters for a given site id and solarbank 2 AC device.
 
@@ -1735,9 +1749,15 @@ async def set_sb2_ac_charge(  # noqa: C901
         "default_home_load": 200,"max_load": 800,"min_load": 0,"step": 10}
     """
     # fast quit if nothing to change
-    backup_start = backup_start.astimezone() if isinstance(backup_start, datetime) else None
+    backup_start = (
+        backup_start.astimezone() if isinstance(backup_start, datetime) else None
+    )
     backup_end = backup_end.astimezone() if isinstance(backup_end, datetime) else None
-    backup_duration = backup_duration if isinstance(backup_duration, timedelta) else timedelta(hours=1)
+    backup_duration = (
+        backup_duration
+        if isinstance(backup_duration, timedelta)
+        else timedelta(hours=1)
+    )
     backup_switch = backup_switch if isinstance(backup_switch, bool) else None
     if backup_start is None and backup_end is None and backup_switch is None:
         self._logger.error("No valid AC charge options provided")
@@ -1756,16 +1776,20 @@ async def set_sb2_ac_charge(  # noqa: C901
         ).get("param_data") or {}
 
     rate_plan_name = SolarbankRatePlan.backup
-    dtn = datetime.now().replace(second=0,microsecond=0).astimezone()
+    dtn = datetime.now().replace(second=0, microsecond=0).astimezone()
     # create new structure if none exists yet or get old times if not provided for validation
     if not (new_rate_plan := schedule.get(rate_plan_name) or {}):
         new_rate_plan["ranges"] = []
         new_rate_plan["switch"] = False
     else:
         if not backup_start:
-            backup_start = datetime.fromtimestamp((new_rate_plan.get("ranges") or [{}])[0].get("start_time") or 0,UTC).astimezone()
+            backup_start = datetime.fromtimestamp(
+                (new_rate_plan.get("ranges") or [{}])[0].get("start_time") or 0, UTC
+            ).astimezone()
         if not backup_end:
-            backup_end = datetime.fromtimestamp((new_rate_plan.get("ranges") or [{}])[0].get("end_time") or 0,UTC).astimezone()
+            backup_end = datetime.fromtimestamp(
+                (new_rate_plan.get("ranges") or [{}])[0].get("end_time") or 0, UTC
+            ).astimezone()
 
     if backup_switch is None:
         backup_switch = bool(new_rate_plan.get("switch"))
@@ -1811,11 +1835,12 @@ async def set_sb2_ac_charge(  # noqa: C901
         deviceSn=deviceSn,
     )
 
-async def set_sb2_use_time(  # noqa: C901
+
+async def set_sb2_use_time(
     self,
     siteId: str,
     deviceSn: str,
-    test_schedule: dict | None = None,  # used only for testing instead of real schedule
+    test_schedule: dict | None = None,  # used for testing or to apply changes only to api cache
 ) -> bool | dict:
     r"""Set or change the AC use time parameters for a given site id and solarbank 2 AC device.
 

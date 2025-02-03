@@ -141,6 +141,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             col1 = 15
             col2 = 23
             col3 = 15
+            site_names: list | None = None
             while True:
                 clearscreen()
                 now = datetime.now().astimezone()
@@ -171,9 +172,38 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 CONSOLE.info(
                     "Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices)
                 )
+                site_selected: str = None
+                # Ask whether monitor should be limited to selected site ID
+                if not (use_file or site_names):
+                    CONSOLE.info("Select which Site to be monitored:")
+                    site_names = ["All"] + [
+                        (
+                            ", ".join(
+                                [
+                                    str(id),
+                                    str((s.get("site_info") or {}).get("site_name")),
+                                    "Type: "
+                                    + str(s.get("site_type") or "unknown").capitalize(),
+                                ]
+                            )
+                        )
+                        for id, s in myapi.sites.items()
+                    ]
+                    for idx, sitename in enumerate(site_names):
+                        CONSOLE.info("(%s) %s", idx, sitename)
+                    selection = input(
+                        f"Enter site number (0-{len(site_names) - 1}) or nothing for All: "
+                    )
+                    if selection.isdigit() and 1 <= int(selection) < len(site_names):
+                        site_selected = site_names[int(selection)].split(",")[0]
+
                 # pylint: disable=logging-fstring-interpolation
                 shown_sites = set()
-                for sn, dev in myapi.devices.items():
+                for sn, dev in [
+                    (dev.get("device_sn"), dev)
+                    for dev in myapi.devices.values()
+                    if (not site_selected or dev.get("site_id") == site_selected)
+                ]:
                     devtype = dev.get("type", "Unknown")
                     admin = dev.get("is_admin", False)
                     siteid = dev.get("site_id", "")
@@ -208,27 +238,27 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '---')).split('.')[0]:>4} {unit:<{col2 - 5}} {'Home Load Tot':<{col3}}: {sb.get('to_home_load') or '----':>4} W"
                                 )
-                                features = site.get('feature_switch') or {}
-                                if mode := site.get('scene_mode'):
-                                    mode_name = (
-                                        next(
-                                            iter(
-                                                [
-                                                    item.name
-                                                    for item in SolarbankUsageMode
-                                                    if item.value == mode
-                                                ]
-                                            ),
-                                            ('Unknown' if mode else None),
-                                        )
+                                features = site.get("feature_switch") or {}
+                                if mode := site.get("scene_mode"):
+                                    mode_name = next(
+                                        iter(
+                                            [
+                                                item.name
+                                                for item in SolarbankUsageMode
+                                                if item.value == mode
+                                            ]
+                                        ),
+                                        ("Unknown" if mode else None),
                                     )
-                                    feat1 = features.get('heating')
+                                    feat1 = features.get("heating")
                                     CONSOLE.info(
-                                        f"{'Active Mode':<{col1}}: {str(mode_name).capitalize()+' ('+str(mode)+')' if mode_name else '---------':<{col2}} {'Heating':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF'}"
+                                        f"{'Active Mode':<{col1}}: {str(mode_name).capitalize() + ' (' + str(mode) + ')' if mode_name else '---------':<{col2}} {'Heating':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF'}"
                                     )
                                 if "offgrid_with_micro_inverter_alert" in features:
-                                    feat1 = features.get('offgrid_with_micro_inverter_alert')
-                                    feat2 = features.get('micro_inverter_power_exceed')
+                                    feat1 = features.get(
+                                        "offgrid_with_micro_inverter_alert"
+                                    )
+                                    feat2 = features.get("micro_inverter_power_exceed")
                                     CONSOLE.info(
                                         f"{'Offgrid Alert':<{col1}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':<{col2}} {'Inv. Pwr Exceed':<{col3}}: {'ON' if feat2 else '---' if feat2 is None else 'OFF'}"
                                     )
@@ -559,13 +589,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 end="\r",
                                 flush=True,
                             )
-                        elif sec == 0:
+                        elif sec == 0 or int((next_refr - now).total_seconds()) < 0:
                             # IDLE may be used and does not support cursor placement, skip time progress display
                             print(  # noqa: T201
                                 f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details refresh: {int((next_dev_refr - now).total_seconds()):>3} sec  (CTRL-C to abort)",
                                 end="",
                                 flush=True,
                             )
+                            break
                         await asyncio.sleep(1)
             return False
 
