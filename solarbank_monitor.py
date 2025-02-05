@@ -142,6 +142,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             col2 = 23
             col3 = 15
             site_names: list | None = None
+            site_selected: str = None
             while True:
                 clearscreen()
                 now = datetime.now().astimezone()
@@ -172,7 +173,6 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 CONSOLE.info(
                     "Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices)
                 )
-                site_selected: str = None
                 # Ask whether monitor should be limited to selected site ID
                 if not (use_file or site_names):
                     CONSOLE.info("Select which Site to be monitored:")
@@ -180,14 +180,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         (
                             ", ".join(
                                 [
-                                    str(id),
+                                    str(sid),
                                     str((s.get("site_info") or {}).get("site_name")),
                                     "Type: "
                                     + str(s.get("site_type") or "unknown").capitalize(),
                                 ]
                             )
                         )
-                        for id, s in myapi.sites.items()
+                        for sid, s in myapi.sites.items()
                     ]
                     for idx, sitename in enumerate(site_names):
                         CONSOLE.info("(%s) %s", idx, sitename)
@@ -200,9 +200,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 # pylint: disable=logging-fstring-interpolation
                 shown_sites = set()
                 for sn, dev in [
-                    (dev.get("device_sn"), dev)
-                    for dev in myapi.devices.values()
-                    if (not site_selected or dev.get("site_id") == site_selected)
+                    (s, d)
+                    for s,d in myapi.devices.items()
+                    if (not site_selected or d.get("site_id") == site_selected)
                 ]:
                     devtype = dev.get("type", "Unknown")
                     admin = dev.get("is_admin", False)
@@ -432,7 +432,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                 # print optional energy details
                 if energy_stats:
-                    for site_id, site in myapi.sites.items():
+                    for site_id, site in [
+                        (s, d)
+                        for s,d in myapi.sites.items()
+                        if (not site_selected or s == site_selected)
+                    ]:
                         CONSOLE.info("=" * 80)
                         CONSOLE.info(
                             f"Energy details for System {(site.get('site_info') or {}).get('site_name', 'Unknown')} (Site ID: {site_id}):"

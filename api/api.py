@@ -21,6 +21,7 @@ from .apitypes import (
     API_FILEPREFIXES,
     SmartmeterStatus,
     SolarbankDeviceMetrics,
+    SolarbankPriceTypes,
     SolarbankRatePlan,
     SolarbankStatus,
     SolarbankUsageMode,
@@ -144,15 +145,19 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             )
                     elif key in ["device_sw_version"] and value:
                         device.update({"sw_version": str(value)})
-                    elif key in [
-                        # keys with boolean values that should only be updated if value returned
-                        "wifi_online",
-                        "data_valid",
-                        "charge",
-                        "auto_upgrade",
-                        "is_ota_update",
-                        "cascaded",
-                    ] and value is not None:
+                    elif (
+                        key
+                        in [
+                            # keys with boolean values that should only be updated if value returned
+                            "wifi_online",
+                            "data_valid",
+                            "charge",
+                            "auto_upgrade",
+                            "is_ota_update",
+                            "cascaded",
+                        ]
+                        and value is not None
+                    ):
                         device.update({key: bool(value)})
                     elif key in [
                         # keys with string values
@@ -394,14 +399,19 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             mode_type = (
                                 value.get("mode_type") or SolixDefaults.USAGE_MODE
                             )
-                            # define default presets, will be updated if active slot found
+                            # define default presets, will be updated if active slot found for mode
                             device.update(
                                 {
                                     "preset_usage_mode": mode_type,
-                                    "preset_system_output_power": 0
-                                    if mode_type == SolarbankUsageMode.smartplugs.value
-                                    else value.get("default_home_load")
-                                    or SolixDefaults.PRESET_NOSCHEDULE,
+                                    "preset_system_output_power": value.get(
+                                        "default_home_load"
+                                    )
+                                    or SolixDefaults.PRESET_NOSCHEDULE
+                                    if mode_type in [SolarbankUsageMode.manual.value]
+                                    else 0
+                                    if mode_type
+                                    in [SolarbankUsageMode.smartplugs.value]
+                                    else None,
                                 }
                             )
                             if ac_type:
@@ -409,7 +419,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     {
                                         "preset_manual_backup_start": 0,
                                         "preset_manual_backup_end": 0,
-                                        "preset_backup_option": False
+                                        "preset_backup_option": False,
                                     }
                                 )
                         else:
@@ -429,9 +439,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "preset_power_mode": SolixDefaults.POWER_MODE,
                                         "preset_device_output_power": int(
                                             SolixDefaults.PRESET_NOSCHEDULE / cnt
-                                        )
+                                        ),
                                     }
-                            )
+                                )
                         # get actual presets from current slot
                         now: datetime = datetime.now().time().replace(microsecond=0)
                         sys_power = None
@@ -442,7 +452,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         if generation >= 2:
                             # Solarbank 2 schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
-                            # TODO: Implement proper parsing for use_time plan of AC types
+                            # TODO: Implement proper parsing for use_time plan of AC types if current settings to be extracted
                             weekday = int(datetime.now().strftime("%w"))
                             # get rate_plan_name depending on use usage mode_type
                             rate_plan_name = getattr(
@@ -492,18 +502,27 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                             }
                                         )
                                         break
-                            if ac_type and (backup := value.get("manual_backup") or {}):
+                            if ac_type and (
+                                backup := value.get(SolarbankRatePlan.backup) or {}
+                            ):
                                 # check whether now in active backup interval to update usage mode info because active backup mode is not reflected in schedule object
-                                start = (backup.get("ranges") or [{}])[0].get("start_time") or 0
-                                end = (backup.get("ranges") or [{}])[0].get("end_time") or 0
+                                start = (backup.get("ranges") or [{}])[0].get(
+                                    "start_time"
+                                ) or 0
+                                end = (backup.get("ranges") or [{}])[0].get(
+                                    "end_time"
+                                ) or 0
                                 switch = backup.get("switch") or False
                                 # update valid backup list item data
                                 device.update(
                                     {
-                                        "preset_usage_mode": SolarbankUsageMode.backup if switch and start < datetime.now().timestamp() < end else mode_type,
+                                        "preset_usage_mode": SolarbankUsageMode.backup
+                                        if switch
+                                        and start < datetime.now().timestamp() < end
+                                        else mode_type,
                                         "preset_manual_backup_start": start,
                                         "preset_manual_backup_end": end,
-                                        "preset_backup_option": switch
+                                        "preset_backup_option": switch,
                                     }
                                 )
 
@@ -549,10 +568,18 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         # For enforced SB1 schedule by SB2, the export switch setting is None and all other will be set to None either
                                         device.update(
                                             {
-                                                "preset_system_output_power": None if export is None else preset_power,
-                                                "preset_allow_export": None if export is None else export,
-                                                "preset_discharge_priority": None if export is None else discharge_prio,
-                                                "preset_charge_priority": None if export is None else prio,
+                                                "preset_system_output_power": None
+                                                if export is None
+                                                else preset_power,
+                                                "preset_allow_export": None
+                                                if export is None
+                                                else export,
+                                                "preset_discharge_priority": None
+                                                if export is None
+                                                else discharge_prio,
+                                                "preset_charge_priority": None
+                                                if export is None
+                                                else prio,
                                             }
                                         )
                                         # add presets for dual solarbank setups, default to None if schedule does not support new keys yet
@@ -575,8 +602,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                             # For enforced SB1 schedule by SB2, the export switch setting is None and all other will be set to None either
                                             device.update(
                                                 {
-                                                    "preset_power_mode": None if export is None else power_mode,
-                                                    "preset_device_output_power": None if export is None else dev_power,
+                                                    "preset_power_mode": None
+                                                    if export is None
+                                                    else power_mode,
+                                                    "preset_device_output_power": None
+                                                    if export is None
+                                                    else dev_power,
                                                 }
                                             )
                                         break
@@ -610,11 +641,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 sys_power = "0"
                                 dev_power = "0"
                         # update appliance load in site cache upon device details or schedule updates not triggered by sites update
-                        if (
-                            not devData.get("retain_load")
-                            and mysite
-                            and sys_power
-                        ):
+                        if not devData.get("retain_load") and mysite and sys_power:
                             mysite.update({"retain_load": sys_power})
                             # update also device fields for output power if not provided along with schedule update
                             if not devData.get("current_home_load") and sys_power:
@@ -928,6 +955,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
         Example data:
         {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"site_co2": 0,"site_price_unit": "\u20ac"}
+        Enhanced data from 2025 to support dynamic prices for systems:
+        {"site_id": "8b0bdb3e-c2c6-95dc-5a3d-dfa4356ab0d8","price": 0.29,"site_co2": 0,"site_price_unit": "\u20ac","price_type": "fixed","current_mode": 3}
         """
         data = {"site_id": siteId}
         if fromFile:
@@ -953,40 +982,40 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         price: float | None = None,
         unit: str | None = None,
         co2: float | None = None,
-    ) -> bool:
-        """Set the power price, the unit and/or CO2 for a site.
+        price_type: str | None = None,  # "fixed" | "use_time"
+        cache_only: bool = False,
+    ) -> bool | dict:
+        """Set the power price, the unit, CO2 and price type for a site.
 
         Example input:
         {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0}
-        The id must be one of the ids listed with the get_power_cutoff endpoint
+        Additional fields have been added to support dynamic prices
+        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0, "price_type": "fixed"}
         """
-        # First get the old settings if only single setting should be updated
-        details = {}
-        if siteId in self.sites:
-            details = (self.sites.get(siteId) or {}).get("site_details") or {}
-        new_price = details.get("price") if price is None else price
-        new_unit = details.get("site_price_unit") if unit is None else unit
-        new_co2 = details.get("site_co2") if co2 is None else co2
-        data = {}
-        # Need to query old setting to avoid changing them if parameter not provided
-        if new_price is None or new_unit is None or new_co2 is None:
-            data = await self.get_site_price(siteId=siteId)
-            if new_price is not None:
-                data["price"] = new_price
-            if new_unit is not None:
-                data["site_price_unit"] = new_unit
-            if new_co2 is not None:
-                data["site_co2"] = new_co2
-        else:
-            data.update(
-                {
-                    "site_id": siteId,
-                    "price": new_price,
-                    "site_price_unit": new_unit,
-                    "site_co2": new_co2,
-                }
-            )
+        # First get the old settings from api dict or Api call to update only requested parameter
+        if (
+            not (details := (self.sites.get(siteId) or {}).get("site_details") or {})
+            and not cache_only
+        ):
+            details = await self.get_site_price(siteId=siteId)
+        if not details or not isinstance(details, dict):
+            return False
+        # Validate parameters
+        price_type = str(price_type).lower() if str(price_type).lower() in [item.value for item in SolarbankPriceTypes] else None
+        # Prepare payload from details
+        data: dict = {}
+        data["price"] = float(price) if isinstance(price, float | int) else details.get("price")
+        data["site_price_unit"] = unit if unit in ["€", "$", "£", "¥", "₹", "원"] else details.get("site_price_unit")
+        data["site_co2"] = float(co2) if isinstance(co2, float | int) else details.get("site_co2")
+        if "price_type" in details or price_type:
+            data["price_type"] = price_type if price_type else details.get("price_type")
+
+        if cache_only:
+            ((self.sites.get(siteId) or {}).get("site_details") or {}).update(data)
+            return data
+
         # Make the Api call and check for return code
+        data["site_id"] = siteId
         code = (
             await self.apisession.request(
                 "post", API_ENDPOINTS["update_site_price"], json=data
@@ -994,9 +1023,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         ).get("code")
         if not isinstance(code, int) or int(code) != 0:
             return False
-        # update the data in api dict
-        await self.get_site_price(siteId=siteId)
-        return True
+        # update the data in api dict and return active data
+        return await self.get_site_price(siteId=siteId)
 
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False

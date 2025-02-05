@@ -938,13 +938,14 @@ class AnkerSolixApiExport:
                     payload={"siteId": siteId},
                     replace=[(siteId, "<siteId>")],
                 )
-                self._logger.info("Exporting HES install info...")
-                response = await self.query(
-                    endpoint=API_HES_SVC_ENDPOINTS["get_install_info"],
-                    filename=f"{API_FILEPREFIXES['hes_get_install_info']}_{self._randomize(siteId,'site_id')}.json",
-                    payload={"siteId": siteId},
-                    replace=[(siteId, "<siteId>")],
-                )
+                # Following will show sensitive information and addresses
+                # self._logger.info("Exporting HES install info...")
+                # response = await self.query(
+                #     endpoint=API_HES_SVC_ENDPOINTS["get_install_info"],
+                #     filename=f"{API_FILEPREFIXES['hes_get_install_info']}_{self._randomize(siteId,'site_id')}.json",
+                #     payload={"siteId": siteId},
+                #     replace=[(siteId, "<siteId>")],
+                # )
 
                 # get various daily energies since yesterday
                 for stat_type in ["solar", "hes", "home", "grid"]:
@@ -968,14 +969,15 @@ class AnkerSolixApiExport:
                     )
 
                 # Export site infos requiring owner accounts
-                self._logger.info("Exporting HES installer info...")
-                response = await self.query(
-                    endpoint=API_HES_SVC_ENDPOINTS["get_installer_info"],
-                    filename=f"{API_FILEPREFIXES['hes_get_installer_info']}_{self._randomize(siteId,'site_id')}.json",
-                    payload={"siteIds": [siteId], "siteId": siteId},
-                    replace=[(siteId, "<siteId>")],
-                    admin=admin,
-                )
+                # Following will show sensitive information and addresses of installer
+                # self._logger.info("Exporting HES installer info...")
+                # response = await self.query(
+                #     endpoint=API_HES_SVC_ENDPOINTS["get_installer_info"],
+                #     filename=f"{API_FILEPREFIXES['hes_get_installer_info']}_{self._randomize(siteId,'site_id')}.json",
+                #     payload={"siteIds": [siteId], "siteId": siteId},
+                #     replace=[(siteId, "<siteId>")],
+                #     admin=admin,
+                # )
                 self._logger.info("Exporting HES system running time...")
                 response = await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["get_system_running_time"],

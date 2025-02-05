@@ -12,6 +12,7 @@ from .apitypes import (
     API_FILEPREFIXES,
     Solarbank2Timeslot,
     SolarbankPowerMode,
+    SolarbankPriceTypes,
     SolarbankRatePlan,
     SolarbankTimeslot,
     SolarbankUsageMode,
@@ -1164,7 +1165,8 @@ async def set_sb2_home_load(  # noqa: C901
     plan_name: str | None = None,
     set_slot: Solarbank2Timeslot | None = None,
     insert_slot: Solarbank2Timeslot | None = None,
-    test_schedule: dict | None = None,  # used for testing or to apply changes only to api cache
+    test_schedule: dict
+    | None = None,  # used for testing or to apply changes only to api cache
 ) -> bool | dict:
     """Set or change the home load parameters for a given site id and solarbank 2 device for any slot in the existing schedule.
 
@@ -1227,6 +1229,13 @@ async def set_sb2_home_load(  # noqa: C901
             )
             < 1
         )
+        and not (
+            usage_mode == SolarbankUsageMode.use_time.value
+            and ((self.sites.get(siteId) or {}).get("site_info") or {}).get(
+                "power_site_type"
+            )
+            not in [11]
+        )
         else None
     )
     if (
@@ -1276,8 +1285,26 @@ async def set_sb2_home_load(  # noqa: C901
     delete_plan: bool = set_slot and (not set_slot.start_time or not set_slot.end_time)
 
     # update the usage mode in the overall schedule object or set it to the one used in the schedule
+    # check whether price type for site must be toggled as well
+    price_type = None
     if usage_mode is not None:
-        schedule.update({"mode_type": usage_mode})
+        if (mode := schedule.get("mode_type")) in iter(SolarbankUsageMode):
+            if usage_mode == SolarbankUsageMode.use_time.value and mode in [
+                SolarbankUsageMode.manual.value,
+                SolarbankUsageMode.smartmeter.value,
+                SolarbankUsageMode.smartplugs.value,
+            ]:
+                price_type = SolarbankPriceTypes.USE_TIME
+            elif (
+                usage_mode
+                in [
+                    SolarbankUsageMode.manual.value,
+                    SolarbankUsageMode.smartmeter.value,
+                    SolarbankUsageMode.smartplugs.value,
+                ]
+                and mode == SolarbankUsageMode.use_time.value
+            ):
+                price_type = SolarbankPriceTypes.FIXED
     else:
         usage_mode = schedule.get("mode_type")
 
@@ -1354,12 +1381,12 @@ async def set_sb2_home_load(  # noqa: C901
         preset is not None or set_slot or insert_slot
     ):
         if not delete_plan:
-            for idx in rate_plan:
-                if len((days := set(idx.get("week") or [])) & weekdays) > len(
+            for idx, rate in enumerate(rate_plan):
+                if len((days := set(rate.get("week") or [])) & weekdays) > len(
                     matched_days & weekdays
                 ):
                     matched_days = days.copy()
-                    index = idx.get("index")
+                    index = idx
                     # re-use matching plan days if no weekdays provided
                     if match_plan:
                         weekdays = days.copy()
@@ -1368,34 +1395,37 @@ async def set_sb2_home_load(  # noqa: C901
                         # all days defined, reuse plan
                         break
             if index is None:
-                # set next index number if no matching days found
-                index = len(rate_plan)
+                # set next used index number if no matching days found
+                index = (
+                    int(dict(rate_plan[-1]).get("index") or -1) + 1 if rate_plan else 0
+                )
                 rate_plan.append({"index": index, "week": weekdays, "ranges": []})
             elif (matched_days & weekdays) != matched_days:
                 # Clone existing ranges to new plan if only partial subset of provided days
                 new_ranges = list(rate_plan[index].get("ranges") or [])
-                index = len(rate_plan)
+                index = int(dict(rate_plan[-1]).get("index") or len(rate_plan) - 1) + 1
                 rate_plan.append(
                     {"index": index, "week": weekdays, "ranges": new_ranges}
                 )
             else:
                 # Merge new and existing weekdays since existing plan is for complete subset of new weekdays
                 weekdays = weekdays | set(rate_plan[index].get("week") or [])
+                index = rate_plan[index].get("index")
         # create new rate plan and curate existing weekdays
         removed = 0
-        for idx in rate_plan:
-            new_idx = copy.deepcopy(idx)
+        for idx, rate in enumerate(rate_plan):
+            new_rate = copy.deepcopy(rate)
             if new_days := (
                 sorted(weekdays)
-                if idx.get("index") == index
-                else sorted(set(idx.get("week") or []) - weekdays)
+                if rate.get("index") == index
+                else sorted(set(rate.get("week") or []) - weekdays)
             ):
                 # add merged weekdays
-                new_idx.update({"index": idx.get("index") - removed, "week": new_days})
-                new_rate_plan.append(new_idx)
+                new_rate.update({"index": idx - removed, "week": new_days})
+                new_rate_plan.append(new_rate)
                 # adjust rate plan list index to new number
-                if idx.get("index") == index:
-                    index -= removed
+                if rate.get("index") == index:
+                    index = idx - removed
             else:
                 # skip index in new rate plan and adjust remaining
                 removed += 1
@@ -1698,9 +1728,19 @@ async def set_sb2_home_load(  # noqa: C901
                 "ranges": new_ranges,
             }
         ]
-    schedule.update({rate_plan_name: new_rate_plan})
+    if rate_plan_name:
+        schedule.update({rate_plan_name: new_rate_plan})
+    # Update usage mode, reset to manual mode if required rate plan not in schedule
+    schedule.update(
+        {
+            "mode_type": SolarbankUsageMode.manual.value
+            if usage_mode == SolarbankUsageMode.use_time.value
+            and not schedule.get(SolarbankRatePlan.use_time)
+            else usage_mode
+        }
+    )
     self._logger.debug("Schedule to apply: %s", schedule)
-    # return resulting schedule for test purposes without Api call
+    # update Api dict and return resulting schedule for test purposes without Api call
     if test_schedule is not None:
         await self.get_device_parm(
             siteId=siteId,
@@ -1708,14 +1748,25 @@ async def set_sb2_home_load(  # noqa: C901
             testSchedule=schedule,
             deviceSn=deviceSn,
         )
+        if price_type == SolarbankPriceTypes.USE_TIME:
+            self._logger.debug("Toggling price type to: %s", price_type)
+            await self.set_site_price(
+                siteId=siteId, price_type=price_type, cache_only=True
+            )
         return schedule
     # Make the Api call with final schedule and return result, the set call will also update api dict
-    return await self.set_device_parm(
+    resp = await self.set_device_parm(
         siteId=siteId,
         paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
         paramData=schedule,
         deviceSn=deviceSn,
     )
+    # Make also the price type change if required by usage mode change
+    # The mobile App only activates use_time price automatically with use_time mode, but does not toggle back to fixed price automatically
+    if price_type == SolarbankPriceTypes.USE_TIME:
+        self._logger.debug("Toggling price type to: %s", price_type)
+        await self.set_site_price(siteId=siteId, price_type=price_type)
+    return resp
 
 
 async def set_sb2_ac_charge(
@@ -1726,7 +1777,8 @@ async def set_sb2_ac_charge(
     backup_end: datetime | None = None,
     backup_duration: timedelta = timedelta(hours=1),
     backup_switch: bool | None = None,
-    test_schedule: dict | None = None,  # used for testing or to apply changes only to api cache
+    test_schedule: dict
+    | None = None,  # used for testing or to apply changes only to api cache
 ) -> bool | dict:
     """Set or change the AC charge parameters for a given site id and solarbank 2 AC device.
 
@@ -1840,7 +1892,8 @@ async def set_sb2_use_time(
     self,
     siteId: str,
     deviceSn: str,
-    test_schedule: dict | None = None,  # used for testing or to apply changes only to api cache
+    test_schedule: dict
+    | None = None,  # used for testing or to apply changes only to api cache
 ) -> bool | dict:
     r"""Set or change the AC use time parameters for a given site id and solarbank 2 AC device.
 

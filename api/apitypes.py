@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 from typing import ClassVar
 
 # API servers per region. Country assignment not clear, defaulting to EU server
@@ -164,9 +164,9 @@ API_HES_SVC_ENDPOINTS = {
     "get_system_running_info": "charging_hes_svc/get_system_running_info",  # system runtime info, works with shared account
     "energy_statistics": "charging_hes_svc/get_energy_statistics",  # Energy stats for HES, # source type [solar hes grid home]
     "get_monetary_units": "charging_hes_svc/get_world_monetary_unit",  # monetary unit list for system, works with shared account
-    "get_install_info": "charging_hes_svc/get_install_info",  # get system install info, works with shared account
+    "get_install_info": "charging_hes_svc/get_install_info",  # get system install info, works with shared account. Shows installation location
     "get_wifi_info": "charging_hes_svc/get_wifi_info",  # get device wifi info, works with shared account
-    "get_installer_info": "charging_hes_svc/get_installer_info",  # no shared account access, needs HES site?
+    "get_installer_info": "charging_hes_svc/get_installer_info",  # no shared account access, Shows contact information of the installer
     "get_system_running_time": "charging_hes_svc/get_system_running_time",  # no shared account access, needs HES site?
     "get_mi_layout": "charging_hes_svc/get_mi_layout",  # no shared account access, needs HES site?
     "get_conn_net_tips": "charging_hes_svc/get_conn_net_tips",  # no shared account access, needs HES site?
@@ -439,8 +439,9 @@ class SolarbankUsageMode(IntEnum):
     smartmeter = 1  # AC output based on measured smart meter power
     smartplugs = 2  # AC output based on measured smart plug power
     manual = 3  # manual time plan for home load output
-    backup = 4 # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
+    backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
     use_time = 5  # Use Time plan with SB2 AC and smart meter
+
 
 class SolarbankTariffTypes(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
@@ -451,14 +452,19 @@ class SolarbankTariffTypes(IntEnum):
     OTHER = 4
 
 
+class SolarbankPriceTypes(StrEnum):
+    """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
+
+    FIXED = "fixed"
+    USE_TIME = "use_time"
+
+
 @dataclass(frozen=True)
 class SolarbankRatePlan:
     """Dataclass for Anker Solix Solarbank 2 rate plan types."""
 
     # rate plan per usage mode
-    smartmeter: str = (
-        "custom_rate_plan"  # used for default output setting on connection loss
-    )
+    smartmeter: str = ""  # does not use a plan
     smartplugs: str = "blend_plan"
     manual: str = "custom_rate_plan"
     backup: str = "manual_backup"
@@ -633,10 +639,10 @@ class SolarbankDeviceMetrics:
         "to_home_load",
         "pei_heating_power",
         # Only used by AC model?
-        #"micro_inverter_power",
-        #"micro_inverter_power_limit",
-        #"micro_inverter_low_power_limit",
-        #"other_input_power",
+        # "micro_inverter_power",
+        # "micro_inverter_power_limit",
+        # "micro_inverter_low_power_limit",
+        # "other_input_power",
     }
     # SOLIX E1600 Solarbank 2 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -661,10 +667,10 @@ class SolarbankDeviceMetrics:
         "to_home_load",
         "pei_heating_power",
         # Only used by AC model?
-        #"micro_inverter_power",
-        #"micro_inverter_power_limit",
-        #"micro_inverter_low_power_limit",
-        #"other_input_power",
+        # "micro_inverter_power",
+        # "micro_inverter_power_limit",
+        # "micro_inverter_low_power_limit",
+        # "other_input_power",
     }
 
 
