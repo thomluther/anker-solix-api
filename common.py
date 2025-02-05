@@ -1,4 +1,4 @@
-"""A collection of helper functions for pyscripts."""  # noqa: INP001
+"""A collection of helper functions for pyscripts."""
 
 import datetime
 import getpass

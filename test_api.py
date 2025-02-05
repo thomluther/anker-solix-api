@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""Example exec module to test the Anker API for various methods or direct endpoint requests with various parameters."""  # noqa: D205
-# pylint: disable=duplicate-code
+"""Example exec module to test the Anker API for various methods or direct endpoint requests with various parameters."""
 
 import asyncio
 from datetime import datetime
@@ -9,7 +8,7 @@ import logging
 from pathlib import Path
 
 from aiohttp import ClientSession
-from api import api  # pylint: disable=no-name-in-module
+import api.api  # pylint: disable=no-name-in-module
 from api.apitypes import SolixParmType  # pylint: disable=no-name-in-module
 import common
 
@@ -96,55 +95,55 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _system = list(myapi.sites.values())[0]
     siteid = _system["site_info"]["site_id"]
     devicesn = _system["solarbank_info"]["solarbank_list"][0]["device_sn"]
-    _out(await myapi.apisession.request("post", api.API_ENDPOINTS["homepage"], json={}))  # pylint: disable=protected-access  # noqa: SLF001
+    _out(await myapi.apisession.request("post", api.API_ENDPOINTS["homepage"], json={}))  # pylint: disable=protected-access
     _out(
         await myapi.apisession.request("post", api.API_ENDPOINTS["site_list"], json={})
-    )  # pylint: disable=protected-access  # noqa: SLF001
+    )  # pylint: disable=protected-access
     _out(
         await myapi.apisession.request(
             "post", api.API_ENDPOINTS["bind_devices"], json={}
         )
-    )  # pylint: disable=protected-access  # noqa: SLF001
+    )  # pylint: disable=protected-access
     _out(
         await myapi.apisession.request(
             "post", api.API_ENDPOINTS["user_devices"], json={}
         )
-    )  # pylint: disable=protected-access  # noqa: SLF001
+    )  # pylint: disable=protected-access
     _out(
         await myapi.apisession.request(
             "post", api.API_ENDPOINTS["charging_devices"], json={}
         )
-    )  # pylint: disable=protected-access  # noqa: SLF001
+    )  # pylint: disable=protected-access
     _out(
         await myapi.apisession.request(
             "post", api.API_ENDPOINTS["get_auto_upgrade"], json={}
         )
-    )  # pylint: disable=protected-access  # noqa: SLF001
+    )  # pylint: disable=protected-access
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["site_detail"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["site_detail"],  # pylint: disable=protected-access
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["wifi_list"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["wifi_list"],  # pylint: disable=protected-access
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_site_price"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_site_price"],  # pylint: disable=protected-access
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["solar_info"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["solar_info"],  # pylint: disable=protected-access
             json={
                 "site_id": siteid,
                 "solarbank_sn": devicesn,
@@ -154,7 +153,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_cutoff"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_cutoff"],  # pylint: disable=protected-access
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -164,7 +163,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_device_fittings"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_device_fittings"],  # pylint: disable=protected-access
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -174,7 +173,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_device_load"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_device_load"],  # pylint: disable=protected-access
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -184,7 +183,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_device_parm"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["get_device_parm"],  # pylint: disable=protected-access
             json={
                 "site_id": siteid,
                 "param_type": "4",
@@ -194,14 +193,14 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["compatible_process"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["compatible_process"],  # pylint: disable=protected-access
             json={"solarbank_sn": devicesn},
         )
     )
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["home_load_chart"],  # pylint: disable=protected-access  # noqa: SLF001
+            api.API_ENDPOINTS["home_load_chart"],  # pylint: disable=protected-access
             json={"site_id": siteid},
         )
     )
