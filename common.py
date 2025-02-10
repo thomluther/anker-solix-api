@@ -82,7 +82,7 @@ def print_schedule(schedule: dict) -> None:
                 weekdays = [week[day] for day in idx.get("week") or []]
                 if ranges := idx.get("ranges") or []:
                     CONSOLE.info(
-                        f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Output':<{t6}} {'Weekdays':<{t6}}   <== {rate_plan_name}{' (Smart plugs)' if rate_plan_name == SolarbankRatePlan.smartplugs else ''}"
+                        f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Output':<{t6}} {'Weekdays':<{t6}}                          <== {rate_plan_name}{' (Smart plugs)' if rate_plan_name == SolarbankRatePlan.smartplugs else ''}"
                     )
                 for slot in ranges:
                     CONSOLE.info(
@@ -93,37 +93,49 @@ def print_schedule(schedule: dict) -> None:
             ranges := rate_plan.get("ranges") or []
         ):
             CONSOLE.info(
-                f"{'Backup Start':<{t10 + t10}} {'Backup End':<{t10 + t10}}  <== manual_backup (Switch {'ON' if rate_plan.get('switch') else 'OFF'})"
+                f"{'Backup Start':<{t10 + t10}} {'Backup End':<{t10 + t10}} Switch: {'ON' if rate_plan.get('switch') else 'OFF':<{t3}}   <== manual_backup"
             )
             for slot in ranges:
                 CONSOLE.info(
-                    f"{datetime.datetime.fromtimestamp(slot.get('start_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M:%S'):<{t10 + t10}} {datetime.datetime.fromtimestamp(slot.get('end_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M:%S'):<{t10 + t10}}"
+                    f"{datetime.datetime.fromtimestamp(slot.get('start_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}} {datetime.datetime.fromtimestamp(slot.get('end_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}}"
                 )
         if rate_plan := plan.get(SolarbankRatePlan.use_time) or []:
             tarifs = ["High","Medium","Low","Other"]
             for sea in rate_plan:
                 unit = sea.get("unit") or "-"
-                m_start = datetime.date.today().replace(month=(sea.get('sea') or {}).get('start_month') or 1).strftime("%b")
-                m_end = datetime.date.today().replace(month=(sea.get('sea') or {}).get('end_month') or 1).strftime("%b")
+                m_start = datetime.date.today().replace(month=(sea.get('sea') or {}).get('start_month') or 1)
+                m_end = datetime.date.today().replace(month=(sea.get('sea') or {}).get('end_month') or 1)
                 is_same = sea.get("is_same")
+                weekday = sea.get("weekday") or []
+                weekend = sea.get("weekend") or []
+                today = datetime.datetime.now().astimezone().replace(hour=0,minute=0,second=0,microsecond=0)
                 CONSOLE.info(
-                    f"{'Start':<{t5}} {'End':<{t5}} {'Type':<{t6}} {'Price':<{t6}}  Weekends: {'SAME' if is_same else 'DIFF':<{t5}} Season: {m_start:<{t3}}-{m_end:<{t3}}  <== use_time"
+                    f"Season: {m_start.strftime("%b")} - {m_end.strftime("%b")},           Weekends: {'SAME' if is_same else 'DIFF'}             <== use_time"
                 )
-                for slot in sea.get("weekday") or []:
-                    tarif = slot.get('type')
-                    tarif = tarifs[tarif-1] if isinstance(tarif,int) and 0 < tarif <= len(tarifs) else '------'
-                    price = next(iter([item.get("price") for item in (sea.get("weekday_price") or []) if item.get("type") == tarif]),0)
-                    CONSOLE.info(
-                        f"{slot.get('start_time') or 0:>0{t2}}:00 {slot.get('end_time') or 0:>0{t2}}:00 {tarif:<{t6}} {float(price):<.02f} {unit:<{t2}} {'  All days' if is_same else 'Workdays'}"
-                    )
-                if not is_same:
-                    for slot in sea.get("weekend") or []:
-                        tarif = slot.get('type')
+                CONSOLE.info(
+                    f"{'Start':<{t5}} {'End':<{t5}} {'Type':<{t6}} {'Price':<{t6}}    {'Start':<{t5}} {'End':<{t5}} {'Type':<{t6}} {'Price':<{t6}}"
+                )
+                for idx in range(max(len(weekday),len(weekend))):
+                    if len(weekday) > idx:
+                        tarif = weekday[idx].get('type')
+                        price = next(iter([item.get("price") for item in (sea.get("weekday_price") or []) if item.get("type") == tarif]),0)
                         tarif = tarifs[tarif-1] if isinstance(tarif,int) and 0 < tarif <= len(tarifs) else '------'
+                        start = today+datetime.timedelta(hours=weekday[idx].get('start_time') or 0)
+                        end = weekday[idx].get('end_time') or 24
+                        end = today+(datetime.timedelta(hours=end) if end < 24 else datetime.timedelta(days=1))
+                        row = f"{start.strftime("%H:%M"):<{t5}} {end.strftime("%H:%M"):<{t5}} {tarif:<{t6}} {float(price):<.02f} {unit:<{t2}}"
+                    else:
+                        row = " "*26
+                    if not is_same and len(weekend) > idx:
+                        tarif = weekend[idx].get('type')
                         price = next(iter([item.get("price") for item in (sea.get("weekend_price") or []) if item.get("type") == tarif]),0)
-                        CONSOLE.info(
-                            f"{slot.get('start_time') or 0:>0{t2}}:00 {slot.get('end_time') or 0:>0{t2}}:00 {tarif:<{t6}} {float(price):<.02f} {unit:<{t2}} {'    Weekends'}"
-                        )
+                        tarif = tarifs[tarif-1] if isinstance(tarif,int) and 0 < tarif <= len(tarifs) else '------'
+                        start = today+datetime.timedelta(hours=weekend[idx].get('start_time') or 0)
+                        end = weekend[idx].get('end_time') or 24
+                        end = today+(datetime.timedelta(hours=end) if end < 24 else datetime.timedelta(days=1))
+                        row = row + f"   {start.strftime("%H:%M"):<{t5}} {end.strftime("%H:%M"):<{t5}} {tarif:<{t6}} {float(price):<.02f} {unit:<{t2}}"
+                    CONSOLE.info(row)
+
     else:
         # SB1 schedule
         if ranges := plan.get("ranges") or []:
