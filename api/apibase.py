@@ -554,7 +554,7 @@ class AnkerSolixBaseApi:
             for wifi_info in data.get("wifi_info_list") or []:
                 if wifi_info.get("device_sn"):
                     self._update_dev(wifi_info)
-        return resp.get("data") or {}
+        return data
 
     async def get_ota_batch(
         self, deviceSns: list | None = None, fromFile: bool = False
@@ -626,7 +626,7 @@ class AnkerSolixBaseApi:
                             "ota_children": children,
                         }
                     )
-        return resp.get("data") or {}
+        return data
 
     async def get_message_unread(self, fromFile: bool = False) -> dict:
         """Get the unread messages for account.

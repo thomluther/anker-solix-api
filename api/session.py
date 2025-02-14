@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import logging
 from pathlib import Path
+from random import randrange
 import time as systime
 
 import aiofiles
@@ -402,14 +403,14 @@ class AnkerSolixClientSession:
                     )
                 else:
                     self._logger.debug("Response Data: %s", data)
-                    # reset retry flag only when valid token received and not another login request
-                    self._retry_attempt = False
 
+                # valid client response at this point, mark login to avoid repeated authentication 
+                self._loggedIn = True
                 # check the Api response status code in the data
                 errors.raise_error(data)
 
-                # valid response at this point, mark login and return data
-                self._loggedIn = True
+                # reset retry flag for normal request retry attempts
+                self._retry_attempt = False
                 return data  # noqa: TRY300
 
             # Exception from ClientSession based on standard response status codes
@@ -454,6 +455,21 @@ class AnkerSolixClientSession:
                     f"Api Request Error: {err}", f"response={body_text}"
                 ) from err
             except errors.AnkerSolixError as err:  # Other Exception from API
+                if isinstance(err, errors.BusyError):
+                    # Api fails to respond to standard query, repeat once after delay
+                    self._logger.error("Api Busy Error: %s", err)
+                    self._logger.error("Response Text: %s", body_text)
+                    if not self._retry_attempt:
+                        self._retry_attempt = True
+                        delay = randrange(2,6)  # random wait time 2-5 seconds
+                        self._logger.warning(
+                            "Server busy, retrying request after delay of %s seconds.",
+                            delay,
+                        )
+                        await self._wait_delay(delay=delay)
+                        return await self.request(
+                            method, endpoint, headers=headers, json=json
+                        )
                 self._logger.error("%s", err)
                 self._logger.error("Response Text: %s", body_text)
                 raise
@@ -487,7 +503,7 @@ class AnkerSolixClientSession:
                     new = ""
                     for idx in range(0, len(old), 16):
                         new = new + (
-                            f"{old[idx:idx+2]}###masked###{old[idx+14:idx+16]}"
+                            f"{old[idx : idx + 2]}###masked###{old[idx + 14 : idx + 16]}"
                         )
                     new = new[: len(old)]
                     datacopy[key] = new

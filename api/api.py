@@ -31,6 +31,7 @@ from .apitypes import (
     SolixDeviceStatus,
     SolixDeviceType,
 )
+from .hes.api import AnkerSolixHesApi
 from .poller import (
     poll_device_details,
     poll_device_energy,
@@ -84,6 +85,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         self.request_count = self.apisession.request_count
         self.async_authenticate = self.apisession.async_authenticate
         self.powerpanelApi: AnkerSolixPowerpanelApi | None = None
+        self.hesApi: AnkerSolixHesApi | None = None
 
     def _update_dev(  # noqa: C901
         self,
@@ -752,6 +754,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         super().clearCaches()
         if self.powerpanelApi:
             self.powerpanelApi.clearCaches()
+        if self.hesApi:
+            self.hesApi.clearCaches()
 
     async def update_sites(
         self,
@@ -761,9 +765,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     ) -> dict:
         """Create/Update api sites cache structure."""
         resp = await poll_sites(self, siteId=siteId, fromFile=fromFile, exclude=exclude)
-        # Clean up powerpanel api sites cache if used
+        # Clean up other api classes sites cache if used
         if self.powerpanelApi:
             self.powerpanelApi.recycleSites(activeSites=set(self.sites.keys()))
+        if self.hesApi:
+            self.hesApi.recycleSites(activeSites=set(self.sites.keys()))
         return resp
 
     async def update_site_details(
@@ -783,9 +789,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     ) -> dict:
         """Create/Update device details in api devices cache structure."""
         resp = await poll_device_details(self, fromFile=fromFile, exclude=exclude)
-        # Clean up powerpanel devices cache if used
+        # Clean up other api class devices cache if used
         if self.powerpanelApi:
             self.powerpanelApi.recycleDevices(activeDevices=set(self.sites.keys()))
+        if self.hesApi:
+            self.hesApi.recycleDevices(activeDevices=set(self.sites.keys()))
         return resp
 
     async def get_homepage(self, fromFile: bool = False) -> dict:

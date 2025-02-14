@@ -34,7 +34,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "2.5.0.0"
+VERSION: str = "2.5.2.0"
 
 
 class AnkerSolixApiExport:
@@ -552,18 +552,18 @@ class AnkerSolixApiExport:
                         },
                         replace=[(siteId, "<siteId>")],
                     )
-                for ch in range(1, 5):
+                for ch in ["pv"+str(num) for num in range(1, 5)] + ["microinverter"]:
                     self._logger.info(
-                        "Exporting site energy data for solar_production PV%s...", ch
+                        "Exporting site energy data for solar production channel %s...", ch.upper()
                     )
                     response = await self.query(
                         endpoint=API_ENDPOINTS["energy_analysis"],
-                        filename=f"{API_FILEPREFIXES['energy_solar_production_pv']}{ch}_{self._randomize(siteId,'site_id')}.json",
+                        filename=f"{API_FILEPREFIXES['energy_solar_production']}_{ch}_{self._randomize(siteId,'site_id')}.json",
                         payload={
                             "site_id": siteId,
                             "device_sn": "",
                             "type": "week",
-                            "device_type": f"solar_production_pv{ch}",
+                            "device_type": f"solar_production_{ch}",
                             "start_time": (
                                 datetime.today() - timedelta(days=1)
                             ).strftime("%Y-%m-%d"),
@@ -573,8 +573,8 @@ class AnkerSolixApiExport:
                     )
                     if not isinstance(response, dict) or not response.get("data"):
                         self._logger.warning(
-                            "No solar production energy available for PV%s, skipping remaining PV channel export...",
-                            ch,
+                            "No solar production energy available for channel %s, skipping remaining solar channel export...",
+                            ch.upper(),
                         )
                         break
 
@@ -948,7 +948,7 @@ class AnkerSolixApiExport:
                 # )
 
                 # get various daily energies since yesterday
-                for stat_type in ["solar", "hes", "home", "grid"]:
+                for stat_type in ["solar", "hes", "home", "grid", "pps"]:
                     self._logger.info(
                         "Exporting HES site energy data for %s...",
                         stat_type.upper(),
@@ -963,6 +963,25 @@ class AnkerSolixApiExport:
                             "start": (datetime.today() - timedelta(days=1)).strftime(
                                 "%Y-%m-%d"
                             ),
+                            "end": datetime.today().strftime("%Y-%m-%d"),
+                        },
+                        replace=[(siteId, "<siteId>")],
+                    )
+
+                # get various energies of today for last 5 min average values
+                for stat_type in ["solar", "hes", "home", "grid", "pps"]:
+                    self._logger.info(
+                        "Exporting HES site energy data of today for %s...",
+                        stat_type.upper(),
+                    )
+                    await self.query(
+                        endpoint=API_HES_SVC_ENDPOINTS["energy_statistics"],
+                        filename=f"{API_FILEPREFIXES['hes_energy_'+stat_type+'_today']}_{self._randomize(siteId, "site_id")}.json",
+                        payload={
+                            "siteId": siteId,
+                            "sourceType": stat_type,
+                            "dateType": "day",
+                            "start": datetime.today().strftime("%Y-%m-%d"),
                             "end": datetime.today().strftime("%Y-%m-%d"),
                         },
                         replace=[(siteId, "<siteId>")],

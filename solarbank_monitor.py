@@ -29,7 +29,7 @@ import common
 # use Console logger from common module
 CONSOLE: logging.Logger = common.CONSOLE
 # enable debug mode for the console handler
-# CONSOLE.handlers[0].setLevel(logging.DEBUG)
+CONSOLE.handlers[0].setLevel(logging.DEBUG)
 
 REFRESH = 0  # default No refresh interval
 INTERACTIVE = True
@@ -145,8 +145,33 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 clearscreen()
                 now = datetime.now().astimezone()
                 if next_refr <= now:
+                    # Ask whether monitor should be limited to selected site ID
+                    if not (use_file or site_names):
+                        CONSOLE.info("Getting site list...")
+                        sites = (await myapi.get_site_list(fromFile=use_file)).get("site_list") or []
+                        CONSOLE.info("Select which Site to be monitored:")
+                        site_names = ["All"] + [
+                            (
+                                ", ".join(
+                                    [
+                                        str(s.get("site_id")),
+                                        str(s.get("site_name")),
+                                        "Type: "
+                                        + str(s.get("power_site_type") or "unknown"),
+                                    ]
+                                )
+                            )
+                            for s in sites
+                        ]
+                        for idx, sitename in enumerate(site_names):
+                            CONSOLE.info("(%s) %s", idx, sitename)
+                        selection = input(
+                            f"Enter site number (0-{len(site_names) - 1}) or nothing for All: "
+                        )
+                        if selection.isdigit() and 1 <= int(selection) < len(site_names):
+                            site_selected = site_names[int(selection)].split(",")[0]
                     CONSOLE.info("Running site refresh...")
-                    await myapi.update_sites(fromFile=use_file)
+                    await myapi.update_sites(fromFile=use_file,siteId=site_selected)
                     next_refr = now + timedelta(seconds=REFRESH)
                 if next_dev_refr <= now:
                     CONSOLE.info("Running device details refresh...")
@@ -171,29 +196,6 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 CONSOLE.info(
                     "Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices)
                 )
-                # Ask whether monitor should be limited to selected site ID
-                if not (use_file or site_names):
-                    CONSOLE.info("Select which Site to be monitored:")
-                    site_names = ["All"] + [
-                        (
-                            ", ".join(
-                                [
-                                    str(sid),
-                                    str((s.get("site_info") or {}).get("site_name")),
-                                    "Type: "
-                                    + str(s.get("site_type") or "unknown").capitalize(),
-                                ]
-                            )
-                        )
-                        for sid, s in myapi.sites.items()
-                    ]
-                    for idx, sitename in enumerate(site_names):
-                        CONSOLE.info("(%s) %s", idx, sitename)
-                    selection = input(
-                        f"Enter site number (0-{len(site_names) - 1}) or nothing for All: "
-                    )
-                    if selection.isdigit() and 1 <= int(selection) < len(site_names):
-                        site_selected = site_names[int(selection)].split(",")[0]
 
                 # pylint: disable=logging-fstring-interpolation
                 shown_sites = set()
@@ -470,6 +472,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Solar Ch 3/4':<{col1}}: {today.get('solar_production_pv3') or '-.--':>6} / {today.get('solar_production_pv4') or '-.--':>5} {unit:<{col2 - 15}} {'Solar Ch 3/4':<{col3}}: {yesterday.get('solar_production_pv3') or '-.--':>6} / {yesterday.get('solar_production_pv4') or '-.--':>5} {unit}"
                                 )
+                            if value := today.get("solar_production_microinverter"):
+                                CONSOLE.info(
+                                    f"{'Solar Ch AC':<{col1}}: {today.get('solar_production_microinverter') or '-.--':>6} {unit:<{col2-7}} {'Solar Ch AC':<{col3}}: {yesterday.get('solar_production_microinverter') or '-.--':>6} {unit}"
+                                )
                             CONSOLE.info(
                                 f"{'Charged':<{col1}}: {today.get('battery_charge') or '-.--':>6} {unit:<{col2 - 7}} {'Charged':<{col3}}: {yesterday.get('battery_charge') or '-.--':>6} {unit}"
                             )
@@ -532,7 +538,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if use_file:
                     while use_file:
                         CONSOLE.info("Api Requests: %s", myapi.request_count)
-                        # CONSOLE.info(myapi.request_count.get_details(last_hour=True)))
+                        CONSOLE.debug(myapi.request_count.get_details(last_hour=True))
+                        CONSOLE.debug(json.dumps(myapi.sites, indent=2))
+                        CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                         myapi.request_count.recycle(last_time=datetime.now())
                         resp = input(
                             "[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file or [Q]uit: "
@@ -581,7 +589,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             return True
                 else:
                     CONSOLE.info("Api Requests: %s", myapi.request_count)
-                    # CONSOLE.info(myapi.request_count.get_details(last_hour=True))
+                    CONSOLE.debug(myapi.request_count.get_details(last_hour=True))
                     CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                     for sec in range(REFRESH):
                         now = datetime.now().astimezone()
@@ -604,6 +612,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
 
     except (ClientError, errors.AnkerSolixError) as err:
         CONSOLE.error("%s: %s", type(err), err)
+        CONSOLE.info("Api Requests: %s", myapi.request_count)
+        CONSOLE.info(myapi.request_count.get_details(last_hour=True))
         return False
 
 

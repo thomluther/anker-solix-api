@@ -278,14 +278,14 @@ async def energy_daily(  # noqa: C901
 
     # Add solar energy per channel if supported by device, e.g. Solarbank 2 embedded inverter
     if SolixDeviceType.INVERTER.value in devTypes:
-        for ch in range(1, 5):
+        for ch in ["pv"+str(num) for num in range(1, 5)] + ["micro_inverter"]:
             # query only if provided device SN has solar power values in cache
-            if (self.devices.get(deviceSn) or {}).get(f"solar_power_{ch}") or "":
+            if f"solar_power_{ch.replace('pv','')}" in (dev:=self.devices.get(deviceSn) or {}) or f"{ch}_power" in dev:
                 if fromFile:
                     resp = (
                         await self.apisession.loadFromFile(
                             Path(self.testDir())
-                            / f"{API_FILEPREFIXES['energy_solar_production_pv']}{ch}_{siteId}.json"
+                            / f"{API_FILEPREFIXES['energy_solar_production']}_{ch.replace('_','')}_{siteId}.json"
                         )
                     ).get("data") or {}
                 else:
@@ -295,7 +295,7 @@ async def energy_daily(  # noqa: C901
                         rangeType="week",
                         startDay=startDay,
                         endDay=startDay + timedelta(days=numDays - 1),
-                        devType=f"solar_production_pv{ch}",
+                        devType=f"solar_production_{ch.replace('_','')}",
                     )
                 fileNumDays = 0
                 fileStartDay = None
@@ -310,7 +310,7 @@ async def energy_daily(  # noqa: C901
                         entry.update(
                             {
                                 "date": daystr,
-                                f"solar_production_pv{ch}": item.get("value") or None,
+                                f"solar_production_{ch.replace('_','')}": item.get("value") or None,
                             }
                         )
                         table.update({daystr: entry})
@@ -411,7 +411,7 @@ async def energy_analysis(
     rangeType: "day" | "week" | "year"
     startTime: optional start Date and time
     endTime: optional end Date and time
-    devType: "solar_production" | "solar_production_pv[1-4]" | "solarbank" | "home_usage" | "grid"
+    devType: "solar_production" | "solar_production_[pv1-pv4|microinverter]" | "solarbank" | "home_usage" | "grid"
     Example Data for solar_production:
     {'power': [{'time': '2023-10-01', 'value': '3.67'}, {'time': '2023-10-02', 'value': '3.29'}, {'time': '2023-10-03', 'value': '0.55'}],
     'charge_trend': None, 'charge_level': [], 'power_unit': 'wh', 'charge_total': '3.67', 'charge_unit': 'kwh', 'discharge_total': '3.11', 'discharge_unit': 'kwh',
@@ -422,7 +422,7 @@ async def energy_analysis(
 
     Responses for solar_production:
     Daily: Solar Energy, Extra Totals: charge, discharge, overall stats (Energy, CO2, Money), 3 x percentage share, solar_to_grid
-    Responses for solar_production_pv*:
+    Responses for solar_production_*:
     Daily: Solar Energy
     Responses for solarbank:
     Daily: Discharge Energy, Extra Totals: charge, discharge, ac_socket, battery_to_home, grid_to_battery
@@ -441,7 +441,7 @@ async def energy_analysis(
         "device_type": devType
         if (
             devType in ["solar_production", "solarbank", "home_usage", "grid"]
-            or "solar_production_pv" in devType
+            or "solar_production_" in devType
         )
         else "solar_production",
         "end_time": endDay.strftime("%Y-%m-%d") if endDay else "",
