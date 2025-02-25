@@ -29,7 +29,7 @@ import common
 # use Console logger from common module
 CONSOLE: logging.Logger = common.CONSOLE
 # enable debug mode for the console handler
-CONSOLE.handlers[0].setLevel(logging.DEBUG)
+#CONSOLE.handlers[0].setLevel(logging.DEBUG)
 
 REFRESH = 0  # default No refresh interval
 INTERACTIVE = True

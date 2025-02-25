@@ -701,10 +701,17 @@ class SolixDefaults:
     CHARGE_PRIORITY_DEF: int = 80
     # Discharge Priority preset for Solarbank schedule timeslot settings
     DISCHARGE_PRIORITY_DEF: int = SolarbankDischargePriorityMode.off.value
+    # AC tariff settings for Use Time plan
+    TARIFF_MIN: int = SolarbankTariffTypes.PEEK.value
+    TARIFF_MAX: int = SolarbankTariffTypes.OTHER.value
+    TARIFF_DEF: int = SolarbankTariffTypes.MID_PEEK.value
+    TARIFF_PRICE_DEF: float = 0.0
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
     REQUEST_DELAY_MIN: float = 0.0
-    REQUEST_DELAY_MAX: float = 5.0
+    REQUEST_DELAY_MAX: float = 10.0
     REQUEST_DELAY_DEF: float = 0.3
+    # Request limit per endpoint per minute
+    REQUEST_LIMIT_DEF: int = 10
 
 
 class SolixDeviceStatus(Enum):

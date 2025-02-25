@@ -63,7 +63,6 @@ async def poll_sites(  # noqa: C901
         )
         new_sites = {}
         api._logger.debug("Getting site list")
-        api._site_devices = set()
         # get site object list and filter selected site if provided
         sites: dict = {
             "site_list": [
@@ -73,6 +72,9 @@ async def poll_sites(  # noqa: C901
                 if not siteId or s.get("site_id") == siteId
             ]
         }
+        # rebuild device list found in any site
+        if not siteId:
+            api._site_devices = set()
     for site in sites.get("site_list", []):
         if myid := site.get("site_id"):
             # Update site info
@@ -93,30 +95,26 @@ async def poll_sites(  # noqa: C901
                 api._update_account(
                     {"products": await api.get_products(fromFile=fromFile)}
                 )
-            # Rountines for hes site type to get site statistic object (no values in scene info response)
+            # Routines for hes site type to get site statistic object (no values in scene info response)
             if (site_Type := mysite.get("site_type")) == SolixDeviceType.HES.value:
                 # initialize the HES Api if not done yet
                 if not api.hesApi:
                     api.hesApi = AnkerSolixHesApi(apisession=api.apisession)
-                # pass the site ID and site info to avoid another site list query
+                # pass the site ID and site info to avoid another site list query and merge site data
                 await api.hesApi.update_sites(
                     siteId=myid,
                     siteData=mysite,
                     fromFile=fromFile,
                     exclude=exclude,
                 )
+                mysite.update(api.hesApi.sites.get(myid))
+                new_sites.update({myid: mysite})
                 for hes_device in [
                     h
                     for h in api.hesApi.devices.values()
                     if h.get("dev_type") == SolixDeviceType.HES.value and h.get("site_id") == myid
                 ]:
-                    if sn := api._update_dev(
-                        # merge hes device details if available for this site
-                        devData=hes_device,
-                        devType=SolixDeviceType.HES.value,
-                        siteId=myid,
-                        isAdmin=admin,
-                    ):
+                    if sn := hes_device.get("device_sn"):
                         api._site_devices.add(sn)
             # Update scene info for other site types and extract values for device updates
             else:

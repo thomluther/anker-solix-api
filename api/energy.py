@@ -15,6 +15,7 @@ async def energy_daily(  # noqa: C901
     dayTotals: bool = False,
     devTypes: set | None = None,
     fromFile: bool = False,
+    showProgress: bool = False,
 ) -> dict:
     """Fetch daily Energy data for given interval and provide it in a table format dictionary.
 
@@ -118,6 +119,10 @@ async def energy_daily(  # noqa: C901
                     }
                 )
                 table.update({daystr: entry})
+                if showProgress:
+                    self._logger.info("Received solarbank energy for %s", daystr)
+        if showProgress:
+            self._logger.info("Received solarbank energy for period")
 
     # Get home usage energy types if device is solarbank generation 2 or smart meter or smart plugs
     if (
@@ -224,6 +229,10 @@ async def energy_daily(  # noqa: C901
                         }
                     )
                 table.update({daystr: entry})
+                if showProgress:
+                    self._logger.info("Received home_usage energy for %s", daystr)
+        if showProgress:
+            self._logger.info("Received home_usage energy for period")
 
     # Add grid stats from smart reader only if solarbank not requested, otherwise grid data available in solarbank and solar responses
     if (
@@ -275,17 +284,23 @@ async def energy_daily(  # noqa: C901
                     }
                 )
                 table.update({daystr: entry})
+        if showProgress:
+            self._logger.info("Received grid energy for period")
 
     # Add solar energy per channel if supported by device, e.g. Solarbank 2 embedded inverter
     if SolixDeviceType.INVERTER.value in devTypes:
-        for ch in ["pv"+str(num) for num in range(1, 5)] + ["micro_inverter"]:
+        for ch in ["pv" + str(num) for num in range(1, 5)] + ["micro_inverter"]:
             # query only if provided device SN has solar power values in cache
-            if f"solar_power_{ch.replace('pv','')}" in (dev:=self.devices.get(deviceSn) or {}) or f"{ch}_power" in dev:
+            if (
+                f"solar_power_{ch.replace('pv', '')}"
+                in (dev := self.devices.get(deviceSn) or {})
+                or f"{ch}_power" in dev
+            ):
                 if fromFile:
                     resp = (
                         await self.apisession.loadFromFile(
                             Path(self.testDir())
-                            / f"{API_FILEPREFIXES['energy_solar_production']}_{ch.replace('_','')}_{siteId}.json"
+                            / f"{API_FILEPREFIXES['energy_solar_production']}_{ch.replace('_', '')}_{siteId}.json"
                         )
                     ).get("data") or {}
                 else:
@@ -295,7 +310,7 @@ async def energy_daily(  # noqa: C901
                         rangeType="week",
                         startDay=startDay,
                         endDay=startDay + timedelta(days=numDays - 1),
-                        devType=f"solar_production_{ch.replace('_','')}",
+                        devType=f"solar_production_{ch.replace('_', '')}",
                     )
                 fileNumDays = 0
                 fileStartDay = None
@@ -310,10 +325,15 @@ async def energy_daily(  # noqa: C901
                         entry.update(
                             {
                                 "date": daystr,
-                                f"solar_production_{ch.replace('_','')}": item.get("value") or None,
+                                f"solar_production_{ch.replace('_', '')}": item.get(
+                                    "value"
+                                )
+                                or None,
                             }
                         )
                         table.update({daystr: entry})
+                if showProgress:
+                    self._logger.info("Received solar_production_%s energy for period", ch.replace('_', ''))
 
     # Always Add solar production which contains percentages
     # get first data period from file or api
@@ -392,6 +412,10 @@ async def energy_daily(  # noqa: C901
                 }
             )
             table.update({daystr: entry})
+            if showProgress:
+                self._logger.info("Received solar_production energy for %s", daystr)
+    if showProgress:
+        self._logger.info("Received solar_production energy for period")
     return table
 
 

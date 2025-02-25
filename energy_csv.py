@@ -21,7 +21,8 @@ import logging
 from pathlib import Path
 
 from aiohttp import ClientSession
-from api import api  # pylint: disable=no-name-in-module
+from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
+from api.apitypes import SolixDeviceType  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -36,7 +37,7 @@ async def main() -> bool:
     try:
         async with ClientSession() as websession:
             CONSOLE.info("\nTrying authentication...")
-            myapi = api.AnkerSolixApi(
+            myapi = AnkerSolixApi(
                 common.user(), common.password(), common.country(), websession, CONSOLE
             )
             if await myapi.async_authenticate():
@@ -59,11 +60,16 @@ async def main() -> bool:
                 powerpanel = bool(
                     myapi.powerpanelApi and site_id in myapi.powerpanelApi.sites
                 )
+                hes = bool(myapi.hesApi and site_id in myapi.hesApi.sites)
                 CONSOLE.info("Found site %s ID %s", site_name, site_id)
                 CONSOLE.info(
                     "Site Type %s: %s",
                     (site.get("site_info") or {}).get("power_site_type") or "??",
-                    "Power Panel" if powerpanel else "Balcony Power",
+                    "Power Panel"
+                    if powerpanel
+                    else "Home Energy System"
+                    if hes
+                    else "Balcony Power",
                 )
                 try:
                     daystr = input(
@@ -81,25 +87,34 @@ async def main() -> bool:
                     )
                     daytotals = daytotals.upper() in ["Y", "YES", "TRUE", 1]
                     prefix = input(
-                        f"CSV filename prefix for export (daily_energy_{daystr}): "
+                        f"CSV filename prefix for export ({site_name.replace(' ','_')}_daily_energy_{daystr}): "
                     )
                     if prefix == "":
-                        prefix = f"daily_energy_{daystr}"
+                        prefix = f"{site_name.replace(' ','_')}_daily_energy_{daystr}"
                     filename = f"{prefix}_{site_name}.csv"
                 except ValueError:
                     return False
                 # delay requests, limit appears to be around 25 per minute
-                if numdays > 10:
-                    myapi.apisession.requestDelay(2.5)
+                # As of Feb 2025, limit appears to be reduced to 12 per minute
+                if numdays > 3:
+                    # myapi.apisession.requestDelay(5.1)
+                    CONSOLE.info(
+                        "Queries may take several minutes depending on system configuration and throttling ...please wait..."
+                    )
                 else:
-                    myapi.apisession.requestDelay(0.3)
-                CONSOLE.info(
-                    "Queries may take up to %s seconds with %.1f seconds delay...please wait...",
-                    round(
-                        ((4 * (numdays-1) * daytotals + 4) if powerpanel else (2 * numdays * daytotals + 5)) * myapi.apisession.requestDelay()
-                    ),
-                    myapi.apisession.requestDelay(),
-                )
+                    # myapi.apisession.requestDelay(0.3)
+                    CONSOLE.info(
+                        "Queries may take up to %s seconds with %.1f seconds delay ...please wait...",
+                        round(
+                            (
+                                (4 * (numdays - 1) * daytotals + 4)
+                                if powerpanel or hes
+                                else (2 * numdays * daytotals + 5)
+                            )
+                            * myapi.apisession.requestDelay()
+                        ),
+                        myapi.apisession.requestDelay(),
+                    )
                 if powerpanel:
                     data = await myapi.powerpanelApi.energy_daily(
                         siteId=site_id,
@@ -107,28 +122,41 @@ async def main() -> bool:
                         numDays=numdays,
                         dayTotals=daytotals,
                         devTypes={
-                            api.SolixDeviceType.POWERPANEL.value,
+                            SolixDeviceType.POWERPANEL.value,
                         },
+                        showProgress=True,
+                    )
+                elif hes:
+                    data = await myapi.hesApi.energy_daily(
+                        siteId=site_id,
+                        startDay=startday,
+                        numDays=numdays,
+                        dayTotals=daytotals,
+                        devTypes={
+                            SolixDeviceType.HES.value,
+                        },
+                        showProgress=True,
                     )
                 else:
                     data = await myapi.energy_daily(
                         siteId=site_id,
-                        deviceSn="",  # mandatory parameter but can be empty since not distinguished for site energy stats
+                        deviceSn=next(iter((site.get("solarbank_info") or {}).get("solarbank_list") or []),{}).get("device_sn"),  # mandatory parameter but can be empty since not distinguished for site energy stats
                         startDay=startday,
                         numDays=numdays,
                         dayTotals=daytotals,
                         # include all possible energy stats per site
                         devTypes={
-                            api.SolixDeviceType.INVERTER.value,
-                            api.SolixDeviceType.SOLARBANK.value,
-                            api.SolixDeviceType.SMARTMETER.value,
-                            api.SolixDeviceType.SMARTPLUG.value,
+                            SolixDeviceType.INVERTER.value,
+                            SolixDeviceType.SOLARBANK.value,
+                            SolixDeviceType.SMARTMETER.value,
+                            SolixDeviceType.SMARTPLUG.value,
                         },
+                        showProgress=True,
                     )
                 CONSOLE.debug(json.dumps(data, indent=2))
                 # Write csv file
                 if len(data) > 0:
-                    with Path.open(  # noqa: ASYNC230
+                    with Path.open(
                         Path(filename), "w", newline="", encoding="utf-8"
                     ) as csvfile:
                         fieldnames = (next(iter(data.values()))).keys()
@@ -144,7 +172,7 @@ async def main() -> bool:
                         "No data received for site %s ID %s", site_name, site_id
                     )
                     return False
-                #CONSOLE.info(myapi.apisession.request_count.get_details())
+                # CONSOLE.info(myapi.apisession.request_count.get_details())
                 CONSOLE.info(f"Api Requests: {myapi.request_count}")
             return True
 

@@ -55,17 +55,6 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             apisession=apisession,
         )
 
-    def testDir(self, subfolder: str | None = None) -> str:
-        """Get or set the subfolder for local API test files in the api session."""
-        return self.apisession.testDir(subfolder)
-
-    def logLevel(self, level: int | None = None) -> int:
-        """Get or set the logger log level."""
-        if level is not None and isinstance(level, int):
-            self._logger.setLevel(level)
-            self._logger.info("Set log level to: %s", level)
-        return self._logger.getEffectiveLevel()
-
     def _update_site(
         self,
         siteId: str,
@@ -205,7 +194,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     if not siteId or s.get("site_id") == siteId
                 ]
             }
-            self._site_devices = set()
+            # rebuild device list found in any site
+            if not siteId:
+                self._site_devices = set()
         for site in sites.get("site_list", []):
             if myid := site.get("site_id"):
                 # Update site info
@@ -731,6 +722,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         dayTotals: bool = False,
         devTypes: set | None = None,
         fromFile: bool = False,
+        showProgress: bool = False,
     ) -> dict:
         """Fetch daily Energy data for given interval and provide it in a table format dictionary.
 
@@ -834,6 +826,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         }
                     )
                     table.update({daystr: entry})
+                    if showProgress:
+                        self._logger.info("Received hes energy for %s", daystr)
+            if showProgress:
+                self._logger.info("Received hes energy for period")
 
         # Get home usage energy types
         if SolixDeviceType.POWERPANEL.value in devTypes:
@@ -959,6 +955,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 }
                             )
                     table.update({daystr: entry})
+                    if showProgress:
+                        self._logger.info("Received home energy for %s", daystr)
+            if showProgress:
+                self._logger.info("Received home energy for period")
 
         # Add grid import, totals contain export and battery charging from grid for given interval
         if SolixDeviceType.POWERPANEL.value in devTypes:
@@ -1053,6 +1053,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 }
                             )
                     table.update({daystr: entry})
+                    if showProgress:
+                        self._logger.info("Received grid energy for %s", daystr)
+            if showProgress:
+                self._logger.info("Received grid energy for period")
 
         # Always Add solar production
         # get first data period from file or api
@@ -1136,4 +1140,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             }
                         )
                 table.update({daystr: entry})
+                if showProgress:
+                    self._logger.info("Received solar energy for %s", daystr)
+        if showProgress:
+            self._logger.info("Received solar energy for period")
         return table

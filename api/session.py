@@ -83,6 +83,8 @@ class AnkerSolixClientSession:
         self._login_response: dict = {}
         self._request_delay: float = SolixDefaults.REQUEST_DELAY_DEF
         self._last_request_time: datetime | None = None
+        # define limit of same endpoint requests per minute
+        self._request_limit: int = SolixDefaults.REQUEST_LIMIT_DEF
 
         # Define Encryption for password, using ECDH asymmetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
         # uncompressed public key from EU Anker server in the format 04 [32 byte x value] [32 byte y value]
@@ -174,8 +176,30 @@ class AnkerSolixClientSession:
             )
         return self._request_delay
 
-    async def _wait_delay(self, delay: float | None = None) -> None:
-        """Wait at least for the defined Api request delay or for the provided delay in seconds since the last request occurred."""
+    def requestLimit(self, limit: int | None = None) -> int:
+        """Get or set the api request limit per endpoint per minute."""
+        if (
+            limit is not None
+            and isinstance(limit, float | int)
+            and int(limit) != int(self._request_limit)
+        ):
+            self._request_limit = int(max(0, limit))
+            if self._request_limit:
+                self._logger.info(
+                    "Set api request limit to %s requests per endpoint per minute",
+                    self._request_limit,
+                )
+            else:
+                self._logger.info("Disabled api request limit")
+        return self._request_limit
+
+    async def _wait_delay(
+        self, delay: float | None = None, endpoint: str | None = None
+    ) -> None:
+        """Wait at least for the defined Api request delay or for the provided delay in seconds since the last request occurred.
+
+        If the endpoint is provided and a request limit is defined, the request will be throttled to avoid exceeding endpoint limit per minute.
+        """
         if delay is not None and isinstance(delay, float | int):
             delay = float(
                 min(
@@ -185,13 +209,36 @@ class AnkerSolixClientSession:
             )
         else:
             delay = self._request_delay
-        if isinstance(self._last_request_time, datetime):
-            await sleep(
-                max(
-                    0,
-                    delay - (datetime.now() - self._last_request_time).total_seconds(),
-                )
+        # throttle requests to same endpoint
+        throttle = 0
+        if endpoint and delay == self._request_delay and self._request_limit:
+            same_requests = [
+                i
+                for i in self.request_count.last_minute(details=True)
+                if endpoint in i[1]
+            ]
+            # delay at least 1 minute from oldest request
+            throttle = (
+                63 - (datetime.now() - same_requests[0][0]).total_seconds()
+                if len(same_requests) >= self._request_limit
+                else 0
             )
+            if throttle:
+                self._logger.warning(
+                    "Throttling next request for %.1f seconds to maintain request limit of %s for endpoint %s",
+                    throttle,
+                    self._request_limit,
+                    endpoint,
+                )
+        await sleep(
+            max(
+                0,
+                throttle,
+                delay - (datetime.now() - self._last_request_time).total_seconds()
+                if isinstance(self._last_request_time, datetime)
+                else 0,
+            )
+        )
 
     async def async_authenticate(self, restart: bool = False) -> bool:
         """Authenticate with server and get an access token. If restart is not enforced, cached login data may be used to obtain previous token."""
@@ -365,7 +412,7 @@ class AnkerSolixClientSession:
             body_text = str(json)
         self._logger.debug("Request Body: %s", body_text)
         # enforce configured delay between any subsequent request
-        await self._wait_delay()
+        await self._wait_delay(endpoint=endpoint)
         async with self._session.request(
             method, url, headers=mergedHeaders, json=json
         ) as resp:
@@ -404,7 +451,7 @@ class AnkerSolixClientSession:
                 else:
                     self._logger.debug("Response Data: %s", data)
 
-                # valid client response at this point, mark login to avoid repeated authentication 
+                # valid client response at this point, mark login to avoid repeated authentication
                 self._loggedIn = True
                 # check the Api response status code in the data
                 errors.raise_error(data)
@@ -461,7 +508,7 @@ class AnkerSolixClientSession:
                     self._logger.error("Response Text: %s", body_text)
                     if not self._retry_attempt:
                         self._retry_attempt = True
-                        delay = randrange(2,6)  # random wait time 2-5 seconds
+                        delay = randrange(2, 6)  # random wait time 2-5 seconds
                         self._logger.warning(
                             "Server busy, retrying request after delay of %s seconds.",
                             delay,

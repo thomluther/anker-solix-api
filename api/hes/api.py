@@ -1,4 +1,4 @@
-"""Class for interacting with the Anker Power / Solix API Power Panel related charging_service endpoints.
+"""Class for interacting with the Anker Power / Solix API HES related charging_service endpoints.
 
 Required Python modules:
 pip install cryptography
@@ -54,17 +54,6 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             logger=logger,
             apisession=apisession,
         )
-
-    def testDir(self, subfolder: str | None = None) -> str:
-        """Get or set the subfolder for local API test files in the api session."""
-        return self.apisession.testDir(subfolder)
-
-    def logLevel(self, level: int | None = None) -> int:
-        """Get or set the logger log level."""
-        if level is not None and isinstance(level, int):
-            self._logger.setLevel(level)
-            self._logger.info("Set log level to: %s", level)
-        return self._logger.getEffectiveLevel()
 
     def _update_site(
         self,
@@ -137,6 +126,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     elif key in [
                         # Examples for boolean key values
                         "auto_upgrade",
+                        "is_subdevice",
                     ]:
                         device.update({key: bool(value)})
                     elif key in [
@@ -147,6 +137,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         in [
                             # Example for key with string values that should only be updated if value returned
                             "wifi_name",
+                            "main_sn",
                         ]
                         and value
                     ):
@@ -181,7 +172,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         if not siteData or not isinstance(siteData, dict):
             siteData = {}
         if siteId and (
-            (site_info := siteData.pop("site_info", {}))
+            site_info := siteData.pop("site_info", {})
             or (self.sites.get(siteId) or {}).get("site_info")
             or {}
         ):
@@ -207,7 +198,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     if not siteId or s.get("site_id") == siteId
                 ]
             }
-            self._site_devices = set()
+            # rebuild device list found in any site
+            if not siteId:
+                self._site_devices = set()
         for site in sites.get("site_list", []):
             if myid := site.get("site_id"):
                 # Update site info
@@ -219,7 +212,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     item := "t_" + str(site_info.get("power_site_type") or ""),
                 ):
                     mysite["site_type"] = getattr(SolixSiteType, item)
-                # check if power panel site type
+                # check if hes site type
                 if mysite.get("site_type") == SolixDeviceType.HES.value:
                     mysite.update(
                         {
@@ -234,7 +227,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     # query site device info if not provided in site Data
                     if not (hes_list := siteData.get("hes_list")):
                         self._logger.debug("Getting device info for HES site")
-                        hes_list = (await self.get_dev_info(siteId=myid, fromFile=fromFile)).get("results") or []
+                        hes_list = (
+                            await self.get_dev_info(siteId=myid, fromFile=fromFile)
+                        ).get("results") or []
 
                     # add extra site data to my site
                     mysite["hes_list"] = hes_list
@@ -251,11 +246,16 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             isAdmin=admin,
                         ):
                             self._site_devices.add(sn)
-                        for subdev in [dev for dev in (hes.get("subDevInfo") or []) if dev.get("sn") != main_sn]:
+                        for subdev in [
+                            dev
+                            for dev in (hes.get("subDevInfo") or [])
+                            if dev.get("sn") != main_sn
+                        ]:
                             if sn := self._update_dev(
                                 {
                                     "device_sn": subdev.get("sn") or "",
                                     "main_sn": main_sn,
+                                    "is_subdevice": True,
                                     "device_pn": subdev.get("pn") or "",
                                 },
                                 devType=SolixDeviceType.HES.value,
@@ -494,19 +494,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
 
         Example data:
         """
-        # get existing data first from device details to check if requery must be done
-        avg_data = next(
-            iter(
-                [
-                    (dev.get("average_power") or {})
-                    for dev in self.devices.values()
-                    if dev.get("type") == SolixDeviceType.HES.value
-                    and dev.get("site_id") == siteId
-                    and dev.get("main_sn")
-                ]
-            ),
-            {},
-        )
+        # get existing data first from site details to check if requery must be done
+        avg_data = (self.sites.get(siteId) or {}).get("average_power") or {}
         # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
         if not (timestring := avg_data.get("last_check")) or (
             datetime.now() - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S")
@@ -680,21 +669,17 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         )
             # update device dict with relevant info and with required structure
             if avg_data:
-                # Add average power to device details as work around if no other hes usage data will be found in cloud
-                for sn, dev in self.devices.items():
-                    if (
-                        dev.get("type") == SolixDeviceType.HES.value
-                        and dev.get("site_id") == siteId
-                    ):
-                        self.devices[sn]["average_power"] = avg_data
+                # Add average power to site details as work around if no other hes usage data will be found in cloud for main devices
                 # Add energy offset info to site cache
-                if site := self.sites.get(siteId):
-                    site.update(
-                        {
-                            "energy_offset_seconds": avg_data.get("offset_seconds"),
-                            "energy_offset_check": avg_data.get("last_check"),
-                        }
-                    )
+                site = self.sites.get(siteId) or {}
+                site.update(
+                    {
+                        "average_power": avg_data,
+                        "energy_offset_seconds": avg_data.get("offset_seconds"),
+                        "energy_offset_check": avg_data.get("last_check"),
+                    }
+                )
+                self.sites[siteId] = site
         return avg_data
 
     async def energy_statistics(
@@ -758,6 +743,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         dayTotals: bool = False,
         devTypes: set | None = None,
         fromFile: bool = False,
+        showProgress: bool = False,
     ) -> dict:
         """Fetch daily Energy data for given interval and provide it in a table format dictionary.
 
@@ -862,6 +848,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             #         #     }
             #         # )
             #         # table.update({daystr: entry})
+            #         # if showProgress:
+            #         #     self._logger.info("Received hes energy for %s", daystr)
+            if showProgress:
+                self._logger.info("Received hes energy for period")
 
         # Get home usage energy types
         if SolixDeviceType.HES.value in devTypes:
@@ -987,6 +977,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 }
                             )
                     table.update({daystr: entry})
+                    if showProgress:
+                        self._logger.info("Received home energy for %s", daystr)
+            if showProgress:
+                self._logger.info("Received home energy for period")
 
         # Add grid import, totals contain export and battery charging from grid for given interval
         if SolixDeviceType.HES.value in devTypes:
@@ -1082,6 +1076,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 }
                             )
                     table.update({daystr: entry})
+                    if showProgress:
+                        self._logger.info("Received grid energy for %s", daystr)
+            if showProgress:
+                self._logger.info("Received grid energy for period")
 
         # Always Add solar production
         # get first data period from file or api
@@ -1165,6 +1163,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             }
                         )
                 table.update({daystr: entry})
+                if showProgress:
+                    self._logger.info("Received solar energy for %s", daystr)
+        if showProgress:
+            self._logger.info("Received solar energy for period")
         return table
 
     async def get_dev_info(self, siteId: str, fromFile: bool = False) -> dict:
@@ -1191,6 +1193,4 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             resp = await self.apisession.request(
                 "post", API_HES_SVC_ENDPOINTS["get_hes_dev_info"], json=data
             )
-        # update device data if device_sn found in wifi list
-        data = resp.get("data") or {}
-        return data
+        return resp.get("data") or {}

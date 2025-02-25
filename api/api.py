@@ -422,6 +422,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "preset_manual_backup_start": 0,
                                         "preset_manual_backup_end": 0,
                                         "preset_backup_option": False,
+                                        "preset_tariff": 0,
+                                        "preset_tariff_price": 0,
                                     }
                                 )
                         else:
