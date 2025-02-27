@@ -706,6 +706,8 @@ class SolixDefaults:
     TARIFF_MAX: int = SolarbankTariffTypes.OTHER.value
     TARIFF_DEF: int = SolarbankTariffTypes.MID_PEEK.value
     TARIFF_PRICE_DEF: float = 0.0
+    TARIFF_WE_SAME: bool = True
+    CURRENCY_DEF: str = "€"
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
     REQUEST_DELAY_MIN: float = 0.0
     REQUEST_DELAY_MAX: float = 10.0
