@@ -713,7 +713,7 @@ class SolixDefaults:
     REQUEST_DELAY_MAX: float = 10.0
     REQUEST_DELAY_DEF: float = 0.3
     # Request limit per endpoint per minute
-    REQUEST_LIMIT_DEF: int = 10
+    ENDPOINT_LIMIT_DEF: int = 10
 
 
 class SolixDeviceStatus(Enum):

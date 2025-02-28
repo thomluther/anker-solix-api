@@ -94,8 +94,8 @@ async def main() -> bool:
                     filename = f"{prefix}_{site_name}.csv"
                 except ValueError:
                     return False
-                # delay requests, limit appears to be around 25 per minute
-                # As of Feb 2025, limit appears to be reduced to 12 per minute
+                # delay requests, endpoint limit appears to be around 25 per minute
+                # As of Feb 2025, endpoint limit appears to be reduced to 10-12 per minute
                 if numdays > 3:
                     # myapi.apisession.requestDelay(5.1)
                     CONSOLE.info(

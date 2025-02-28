@@ -84,7 +84,7 @@ class AnkerSolixClientSession:
         self._request_delay: float = SolixDefaults.REQUEST_DELAY_DEF
         self._last_request_time: datetime | None = None
         # define limit of same endpoint requests per minute
-        self._request_limit: int = SolixDefaults.REQUEST_LIMIT_DEF
+        self._endpoint_limit: int = SolixDefaults.ENDPOINT_LIMIT_DEF
 
         # Define Encryption for password, using ECDH asymmetric key exchange for shared secret calculation, which must be used to encrypt the password using AES-256-CBC with seed of 16
         # uncompressed public key from EU Anker server in the format 04 [32 byte x value] [32 byte y value]
@@ -176,22 +176,22 @@ class AnkerSolixClientSession:
             )
         return self._request_delay
 
-    def requestLimit(self, limit: int | None = None) -> int:
+    def endpointLimit(self, limit: int | None = None) -> int:
         """Get or set the api request limit per endpoint per minute."""
         if (
             limit is not None
             and isinstance(limit, float | int)
-            and int(limit) != int(self._request_limit)
+            and int(limit) != int(self._endpoint_limit)
         ):
-            self._request_limit = int(max(0, limit))
-            if self._request_limit:
+            self._endpoint_limit = int(max(0, limit))
+            if self._endpoint_limit:
                 self._logger.info(
                     "Set api request limit to %s requests per endpoint per minute",
-                    self._request_limit,
+                    self._endpoint_limit,
                 )
             else:
                 self._logger.info("Disabled api request limit")
-        return self._request_limit
+        return self._endpoint_limit
 
     async def _wait_delay(
         self, delay: float | None = None, endpoint: str | None = None
@@ -211,7 +211,7 @@ class AnkerSolixClientSession:
             delay = self._request_delay
         # throttle requests to same endpoint
         throttle = 0
-        if endpoint and delay == self._request_delay and self._request_limit:
+        if endpoint and delay == self._request_delay and self._endpoint_limit:
             same_requests = [
                 i
                 for i in self.request_count.last_minute(details=True)
@@ -220,14 +220,14 @@ class AnkerSolixClientSession:
             # delay at least 1 minute from oldest request
             throttle = (
                 63 - (datetime.now() - same_requests[0][0]).total_seconds()
-                if len(same_requests) >= self._request_limit
+                if len(same_requests) >= self._endpoint_limit
                 else 0
             )
             if throttle:
                 self._logger.warning(
                     "Throttling next request for %.1f seconds to maintain request limit of %s for endpoint %s",
                     throttle,
-                    self._request_limit,
+                    self._endpoint_limit,
                     endpoint,
                 )
         await sleep(

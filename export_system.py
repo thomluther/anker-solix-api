@@ -92,11 +92,11 @@ async def main() -> bool:
                 services if services else "Discover automatically",
             )
             resp = input(
-                f"INPUT: Do you want to change Api request limit for proper throttling of same endpoint requests? [0] = disabled / [{myapi.requestLimit()!s}] = default: "
+                f"INPUT: Do you want to change Api endpoint request limit for proper throttling of same endpoint requests? [0] = disabled / [{myapi.endpointLimit()!s}] = default: "
             )
             if resp.isdigit() and int(resp) >= 0:
-                myapi.requestLimit(limit=int(resp))
-            CONSOLE.info("Api request limit: %s", myapi.requestLimit())
+                myapi.endpointLimit(limit=int(resp))
+            CONSOLE.info("Api endpoint limit: %s", myapi.endpointLimit())
             resp = input(
                 f"INPUT: Do you want to randomize unique IDs and SNs in exported files? [Y]es{' (default)' if randomize else ''} / [N]o{' (default)' if not randomize else ''}: "
             )
