@@ -14,7 +14,7 @@ from .apitypes import (
     SolixParmType,
     SolixSiteType,
 )
-from .hes.api import AnkerSolixHesApi
+from .hesapi import AnkerSolixHesApi
 from .powerpanel import AnkerSolixPowerpanelApi
 
 

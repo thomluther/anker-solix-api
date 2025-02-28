@@ -14,8 +14,8 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
-from ..apibase import AnkerSolixBaseApi  # noqa: TID252
-from ..apitypes import (  # noqa: TID252
+from .apibase import AnkerSolixBaseApi
+from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     ApiCategories,
@@ -24,8 +24,8 @@ from ..apitypes import (  # noqa: TID252
     SolixDeviceType,
     SolixSiteType,
 )
-from ..helpers import convertToKwh  # noqa: TID252
-from ..session import AnkerSolixClientSession  # noqa: TID252
+from .helpers import convertToKwh
+from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 

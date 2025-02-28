@@ -31,7 +31,7 @@ from .apitypes import (
     SolixDeviceStatus,
     SolixDeviceType,
 )
-from .hes.api import AnkerSolixHesApi
+from .hesapi import AnkerSolixHesApi
 from .poller import (
     poll_device_details,
     poll_device_energy,
