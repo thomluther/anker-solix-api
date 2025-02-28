@@ -62,6 +62,10 @@ class AnkerSolixBaseApi:
         """Get or set the subfolder for local API test files in the api session."""
         return self.apisession.testDir(subfolder)
 
+    def requestLimit(self, limit: int | None = None) -> int:
+        """Get or set the api request limit per endpoint per minute."""
+        return self.apisession.requestLimit(limit)
+
     def logLevel(self, level: int | None = None) -> int:
         """Get or set the logger log level."""
         if level is not None and isinstance(level, int):

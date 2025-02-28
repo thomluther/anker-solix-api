@@ -17,6 +17,7 @@ various system outputs.
 """
 
 import asyncio
+from curses.ascii import isdigit
 from dataclasses import asdict
 import json
 import logging
@@ -37,7 +38,19 @@ CONSOLE.handlers[0].setFormatter(
         datefmt="%H:%M:%S",
     )
 )
-
+# Use separate Logger for Api session to avoid printing debug data
+SESSION: logging.Logger = logging.getLogger(__name__)
+SESSION.name = "ExportSystem"
+# create console handler and set level to info
+ch = logging.StreamHandler()
+# This can be changed to DEBUG if more session messages should be printed to console
+ch.setLevel(logging.INFO)
+ch.setFormatter(
+    logging.Formatter(
+        fmt="%(levelname)s: %(message)s",
+    )
+)
+SESSION.addHandler(ch)
 
 async def main() -> bool:
     """Run main function to export config after querying some options from user."""
@@ -50,7 +63,7 @@ async def main() -> bool:
         async with ClientSession() as websession:
             CONSOLE.info("Trying Api authentication for user %s...", user)
             myapi = api.AnkerSolixApi(
-                user, common.password(), common.country(), websession
+                user, common.password(), common.country(), websession, SESSION
             )
             if await myapi.async_authenticate():
                 CONSOLE.info("Authentication: OK")
@@ -78,6 +91,12 @@ async def main() -> bool:
                 "Exporting following services: %s",
                 services if services else "Discover automatically",
             )
+            resp = input(
+                f"INPUT: Do you want to change Api request limit for proper throttling of same endpoint requests? [0] = disabled / [{myapi.requestLimit()!s}] = default: "
+            )
+            if resp.isdigit() and int(resp) >= 0:
+                myapi.requestLimit(limit=int(resp))
+            CONSOLE.info("Api request limit: %s", myapi.requestLimit())
             resp = input(
                 f"INPUT: Do you want to randomize unique IDs and SNs in exported files? [Y]es{' (default)' if randomize else ''} / [N]o{' (default)' if not randomize else ''}: "
             )

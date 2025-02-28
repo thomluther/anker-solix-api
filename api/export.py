@@ -136,7 +136,7 @@ class AnkerSolixApiExport:
         try:
             # create a queue for async file logging
             que = queue.Queue()
-            # add a handler that uses the logs to queue at DEBUG level, independend of other logger handler setting
+            # add a handler that uses the logs to queue at DEBUG level, independent of other logger handler setting
             qh = logging.handlers.QueueHandler(que)
             qh.setFormatter(
                 logging.Formatter(
@@ -1029,7 +1029,7 @@ class AnkerSolixApiExport:
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
                 )
-                self._logger.info("Exporting HES device info...")
+                self._logger.info("Exporting HES device data...")
                 response = await self.query(
                     endpoint=API_HES_SVC_ENDPOINTS["report_device_data"],
                     filename=f"{API_FILEPREFIXES['hes_report_device_data']}_{self._randomize(siteId,'site_id')}.json",
