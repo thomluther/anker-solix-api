@@ -17,7 +17,6 @@ various system outputs.
 """
 
 import asyncio
-from curses.ascii import isdigit
 from dataclasses import asdict
 import json
 import logging
