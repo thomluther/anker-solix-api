@@ -8,6 +8,7 @@ Furthermore the API class can use the json files for debugging and testing of va
 """
 
 import asyncio
+from collections.abc import Callable
 from copy import deepcopy
 from datetime import datetime, timedelta
 from functools import partial
@@ -78,6 +79,7 @@ class AnkerSolixApiExport:
         request_delay: float | None = None,
         randomized: bool = True,
         zipped: bool = True,
+        toggle_cache: Callable | None = None,
     ) -> bool:
         """Run main function to export account data."""
 
@@ -103,6 +105,7 @@ class AnkerSolixApiExport:
         )
         self.randomized = randomized if isinstance(randomized, bool) else True
         self.zipped = zipped if isinstance(randomized, bool) else True
+        toggle_cache = toggle_cache if callable(toggle_cache) else None
         self._randomdata = {}
 
         # ensure nickname is set for api client
@@ -204,6 +207,9 @@ class AnkerSolixApiExport:
                 old_sites = deepcopy(self.api_power.sites)
                 old_devices = deepcopy(self.api_power.devices)
                 old_testdir = self.api_power.testDir()
+                # Notify optional callable that cache is toggled invalid
+                if toggle_cache:
+                    toggle_cache(False)
                 self.api_power.testDir(self.export_path)
                 self._logger.debug("Saved original testfolder.")
                 await self.api_power.update_sites(fromFile=True)
@@ -243,6 +249,9 @@ class AnkerSolixApiExport:
                     self._logger.debug(
                         "Restored original test folder for api client session.",
                     )
+                # Notify optional callable that cache was restored
+                if toggle_cache:
+                    toggle_cache(True)
 
                 # Always export account dictionary
                 self._logger.info("")

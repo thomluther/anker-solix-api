@@ -219,13 +219,14 @@ class AnkerSolixClientSession:
             ]
             # delay at least 1 minute from oldest request
             throttle = (
-                63 - (datetime.now() - same_requests[0][0]).total_seconds()
+                65 - (datetime.now() - same_requests[0][0]).total_seconds()
                 if len(same_requests) >= self._endpoint_limit
                 else 0
             )
             if throttle:
                 self._logger.warning(
-                    "Throttling next request for %.1f seconds to maintain request limit of %s for endpoint %s",
+                    "Throttling next request of %s for %.1f seconds to maintain request limit of %s for endpoint %s",
+                    self.nickname,
                     throttle,
                     self._endpoint_limit,
                     endpoint,
@@ -344,7 +345,10 @@ class AnkerSolixClientSession:
             self._token_expiration
             and (self._token_expiration - datetime.now()).total_seconds() < 60
         ):
-            self._logger.warning("WARNING: Access token expired, fetching a new one")
+            self._logger.warning(
+                "WARNING: Access token expired, fetching a new one%s",
+                (" for " + str(self.nickname)) if self.nickname else "",
+            )
             await self.async_authenticate(restart=True)
         # For non-Login requests, ensure authentication will be updated if not logged in yet or cached file was refreshed
         if endpoint != API_LOGIN and (
@@ -476,7 +480,10 @@ class AnkerSolixClientSession:
                     # reattempt authentication with same credentials if cached token was kicked out
                     # retry attempt is set if login response data were not cached to fail immediately
                     if not self._retry_attempt:
-                        self._logger.warning("Login failed, retrying authentication")
+                        self._logger.warning(
+                            "Login failed, retrying authentication%s",
+                            (" for " + str(self.nickname)) if self.nickname else "",
+                        )
                         if await self.async_authenticate(restart=True):
                             return await self.request(
                                 method, endpoint, headers=headers, json=json
@@ -510,8 +517,10 @@ class AnkerSolixClientSession:
                         self._retry_attempt = True
                         delay = randrange(2, 6)  # random wait time 2-5 seconds
                         self._logger.warning(
-                            "Server busy, retrying request after delay of %s seconds.",
+                            "Server busy, retrying request of %s after delay of %s seconds for endpoint %s",
+                            self.nickname,
                             delay,
+                            endpoint,
                         )
                         await self._wait_delay(delay=delay)
                         return await self.request(
