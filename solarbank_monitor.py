@@ -233,10 +233,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     f"{'SOC total':<{col1}}: {soc:<{col2}} {'Dischrg Pwr Tot':<{col3}}: {sb.get('battery_discharge_power', '---'):>4} {unit}"
                                 )
                                 CONSOLE.info(
-                                    f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power', '---'):>4} {unit:<{col2 - 5}} {'Battery Pwr Tot':<{col3}}: {str(sb.get('total_charging_power')).split('.')[0]:>4} W"
+                                    f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power', '---'):>4} {unit:<{col2 - 5}} {'Battery Pwr Tot':<{col3}}: {str(sb.get('total_charging_power')).split('.',maxsplit=1)[0]:>4} W"
                                 )
                                 CONSOLE.info(
-                                    f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '---')).split('.')[0]:>4} {unit:<{col2 - 5}} {'Home Load Tot':<{col3}}: {sb.get('to_home_load') or '----':>4} W"
+                                    f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '---')).split('.',maxsplit=1)[0]:>4} {unit:<{col2 - 5}} {'Home Load Tot':<{col3}}: {sb.get('to_home_load') or '----':>4} W"
                                 )
                                 features = site.get("feature_switch") or {}
                                 if mode := site.get("scene_mode"):
