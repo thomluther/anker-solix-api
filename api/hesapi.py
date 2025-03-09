@@ -145,7 +145,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
-                        "%s occurred when updating device details for key %s with value %s: %s",
+                        "Api %s error %s occurred when updating device details for key %s with value %s: %s",
+                        self.apisession.nickname,
                         type(err),
                         key,
                         value,
@@ -177,17 +178,26 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             or {}
         ):
             # update only the provided site ID when siteInfo available/provided to avoid another site list query
-            self._logger.debug("Updating HES Sites data for site ID %s", siteId)
+            self._logger.debug(
+                "Updating api %s HES sites data for site ID %s",
+                self.apisession.nickname,
+                siteId,
+            )
             new_sites = self.sites
             # prepare the site list dictionary for the update loop by copying the requested site from the cache
             sites: dict = {"site_list": [site_info]}
         else:
             # run normal refresh for given or all sites
             self._logger.debug(
-                "Updating HES Sites data%s", " for site ID " + siteId if siteId else ""
+                "Updating api %s HES Sites data%s",
+                self.apisession.nickname,
+                " for site ID " + siteId if siteId else "",
             )
             new_sites = {}
-            self._logger.debug("Getting site list")
+            self._logger.debug(
+                "Getting api %s site list",
+                self.apisession.nickname,
+            )
             sites: dict = {
                 "site_list": [
                     s
@@ -226,7 +236,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     mysite["site_admin"] = admin
                     # query site device info if not provided in site Data
                     if not (hes_list := siteData.get("hes_list")):
-                        self._logger.debug("Getting device info for HES site")
+                        self._logger.debug(
+                            "Getting api %s device info for HES site",
+                            self.apisession.nickname,
+                        )
                         hes_list = (
                             await self.get_dev_info(siteId=myid, fromFile=fromFile)
                         ).get("results") or []
@@ -294,10 +307,16 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         # define excluded categories to skip for queries
         if not exclude or not isinstance(exclude, set):
             exclude = set()
-        self._logger.debug("Updating HES Sites details")
+        self._logger.debug(
+            "Updating api %s HES Sites details",
+            self.apisession.nickname,
+        )
         for site_id, site in self.sites.items():
             # Fetch overall statistic totals for hes site that should not be excluded since merged to overall site cache
-            self._logger.debug("Getting system running totals information")
+            self._logger.debug(
+                "Getting api %s system running totals information",
+                self.apisession.nickname,
+            )
             await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
             # Fetch details that work for all account types
             if {SolixDeviceType.HES.value} - exclude:
@@ -333,7 +352,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             ):
                 query_types: set = {SolixDeviceType.HES.value}
             if query_types:
-                self._logger.debug("Getting HES energy details for site")
+                self._logger.debug(
+                    "Getting api %s HES energy details for site",
+                    self.apisession.nickname,
+                )
                 # obtain previous energy details to check if yesterday must be queried as well
                 energy = site.get("energy_details") or {}
                 # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
@@ -399,7 +421,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         # define excluded device types or categories to skip for queries
         if not exclude or not isinstance(exclude, set):
             exclude = set()
-        self._logger.debug("Updating HES Device details")
+        self._logger.debug(
+            "Updating api %s HES Device details",
+            self.apisession.nickname,
+        )
         #
         # Implement required queries according to exclusion set
         #
@@ -501,7 +526,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             datetime.now() - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S")
         ) >= timedelta(minutes=5):
             self._logger.debug(
-                "Updating Power average values from energy statistics of HES Site ID %s",
+                "Updating api %s power average values from energy statistics of HES site ID %s",
+                self.apisession.nickname,
                 siteId,
             )
             offset = timedelta(seconds=avg_data.get("offset_seconds") or 0)
@@ -519,7 +545,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # check +/- 1 day to find last valid SOC timestamp in real data before invalid SOC entry of 0 %
                         checkdate = validtime + timedelta(days=diff)
                         self._logger.debug(
-                            "Checking %s data of %s",
+                            "Checking api %s %s data of %s",
+                            self.apisession.nickname,
                             source,
                             checkdate.strftime("%Y-%m-%d"),
                         )
@@ -569,13 +596,15 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # reuse last valid data from timestamp check to get values
                         data = validdata
                         self._logger.debug(
-                            "Found valid %s entries until %s",
+                            "Found valid api %s %s entries until %s",
+                            self.apisession.nickname,
                             source,
                             validtime.strftime("%Y-%m-%d %H:%M:%S"),
                         )
                 elif fromFile:
                     self._logger.debug(
-                        "Reading %s data of %s",
+                        "Reading api %s %s data of %s",
+                        self.apisession.nickname,
                         source,
                         validtime.strftime("%Y-%m-%d"),
                     )
@@ -587,7 +616,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     ).get("data") or {}
                 else:
                     self._logger.debug(
-                        "Querying %s data of %s",
+                        "Querying api %s %s data of %s",
+                        self.apisession.nickname,
                         source,
                         validtime.strftime("%Y-%m-%d"),
                     )
@@ -849,9 +879,12 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             #         # )
             #         # table.update({daystr: entry})
             #         # if showProgress:
-            #         #     self._logger.info("Received hes energy for %s", daystr)
+            #         #     self._logger.info("Received api %s hes energy for %s", self.apisession.nickname, daystr)
             if showProgress:
-                self._logger.info("Received hes energy for period")
+                self._logger.info(
+                    "Received api %s hes energy for period",
+                    self.apisession.nickname,
+                )
 
         # Get home usage energy types
         if SolixDeviceType.HES.value in devTypes:
@@ -978,9 +1011,16 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             )
                     table.update({daystr: entry})
                     if showProgress:
-                        self._logger.info("Received home energy for %s", daystr)
+                        self._logger.info(
+                            "Received api %s home energy for %s",
+                            self.apisession.nickname,
+                            daystr,
+                        )
             if showProgress:
-                self._logger.info("Received home energy for period")
+                self._logger.info(
+                    "Received api %s home energy for period",
+                    self.apisession.nickname,
+                )
 
         # Add grid import, totals contain export and battery charging from grid for given interval
         if SolixDeviceType.HES.value in devTypes:
@@ -1077,9 +1117,16 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             )
                     table.update({daystr: entry})
                     if showProgress:
-                        self._logger.info("Received grid energy for %s", daystr)
+                        self._logger.info(
+                            "Received api %s grid energy for %s",
+                            self.apisession.nickname,
+                            daystr,
+                        )
             if showProgress:
-                self._logger.info("Received grid energy for period")
+                self._logger.info(
+                    "Received api %s grid energy for period",
+                    self.apisession.nickname,
+                )
 
         # Always Add solar production
         # get first data period from file or api
@@ -1164,9 +1211,16 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         )
                 table.update({daystr: entry})
                 if showProgress:
-                    self._logger.info("Received solar energy for %s", daystr)
+                    self._logger.info(
+                        "Received api %s solar energy for %s",
+                        self.apisession.nickname,
+                        daystr,
+                    )
         if showProgress:
-            self._logger.info("Received solar energy for period")
+            self._logger.info(
+                "Received api %s solar energy for period",
+                self.apisession.nickname,
+            )
         return table
 
     async def get_dev_info(self, siteId: str, fromFile: bool = False) -> dict:

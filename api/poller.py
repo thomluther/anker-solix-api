@@ -52,17 +52,24 @@ async def poll_sites(  # noqa: C901
         exclude = set()
     if siteId and (api.sites.get(siteId) or {}):
         # update only the provided site ID and get data from cache
-        api._logger.debug("Updating Sites data for site ID %s", siteId)
+        api._logger.debug(
+            "Updating api %s sites data for site ID %s", api.apisession.nickname, siteId
+        )
         new_sites = api.sites
         # prepare the site list dictionary for the update loop by copying the requested site from the cache
         sites: dict = {"site_list": [api.sites[siteId].get("site_info") or {}]}
     else:
         # run normal refresh for given or all sites
         api._logger.debug(
-            "Updating Sites data%s", " for site ID " + siteId if siteId else ""
+            "Updating api %s sites data%s",
+            api.apisession.nickname,
+            " for site ID " + siteId if siteId else "",
         )
         new_sites = {}
-        api._logger.debug("Getting site list")
+        api._logger.debug(
+            "Getting api %s site list",
+            api.apisession.nickname,
+        )
         # get site object list and filter selected site if provided
         sites: dict = {
             "site_list": [
@@ -112,13 +119,17 @@ async def poll_sites(  # noqa: C901
                 for hes_device in [
                     h
                     for h in api.hesApi.devices.values()
-                    if h.get("dev_type") == SolixDeviceType.HES.value and h.get("site_id") == myid
+                    if h.get("dev_type") == SolixDeviceType.HES.value
+                    and h.get("site_id") == myid
                 ]:
                     if sn := hes_device.get("device_sn"):
                         api._site_devices.add(sn)
             # Update scene info for other site types and extract values for device updates
             else:
-                api._logger.debug("Getting scene info for site")
+                api._logger.debug(
+                    "Getting api %s scene info for site",
+                    api.apisession.nickname,
+                )
                 scene = await api.get_scene_info(myid, fromFile=fromFile)
                 # Check if Solarbank 2 data is valid, default to true if field not found or no Solarbank in system
                 sb_info = scene.get("solarbank_info") or {}
@@ -132,7 +143,8 @@ async def poll_sites(  # noqa: C901
                 while requeries < 0 and not data_valid:
                     requeries += 1
                     api._logger.debug(
-                        "Received invalid solarbank data, %s retry to get valid scene info for site",
+                        "Api %s received invalid solarbank data, %s retry to get valid scene info for site",
+                        api.apisession.nickname,
                         requeries,
                     )
                     # delay 5 sec prior requery
@@ -239,7 +251,8 @@ async def poll_sites(  # noqa: C901
                         )
                     # Mark SB1 cascaded of other SB types in system
                     cascaded = (
-                        sb_count != len(sb_list) and solarbank.get("device_pn") in ["A17C0"]
+                        sb_count != len(sb_list)
+                        and solarbank.get("device_pn") in ["A17C0"]
                     ) or None
 
                     # Work around for weird charging power fields in SB totals and device list: They have same names, but completely different usage
@@ -308,7 +321,9 @@ async def poll_sites(  # noqa: C901
                             "micro_inverter_low_power_limit": sb_info.get(
                                 "micro_inverter_low_power_limit"
                             ),
-                            "grid_to_battery_power": sb_info.get("grid_to_battery_power"),
+                            "grid_to_battery_power": sb_info.get(
+                                "grid_to_battery_power"
+                            ),
                             "pei_heating_power": sb_info.get("pei_heating_power"),
                             # only passed to device for proper SB2 charge status update
                             "home_load_power": mysite.get("home_load_power"),
@@ -347,7 +362,9 @@ async def poll_sites(  # noqa: C901
                     )
                     # adjust new battery discharge total if available
                     if str(
-                        (mysite.get("solarbank_info") or {}).get("battery_discharge_power")
+                        (mysite.get("solarbank_info") or {}).get(
+                            "battery_discharge_power"
+                        )
                     ).isdigit():
                         mysite["solarbank_info"]["battery_discharge_power"] = str(
                             sb_total_battery_discharge_calc
@@ -358,7 +375,9 @@ async def poll_sites(  # noqa: C901
                     if sb_total_charge_calc < 0:
                         with contextlib.suppress(ValueError):
                             # discharging, adjust sb total charge value in scene info and allow negative value to indicate discharge
-                            sb_total_charge = float(sb_total_solar) - float(sb_total_output)
+                            sb_total_charge = float(sb_total_solar) - float(
+                                sb_total_output
+                            )
                             mysite["solarbank_info"]["total_charging_power"] = str(
                                 sb_total_charge
                             )
@@ -401,7 +420,9 @@ async def poll_sites(  # noqa: C901
                             "photovoltaic_to_grid_power": grid_info.get(
                                 "photovoltaic_to_grid_power", ""
                             ),
-                            "grid_to_home_power": grid_info.get("grid_to_home_power", ""),
+                            "grid_to_home_power": grid_info.get(
+                                "grid_to_home_power", ""
+                            ),
                             "grid_status": grid_info.get("grid_status", ""),
                         },
                         devType=SolixDeviceType.SMARTMETER.value,
@@ -494,9 +515,15 @@ async def poll_site_details(
     # define excluded categories to skip for queries
     if not exclude or not isinstance(exclude, set):
         exclude = set()
-    api._logger.debug("Updating Sites Details")
+    api._logger.debug(
+        "Updating api %s sites details",
+        api.apisession.nickname,
+    )
     # Fetch unread account messages once and put in site details for all sites as well as into account dictionary
-    api._logger.debug("Getting unread messages indicator")
+    api._logger.debug(
+        "Getting api %s unread messages indicator",
+        api.apisession.nickname,
+    )
     await api.get_message_unread(fromFile=fromFile)
     # refresh other api class site details if used
     if api.powerpanelApi:
@@ -518,7 +545,10 @@ async def poll_site_details(
         if site.get("site_admin", False):
             # Fetch site price and CO2 settings
             if {ApiCategories.site_price} - exclude:
-                api._logger.debug("Getting price and CO2 settings for site")
+                api._logger.debug(
+                    "Getting api %s price and CO2 settings for site",
+                    api.apisession.nickname,
+                )
                 await api.get_site_price(siteId=site_id, fromFile=fromFile)
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})
@@ -537,17 +567,29 @@ async def poll_device_details(
     # define excluded device types or categories to skip for queries
     if not exclude or not isinstance(exclude, set):
         exclude = set()
-    api._logger.debug("Updating Device Details")
+    api._logger.debug(
+        "Updating api %s device details",
+        api.apisession.nickname,
+    )
     # Fetch firmware version of devices
     # This response will also contain unbound / standalone devices not added to a site
-    api._logger.debug("Getting bind devices")
+    api._logger.debug(
+        "Getting api %s bind devices",
+        api.apisession.nickname,
+    )
     await api.get_bind_devices(fromFile=fromFile)
     # Get the setting for effective automated FW upgrades
     if {ApiCategories.device_auto_upgrade} - exclude:
-        api._logger.debug("Getting OTA update settings")
+        api._logger.debug(
+            "Getting api %s OTA update settings",
+            api.apisession.nickname,
+        )
         await api.get_auto_upgrade(fromFile=fromFile)
         # Get the OTA batch info for firmware updates of owning devices
-        api._logger.debug("Getting OTA update info for devices")
+        api._logger.debug(
+            "Getting api %s OTA update info for devices",
+            api.apisession.nickname,
+        )
         await api.get_ota_batch(fromFile=fromFile)
     # Get Power Panel device specific updates
     if api.powerpanelApi:
@@ -556,9 +598,7 @@ async def poll_device_details(
         )
     # Get HES device specific updates
     if api.hesApi:
-        await api.hesApi.update_device_details(
-            fromFile=fromFile, exclude=exclude
-        )
+        await api.hesApi.update_device_details(fromFile=fromFile, exclude=exclude)
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
     for sn, device in api.devices.items():
@@ -569,7 +609,10 @@ async def poll_device_details(
         if device.get("is_admin", False) and site_id:
             # Fetch site wifi list if not queried yet with wifi networks and signal strengths
             if site_id not in site_wifi:
-                api._logger.debug("Getting wifi list of site for mapping to device")
+                api._logger.debug(
+                    "Getting api %s wifi list of site for mapping to device",
+                    api.apisession.nickname,
+                )
                 site_wifi[site_id] = (
                     await api.get_wifi_list(siteId=site_id, fromFile=fromFile)
                 ).get("wifi_info_list") or []
@@ -597,7 +640,10 @@ async def poll_device_details(
             if dev_Type in ({SolixDeviceType.SOLARBANK.value} - exclude):
                 # Fetch active Power Cutoff setting for solarbanks
                 if {ApiCategories.solarbank_cutoff} - exclude:
-                    api._logger.debug("Getting Power Cutoff settings for device")
+                    api._logger.debug(
+                        "Getting api %s Power Cutoff settings for device",
+                        api.apisession.nickname,
+                    )
                     await api.get_power_cutoff(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
@@ -605,31 +651,43 @@ async def poll_device_details(
                 if ((api.devices.get(sn) or {}).get("generation") or 0) < 2:
                     # Fetch available OTA update for solarbanks, does not work for solarbank 2 with device SN
                     # DISABLED: Not reliable for Solarbank 1 either, SN can also be "", so not clear what the response actually reports
-                    # api._logger.debug("Getting OTA update info for device")
+                    # api._logger.debug("Getting api %s OTA update info for device", api.apisession.nickname)
                     # await api.get_ota_update(deviceSn=sn, fromFile=fromFile)
                     # Fetch defined inverter details for solarbanks
                     if {ApiCategories.solarbank_solar_info} - exclude:
-                        api._logger.debug("Getting inverter settings for device")
+                        api._logger.debug(
+                            "Getting api %s inverter settings for device",
+                            api.apisession.nickname,
+                        )
                         await api.get_solar_info(solarbankSn=sn, fromFile=fromFile)
                     # Fetch schedule for Solarbank 1
                     # Note: There may be different schedules for SB1 devices when used in combined system with SB2
                     # It appears that get_device_load always provides the active schedule, which may be a minimalistic format when
                     # SB2 is using Manual mode and sync its settings to SB1
                     # get_device_parm with param for SB1 schedule seems to return always the full SB1 schedule, even if not active
-                    api._logger.debug("Getting schedule details for device")
+                    api._logger.debug(
+                        "Getting api %s schedule details for device",
+                        api.apisession.nickname,
+                    )
                     await api.get_device_load(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
                     # Fetch device fittings for device types supporting it
                     if {ApiCategories.solarbank_fittings} - exclude:
-                        api._logger.debug("Getting fittings for device")
+                        api._logger.debug(
+                            "Getting api %s fittings for device",
+                            api.apisession.nickname,
+                        )
                         await api.get_device_fittings(
                             siteId=site_id, deviceSn=sn, fromFile=fromFile
                         )
                 else:
                     # Fetch schedule for Solarbank 2
                     # Note: get_device_load always seems to return SB1 schedule format, which does not contain usefull values for the SB2
-                    api._logger.debug("Getting schedule details for device")
+                    api._logger.debug(
+                        "Getting api %s schedule details for device",
+                        api.apisession.nickname,
+                    )
                     await api.get_device_parm(
                         siteId=site_id,
                         paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
@@ -751,7 +809,10 @@ async def poll_device_energy(
                         query_types |= {SolixDeviceType.INVERTER.value}
 
             if query_types:
-                api._logger.debug("Getting Energy details for site")
+                api._logger.debug(
+                    "Getting api %s energy details for site",
+                    api.apisession.nickname,
+                )
                 # obtain previous energy details to check if yesterday must be queried as well
                 energy = site.get("energy_details") or {}
                 # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once

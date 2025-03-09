@@ -120,9 +120,16 @@ async def energy_daily(  # noqa: C901
                 )
                 table.update({daystr: entry})
                 if showProgress:
-                    self._logger.info("Received solarbank energy for %s", daystr)
+                    self._logger.info(
+                        "Received api %s solarbank energy for %s",
+                        self.apisession.nickname,
+                        daystr,
+                    )
         if showProgress:
-            self._logger.info("Received solarbank energy for period")
+            self._logger.info(
+                "Received api %s solarbank energy for period",
+                self.apisession.nickname,
+            )
 
     # Get home usage energy types if device is solarbank generation 2 or smart meter or smart plugs
     if (
@@ -230,9 +237,16 @@ async def energy_daily(  # noqa: C901
                     )
                 table.update({daystr: entry})
                 if showProgress:
-                    self._logger.info("Received home_usage energy for %s", daystr)
+                    self._logger.info(
+                        "Received api %s home_usage energy for %s",
+                        self.apisession.nickname,
+                        daystr,
+                    )
         if showProgress:
-            self._logger.info("Received home_usage energy for period")
+            self._logger.info(
+                "Received api %s home_usage energy for period",
+                self.apisession.nickname,
+            )
 
     # Add grid stats from smart reader only if solarbank not requested, otherwise grid data available in solarbank and solar responses
     if (
@@ -285,7 +299,10 @@ async def energy_daily(  # noqa: C901
                 )
                 table.update({daystr: entry})
         if showProgress:
-            self._logger.info("Received grid energy for period")
+            self._logger.info(
+                "Received api %s grid energy for period",
+                self.apisession.nickname,
+            )
 
     # Add solar energy per channel if supported by device, e.g. Solarbank 2 embedded inverter
     if SolixDeviceType.INVERTER.value in devTypes:
@@ -333,7 +350,11 @@ async def energy_daily(  # noqa: C901
                         )
                         table.update({daystr: entry})
                 if showProgress:
-                    self._logger.info("Received solar_production_%s energy for period", ch.replace('_', ''))
+                    self._logger.info(
+                        "Received api %s solar_production_%s energy for period",
+                        self.apisession.nickname,
+                        ch.replace("_", ""),
+                    )
 
     # Always Add solar production which contains percentages
     # get first data period from file or api
@@ -413,9 +434,16 @@ async def energy_daily(  # noqa: C901
             )
             table.update({daystr: entry})
             if showProgress:
-                self._logger.info("Received solar_production energy for %s", daystr)
+                self._logger.info(
+                    "Received api %s solar_production energy for %s",
+                    self.apisession.nickname,
+                    daystr,
+                )
     if showProgress:
-        self._logger.info("Received solar_production energy for period")
+        self._logger.info(
+            "Received api %s solar_production energy for period",
+            self.apisession.nickname,
+        )
     return table
 
 

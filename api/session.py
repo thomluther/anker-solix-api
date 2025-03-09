@@ -145,17 +145,21 @@ class AnkerSolixClientSession:
         if not subfolder or subfolder == self._testdir:
             return self._testdir
         if not Path(subfolder).is_dir():
-            self._logger.error("Specified test folder does not exist: %s", subfolder)
+            self._logger.error(
+                "Specified test folder for api %s does not exist: %s",
+                self.nickname,
+                subfolder,
+            )
         else:
             self._testdir = subfolder
-            self._logger.info("Set Api test folder to: %s", subfolder)
+            self._logger.info("Set api %s test folder to: %s", self.nickname, subfolder)
         return self._testdir
 
     def logLevel(self, level: int | None = None) -> int:
         """Get or set the logger log level."""
         if level is not None and isinstance(level, int):
             self._logger.setLevel(level)
-            self._logger.info("Set log level to: %s", level)
+            self._logger.info("Set api %s log level to: %s", self.nickname, level)
         return self._logger.getEffectiveLevel()
 
     def requestDelay(self, delay: float | None = None) -> float:
@@ -172,7 +176,9 @@ class AnkerSolixClientSession:
                 )
             )
             self._logger.info(
-                "Set api request delay to %.3f seconds", self._request_delay
+                "Set api %s request delay to %.3f seconds",
+                self.nickname,
+                self._request_delay,
             )
         return self._request_delay
 
@@ -186,11 +192,12 @@ class AnkerSolixClientSession:
             self._endpoint_limit = int(max(0, limit))
             if self._endpoint_limit:
                 self._logger.info(
-                    "Set api request limit to %s requests per endpoint per minute",
+                    "Set api %s request limit to %s requests per endpoint per minute",
+                    self.nickname,
                     self._endpoint_limit,
                 )
             else:
-                self._logger.info("Disabled api request limit")
+                self._logger.info("Disabled api %s request limit", self.nickname)
         return self._endpoint_limit
 
     async def _wait_delay(
@@ -225,7 +232,7 @@ class AnkerSolixClientSession:
             )
             if throttle:
                 self._logger.warning(
-                    "Throttling next request of %s for %.1f seconds to maintain request limit of %s for endpoint %s",
+                    "Throttling next request of api %s for %.1f seconds to maintain request limit of %s for endpoint %s",
                     self.nickname,
                     throttle,
                     self._endpoint_limit,
@@ -427,7 +434,7 @@ class AnkerSolixClientSession:
                     request_info=(f"{method.upper()} {url} {body_text}").strip(),
                 )
                 self._logger.debug(
-                    "%s request %s %s response received", self.nickname, method, url
+                    "Api %s request %s %s response received", self.nickname, method, url
                 )
                 # print response headers
                 self._logger.debug("Response Headers: %s", resp.headers)
@@ -466,7 +473,7 @@ class AnkerSolixClientSession:
 
             # Exception from ClientSession based on standard response status codes
             except ClientError as err:
-                self._logger.error("Api Request Error: %s", err)
+                self._logger.error("Api %s Request Error: %s", self.nickname, err)
                 self._logger.error("Response Text: %s", body_text)
                 # Prepare data dict for Api error lookup
                 if not data:
@@ -511,13 +518,13 @@ class AnkerSolixClientSession:
             except errors.AnkerSolixError as err:  # Other Exception from API
                 if isinstance(err, errors.BusyError):
                     # Api fails to respond to standard query, repeat once after delay
-                    self._logger.error("Api Busy Error: %s", err)
+                    self._logger.error("Api %s Busy Error: %s", self.nickname, err)
                     self._logger.error("Response Text: %s", body_text)
                     if not self._retry_attempt:
                         self._retry_attempt = True
                         delay = randrange(2, 6)  # random wait time 2-5 seconds
                         self._logger.warning(
-                            "Server busy, retrying request of %s after delay of %s seconds for endpoint %s",
+                            "Server busy, retrying request of api %s after delay of %s seconds for endpoint %s",
                             self.nickname,
                             delay,
                             endpoint,
