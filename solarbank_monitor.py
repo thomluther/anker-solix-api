@@ -141,10 +141,12 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             col3 = 15
             site_names: list | None = None
             site_selected: str = None
+            startup: bool = True
+            deferred: bool = False
             while True:
                 clearscreen()
                 now = datetime.now().astimezone()
-                if next_refr <= now:
+                if next_refr <= datetime.now().astimezone():
                     # Ask whether monitor should be limited to selected site ID
                     if not (use_file or site_names):
                         CONSOLE.info("Getting site list...")
@@ -170,17 +172,33 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                         if selection.isdigit() and 1 <= int(selection) < len(site_names):
                             site_selected = site_names[int(selection)].split(",")[0]
+                        # ask which endpoint limit should be applied
+                        selection = input(
+                            f"Enter Api endpoint limit for request throttling (1-50, 0 = disabled) [Default: {myapi.apisession.endpointLimit()}]: "
+                        )
+                        if selection.isdigit() and 0 <= int(selection) <= 50:
+                            myapi.apisession.endpointLimit(int(selection))
                     CONSOLE.info("Running site refresh...")
                     await myapi.update_sites(fromFile=use_file,siteId=site_selected)
-                    next_refr = now + timedelta(seconds=REFRESH)
-                if next_dev_refr <= now:
-                    CONSOLE.info("Running device details refresh...")
+                    if not use_file and energy_stats and deferred:
+                            CONSOLE.info("Running energy details refresh...")
+                            await myapi.update_device_energy(fromFile=use_file)
+                            deferred = False
+                    next_refr = datetime.now().astimezone() + timedelta(seconds=REFRESH)
+                if next_dev_refr <= datetime.now().astimezone():
+                    CONSOLE.info("Running device and site details refresh...")
                     await myapi.update_device_details(fromFile=use_file)
+                    await myapi.update_site_details(fromFile=use_file)
                     # run also energy refresh if requested
                     if energy_stats:
-                        CONSOLE.info("Running energy details refresh...")
-                        await myapi.update_site_details(fromFile=use_file)
-                        await myapi.update_device_energy(fromFile=use_file)
+                        if startup and not use_file:
+                            CONSOLE.info("Deferring initial energy details refresh...")
+                            startup = False
+                            deferred = True
+                        else:
+                            CONSOLE.info("Running energy details refresh...")
+                            await myapi.update_device_energy(fromFile=use_file)
+                    next_refr = datetime.now().astimezone() + timedelta(seconds=REFRESH)
                     next_dev_refr = next_refr + timedelta(
                         seconds=max((not use_file) * 120, REFRESH * 9)
                     )
@@ -218,6 +236,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             site_type = str(site.get("site_type", ""))
                             CONSOLE.info(
                                 f"{'Type ID':<{col1}}: {str((site.get('site_info') or {}).get('power_site_type', '--')) + (' (' + site_type.capitalize() + ')') if site_type else '':<{col2}} Device models  : {','.join((site.get('site_info') or {}).get('current_site_device_models', []))}"
+                            )
+                            offset = site.get("energy_offset_seconds") or 0
+                            CONSOLE.info(
+                                f"{'Energy Time':<{col1}}: {(datetime.now()+timedelta(seconds=offset)).strftime("%Y-%m-%d %H:%M:%S") if offset else '----.--.-- --:--:--':<{col2}} {'Last Check':<{col3}}: {site.get("energy_offset_check") or '----.--.-- --:--:--'}"
                             )
                             if (sb := site.get("solarbank_info") or {}) and len(
                                 sb.get("solarbank_list", [])
@@ -367,7 +389,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
                         # update schedule with device details refresh and print it
                         CONSOLE.info(
-                            f"{'Schedule  (Now)':<{col1}}: {now.strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W', ''):>4} W"
+                            f"{'Schedule  (Now)':<{col1}}: {datetime.now().astimezone().strftime('%H:%M:%S UTC %z'):<{col2}} {'System Preset':<{col3}}: {str(site_preset).replace('W', ''):>4} W"
                         )
                         if admin:
                             # print schedule
@@ -403,14 +425,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Energy today':<{col1}}: {dev.get('energy_today') or '-.--':>4} {'kWh':<{col2 - 5}} {'Last Period':<{col3}}: {dev.get('energy_last_period') or '-.--':>4} kWh"
                             )
-                    elif devtype in [api.SolixDeviceType.POWERPANEL.value]:
+                    elif devtype in [api.SolixDeviceType.POWERPANEL.value,api.SolixDeviceType.HES.value]:
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
                         )
                         if avg := dev.get("average_power") or {}:
                             unit = avg.get("power_unit") or ""
                             CONSOLE.info(
-                                f"{'Last Check ⌀':<{col1}}: {avg.get('last_check', 'Unknown'):<{col2}} {'Valid before':<{col3}}: {avg.get('valid_time', 'Unknown')!s}"
+                                f"{'Valid ⌀ before':<{col1}}: {avg.get('valid_time', 'Unknown'):<{col2}} {'Last Check':<{col3}}: {avg.get('last_check', 'Unknown')!s}"
                             )
                             CONSOLE.info(
                                 f"{'Solar Power ⌀':<{col1}}: {avg.get('solar_power_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Battery SOC':<{col3}}: {avg.get('state_of_charge') or '-.--':>4} %"
@@ -421,10 +443,6 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Home Usage ⌀':<{col1}}: {avg.get('home_usage_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Grid Import ⌀':<{col3}}: {avg.get('grid_import_avg') or '-.--':>4} {unit}"
                             )
-                    elif devtype in [api.SolixDeviceType.HES.value]:
-                        CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
-                        )
 
                     else:
                         CONSOLE.warning(
@@ -589,7 +607,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             return True
                 else:
                     CONSOLE.info("Api Requests: %s", myapi.request_count)
-                    CONSOLE.debug(myapi.request_count.get_details(last_hour=True))
+                    CONSOLE.info(myapi.request_count.get_details(last_hour=True))
                     CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                     for sec in range(REFRESH):
                         now = datetime.now().astimezone()
@@ -599,7 +617,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 end="\r",
                                 flush=True,
                             )
-                        elif sec == 0 or int((next_refr - now).total_seconds()) < 0:
+                        elif sec == 0 or int((next_refr - now).total_seconds()) <= 0:
                             # IDLE may be used and does not support cursor placement, skip time progress display
                             print(  # noqa: T201
                                 f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details refresh: {int((next_dev_refr - now).total_seconds()):>3} sec  (CTRL-C to abort)",

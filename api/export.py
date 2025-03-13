@@ -414,6 +414,12 @@ class AnkerSolixApiExport:
                 endpoint=API_ENDPOINTS["get_message_unread"],
                 filename=f"{API_FILEPREFIXES['get_message_unread']}.json",
             )
+            self._logger.info("Exporting currency list...")
+            await self.query(
+                method="post",
+                endpoint=API_ENDPOINTS["get_currency_list"],
+                filename=f"{API_FILEPREFIXES['get_currency_list']}.json",
+            )
             self._logger.info("Exporting supported sites, devices and accessories...")
             await self.query(
                 endpoint=API_ENDPOINTS["site_rules"],
@@ -985,7 +991,7 @@ class AnkerSolixApiExport:
                 # )
 
                 # get various daily energies since yesterday
-                for stat_type in ["solar", "hes", "home", "grid", "pps"]:
+                for stat_type in ["solar", "hes", "home", "grid"]:
                     self._logger.info(
                         "Exporting HES site energy data for %s...",
                         stat_type.upper(),
@@ -1006,7 +1012,7 @@ class AnkerSolixApiExport:
                     )
 
                 # get various energies of today for last 5 min average values
-                for stat_type in ["solar", "hes", "home", "grid", "pps"]:
+                for stat_type in ["solar", "hes", "home", "grid"]:
                     self._logger.info(
                         "Exporting HES site energy data of today for %s...",
                         stat_type.upper(),

@@ -28,6 +28,7 @@ from .apitypes import (
     SolixDefaults,
     SolixDeviceCapacity,
     SolixDeviceCategory,
+    SolixDeviceNames,
     SolixDeviceStatus,
     SolixDeviceType,
 )
@@ -142,6 +143,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         (self.account.get("products") or {}).get(pn)
                                         or {}
                                     ).get("name")
+                                    or getattr(SolixDeviceNames,pn,"")
                                     or str(value)
                                 }
                             )
@@ -843,9 +845,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         resp = await poll_device_details(self, fromFile=fromFile, exclude=exclude)
         # Clean up other api class devices cache if used
         if self.powerpanelApi:
-            self.powerpanelApi.recycleDevices(activeDevices=set(self.sites.keys()))
+            self.powerpanelApi.recycleDevices(activeDevices=set(self.devices.keys()))
         if self.hesApi:
-            self.hesApi.recycleDevices(activeDevices=set(self.sites.keys()))
+            self.hesApi.recycleDevices(activeDevices=set(self.devices.keys()))
         return resp
 
     async def get_homepage(self, fromFile: bool = False) -> dict:
