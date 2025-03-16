@@ -728,6 +728,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     ]:
                         device.update({key: str(value)})
 
+                    # hes specific keys
+                    elif key in ["hes_data"] and value:
+                        device.update({key: value})
+        
                     # generate extra values when certain conditions are met
                     if key in ["battery_power"] or calc_capacity:
                         # generate battery values when soc updated or device name changed or PN is known or exp packs changed

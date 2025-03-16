@@ -198,8 +198,8 @@ async def poll_sites(  # noqa: C901
                             else offset,
                             # set offset few minutes before new data timestamp if smaller than previous offset and not aged more than one day
                             timestamp - datetime.now() - timedelta(minutes=2)
-                            if datetime.now() - timestamp < timedelta(days=1)
-                            else 0,
+                            if (datetime.now() - timestamp) < timedelta(days=1)
+                            else timedelta(seconds=0),
                         )
                         #
                         # Add energy offset info to site cache
@@ -207,6 +207,7 @@ async def poll_sites(  # noqa: C901
                             {
                                 "energy_offset_seconds": round(offset.total_seconds()),
                                 "energy_offset_check": datetime.now().strftime(fmt),
+                                "energy_offset_tz": 1800 * round(round(offset.total_seconds())/1800),
                             }
                         )
                 # check if power panel site type to maintain statistic object which will be updated and replaced only during site details refresh
@@ -628,16 +629,20 @@ async def poll_device_details(
         await api.get_ota_batch(fromFile=fromFile)
     # Get Power Panel device specific updates
     if api.powerpanelApi:
-        for sn, device in dict(await api.powerpanelApi.update_device_details(
-            fromFile=fromFile, exclude=exclude
-        )):
+        for sn, device in dict(
+            await api.powerpanelApi.update_device_details(
+                fromFile=fromFile, exclude=exclude
+            )
+        ).items():
             merged_dev = api.devices.get(sn) or {}
             merged_dev.update(device)
             api.devices[sn] = merged_dev
             api.powerpanelApi.devices[sn] = merged_dev
     # Get HES device specific updates and merge them
     if api.hesApi:
-        for sn, device in dict(await api.hesApi.update_device_details(fromFile=fromFile, exclude=exclude)).items():
+        for sn, device in dict(
+            await api.hesApi.update_device_details(fromFile=fromFile, exclude=exclude)
+        ).items():
             merged_dev = api.devices.get(sn) or {}
             merged_dev.update(device)
             api.devices[sn] = merged_dev

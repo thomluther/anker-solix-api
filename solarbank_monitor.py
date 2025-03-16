@@ -29,10 +29,12 @@ import common
 # use Console logger from common module
 CONSOLE: logging.Logger = common.CONSOLE
 # enable debug mode for the console handler
-#CONSOLE.handlers[0].setLevel(logging.DEBUG)
+# CONSOLE.handlers[0].setLevel(logging.DEBUG)
 
 REFRESH = 0  # default No refresh interval
+DETAILSREFRESH = 10  # Multiplier for device details refresh
 INTERACTIVE = True
+SHOWAPICALLS = False
 
 
 def clearscreen():
@@ -133,9 +135,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     break
 
             # Run loop to update Solarbank parameters
-            now = datetime.now().astimezone()
-            next_refr = now
-            next_dev_refr = now
+            next_refr: datetime = datetime.now().astimezone()
+            next_dev_refr: int = 0
             col1 = 15
             col2 = 23
             col3 = 15
@@ -146,11 +147,13 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             while True:
                 clearscreen()
                 now = datetime.now().astimezone()
-                if next_refr <= datetime.now().astimezone():
+                if next_refr <= now:
                     # Ask whether monitor should be limited to selected site ID
                     if not (use_file or site_names):
                         CONSOLE.info("Getting site list...")
-                        sites = (await myapi.get_site_list(fromFile=use_file)).get("site_list") or []
+                        sites = (await myapi.get_site_list(fromFile=use_file)).get(
+                            "site_list"
+                        ) or []
                         CONSOLE.info("Select which Site to be monitored:")
                         site_names = ["All"] + [
                             (
@@ -170,7 +173,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         selection = input(
                             f"Enter site number (0-{len(site_names) - 1}) or nothing for All: "
                         )
-                        if selection.isdigit() and 1 <= int(selection) < len(site_names):
+                        if selection.isdigit() and 1 <= int(selection) < len(
+                            site_names
+                        ):
                             site_selected = site_names[int(selection)].split(",")[0]
                         # ask which endpoint limit should be applied
                         selection = input(
@@ -179,13 +184,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if selection.isdigit() and 0 <= int(selection) <= 50:
                             myapi.apisession.endpointLimit(int(selection))
                     CONSOLE.info("Running site refresh...")
-                    await myapi.update_sites(fromFile=use_file,siteId=site_selected)
+                    await myapi.update_sites(fromFile=use_file, siteId=site_selected)
+                    next_dev_refr -= 1
                     if not use_file and energy_stats and deferred:
-                            CONSOLE.info("Running energy details refresh...")
-                            await myapi.update_device_energy(fromFile=use_file)
-                            deferred = False
+                        CONSOLE.info("Running energy details refresh...")
+                        await myapi.update_device_energy(fromFile=use_file)
+                        deferred = False
                     next_refr = datetime.now().astimezone() + timedelta(seconds=REFRESH)
-                if next_dev_refr <= datetime.now().astimezone():
+                if next_dev_refr < 0:
                     CONSOLE.info("Running device and site details refresh...")
                     await myapi.update_device_details(fromFile=use_file)
                     await myapi.update_site_details(fromFile=use_file)
@@ -199,17 +205,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info("Running energy details refresh...")
                             await myapi.update_device_energy(fromFile=use_file)
                     next_refr = datetime.now().astimezone() + timedelta(seconds=REFRESH)
-                    next_dev_refr = next_refr + timedelta(
-                        seconds=max((not use_file) * 120, REFRESH * 9)
-                    )
-                    # schedules = {}
+                    next_dev_refr = DETAILSREFRESH
                 if use_file:
                     CONSOLE.info("Using input source folder: %s", myapi.testDir())
                 else:
                     CONSOLE.info(
-                        "Solarbank Monitor (refresh %s s, details refresh %s s):",
+                        "Solarbank Monitor (refresh %s s, details refresh countdown %s):",
                         REFRESH,
-                        max(120, 10 * REFRESH),
+                        next_dev_refr,
                     )
                 CONSOLE.info(
                     "Sites: %s, Devices: %s", len(myapi.sites), len(myapi.devices)
@@ -219,7 +222,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 shown_sites = set()
                 for sn, dev in [
                     (s, d)
-                    for s,d in myapi.devices.items()
+                    for s, d in myapi.devices.items()
                     if (not site_selected or d.get("site_id") == site_selected)
                 ]:
                     devtype = dev.get("type", "Unknown")
@@ -230,16 +233,22 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info("=" * 80)
                         if siteid:
                             shown_sites.add(siteid)
+                            shift = site.get("energy_offset_tz")
+                            shift = (
+                                " --:--"
+                                if shift is None
+                                else f"{(shift // 3600):0=+3.0f}:{(shift % 3600 // shift) if shift else 0:0=z2.0f}"
+                            )
                             CONSOLE.info(
-                                f"{'System':<{col1}}: {(site.get('site_info') or {}).get('site_name', 'Unknown')}  (Site ID: {siteid})"
+                                f"{'System (' + shift + ')':<{col1}}: {(site.get('site_info') or {}).get('site_name', 'Unknown')}  (Site ID: {siteid})"
                             )
                             site_type = str(site.get("site_type", ""))
                             CONSOLE.info(
                                 f"{'Type ID':<{col1}}: {str((site.get('site_info') or {}).get('power_site_type', '--')) + (' (' + site_type.capitalize() + ')') if site_type else '':<{col2}} Device models  : {','.join((site.get('site_info') or {}).get('current_site_device_models', []))}"
                             )
-                            offset = site.get("energy_offset_seconds") or 0
+                            offset = site.get("energy_offset_seconds")
                             CONSOLE.info(
-                                f"{'Energy Time':<{col1}}: {(datetime.now()+timedelta(seconds=offset)).strftime("%Y-%m-%d %H:%M:%S") if offset else '----.--.-- --:--:--':<{col2}} {'Last Check':<{col3}}: {site.get("energy_offset_check") or '----.--.-- --:--:--'}"
+                                f"{'Energy Time':<{col1}}: {'----.--.-- --:--:--' if offset is None else (datetime.now() + timedelta(seconds=offset)).strftime('%Y-%m-%d %H:%M:%S'):<{col2}} {'Last Check':<{col3}}: {site.get('energy_offset_check') or '----.--.-- --:--:--'}"
                             )
                             if (sb := site.get("solarbank_info") or {}) and len(
                                 sb.get("solarbank_list", [])
@@ -255,10 +264,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     f"{'SOC total':<{col1}}: {soc:<{col2}} {'Dischrg Pwr Tot':<{col3}}: {sb.get('battery_discharge_power', '---'):>4} {unit}"
                                 )
                                 CONSOLE.info(
-                                    f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power', '---'):>4} {unit:<{col2 - 5}} {'Battery Pwr Tot':<{col3}}: {str(sb.get('total_charging_power')).split('.',maxsplit=1)[0]:>4} W"
+                                    f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power', '---'):>4} {unit:<{col2 - 5}} {'Battery Pwr Tot':<{col3}}: {str(sb.get('total_charging_power')).split('.', maxsplit=1)[0]:>4} W"
                                 )
                                 CONSOLE.info(
-                                    f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '---')).split('.',maxsplit=1)[0]:>4} {unit:<{col2 - 5}} {'Home Load Tot':<{col3}}: {sb.get('to_home_load') or '----':>4} W"
+                                    f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '---')).split('.', maxsplit=1)[0]:>4} {unit:<{col2 - 5}} {'Home Load Tot':<{col3}}: {sb.get('to_home_load') or '----':>4} W"
                                 )
                                 features = site.get("feature_switch") or {}
                                 if mode := site.get("scene_mode"):
@@ -425,7 +434,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Energy today':<{col1}}: {dev.get('energy_today') or '-.--':>4} {'kWh':<{col2 - 5}} {'Last Period':<{col3}}: {dev.get('energy_last_period') or '-.--':>4} kWh"
                             )
-                    elif devtype in [api.SolixDeviceType.POWERPANEL.value,api.SolixDeviceType.HES.value]:
+                    elif devtype in [
+                        api.SolixDeviceType.POWERPANEL.value,
+                        api.SolixDeviceType.HES.value,
+                    ]:
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
                         )
@@ -452,7 +464,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if energy_stats:
                     for site_id, site in [
                         (s, d)
-                        for s,d in myapi.sites.items()
+                        for s, d in myapi.sites.items()
                         if (not site_selected or s == site_selected)
                     ]:
                         CONSOLE.info("=" * 80)
@@ -473,8 +485,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Max savings':<{col1}}: {totals[2].get('total', '---.--'):>7} {totals[2].get('unit', ''):<{col2 - 9}}  {'Price kWh':<{col3}}: {price:>7} {unit}"
                             )
                         if energy := site.get("energy_details") or {}:
-                            today: dict = energy.get("today")
-                            yesterday: dict = energy.get("last_period")
+                            today: dict = energy.get("today") or {}
+                            yesterday: dict = energy.get("last_period") or {}
                             unit = "kWh"
                             CONSOLE.info(
                                 f"{'Today':<{col1}}: {today.get('date', '----------'):<{col2}} {'Yesterday':<{col3}}: {yesterday.get('date', '----------')!s}"
@@ -492,7 +504,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 )
                             if value := today.get("solar_production_microinverter"):
                                 CONSOLE.info(
-                                    f"{'Solar Ch AC':<{col1}}: {today.get('solar_production_microinverter') or '-.--':>6} {unit:<{col2-7}} {'Solar Ch AC':<{col3}}: {yesterday.get('solar_production_microinverter') or '-.--':>6} {unit}"
+                                    f"{'Solar Ch AC':<{col1}}: {today.get('solar_production_microinverter') or '-.--':>6} {unit:<{col2 - 7}} {'Solar Ch AC':<{col3}}: {yesterday.get('solar_production_microinverter') or '-.--':>6} {unit}"
                                 )
                             CONSOLE.info(
                                 f"{'Charged':<{col1}}: {today.get('battery_charge') or '-.--':>6} {unit:<{col2 - 7}} {'Charged':<{col3}}: {yesterday.get('battery_charge') or '-.--':>6} {unit}"
@@ -556,18 +568,25 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if use_file:
                     while use_file:
                         CONSOLE.info("Api Requests: %s", myapi.request_count)
-                        CONSOLE.debug(myapi.request_count.get_details(last_hour=True))
-                        CONSOLE.debug(json.dumps(myapi.sites, indent=2))
-                        CONSOLE.debug(json.dumps(myapi.devices, indent=2))
+                        CONSOLE.log(
+                            logging.INFO if SHOWAPICALLS else logging.DEBUG,
+                            myapi.request_count.get_details(last_hour=True),
+                        )
+                        CONSOLE.log(
+                            logging.INFO if SHOWAPICALLS else logging.DEBUG,
+                            json.dumps(myapi.sites, indent=2),
+                        )
+                        CONSOLE.log(
+                            logging.INFO if SHOWAPICALLS else logging.DEBUG,
+                            json.dumps(myapi.devices, indent=2),
+                        )
                         myapi.request_count.recycle(last_time=datetime.now())
                         resp = input(
                             "[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file or [Q]uit: "
                         )
                         if resp.upper() in ["S", "SITE"]:
                             # set device details refresh to future to reload only site info
-                            next_dev_refr = datetime.now().astimezone() + timedelta(
-                                seconds=1
-                            )
+                            next_dev_refr += 1
                             break
                         if resp.upper() in ["A", "ALL"]:
                             break
@@ -606,26 +625,36 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if resp.upper() in ["Q", "QUIT"]:
                             return True
                 else:
-                    CONSOLE.info("Api Requests: %s", myapi.request_count)
-                    CONSOLE.info(myapi.request_count.get_details(last_hour=True))
+                    CONSOLE.info(
+                        "Api Requests: %s",
+                        myapi.request_count,
+                    )
+                    CONSOLE.log(
+                        logging.INFO if SHOWAPICALLS else logging.DEBUG,
+                        myapi.request_count.get_details(last_hour=True),
+                    )
                     CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                     for sec in range(REFRESH):
                         now = datetime.now().astimezone()
                         if sys.stdin is sys.__stdin__:
                             print(  # noqa: T201
-                                f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details refresh: {int((next_dev_refr - now).total_seconds()):>3} sec  (CTRL-C to abort)",
+                                f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(next_dev_refr):>2}  (CTRL-C to abort)",
                                 end="\r",
                                 flush=True,
                             )
-                        elif sec == 0 or int((next_refr - now).total_seconds()) <= 0:
+                            if next_refr < now:
+                                break
+                        elif sec == 0 or next_refr < now:
                             # IDLE may be used and does not support cursor placement, skip time progress display
                             print(  # noqa: T201
-                                f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details refresh: {int((next_dev_refr - now).total_seconds()):>3} sec  (CTRL-C to abort)",
+                                f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(next_dev_refr):>2}  (CTRL-C to abort)",
                                 end="",
                                 flush=True,
                             )
-                            break
+                            if next_refr < now:
+                                break
                         await asyncio.sleep(1)
+                    await asyncio.sleep(1)
             return False
 
     except (ClientError, errors.AnkerSolixError) as err:

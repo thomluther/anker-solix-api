@@ -35,7 +35,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "2.5.5.0"
+VERSION: str = "2.6.0.0"
 
 
 class AnkerSolixApiExport:
@@ -1237,6 +1237,7 @@ class AnkerSolixApiExport:
                     "_sn",
                     "mainSn",
                     "site_id",
+                    "station_id",
                     "trace_id",
                     "bt_ble_",
                     "wifi_name",

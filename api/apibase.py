@@ -617,7 +617,9 @@ class AnkerSolixBaseApi:
             deviceSns = [
                 s for s, device in self.devices.items() if device.get("is_admin")
             ]
-        if fromFile:
+        if not deviceSns:
+            resp = {}
+        elif fromFile:
             resp = await self.apisession.loadFromFile(
                 Path(self.testDir()) / f"{API_FILEPREFIXES['get_ota_batch']}.json"
             )
