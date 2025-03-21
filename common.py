@@ -100,7 +100,7 @@ def print_schedule(schedule: dict) -> None:
                     f"{datetime.datetime.fromtimestamp(slot.get('start_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}} {datetime.datetime.fromtimestamp(slot.get('end_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}}"
                 )
         if rate_plan := plan.get(SolarbankRatePlan.use_time) or []:
-            tarifs = ["High","Medium","Low","Other"]
+            tariffs = ["High","Medium","Low","Valley"]
             for sea in rate_plan:
                 unit = sea.get("unit") or "-"
                 m_start = datetime.date.today().replace(month=(sea.get('sea') or {}).get('start_month') or 1)
@@ -117,23 +117,23 @@ def print_schedule(schedule: dict) -> None:
                 )
                 for idx in range(max(len(weekday),len(weekend))):
                     if len(weekday) > idx:
-                        tarif = weekday[idx].get('type')
-                        price = next(iter([item.get("price") for item in (sea.get("weekday_price") or []) if item.get("type") == tarif]),0)
-                        tarif = tarifs[tarif-1] if isinstance(tarif,int) and 0 < tarif <= len(tarifs) else '------'
+                        tariff = weekday[idx].get('type')
+                        price = next(iter([item.get("price") for item in (sea.get("weekday_price") or []) if item.get("type") == tariff]),0)
+                        tariff = tariffs[tariff-1] if isinstance(tariff,int) and 0 < tariff <= len(tariffs) else '------'
                         start = today+datetime.timedelta(hours=weekday[idx].get('start_time') or 0)
                         end = weekday[idx].get('end_time') or 24
                         end = today+(datetime.timedelta(hours=end) if end < 24 else datetime.timedelta(days=1))
-                        row = f"{start.strftime("%H:%M"):<{t5}} {end.strftime("%H:%M"):<{t5}} {tarif:<{t6}} {float(price):<.02f} {unit:<{t2}}"
+                        row = f"{start.strftime("%H:%M"):<{t5}} {end.strftime("%H:%M"):<{t5}} {tariff:<{t6}} {float(price):<.02f} {unit:<{t2}}"
                     else:
                         row = " "*26
-                    if not is_same and len(weekend) > idx:
-                        tarif = weekend[idx].get('type')
-                        price = next(iter([item.get("price") for item in (sea.get("weekend_price") or []) if item.get("type") == tarif]),0)
-                        tarif = tarifs[tarif-1] if isinstance(tarif,int) and 0 < tarif <= len(tarifs) else '------'
+                    if len(weekend) > idx:
+                        tariff = weekend[idx].get('type')
+                        price = next(iter([item.get("price") for item in (sea.get("weekend_price") or []) if item.get("type") == tariff]),0)
+                        tariff = tariffs[tariff-1] if isinstance(tariff,int) and 0 < tariff <= len(tariffs) else '------'
                         start = today+datetime.timedelta(hours=weekend[idx].get('start_time') or 0)
                         end = weekend[idx].get('end_time') or 24
                         end = today+(datetime.timedelta(hours=end) if end < 24 else datetime.timedelta(days=1))
-                        row = row + f"   {start.strftime("%H:%M"):<{t5}} {end.strftime("%H:%M"):<{t5}} {tarif:<{t6}} {float(price):<.02f} {unit:<{t2}}"
+                        row = row + f"   {start.strftime("%H:%M"):<{t5}} {end.strftime("%H:%M"):<{t5}} {tariff:<{t6}} {float(price):<.02f} {unit:<{t2}}"
                     CONSOLE.info(row)
 
     else:

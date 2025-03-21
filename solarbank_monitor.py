@@ -237,7 +237,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             shift = (
                                 " --:--"
                                 if shift is None
-                                else f"{(shift // 3600):0=+3.0f}:{(shift % 3600 // shift) if shift else 0:0=z2.0f}"
+                                else f"{(shift // 3600):0=+3.0f}:{(shift % 3600 // 60) if shift else 0:0=z2.0f}"
                             )
                             CONSOLE.info(
                                 f"{'System (' + shift + ')':<{col1}}: {(site.get('site_info') or {}).get('site_name', 'Unknown')}  (Site ID: {siteid})"

@@ -21,7 +21,6 @@ from .apitypes import (
     API_FILEPREFIXES,
     SmartmeterStatus,
     SolarbankDeviceMetrics,
-    SolarbankPriceTypes,
     SolarbankRatePlan,
     SolarbankStatus,
     SolarbankUsageMode,
@@ -31,6 +30,7 @@ from .apitypes import (
     SolixDeviceNames,
     SolixDeviceStatus,
     SolixDeviceType,
+    SolixPriceTypes,
 )
 from .hesapi import AnkerSolixHesApi
 from .poller import (
@@ -62,6 +62,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         set_home_load,
         set_sb2_ac_charge,
         set_sb2_home_load,
+        set_sb2_use_time,
     )
 
     def __init__(
@@ -1069,7 +1070,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         # Validate parameters
         price_type = (
             str(price_type).lower()
-            if str(price_type).lower() in [item.value for item in SolarbankPriceTypes]
+            if str(price_type).lower() in {item.value for item in SolixPriceTypes}
             else None
         )
         # Prepare payload from details

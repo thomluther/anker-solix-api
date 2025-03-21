@@ -477,20 +477,27 @@ class SolarbankUsageMode(IntEnum):
     use_time = 5  # Use Time plan with SB2 AC and smart meter
 
 
-class SolarbankTariffTypes(IntEnum):
+class SolixTariffTypes(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
 
     PEEK = 1
     MID_PEEK = 2
     OFF_PEEK = 3
-    OTHER = 4
+    VALLEY = 4
 
 
-class SolarbankPriceTypes(StrEnum):
+class SolixPriceTypes(StrEnum):
     """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
 
     FIXED = "fixed"
     USE_TIME = "use_time"
+
+class SolixDayTypes(StrEnum):
+    """Enumeration for Anker Solix Solarbank 2 AC Use Time Day Types."""
+
+    WEEKDAY = "weekday"
+    WEEKEND = "weekend"
+    BOTH = "both"
 
 
 @dataclass(frozen=True)
@@ -741,10 +748,10 @@ class SolixDefaults:
     # Discharge Priority preset for Solarbank schedule timeslot settings
     DISCHARGE_PRIORITY_DEF: int = SolarbankDischargePriorityMode.off.value
     # AC tariff settings for Use Time plan
-    TARIFF_MIN: int = SolarbankTariffTypes.PEEK.value
-    TARIFF_MAX: int = SolarbankTariffTypes.OTHER.value
-    TARIFF_DEF: int = SolarbankTariffTypes.MID_PEEK.value
-    TARIFF_PRICE_DEF: float = 0.0
+    TARIFF_MIN: int = SolixTariffTypes.PEEK.value
+    TARIFF_MAX: int = SolixTariffTypes.VALLEY.value
+    TARIFF_DEF: int = SolixTariffTypes.OFF_PEEK.value
+    TARIFF_PRICE_DEF: str = "0.00"
     TARIFF_WE_SAME: bool = True
     CURRENCY_DEF: str = "€"
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
@@ -779,8 +786,7 @@ class SolarbankStatus(Enum):
     charge_priority = "37"  # pseudo state, the solarbank does not distinguish this, when no output power exists while preset is ignored
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night, probably hourly? resync with the cloud
     cold_wakeup = "116"  # At cold temperatures, 116 was observed instead of 4. Not sure why this state is different at low temps?
-    # TODO(3): Add descriptions once status code usage is observed/known
-    # code 5 was not observed yet
+    fully_charged = "5"   # Seen for SB2 when SOC is 100%
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
     standby = "7"
     unknown = "unknown"
