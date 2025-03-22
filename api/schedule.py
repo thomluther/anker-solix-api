@@ -45,13 +45,20 @@ async def get_device_load(
     """
     if not isinstance(testSchedule, dict):
         testSchedule = None
-    if testSchedule is None:
+    if testSchedule is None or fromFile:
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
-            )
+            # For file data, verify first if there is a modified schedule to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_load']}_modified_{deviceSn}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_load']}_{deviceSn}.json"
+                )
         else:
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_device_load"], json=data
@@ -89,10 +96,7 @@ async def get_device_load(
 
 
 async def set_device_load(
-    self,
-    siteId: str,
-    deviceSn: str,
-    loadData: dict,
+    self, siteId: str, deviceSn: str, loadData: dict, toFile: bool = False
 ) -> bool:
     """Set device home load. This supports only SB1 schedule structure, but does not apply them. The set_device_parm method must be used instead.
 
@@ -109,23 +113,40 @@ async def set_device_load(
     }
     Attention: This method and endpoint actually accepts the input data, but does not change anything on the solarbank 1.
     The set_device_parm endpoint has to be used instead.
-    TODO: Test if this method can be used for Solarbank 2 schedule structure?
     """
     data = {
         "site_id": siteId,
         "device_sn": deviceSn,
         "home_load_data": json.dumps(loadData),
     }
-    # Make the Api call and check for return code
-    code = (
-        await self.apisession.request(
-            "post", API_ENDPOINTS["set_device_load"], json=data
-        )
-    ).get("code")
-    if not isinstance(code, int) or int(code) != 0:
-        return False
+    if toFile:
+        # Write updated response to file for testing purposes
+        if not await self.apisession.saveToFile(
+            Path(self.testDir())
+            / f"{API_FILEPREFIXES['get_device_load']}_modified_{deviceSn}.json",
+            data={
+                "code": 0,
+                "msg": "success!",
+                "data": {
+                    "site_id": siteId,
+                    "home_load_data": data.get("home_load_data"),
+                    "current_home_load": "",
+                    "parallel_home_load": "",
+                },
+            },
+        ):
+            return False
+    else:
+        # Make the Api call and check for return code
+        code = (
+            await self.apisession.request(
+                "post", API_ENDPOINTS["set_device_load"], json=data
+            )
+        ).get("code")
+        if not isinstance(code, int) or int(code) != 0:
+            return False
     # update the data in api dict
-    await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
+    await self.get_device_load(siteId=siteId, deviceSn=deviceSn, fromFile=toFile)
     return True
 
 
@@ -165,13 +186,20 @@ async def get_device_parm(
     """
     if not isinstance(testSchedule, dict):
         testSchedule = None
-    if testSchedule is None:
+    if testSchedule is None or fromFile:
         data = {"site_id": siteId, "param_type": paramType}
         if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
-            )
+            # For file data, verify first if there is a modified schedule to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_modified_{siteId}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_{siteId}.json"
+                )
             # ensure backward filename compatibility without parm type in name
             if not resp and paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
                 resp = await self.apisession.loadFromFile(
@@ -223,6 +251,7 @@ async def set_device_parm(
     paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
     command: int = 17,
     deviceSn: str | None = None,
+    toFile: bool = False,
 ) -> bool:
     r"""Set device parameters (e.g. solarbank schedule).
 
@@ -249,21 +278,36 @@ async def set_device_parm(
         "cmd": command,
         "param_data": json.dumps(paramData),  # Must be string type
     }
-    code = (
-        await self.apisession.request(
-            "post", API_ENDPOINTS["set_device_parm"], json=data
-        )
-    ).get("code")
-    if not isinstance(code, int) or int(code) != 0:
-        return False
+    if toFile:
+        # Write updated response to file for testing purposes
+        if not await self.apisession.saveToFile(
+            Path(self.testDir())
+            / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_modified_{siteId}.json",
+            data={
+                "code": 0,
+                "msg": "success!",
+                "data": {"param_data": data.get("param_data")},
+            },
+        ):
+            return False
+    else:
+        code = (
+            await self.apisession.request(
+                "post", API_ENDPOINTS["set_device_parm"], json=data
+            )
+        ).get("code")
+        if not isinstance(code, int) or int(code) != 0:
+            return False
     # update the data in api dict, distinguish which schedule to query for updates
     if (self.devices.get(deviceSn) or {}).get("device_pn") in ["A17C0"]:
         # Active SB1 schedule data should be queried like on details refresh
-        data = await self.get_device_load(siteId=siteId, deviceSn=deviceSn)
+        data = await self.get_device_load(
+            siteId=siteId, deviceSn=deviceSn, fromFile=toFile
+        )
     else:
         # Other solarbank models
         await self.get_device_parm(
-            siteId=siteId, paramType=paramType, deviceSn=deviceSn
+            siteId=siteId, paramType=paramType, deviceSn=deviceSn, fromFile=toFile
         )
         data = {}
     # update also cascaded solarbanks schedule
@@ -277,7 +321,9 @@ async def set_device_parm(
         ]:
             # For two cascaded SB1, their enforced schedule may no longer list the other SB1 anymore when SB2 is in manual mode
             if not data:
-                data = await self.get_device_load(siteId=siteId, deviceSn=casc_sn)
+                data = await self.get_device_load(
+                    siteId=siteId, deviceSn=casc_sn, fromFile=toFile
+                )
             if data:
                 self._update_dev(
                     {
@@ -305,6 +351,7 @@ async def set_home_load(  # noqa: C901
     test_schedule: dict | None = None,  # used only for testing instead of real schedule
     test_count: int
     | None = None,  # used only for testing instead of real solarbank count
+    toFile: bool = False,  # used for testing with files
 ) -> bool | dict:
     """Set the home load parameters for a given site id and solarbank 1 device for actual or all slots in the existing schedule.
 
@@ -368,12 +415,14 @@ async def set_home_load(  # noqa: C901
     # set flag for required current parameter update
     pending_now_update = bool(set_slot is None and insert_slot is None)
     # obtain actual device schedule from internal dict or fetch via api
-    if test_schedule is not None:
+    if not (test_schedule is None and toFile):
         schedule = test_schedule
     elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
-        schedule = (await self.get_device_load(siteId=siteId, deviceSn=deviceSn)).get(
-            "home_load_data"
-        ) or {}
+        schedule = (
+            await self.get_device_load(
+                siteId=siteId, deviceSn=deviceSn, fromFile=toFile
+            )
+        ).get("home_load_data") or {}
     ranges = schedule.get("ranges") or []
     # get appliance load name from first existing slot to avoid mixture
     # NOTE: The solarbank may behave weird if a mixture is found or the name does not match with some internal settings
@@ -1144,7 +1193,7 @@ async def set_home_load(  # noqa: C901
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
     # return resulting schedule for test purposes without Api call
-    if test_count is not None or test_schedule is not None:
+    if not (test_count is None and test_schedule is None) and not toFile:
         await self.get_device_parm(
             siteId=siteId,
             testSchedule=schedule,
@@ -1157,6 +1206,7 @@ async def set_home_load(  # noqa: C901
         siteId=siteId,
         paramData=schedule,
         deviceSn=deviceSn,
+        toFile=toFile,
     )
 
 
@@ -1171,6 +1221,7 @@ async def set_sb2_home_load(  # noqa: C901
     insert_slot: Solarbank2Timeslot | None = None,
     test_schedule: dict
     | None = None,  # used for testing or to apply changes only to api cache
+    toFile: bool = False,  # for testing in file usage mode
 ) -> bool | dict:
     """Set or change the home load parameters for a given site id and solarbank 2 device for any slot in the existing schedule.
 
@@ -1256,7 +1307,7 @@ async def set_sb2_home_load(  # noqa: C901
     # set flag for required current parameter update
     pending_now_update = bool(set_slot is None and insert_slot is None)
     # obtain actual device schedule from internal dict or fetch via api
-    if test_schedule is not None:
+    if not (test_schedule is None or toFile):
         schedule = test_schedule
     elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
         schedule = (
@@ -1264,6 +1315,7 @@ async def set_sb2_home_load(  # noqa: C901
                 siteId=siteId,
                 paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
                 deviceSn=deviceSn,
+                fromFile=toFile,
             )
         ).get("param_data") or {}
 
@@ -1751,7 +1803,7 @@ async def set_sb2_home_load(  # noqa: C901
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
     # update Api dict and return resulting schedule for test purposes without Api call
-    if test_schedule is not None:
+    if not (test_schedule is None or toFile):
         await self.get_device_parm(
             siteId=siteId,
             paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
@@ -1765,7 +1817,7 @@ async def set_sb2_home_load(  # noqa: C901
                 price_type,
             )
             await self.set_site_price(
-                siteId=siteId, price_type=price_type, cache_only=True
+                siteId=siteId, price_type=price_type, cache_only=True, toFile=toFile
             )
         return schedule
     # Make the Api call with final schedule and return result, the set call will also update api dict
@@ -1774,6 +1826,7 @@ async def set_sb2_home_load(  # noqa: C901
         paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
         paramData=schedule,
         deviceSn=deviceSn,
+        toFile=toFile,
     )
     # Make also the price type change if required by usage mode change
     # The mobile App only activates use_time price automatically with use_time mode, but does not toggle back to fixed price automatically
@@ -1781,7 +1834,7 @@ async def set_sb2_home_load(  # noqa: C901
         self._logger.debug(
             "Toggling api %s price type to: %s", self.apisession.nickname, price_type
         )
-        await self.set_site_price(siteId=siteId, price_type=price_type)
+        await self.set_site_price(siteId=siteId, price_type=price_type, toFile=toFile)
     return resp
 
 
@@ -1795,6 +1848,7 @@ async def set_sb2_ac_charge(
     backup_switch: bool | None = None,
     test_schedule: dict
     | None = None,  # used for testing or to apply changes only to api cache
+    toFile: bool = False,  # used for testing with files
 ) -> bool | dict:
     """Set or change the AC charge parameters for a given site id and solarbank 2 AC device.
 
@@ -1834,7 +1888,7 @@ async def set_sb2_ac_charge(
         return False
 
     # obtain actual device schedule from internal dict or fetch via api
-    if test_schedule is not None:
+    if not (test_schedule is None or toFile):
         schedule = test_schedule
     elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
         schedule = (
@@ -1842,6 +1896,7 @@ async def set_sb2_ac_charge(
                 siteId=siteId,
                 paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
                 deviceSn=deviceSn,
+                fromFile=toFile,
             )
         ).get("param_data") or {}
 
@@ -1891,7 +1946,7 @@ async def set_sb2_ac_charge(
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
     # return resulting schedule for test purposes without Api call
-    if test_schedule is not None:
+    if not (test_schedule is None or toFile):
         await self.get_device_parm(
             siteId=siteId,
             paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
@@ -1905,6 +1960,7 @@ async def set_sb2_ac_charge(
         paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
         paramData=schedule,
         deviceSn=deviceSn,
+        toFile=toFile,
     )
 
 
@@ -1921,8 +1977,11 @@ async def set_sb2_use_time(  # noqa: C901
     tariff_price: float | str | None = None,
     currency: str | None = None,
     delete: bool = False,
+    merge_tariff_slots: bool = True,  # merge time slots with same tariff
+    clear_unused_tariff: bool = True,  # clear price of unsused tariff in season/daytype
     test_schedule: dict
     | None = None,  # used for testing or to apply changes only to api cache
+    toFile: bool = False,  # for testing with files
 ) -> bool | dict:
     r"""Set or change the AC use time parameters for a given site id and solarbank 2 AC device.
 
@@ -2086,6 +2145,12 @@ async def set_sb2_use_time(  # noqa: C901
     )
     currency = str(currency)[0:3] if currency else None
     delete = delete if isinstance(delete, bool) else False
+    merge_tariff_slots = (
+        merge_tariff_slots if isinstance(merge_tariff_slots, bool) else True
+    )
+    clear_unused_tariff = (
+        clear_unused_tariff if isinstance(clear_unused_tariff, bool) else True
+    )
 
     # fast return if no valid options provided
     if not (
@@ -2164,7 +2229,7 @@ async def set_sb2_use_time(  # noqa: C901
     )
 
     # obtain actual device schedule from internal dict or fetch via api
-    if test_schedule is not None:
+    if not (test_schedule is None or toFile):
         schedule = test_schedule
     elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
         schedule = (
@@ -2172,6 +2237,7 @@ async def set_sb2_use_time(  # noqa: C901
                 siteId=siteId,
                 paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
                 deviceSn=deviceSn,
+                fromFile=toFile,
             )
         ).get("param_data") or {}
 
@@ -2243,275 +2309,284 @@ async def set_sb2_use_time(  # noqa: C901
                     if len(new_ranges) > 0:
                         new_ranges[-1]["sea"]["end_month"] = end_month
                     continue
-                else:
-                    # use start month of matching season if not provided and adjust split season
-                    if delete_scope in ["daytype", "tariff", "slot"]:
-                        # always set start month to current season start for repetiive traversal without month changes
-                        start_month = sea_start
-                    elif not start_month:
-                        start_month = sea_start
-                        # overwrite end_month with season end to prevent split or expand when no range was given
-                        end_month = sea_end
-                    elif start_month and start_month > sea_start and end_month:
-                        # split season by copy
-                        split_season = copy.deepcopy(season)
-                        split_season["sea"]["end_month"] = start_month - 1
-                        new_ranges.append(split_season)
-                        split_season = {}
-                    # use end month of matching season if not provided and adjust split season or expanded season
-                    if not end_month:
-                        end_month = sea_end
-                    elif delete_scope in ["daytype", "tariff", "slot"] and start_month:
-                        # extend find_month to following seasons for lower level deletion scopes and valid month range
-                        find_month = sea_end + 1 if end_month > sea_end else find_month
-                    elif end_month > sea_end:
-                        delay_month = end_month + 1
-                    elif end_month < sea_end:
-                        # split season by copy
-                        split_season = copy.deepcopy(season)
-                        split_season["sea"]["start_month"] = end_month + 1
-                    # Adjust current season range if not low level deletion scope
-                    if delete_scope not in ["daytype", "tariff", "slot"]:
-                        season["sea"]["start_month"] = start_month
-                        season["sea"]["end_month"] = end_month
+                # use start month of matching season if not provided and adjust split season
+                if delete_scope in ["daytype", "tariff", "slot"]:
+                    # always set start month to current season start for repetiive traversal without month changes
+                    start_month = sea_start
+                elif not start_month:
+                    start_month = sea_start
+                    # overwrite end_month with season end to prevent split or expand when no range was given
+                    end_month = sea_end
+                elif start_month and start_month > sea_start and end_month:
+                    # split season by copy
+                    split_season = copy.deepcopy(season)
+                    split_season["sea"]["end_month"] = start_month - 1
+                    new_ranges.append(split_season)
+                    split_season = {}
+                # use end month of matching season if not provided and adjust split season or expanded season
+                if not end_month:
+                    end_month = sea_end
+                elif delete_scope in ["daytype", "tariff", "slot"] and start_month:
+                    # extend find_month to following seasons for lower level deletion scopes and valid month range
+                    find_month = sea_end + 1 if end_month > sea_end else find_month
+                elif end_month > sea_end:
+                    delay_month = end_month + 1
+                elif end_month < sea_end:
+                    # split season by copy
+                    split_season = copy.deepcopy(season)
+                    split_season["sea"]["start_month"] = end_month + 1
+                # Adjust current season range if not low level deletion scope
+                if delete_scope not in ["daytype", "tariff", "slot"]:
+                    season["sea"]["start_month"] = start_month
+                    season["sea"]["end_month"] = end_month
 
-                    # select dayslot for adjustments based on day types and actual same setting
-                    is_same = season.get("is_same")
-                    copy_day = None
-                    if delete_scope == "daytype":
-                        # delete the requested daytype and make them same by copying the other daytype slots and prices
-                        if is_same:
-                            # do not delete a daytype if they are same
-                            modify_days = []
-                        elif day_type == SolixDayTypes.WEEKDAY.value:
-                            modify_days = [SolixDayTypes.WEEKEND.value]
-                            copy_day = SolixDayTypes.WEEKDAY.value
-                            is_same = True
-                        elif day_type == SolixDayTypes.WEEKEND.value:
-                            modify_days = [SolixDayTypes.WEEKDAY.value]
-                            copy_day = SolixDayTypes.WEEKEND.value
-                            is_same = True
-                    elif day_type in [
-                        SolixDayTypes.WEEKDAY.value,
-                        SolixDayTypes.WEEKEND.value,
-                    ]:
-                        # modify only given daytype
-                        modify_days = [day_type]
-                        if is_same:
-                            is_same = False
-                    elif day_type == SolixDayTypes.BOTH.value:
-                        # modify both daytypes
-                        if is_same:
+                # select dayslot for adjustments based on day types and actual same setting
+                is_same = season.get("is_same")
+                copy_day = None
+                if delete_scope in ["daytype", "tariff", "slot"]:
+                    # delete the requested daytype and make them same by copying the other daytype slots and prices
+                    if is_same:
+                        if delete_scope in ["tariff", "slot"]:
+                            # process lower level deletion scope
                             modify_days = [SolixDayTypes.WEEKDAY.value]
                             copy_day = SolixDayTypes.WEEKEND.value
                         else:
-                            modify_days = [
-                                SolixDayTypes.WEEKDAY.value,
-                                SolixDayTypes.WEEKEND.value,
-                            ]
-                    # modify active daytype
-                    elif is_same:
+                            # do not delete a requested daytype if they are same
+                            modify_days = []
+                    elif day_type == SolixDayTypes.WEEKDAY.value:
+                        modify_days = [SolixDayTypes.WEEKEND.value]
+                        copy_day = SolixDayTypes.WEEKDAY.value
+                        is_same = True
+                    elif day_type == SolixDayTypes.WEEKEND.value:
+                        modify_days = [SolixDayTypes.WEEKDAY.value]
+                        copy_day = SolixDayTypes.WEEKEND.value
+                        is_same = True
+                elif day_type in [
+                    SolixDayTypes.WEEKDAY.value,
+                    SolixDayTypes.WEEKEND.value,
+                ]:
+                    # modify only given daytype
+                    modify_days = [day_type]
+                    if is_same:
+                        is_same = False
+                elif day_type == SolixDayTypes.BOTH.value:
+                    # modify both daytypes
+                    if is_same:
                         modify_days = [SolixDayTypes.WEEKDAY.value]
                         copy_day = SolixDayTypes.WEEKEND.value
                     else:
-                        modify_days = [def_day_type]
-                    for day in modify_days:
-                        # weeday or weekend
-                        slots = []
-                        find_tariff = set()
-                        delay_hour = None
-                        day_start_hour = start_hour
-                        day_end_hour = end_hour
-                        day_tariff_type = tariff_type
-                        day_tariff_change = tariff_type and not (
+                        modify_days = [
+                            SolixDayTypes.WEEKDAY.value,
+                            SolixDayTypes.WEEKEND.value,
+                        ]
+                # modify active daytype
+                elif is_same:
+                    modify_days = [SolixDayTypes.WEEKDAY.value]
+                    copy_day = SolixDayTypes.WEEKEND.value
+                else:
+                    modify_days = [def_day_type]
+                for day in modify_days:
+                    # weeday or weekend
+                    slots = []
+                    find_tariff = set()
+                    delay_hour = None
+                    day_start_hour = start_hour
+                    day_end_hour = end_hour
+                    day_tariff_type = tariff_type
+                    day_tariff_change = (
+                        tariff_type
+                        and not (
                             tariff_price and start_hour is None and end_hour is None
                         )
-                        for slot in season.get(day) or []:
-                            start = slot.get("start_time")
-                            end = slot.get("end_time")
-                            tariff = slot.get("type")
-                            if delete_scope == "tariff" and tariff == tariff_type:
-                                # delete all slots with the given tariff and ensure to adjust other slot times to avoid gaps
-                                delay_hour = max(delay_hour or end, end)
+                        and delete_scope not in ["daytype", "tariff", "slot"]
+                    )
+                    for slot in season.get(day) or []:
+                        start = slot.get("start_time")
+                        end = slot.get("end_time")
+                        tariff = slot.get("type")
+                        if delete_scope == "tariff" and tariff == tariff_type:
+                            # delete all slots with the given tariff and ensure to adjust other slot times to avoid gaps
+                            delay_hour = max(delay_hour or end, end)
+                            if len(slots) > 0:
+                                slots[-1]["end_time"] = delay_hour
+                            continue
+                        if delay_hour:
+                            if len(slots) == 0 and delay_hour < 24:
+                                # no previous slot after a deletion that set delay hour, expand slot to beginning and skip remaining changes
+                                delay_hour = None
+                                slot["start_time"] = 0
+                                find_tariff.add(tariff)
+                                slots.append(slot)
+                                continue
+                            if end > delay_hour:
+                                slot["start_time"] = (
+                                    0 if len(slots) == 0 else delay_hour
+                                )
+                                delay_hour = None
+                            else:
+                                # skip slot if overwritten
+                                continue
+                        if start <= find_hour < end:
+                            if delete_scope == "slot":
+                                # use start hour of found slot, deletion scope can just extend actual slot if range was defined
+                                day_start_hour = start
+                                day_end_hour = max(
+                                    day_end_hour
+                                    if not (
+                                        day_start_hour is None or day_end_hour is None
+                                    )
+                                    else end,
+                                    end,
+                                )
+                                delay_hour = day_end_hour
+                                # adjust previous slot to fill gap of deleted slot(s)
                                 if len(slots) > 0:
                                     slots[-1]["end_time"] = delay_hour
                                 continue
-                            if delay_hour:
-                                if len(slots) == 0 and delay_hour < 24:
-                                    # no previous slot after a deletion that set delay hour, expand slot to beginning and skip remaining changes
-                                    delay_hour = None
-                                    slot["start_time"] = 0
-                                    find_tariff.add(tariff)
-                                    slots.append(slot)
-                                    continue
-                                if end > delay_hour:
-                                    slot["start_time"] = (
-                                        0 if len(slots) == 0 else delay_hour
-                                    )
-                                    delay_hour = None
-                                else:
-                                    # skip slot if overwritten
-                                    continue
-                            if start <= find_hour < end:
-                                if delete_scope == "slot":
-                                    # use start hour of found slot, deletion scope can just extend actual slot if range was defined
-                                    day_start_hour = start
-                                    day_end_hour = max(
-                                        day_end_hour
-                                        if not (
-                                            day_start_hour is None
-                                            or day_end_hour is None
-                                        )
-                                        else end,
-                                        end,
-                                    )
-                                    delay_hour = day_end_hour
-                                    # adjust previous slot to fill gap of deleted slot(s)
-                                    if len(slots) > 0:
-                                        slots[-1]["end_time"] = delay_hour
-                                    continue
-                                else:
-                                    # use start hour of matching slot if not provided and adjust split slot
-                                    if day_start_hour is None:
-                                        day_start_hour = start
-                                        # overwrite end_hour with slot end to prevent split or expand when no range was given
-                                        day_end_hour = end
-                                    elif (
-                                        day_start_hour > start
-                                        and day_end_hour is not None
-                                    ):
-                                        # split slot by copy or merge with previous
-                                        if (
-                                            len(slots) > 0
-                                            and slots[-1]["type"] == tariff
-                                        ):
-                                            # merge with previous slot if same tariff type
-                                            slots[-1]["end_time"] = day_start_hour
-                                        else:
-                                            # Copy and add slot
-                                            split_slot = copy.deepcopy(slot)
-                                            split_slot["end_time"] = day_start_hour
-                                            find_tariff.add(tariff)
-                                            slots.append(split_slot)
-                                            split_slot = {}
-                                    # use end hour of matching slot if not provided and adjust split slot or expanded slot
-                                    if day_end_hour is None:
-                                        day_end_hour = end
-                                    elif day_end_hour > end:
-                                        delay_hour = day_end_hour
-                                    elif day_end_hour < end:
-                                        # split slot by copy if tariff is different to new tariff
-                                        if day_tariff_change and tariff_type != tariff:
-                                            # split slot by copy
-                                            split_slot = copy.deepcopy(slot)
-                                            split_slot["start_time"] = day_end_hour
-                                        else:
-                                            day_end_hour = end
-                                    # Adjust current slot range
-                                    slot["start_time"] = day_start_hour
-                                    slot["end_time"] = day_end_hour
-                                    # make slot tariff adjustments if no price or range given
-                                    # Price without range is considered as change for the given tariff type only, but not for changing tariff for slots
-                                    if day_tariff_change:
-                                        tariff = tariff_type
-                                        slot["type"] = tariff
-                                    elif not day_tariff_type:
-                                        # set dayttype tariff of modified slot for price adjustment if no tariff defined
-                                        day_tariff_type = slot.get("type")
-                            # Merge with previous slots if they have same tariff
-                            if len(slots) > 0 and slots[-1]["type"] == tariff:
-                                # merge with previous slot if same tariff type
-                                slots[-1]["end_time"] = slot.get("end_time")
-                            else:
-                                slots.append(slot)
-                                find_tariff.add(tariff)
-                            if split_slot:
-                                # This split slot should have different tariff and must be appended
-                                slots.append(split_slot)
-                                find_tariff.add(split_slot.get("type"))
-                                split_slot = {}
-                        # add modified slot(s) into season
-                        season[day] = slots
-
-                        if slots:
-                            prices = []
-                            for price in season.get(day + "_price") or []:
-                                tariff = price.get("type")
+                            # use start hour of matching slot if not provided and adjust split slot
+                            if day_start_hour is None:
+                                day_start_hour = start
+                                # overwrite end_hour with slot end to prevent split or expand when no range was given
+                                day_end_hour = end
+                            elif day_start_hour > start and day_end_hour is not None:
+                                # split slot by copy or merge with previous
                                 if (
-                                    delete_scope == "tariff"
-                                    and tariff == day_tariff_type
-                                ) or tariff not in find_tariff:
-                                    # delete unused tariff
-                                    if tariff in find_tariff:
-                                        find_tariff.remove(tariff)
-                                    continue
-                                if tariff_price and tariff == day_tariff_type:
-                                    # update price of tariff if specified
-                                    price["price"] = tariff_price
-                                if tariff in find_tariff:
-                                    # remove found tariff to prevent it will be added
-                                    find_tariff.remove(tariff)
-                                prices.append(price)
-                            # Ensure to append remaining tariffs to price list
-                            prices.extend(
-                                {
-                                    "price": tariff_price or def_tariff_price,
-                                    "type": tariff,
-                                }
-                                for tariff in find_tariff
-                            )
-                            season[day + "_price"] = prices
-
-                            # adjust other daytype settings as modified
-                            if copy_day:
-                                # Copy days and tariffs
-                                season[copy_day] = season.get(day)
-                                season[copy_day + "_price"] = season.get(day + "_price")
-                            elif (
-                                not is_same
-                                and len(modify_days) > 0
-                                and day == modify_days[-1]
-                            ):
-                                # compare and activate is same if they are same after last day modification
-                                other = (
-                                    SolixDayTypes.WEEKDAY.value
-                                    if day == SolixDayTypes.WEEKEND.value
-                                    else SolixDayTypes.WEEKEND.value
-                                )
-                                if (
-                                    season[day] == season[other]
-                                    and season[day + "_price"]
-                                    == season[other + "_price"]
+                                    len(slots) > 0
+                                    and slots[-1]["type"] == tariff
+                                    and merge_tariff_slots
                                 ):
-                                    is_same = True
-                            season["is_same"] = is_same
+                                    # merge with previous slot if same tariff type
+                                    slots[-1]["end_time"] = day_start_hour
+                                else:
+                                    # Copy and add slot
+                                    split_slot = copy.deepcopy(slot)
+                                    split_slot["end_time"] = day_start_hour
+                                    find_tariff.add(tariff)
+                                    slots.append(split_slot)
+                                    split_slot = {}
+                            # use end hour of matching slot if not provided and adjust split slot or expanded slot
+                            if day_end_hour is None:
+                                day_end_hour = end
+                            elif day_end_hour > end:
+                                delay_hour = day_end_hour
+                            elif day_end_hour < end:
+                                # split slot by copy if tariff is different to new tariff
+                                if (
+                                    day_tariff_change and tariff_type != tariff
+                                ) or not merge_tariff_slots:
+                                    # split slot by copy
+                                    split_slot = copy.deepcopy(slot)
+                                    split_slot["start_time"] = day_end_hour
+                                else:
+                                    day_end_hour = end
+                            # Adjust current slot range
+                            slot["start_time"] = day_start_hour
+                            slot["end_time"] = day_end_hour
+                            # make slot tariff adjustments if no price or range given
+                            # Price without range is considered as change for the given tariff type only, but not for changing tariff for slots
+                            if day_tariff_change:
+                                tariff = tariff_type
+                                slot["type"] = tariff
+                            elif not day_tariff_type:
+                                # set dayttype tariff of modified slot for price adjustment if no tariff defined
+                                day_tariff_type = slot.get("type")
+                        # Merge with previous slots if they have same tariff and merge allowed
+                        if (
+                            len(slots) > 0
+                            and slots[-1]["type"] == tariff
+                            and merge_tariff_slots
+                        ):
+                            # merge with previous slot if same tariff type
+                            slots[-1]["end_time"] = slot.get("end_time")
+                        else:
+                            slots.append(slot)
+                            find_tariff.add(tariff)
+                        if split_slot:
+                            # This split slot should have different tariff or merge is not allowed and must be appended
+                            slots.append(split_slot)
+                            find_tariff.add(split_slot.get("type"))
+                            split_slot = {}
+                    # add modified slot(s) into season
+                    season[day] = slots
 
-                        elif not is_same:
-                            # No slots left for daytype but not same, copy other daytype and make same
+                    if slots:
+                        prices = []
+                        for price in season.get(day + "_price") or []:
+                            tariff = price.get("type")
+                            if clear_unused_tariff and (
+                                (delete_scope == "tariff" and tariff == day_tariff_type)
+                                or tariff not in find_tariff
+                            ):
+                                # delete unused tariff price
+                                if tariff in find_tariff:
+                                    find_tariff.remove(tariff)
+                                continue
+                            if tariff_price and tariff == day_tariff_type:
+                                # update price of tariff if specified
+                                price["price"] = tariff_price
+                            if tariff in find_tariff:
+                                # remove found tariff to prevent it will be added
+                                find_tariff.remove(tariff)
+                            prices.append(price)
+                        # Ensure to append remaining tariffs to price list
+                        prices.extend(
+                            {
+                                "price": tariff_price or def_tariff_price,
+                                "type": tariff,
+                            }
+                            for tariff in find_tariff
+                        )
+                        season[day + "_price"] = prices
+
+                        # adjust other daytype settings as modified
+                        if copy_day:
+                            # Copy days and tariffs
+                            season[copy_day] = season.get(day)
+                            season[copy_day + "_price"] = season.get(day + "_price")
+                        elif (
+                            not is_same
+                            and len(modify_days) > 0
+                            and day == modify_days[-1]
+                        ):
+                            # compare and activate is same if they are same after last day modification
                             other = (
                                 SolixDayTypes.WEEKDAY.value
                                 if day == SolixDayTypes.WEEKEND.value
                                 else SolixDayTypes.WEEKEND.value
                             )
-                            is_same = True
-                            season["is_same"] = is_same
-                            season[day] = season.get(other)
-                            season[day + "_price"] = season.get(other + "_price")
-                        elif copy_day or is_same:
-                            # remove season since no slot left and daytypes are same
-                            season = []
                             if (
-                                delete_scope in ["daytype", "tariff", "slot"]
-                                and start_month
-                                and end_month
+                                season[day] == season[other]
+                                and season[day + "_price"] == season[other + "_price"]
                             ):
-                                delay_month = sea_end + 1
-                            else:
-                                end_month = max(end_month or sea_end, sea_end)
-                                delay_month = end_month + 1
-                            # adjust previous season to fill gap of deleted season(s)
-                            if len(new_ranges) > 0:
-                                new_ranges[-1]["sea"]["end_month"] = delay_month - 1
+                                is_same = True
+                        season["is_same"] = is_same
+
+                    elif not is_same:
+                        # No slots left for daytype but not same, copy other daytype and make same
+                        other = (
+                            SolixDayTypes.WEEKDAY.value
+                            if day == SolixDayTypes.WEEKEND.value
+                            else SolixDayTypes.WEEKEND.value
+                        )
+                        is_same = True
+                        season["is_same"] = is_same
+                        season[day] = season.get(other)
+                        season[day + "_price"] = season.get(other + "_price")
+                    elif copy_day or is_same:
+                        # remove season since no slot left and daytypes are same
+                        season = []
+                        if (
+                            delete_scope in ["daytype", "tariff", "slot"]
+                            and start_month
+                            and end_month
+                        ):
+                            delay_month = sea_end + 1
+                        else:
+                            end_month = max(end_month or sea_end, sea_end)
+                            delay_month = end_month + 1
+                        # adjust previous season to fill gap of deleted season(s)
+                        if len(new_ranges) > 0:
+                            new_ranges[-1]["sea"]["end_month"] = delay_month - 1
 
             # save season(s) to new ranges
             if season:
@@ -2525,7 +2600,7 @@ async def set_sb2_use_time(  # noqa: C901
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
     # return resulting schedule for test purposes without Api call
-    if test_schedule is not None:
+    if not (test_schedule is None or toFile):
         await self.get_device_parm(
             siteId=siteId,
             paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
@@ -2539,4 +2614,5 @@ async def set_sb2_use_time(  # noqa: C901
         paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
         paramData=schedule,
         deviceSn=deviceSn,
+        toFile=toFile,
     )

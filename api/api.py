@@ -144,7 +144,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         (self.account.get("products") or {}).get(pn)
                                         or {}
                                     ).get("name")
-                                    or getattr(SolixDeviceNames,pn,"")
+                                    or getattr(SolixDeviceNames, pn, "")
                                     or str(value)
                                 }
                             )
@@ -1027,10 +1027,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         data = {"site_id": siteId}
         if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
-            )
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_site_price']}_modified_{siteId}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
+                )
         else:
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_site_price"], json=data
@@ -1050,7 +1057,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         unit: str | None = None,
         co2: float | None = None,
         price_type: str | None = None,  # "fixed" | "use_time"
-        cache_only: bool = False,
+        toFile: bool = False,
     ) -> bool | dict:
         """Set the power price, the unit, CO2 and price type for a site.
 
@@ -1060,11 +1067,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0, "price_type": "fixed"}
         """
         # First get the old settings from api dict or Api call to update only requested parameter
-        if (
-            not (details := (self.sites.get(siteId) or {}).get("site_details") or {})
-            and not cache_only
-        ):
-            details = await self.get_site_price(siteId=siteId)
+        if not (details := (self.sites.get(siteId) or {}).get("site_details") or {}):
+            details = await self.get_site_price(siteId=siteId, fromFile=toFile)
         if not details or not isinstance(details, dict):
             return False
         # Validate parameters
@@ -1089,21 +1093,30 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if "price_type" in details or price_type:
             data["price_type"] = price_type if price_type else details.get("price_type")
 
-        if cache_only:
-            ((self.sites.get(siteId) or {}).get("site_details") or {}).update(data)
-            return data
-
         # Make the Api call and check for return code
         data["site_id"] = siteId
-        code = (
-            await self.apisession.request(
-                "post", API_ENDPOINTS["update_site_price"], json=data
-            )
-        ).get("code")
-        if not isinstance(code, int) or int(code) != 0:
-            return False
+        if toFile:
+            # Write updated response to file for testing purposes
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_site_price']}_modified_{siteId}.json",
+                data={
+                    "code": 0,
+                    "msg": "success!",
+                    "data": data | {"current_mode": details.get("current_mode")},
+                },
+            ):
+                return False
+        else:
+            code = (
+                await self.apisession.request(
+                    "post", API_ENDPOINTS["update_site_price"], json=data
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return False
         # update the data in api dict and return active data
-        return await self.get_site_price(siteId=siteId)
+        return await self.get_site_price(siteId=siteId, fromFile=toFile)
 
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False
