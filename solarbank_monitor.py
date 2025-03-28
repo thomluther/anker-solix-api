@@ -204,6 +204,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         else:
                             CONSOLE.info("Running energy details refresh...")
                             await myapi.update_device_energy(fromFile=use_file)
+                            startup = False
                     next_refr = datetime.now().astimezone() + timedelta(seconds=REFRESH)
                     next_dev_refr = DETAILSREFRESH
                 if use_file:
@@ -589,6 +590,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             next_dev_refr += 1
                             break
                         if resp.upper() in ["A", "ALL"]:
+                            next_dev_refr = 0
                             break
                         if resp.upper() in ["O", "OTHER"] and exampleslist:
                             CONSOLE.info("Select the input source for the monitor:")

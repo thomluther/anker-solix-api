@@ -480,10 +480,13 @@ class SolarbankUsageMode(IntEnum):
 class SolixTariffTypes(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
 
-    PEEK = 1
-    MID_PEEK = 2
-    OFF_PEEK = 3
-    VALLEY = 4
+    NONE = 0  # Pseudo type to reflect no tariff defined
+    PEEK = 1  # maximize PV and Battery usage, no AC charge
+    MID_PEEK = 2  # maximize PV and Battery usage, no AC charge
+    OFF_PEEK = 3  # maximize PV and Battery usage, no AC charge, discharge only above 80% SOC, Reserve charge utilized only for PEEK & MID PEEK times
+    VALLEY = (
+        4  # AC charge allowed, charge power depends on SOC and available VALLEY time
+    )
 
 
 class SolixPriceTypes(StrEnum):
@@ -492,12 +495,13 @@ class SolixPriceTypes(StrEnum):
     FIXED = "fixed"
     USE_TIME = "use_time"
 
+
 class SolixDayTypes(StrEnum):
     """Enumeration for Anker Solix Solarbank 2 AC Use Time Day Types."""
 
     WEEKDAY = "weekday"
     WEEKEND = "weekend"
-    BOTH = "both"
+    ALL = "all"
 
 
 @dataclass(frozen=True)
@@ -538,6 +542,7 @@ class ApiCategories:
     smartplug_energy: str = "smartplug_energy"
     powerpanel_energy: str = "powerpanel_energy"
     hes_energy: str = "hes_energy"
+
 
 @dataclass(frozen=True)
 class SolixDeviceNames:
@@ -748,8 +753,6 @@ class SolixDefaults:
     # Discharge Priority preset for Solarbank schedule timeslot settings
     DISCHARGE_PRIORITY_DEF: int = SolarbankDischargePriorityMode.off.value
     # AC tariff settings for Use Time plan
-    TARIFF_MIN: int = SolixTariffTypes.PEEK.value
-    TARIFF_MAX: int = SolixTariffTypes.VALLEY.value
     TARIFF_DEF: int = SolixTariffTypes.OFF_PEEK.value
     TARIFF_PRICE_DEF: str = "0.00"
     TARIFF_WE_SAME: bool = True
@@ -786,7 +789,7 @@ class SolarbankStatus(Enum):
     charge_priority = "37"  # pseudo state, the solarbank does not distinguish this, when no output power exists while preset is ignored
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night, probably hourly? resync with the cloud
     cold_wakeup = "116"  # At cold temperatures, 116 was observed instead of 4. Not sure why this state is different at low temps?
-    fully_charged = "5"   # Seen for SB2 when SOC is 100%
+    fully_charged = "5"  # Seen for SB2 when SOC is 100%
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
     standby = "7"
     unknown = "unknown"

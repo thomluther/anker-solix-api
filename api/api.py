@@ -31,6 +31,7 @@ from .apitypes import (
     SolixDeviceStatus,
     SolixDeviceType,
     SolixPriceTypes,
+    SolixTariffTypes,
 )
 from .hesapi import AnkerSolixHesApi
 from .poller import (
@@ -425,7 +426,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "preset_manual_backup_start": 0,
                                         "preset_manual_backup_end": 0,
                                         "preset_backup_option": False,
-                                        "preset_tariff": SolixDefaults.TARIFF_DEF,
+                                        "preset_tariff": SolixTariffTypes.NONE.value,
                                         "preset_tariff_price": SolixDefaults.TARIFF_PRICE_DEF,
                                         "preset_tariff_currency": SolixDefaults.CURRENCY_DEF,
                                     }
@@ -574,7 +575,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     device.update(
                                         {
                                             "preset_tariff": tariff
-                                            or SolixDefaults.TARIFF_DEF,
+                                            or SolixTariffTypes.NONE.value,
                                             "preset_tariff_price": price
                                             or SolixDefaults.TARIFF_PRICE_DEF,
                                             "preset_tariff_currency": season.get("unit")

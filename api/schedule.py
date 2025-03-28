@@ -3,7 +3,7 @@
 import contextlib
 import copy
 from dataclasses import fields
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 import json
 from pathlib import Path
 
@@ -97,7 +97,7 @@ async def get_device_load(
 
 async def set_device_load(
     self, siteId: str, deviceSn: str, loadData: dict, toFile: bool = False
-) -> bool:
+) -> bool | dict:
     """Set device home load. This supports only SB1 schedule structure, but does not apply them. The set_device_parm method must be used instead.
 
     Example input for system with single solarbank:
@@ -145,9 +145,8 @@ async def set_device_load(
         ).get("code")
         if not isinstance(code, int) or int(code) != 0:
             return False
-    # update the data in api dict
-    await self.get_device_load(siteId=siteId, deviceSn=deviceSn, fromFile=toFile)
-    return True
+    # update and return the data in api dict
+    return await self.get_device_load(siteId=siteId, deviceSn=deviceSn, fromFile=toFile)
 
 
 async def get_device_parm(
@@ -252,7 +251,7 @@ async def set_device_parm(
     command: int = 17,
     deviceSn: str | None = None,
     toFile: bool = False,
-) -> bool:
+) -> bool | dict:
     r"""Set device parameters (e.g. solarbank schedule).
 
     command: Must be 17 for SB1 and SB2 solarbank schedules. Maybe for the new AC models this has to be different to apply custom_rate_plan changes?
@@ -299,14 +298,16 @@ async def set_device_parm(
         if not isinstance(code, int) or int(code) != 0:
             return False
     # update the data in api dict, distinguish which schedule to query for updates
+    respdata: dict = {}
     if (self.devices.get(deviceSn) or {}).get("device_pn") in ["A17C0"]:
         # Active SB1 schedule data should be queried like on details refresh
-        data = await self.get_device_load(
+        respdata = await self.get_device_load(
             siteId=siteId, deviceSn=deviceSn, fromFile=toFile
         )
+        data = respdata
     else:
         # Other solarbank models
-        await self.get_device_parm(
+        respdata = await self.get_device_parm(
             siteId=siteId, paramType=paramType, deviceSn=deviceSn, fromFile=toFile
         )
         data = {}
@@ -333,7 +334,7 @@ async def set_device_parm(
                         "parallel_home_load": data.get("parallel_home_load") or "",
                     }
                 )
-    return True
+    return respdata
 
 
 async def set_home_load(  # noqa: C901
@@ -1817,7 +1818,9 @@ async def set_sb2_home_load(  # noqa: C901
                 price_type,
             )
             await self.set_site_price(
-                siteId=siteId, price_type=price_type, cache_only=True, toFile=toFile
+                siteId=siteId,
+                price_type=price_type,
+                toFile=toFile,
             )
         return schedule
     # Make the Api call with final schedule and return result, the set call will also update api dict
@@ -1844,7 +1847,7 @@ async def set_sb2_ac_charge(
     deviceSn: str,
     backup_start: datetime | None = None,
     backup_end: datetime | None = None,
-    backup_duration: timedelta = timedelta(hours=3),
+    backup_duration: timedelta | None = None,
     backup_switch: bool | None = None,
     test_schedule: dict
     | None = None,  # used for testing or to apply changes only to api cache
@@ -1870,17 +1873,19 @@ async def set_sb2_ac_charge(
             "switch": true
         "default_home_load": 200,"max_load": 800,"min_load": 0,"step": 10}
     """
-    # fast quit if nothing to change
+    # validate parameters
+    def_duration = timedelta(hours=3)
     backup_start = (
         backup_start.astimezone() if isinstance(backup_start, datetime) else None
     )
-    backup_end = backup_end.astimezone() if isinstance(backup_end, datetime) else None
     backup_duration = (
-        backup_duration
+        max(backup_duration, timedelta(minutes=5))
         if isinstance(backup_duration, timedelta)
-        else timedelta(hours=1)
+        else None
     )
+    backup_end = backup_end.astimezone() if isinstance(backup_end, datetime) else None
     backup_switch = backup_switch if isinstance(backup_switch, bool) else None
+    # fast quit if nothing to change
     if backup_start is None and backup_end is None and backup_switch is None:
         self._logger.error(
             "Api %s no valid AC charge options provided", self.apisession.nickname
@@ -1932,8 +1937,8 @@ async def set_sb2_ac_charge(
         # TODO(AC): Modify if more than one range supported for device
         backup_end = max(backup_start or backup_end, backup_end or backup_start)
         backup_start = min(backup_start or backup_end, backup_end or backup_start)
-        if backup_start == backup_end:
-            backup_end = backup_start + backup_duration
+        if backup_start == backup_end or backup_duration:
+            backup_end = backup_start + (backup_duration or def_duration)
         new_rate_plan["ranges"] = [
             {
                 "start_time": int(backup_start.timestamp()),
@@ -1970,13 +1975,13 @@ async def set_sb2_use_time(  # noqa: C901
     deviceSn: str,
     start_month: int | str | None = None,  # 1-12
     end_month: int | str | None = None,  # 1-12
-    start_hour: int | None = None,  # 0-23
-    end_hour: int | None = None,  # 1-24
+    start_hour: int | datetime | time | None = None,  # 0-23
+    end_hour: int | datetime | time | None = None,  # 1-24
     day_type: str | None = None,  # Anker Solix use time day types
     tariff_type: int | str | None = None,  # Any SolixTariffTypes
     tariff_price: float | str | None = None,
     currency: str | None = None,
-    delete: bool = False,
+    delete: bool | None = False,
     merge_tariff_slots: bool = True,  # merge time slots with same tariff
     clear_unused_tariff: bool = True,  # clear price of unsused tariff in season/daytype
     test_schedule: dict
@@ -2030,10 +2035,10 @@ async def set_sb2_use_time(  # noqa: C901
         - If end month matches existing season end, use it without change
         - If end month splits existing season, copy season and increase start month for the remaining seasion
         - If end month exceeds existing season, increase start month of next season with start month < end and end month > end
-    - Optional selection for days weekday, weekend, both
+    - Optional selection for days weekday, weekend, all
         - If None, use current day and modify active weekday and/or weekend. If same active, modify weekday and copy to weekend including tariffs
         - If weekday or weekend and same active, modify selected and disable the same setting
-        - If both and same active, modify weekday and copy to weekend, otherwise modify both independently
+        - If all and same active, modify weekday and copy to weekend, otherwise modify all independently
         - How to activate the same switch? Delete the unwanted daytype, which will copy the other and enable the same switch
     - => If no day structure identified, define default 0-24 hour, use default tariff low peek and fixed site price (0 if not defined)
     - Optional start hour
@@ -2114,14 +2119,25 @@ async def set_sb2_use_time(  # noqa: C901
     if start_month and end_month:
         end_month = end_month if end_month >= start_month else None
     # get valid integer for hour or set None
+    if isinstance(start_hour, datetime):
+        start_hour = start_hour.time()
     start_hour = (
         max(0, min(23, int(start_hour)))
         if (str(start_hour).isdigit() or isinstance(start_hour, int | float))
+        else start_hour.hour
+        if isinstance(start_hour, time)
         else None
     )
+    if isinstance(end_hour, datetime):
+        end_hour = end_hour.time()
     end_hour = (
         max(1, min(24, int(end_hour)))
         if (str(end_hour).isdigit() or isinstance(end_hour, int | float))
+        else end_hour.hour
+        if isinstance(end_hour, time)
+        and end_hour < datetime.strptime("23:59", "%H:%M").time()
+        else 24
+        if isinstance(end_hour, time)
         else None
     )
     # ensure end hour is larger than start hour for considering valid range
@@ -2132,10 +2148,15 @@ async def set_sb2_use_time(  # noqa: C901
         if str(day_type).lower() in {item.value for item in SolixDayTypes}
         else None
     )
+    # ensure NONE tariff type is ignored for any modifications
     tariff_type = (
-        int(tariff_type)
+        int(getattr(SolixTariffTypes, str(tariff_type).upper()))
+        if hasattr(SolixTariffTypes, str(tariff_type).upper())
+        and str(tariff_type).upper() != SolixTariffTypes.NONE.name
+        else int(tariff_type)
         if (str(tariff_type).isdigit() or isinstance(tariff_type, int | float))
-        and int(tariff_type) in {item.value for item in SolixTariffTypes}
+        and int(tariff_type) in iter(SolixTariffTypes)
+        and int(tariff_type) != SolixTariffTypes.NONE.value
         else None
     )
     tariff_price = (
@@ -2261,7 +2282,7 @@ async def set_sb2_use_time(  # noqa: C901
                     {"price": def_tariff_price, "type": def_tariff_type},
                 ],
                 "unit": def_currency,
-                "is_same": True,
+                "is_same": SolixDefaults.TARIFF_WE_SAME,
             },
         ]
 
@@ -2369,8 +2390,8 @@ async def set_sb2_use_time(  # noqa: C901
                     modify_days = [day_type]
                     if is_same:
                         is_same = False
-                elif day_type == SolixDayTypes.BOTH.value:
-                    # modify both daytypes
+                elif day_type == SolixDayTypes.ALL.value:
+                    # modify all daytypes
                     if is_same:
                         modify_days = [SolixDayTypes.WEEKDAY.value]
                         copy_day = SolixDayTypes.WEEKEND.value
@@ -2393,11 +2414,13 @@ async def set_sb2_use_time(  # noqa: C901
                     day_start_hour = start_hour
                     day_end_hour = end_hour
                     day_tariff_type = tariff_type
+                    # flag for allowing tarif change in slot or not
+                    # Allow change in slot only if only one slot or if either start or end hour is given
                     day_tariff_change = (
                         tariff_type
-                        and not (
+                        and (not (
                             tariff_price and start_hour is None and end_hour is None
-                        )
+                        ) or len(season.get(day) or []) == 1)
                         and delete_scope not in ["daytype", "tariff", "slot"]
                     )
                     for slot in season.get(day) or []:
