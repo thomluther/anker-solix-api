@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 
 from aiohttp import ClientSession
-import api.api  # pylint: disable=no-name-in-module
+import api.api as api
 from api.apitypes import SolixParmType  # pylint: disable=no-name-in-module
 import common
 
