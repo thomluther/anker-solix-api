@@ -34,7 +34,7 @@ CONSOLE: logging.Logger = common.CONSOLE
 REFRESH = 0  # default No refresh interval
 DETAILSREFRESH = 10  # Multiplier for device details refresh
 INTERACTIVE = True
-SHOWAPICALLS = False
+SHOWAPICALLS = True
 
 
 def clearscreen():
@@ -609,6 +609,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     break
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
+                            myapi.clearCaches()
+                            next_dev_refr = 0
                             break
                         if resp.upper() in ["N", "NEXT"] and exampleslist:
                             selection = (
@@ -616,6 +618,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
+                            myapi.clearCaches()
+                            next_dev_refr = 0
                             break
                         if resp.upper() in ["P", "PREVIOUS"] and exampleslist:
                             selection = (
@@ -623,6 +627,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
                             testfolder = exampleslist[selection - 1]
                             myapi.testDir(testfolder)
+                            myapi.clearCaches()
+                            next_dev_refr = 0
                             break
                         if resp.upper() in ["Q", "QUIT"]:
                             return True
