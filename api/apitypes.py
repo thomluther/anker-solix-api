@@ -541,7 +541,9 @@ class ApiCategories:
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
     powerpanel_energy: str = "powerpanel_energy"
+    powerpanel_avg_power: str = "powerpanel_avg_power"
     hes_energy: str = "hes_energy"
+    hes_avg_power: str = "hes_avg_power"
 
 
 @dataclass(frozen=True)

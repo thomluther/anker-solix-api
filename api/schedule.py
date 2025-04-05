@@ -416,7 +416,9 @@ async def set_home_load(  # noqa: C901
     # set flag for required current parameter update
     pending_now_update = bool(set_slot is None and insert_slot is None)
     # obtain actual device schedule from internal dict or fetch via api
-    if not (test_schedule is None and toFile):
+    if not isinstance(test_schedule, dict):
+        test_schedule = None
+    if test_schedule:
         schedule = test_schedule
     elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
         schedule = (
@@ -1194,7 +1196,8 @@ async def set_home_load(  # noqa: C901
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
     # return resulting schedule for test purposes without Api call
-    if not (test_count is None and test_schedule is None) and not toFile:
+    if (test_count or test_schedule):
+        # ensure schedule is updated also in cache for dependent devices
         await self.get_device_parm(
             siteId=siteId,
             testSchedule=schedule,
@@ -1308,7 +1311,9 @@ async def set_sb2_home_load(  # noqa: C901
     # set flag for required current parameter update
     pending_now_update = bool(set_slot is None and insert_slot is None)
     # obtain actual device schedule from internal dict or fetch via api
-    if not (test_schedule is None or toFile):
+    if not isinstance(test_schedule, dict):
+        test_schedule = None
+    if test_schedule:
         schedule = test_schedule
     elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
         schedule = (
@@ -1804,24 +1809,14 @@ async def set_sb2_home_load(  # noqa: C901
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
     # update Api dict and return resulting schedule for test purposes without Api call
-    if not (test_schedule is None or toFile):
+    if test_schedule:
+        # ensure schedule is updated also in cache for dependent devices
         await self.get_device_parm(
             siteId=siteId,
             paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
             testSchedule=schedule,
             deviceSn=deviceSn,
         )
-        if price_type == SolixPriceTypes.USE_TIME:
-            self._logger.debug(
-                "Toggling api %s price type to: %s",
-                self.apisession.nickname,
-                price_type,
-            )
-            await self.set_site_price(
-                siteId=siteId,
-                price_type=price_type,
-                toFile=toFile,
-            )
         return schedule
     # Make the Api call with final schedule and return result, the set call will also update api dict
     resp = await self.set_device_parm(
@@ -1893,7 +1888,9 @@ async def set_sb2_ac_charge(
         return False
 
     # obtain actual device schedule from internal dict or fetch via api
-    if not (test_schedule is None or toFile):
+    if not isinstance(test_schedule, dict):
+        test_schedule = None
+    if test_schedule:
         schedule = test_schedule
     elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
         schedule = (
@@ -1951,7 +1948,8 @@ async def set_sb2_ac_charge(
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
     # return resulting schedule for test purposes without Api call
-    if not (test_schedule is None or toFile):
+    if test_schedule:
+        # ensure schedule is updated also in cache for dependent devices
         await self.get_device_parm(
             siteId=siteId,
             paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
@@ -2250,7 +2248,9 @@ async def set_sb2_use_time(  # noqa: C901
     )
 
     # obtain actual device schedule from internal dict or fetch via api
-    if not (test_schedule is None or toFile):
+    if not isinstance(test_schedule, dict):
+        test_schedule = None
+    if test_schedule:
         schedule = test_schedule
     elif not (schedule := (self.devices.get(deviceSn) or {}).get("schedule") or {}):
         schedule = (
@@ -2418,9 +2418,12 @@ async def set_sb2_use_time(  # noqa: C901
                     # Allow change in slot only if only one slot or if either start or end hour is given
                     day_tariff_change = (
                         tariff_type
-                        and (not (
-                            tariff_price and start_hour is None and end_hour is None
-                        ) or len(season.get(day) or []) == 1)
+                        and (
+                            not (
+                                tariff_price and start_hour is None and end_hour is None
+                            )
+                            or len(season.get(day) or []) == 1
+                        )
                         and delete_scope not in ["daytype", "tariff", "slot"]
                     )
                     for slot in season.get(day) or []:
@@ -2623,7 +2626,8 @@ async def set_sb2_use_time(  # noqa: C901
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
     # return resulting schedule for test purposes without Api call
-    if not (test_schedule is None or toFile):
+    if test_schedule:
+        # ensure schedule is updated also in cache for dependent devices
         await self.get_device_parm(
             siteId=siteId,
             paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,

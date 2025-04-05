@@ -324,7 +324,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     if not (
                         {
                             SolixDeviceType.HES.value,
-                            ApiCategories.hes_energy,
+                            ApiCategories.hes_avg_power,
                         }
                         & exclude
                     ):
@@ -350,8 +350,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                     ),
                                 }
                             )
-                            # Update todays energy totals
-                            if intraday := avg_data.get("intraday"):
+                            # Update todays energy totals if not excluded
+                            if (intraday := avg_data.get("intraday")) and not (
+                                {ApiCategories.hes_energy} & exclude
+                            ):
                                 energy = mysite.get("energy_details") or {}
                                 # add intraday entry to indicate latest data for energy details routine
                                 energy.update({"intraday": intraday})
@@ -362,6 +364,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 ]:
                                     energy.update({"today": intraday})
                                 mysite["energy_details"] = energy
+                        elif not (avg_data or {}).get("intraday"):
+                            # remove avg data from energy details to indicate no update was done for energy details routine
+                            (mysite.get("energy_details") or {}).pop("intraday", None)
                     new_sites.update({myid: mysite})
 
         # Write back the updated sites
@@ -742,14 +747,15 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             powerlist[-1].get("powerInfos") or [], start=1
                         ):
                             if idx == 1:
-                                # Currently the intraday data contain only one element with discharge power
-                                avg_data["discharge_power_avg"] = str(
-                                    power.get("value") or ""
-                                ).replace("-", "")
-                            else:
-                                avg_data["charge_power_avg"] = str(
-                                    power.get("value") or ""
-                                ).replace("-", "")
+                                # Currently the intraday data contain only one element with positive discharge power and negative charge power
+                                pwr = str(power.get("value") or "")
+                                if pwr and pwr[0] == "-":
+                                    # use positive values also for charge
+                                    avg_data["charge_power_avg"] = pwr.replace("-", "")
+                                    avg_data["discharge_power_avg"] = "0.00"
+                                else:
+                                    avg_data["discharge_power_avg"] = pwr
+                                    avg_data["charge_power_avg"] = "0.00"
                         if soclist := [
                             item
                             for item in (data.get("chargeLevel") or [])
@@ -780,13 +786,21 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # get interval totals from aggregate to avoid redundant daily query for today
                         entry.update(self.extract_energy(source=source, data=data))
                     elif source == "grid":
-                        avg_data["grid_import_avg"] = (
+                        pwr = (
                             next(
                                 iter(powerlist[-1].get("powerInfos") or []),
                                 {},
                             ).get("value")
                             or ""
                         )
+                        # Currently the intraday data contain only one element with positive import power and negative export power
+                        if pwr and pwr[0] == "-":
+                            # use positive values also for export
+                            avg_data["grid_export_avg"] = pwr.replace("-", "")
+                            avg_data["grid_import_avg"] = "0.00"
+                        else:
+                            avg_data["grid_import_avg"] = pwr
+                            avg_data["grid_export_avg"] = "0.00"
                         # get interval totals from aggregate to avoid redundant daily query for today
                         entry.update(self.extract_energy(source=source, data=data))
             # Add average power to main device details as work around if no other hes device usage data will be found in cloud

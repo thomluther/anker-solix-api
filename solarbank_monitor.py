@@ -34,7 +34,7 @@ CONSOLE: logging.Logger = common.CONSOLE
 REFRESH = 0  # default No refresh interval
 DETAILSREFRESH = 10  # Multiplier for device details refresh
 INTERACTIVE = True
-SHOWAPICALLS = True
+SHOWAPICALLS = False
 
 
 def clearscreen():
@@ -294,6 +294,28 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     CONSOLE.info(
                                         f"{'Offgrid Alert':<{col1}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':<{col2}} {'Inv. Pwr Exceed':<{col3}}: {'ON' if feat2 else '---' if feat2 is None else 'OFF'}"
                                     )
+                            if (hes := site.get("hes_info") or {}) and len(
+                                hes.get("hes_list", [])
+                            ) > 0:
+                                # print hes totals
+                                CONSOLE.info(
+                                    f"{'Parallel Devs':<{col1}}: {hes.get('numberOfParallelDevice', '---'):>3} {'':<{col2-4}} {'Battery count':<{col3}}: {hes.get('batCount', '---'):>3}"
+                                )
+                                CONSOLE.info(
+                                    f"{'Main SN':<{col1}}: {hes.get('main_sn', 'unknown'):<{col2}} {'System Code':<{col3}}: {hes.get('systemCode', 'unknown')}"
+                                )
+                                feat1 = hes.get("connected")
+                                CONSOLE.info(
+                                    f"{'Connected':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2-4}} {'Repost time':<{col3}}: {hes.get('rePostTime', '---'):>3} min?"
+                                )
+                                CONSOLE.info(
+                                    f"{'Net status':<{col1}}: {hes.get('net', '---'):>3} {'':<{col2-4}} {'Real net':<{col3}}: {hes.get('realNet', '---'):>3}"
+                                )
+                                feat1 = hes.get("isAddHeatPump")
+                                feat2 = hes.get("supportDiesel")
+                                CONSOLE.info(
+                                    f"{'Has heat pump':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2-4}} {'Support diesel':<{col3}}: {'YES' if feat2 else '---' if feat2 is None else ' NO':>3}"
+                                )
                             CONSOLE.info("-" * 80)
                     else:
                         CONSOLE.info("-" * 80)
@@ -439,22 +461,36 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         api.SolixDeviceType.POWERPANEL.value,
                         api.SolixDeviceType.HES.value,
                     ]:
-                        CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
-                        )
+                        if hes := dev.get("hes_data") or {}:
+                            CONSOLE.info(
+                                f"{'Station ID':<{col1}}: {hes.get('station_id', 'Unknown'):<{col2}}     (Type: {str(hes.get('type', '---')).upper()})"
+                            )
+                            CONSOLE.info(
+                                f"{'Online status':<{col1}}: {hes.get('online_status', '---'):>3} {'':<{col2-4}} {'Net status':<{col3}}: {hes.get('network_status', '---'):>3}"
+                            )
+                            CONSOLE.info(
+                                f"{'Grid status':<{col1}}: {hes.get('grid_status', '---'):>3} {'':<{col2-4}} {'Master/Slave':<{col3}}: {hes.get('master_slave_status', '---'):>3}"
+                            )
+                        if "status_desc" in dev:
+                            CONSOLE.info(
+                                f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                            )
                         if avg := dev.get("average_power") or {}:
                             unit = avg.get("power_unit") or ""
                             CONSOLE.info(
                                 f"{'Valid ⌀ before':<{col1}}: {avg.get('valid_time', 'Unknown'):<{col2}} {'Last Check':<{col3}}: {avg.get('last_check', 'Unknown')!s}"
                             )
                             CONSOLE.info(
-                                f"{'Solar Power ⌀':<{col1}}: {avg.get('solar_power_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Battery SOC':<{col3}}: {avg.get('state_of_charge') or '-.--':>4} %"
+                                f"{'Battery SOC':<{col1}}: {avg.get('state_of_charge') or '---':>4} %"
                             )
                             CONSOLE.info(
-                                f"{'Charge Power ⌀':<{col1}}: {avg.get('charge_power_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Discharge ⌀':<{col3}}: {avg.get('discharge_power_avg') or '-.--':>4} {unit}"
+                                f"{'Solar Power ⌀':<{col1}}: {avg.get('solar_power_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Home Usage ⌀':<{col3}}: {avg.get('home_usage_avg') or '-.--':>4} {unit}"
                             )
                             CONSOLE.info(
-                                f"{'Home Usage ⌀':<{col1}}: {avg.get('home_usage_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Grid Import ⌀':<{col3}}: {avg.get('grid_import_avg') or '-.--':>4} {unit}"
+                                f"{'Charge Power ⌀':<{col1}}: {avg.get('charge_power_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Discharge Pwr ⌀':<{col3}}: {avg.get('discharge_power_avg') or '-.--':>4} {unit}"
+                            )
+                            CONSOLE.info(
+                                f"{'Grid Import ⌀':<{col1}}: {avg.get('grid_import_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Grid Export ⌀':<{col3}}: {avg.get('grid_export_avg') or '-.--':>4} {unit}"
                             )
 
                     else:
