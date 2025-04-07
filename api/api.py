@@ -171,7 +171,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in [
                         # keys with string values
                         "wireless_type",
-                        "bt_ble_mac",
                         "charging_power",
                         "output_power",
                         "power_unit",
@@ -186,12 +185,16 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         in [
                             # keys with string values that should only updated if value returned
                             "wifi_name",
+                            "bt_ble_mac",
                             "energy_today",
                             "energy_last_period",
                         ]
                         and value
                     ):
                         device.update({key: str(value)})
+                    elif key in ["bt_ble_id"] and value and not devData.get("bt_ble_mac"):
+                        # Make sure that BT ID is added if mac not in data
+                        device.update({"bt_ble_mac": str(value).replace(":","")})
                     elif key in ["wifi_signal"]:
                         # Make sure that key is added, but update only if new value provided to avoid deletion of value from rssi calculation
                         if value or device.get(key) is None:

@@ -171,7 +171,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_system_running_time": "charging_hes_svc/get_system_running_time",  # no shared account access, needs HES site?
     "get_mi_layout": "charging_hes_svc/get_mi_layout",  # no shared account access, needs HES site?
     "get_conn_net_tips": "charging_hes_svc/get_conn_net_tips",  # no shared account access, needs HES site?
-    "get_hes_dev_info": "charging_hes_svc/get_hes_dev_info",  # no shared account access, needs HES site?
+    "get_hes_dev_info": "charging_hes_svc/get_hes_dev_info",  # works with shared account, lists hes device structure and SNs
     "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
 }
 
@@ -271,7 +271,7 @@ Home Energy System related (X1): 37 + 14 used => 51 total
     "charging_hes_svc/update_device_info_by_app",
     "charging_hes_svc/update_hes_utility_rate_plan",
     "charging_hes_svc/update_wifi_config",
-    "charging_hes_svc/upload_device_status",2
+    "charging_hes_svc/upload_device_status",
     "charging_hes_svc/user_event_alarm",
     "charging_hes_svc/user_fault_alarm",
     "charging_hes_svc/ota",

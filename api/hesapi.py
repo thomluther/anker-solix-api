@@ -150,10 +150,15 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             # Example for key with string values that should only be updated if value returned
                             "wifi_name",
                             "main_sn",
+                            "ssid",
+                            "encryption",
                         ]
                         and value
                     ):
                         device.update({key: str(value)})
+                    elif key in ["rssi"] and value:
+                        # For HES this is actually not a relative rssi value (0-255), but signal strength 0-100 %
+                        device.update({"wifi_signal": str(value)})
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
@@ -502,10 +507,25 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             "Updating api %s HES Device details",
             self.apisession.nickname,
         )
-        #
-        # Implement required queries according to exclusion set
-        #
-
+        for sn, device in self.devices.items():
+            site_id = device.get("site_id", "")
+            dev_Type = device.get("type", "")
+            # Fetch details that work for shared accounts
+            if (
+                site_id
+                and dev_Type in ({SolixDeviceType.HES.value} - exclude)
+            ):
+                # Fetch device wifi info if not found yet with bind_devices
+                self._logger.debug(
+                    "Getting api %s wifi info for device",
+                    self.apisession.nickname,
+                )
+                await self.get_hes_wifi_info(deviceSn=sn, fromFile=fromFile)
+                # Fetch details that only work for site admins
+                if (
+                    device.get("is_admin", False)
+                ):
+                    pass
         return self.devices
 
     async def get_system_running_info(
@@ -1432,3 +1452,34 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         }
                     )
         return entry
+
+    async def get_hes_wifi_info(self, deviceSn: str, fromFile: bool = False) -> dict:
+        """Get the wifi info of a hes device with admin access.
+
+        Example data:
+        {"ssid": "","rssi": 100,"wifiInfos": [
+            {"sn": "Y9ILYOUZI2LXRN62","pn": "A5220","type": "ats","ssid": "","rssi": 100,"encryption": ""}]}
+        """
+        data = {"sn": deviceSn}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['hes_get_wifi_info']}_{deviceSn}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_HES_SVC_ENDPOINTS["get_wifi_info"], json=data
+            )
+        # update device data if device_sn found in wifi list
+        if data := resp.get("data") or {}:
+            for wifi_info in data.get("wifiInfos") or []:
+                if sn := wifi_info.get("sn"):
+                    self._update_dev(
+                        {
+                            "device_sn": sn,
+                            "ssid": wifi_info.get("ssid"),
+                            "rssi": wifi_info.get("rssi"),
+                            "encryption": wifi_info.get("encryption"),
+                        }
+                    )
+        return data

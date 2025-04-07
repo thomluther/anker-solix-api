@@ -34,7 +34,7 @@ CONSOLE: logging.Logger = common.CONSOLE
 REFRESH = 0  # default No refresh interval
 DETAILSREFRESH = 10  # Multiplier for device details refresh
 INTERACTIVE = True
-SHOWAPICALLS = False
+SHOWAPICALLS = True
 
 
 def clearscreen():
