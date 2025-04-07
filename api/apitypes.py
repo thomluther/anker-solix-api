@@ -481,9 +481,9 @@ class SolixTariffTypes(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
 
     NONE = 0  # Pseudo type to reflect no tariff defined
-    PEEK = 1  # maximize PV and Battery usage, no AC charge
-    MID_PEEK = 2  # maximize PV and Battery usage, no AC charge
-    OFF_PEEK = 3  # maximize PV and Battery usage, no AC charge, discharge only above 80% SOC, Reserve charge utilized only for PEEK & MID PEEK times
+    PEAK = 1  # maximize PV and Battery usage, no AC charge
+    MID_PEAK = 2  # maximize PV and Battery usage, no AC charge
+    OFF_PEAK = 3  # maximize PV and Battery usage, no AC charge, discharge only above 80% SOC, Reserve charge utilized only for PEAK & MID PEAK times
     VALLEY = (
         4  # AC charge allowed, charge power depends on SOC and available VALLEY time
     )
@@ -755,7 +755,7 @@ class SolixDefaults:
     # Discharge Priority preset for Solarbank schedule timeslot settings
     DISCHARGE_PRIORITY_DEF: int = SolarbankDischargePriorityMode.off.value
     # AC tariff settings for Use Time plan
-    TARIFF_DEF: int = SolixTariffTypes.OFF_PEEK.value
+    TARIFF_DEF: int = SolixTariffTypes.OFF_PEAK.value
     TARIFF_PRICE_DEF: str = "0.00"
     TARIFF_WE_SAME: bool = True
     CURRENCY_DEF: str = "€"
@@ -767,7 +767,7 @@ class SolixDefaults:
     ENDPOINT_LIMIT_DEF: int = 10
 
 
-class SolixDeviceStatus(Enum):
+class SolixDeviceStatus(StrEnum):
     """Enumeration for Anker Solix Device status."""
 
     # The device status code seems to be used for cloud connection status.
@@ -776,7 +776,7 @@ class SolixDeviceStatus(Enum):
     unknown = "unknown"
 
 
-class SolarbankStatus(Enum):
+class SolarbankStatus(StrEnum):
     """Enumeration for Anker Solix Solarbank status."""
 
     detection = "0"  # Rare for SB1, frequent for SB2 especially in combination with Smartmeter in the morning
@@ -798,13 +798,39 @@ class SolarbankStatus(Enum):
     # TODO(AC): Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
-class SmartmeterStatus(Enum):
+class SmartmeterStatus(StrEnum):
     """Enumeration for Anker Solix Smartmeter status."""
 
     # TODO(#106) Update Smartmeter grid status description once known
     ok = "0"  # normal grid state when smart meter is measuring
-    unknown_1 = "1"  # does it exist?
-    unknown_2 = "2"  # does it exist?
+    unknown = "unknown"
+
+
+class SolixGridStatus(StrEnum):
+    """Enumeration for Anker Solix grid status."""
+
+    # TODO Update grid status description once known
+    ok = "0"  # normal grid state when hes pcu grid status is ok
+    unknown = "unknown"
+
+
+class SolixRoleStatus(StrEnum):
+    """Enumeration for Anker Solix role status of devices."""
+
+    # The device role status codes as used for HES devices
+    # TODO: The proper description of those codes has to be confirmed
+    primary = "1"  # Master role in Api
+    subordinate = "2"  # Slave role in Api, to be confirmed!!!
+    unknown = "unknown"
+
+
+class SolixNetworkStatus(StrEnum):
+    """Enumeration for Anker Solix HES network status."""
+
+    # TODO: The proper description of those codes has to be confirmed
+    wifi = "1"  # to be confirmed
+    lan = "2"  # this was seen on LAN connected systems
+    mobile = "3"  # HES systems support also 5G connections, code to be confirmed
     unknown = "unknown"
 
 

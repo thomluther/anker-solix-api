@@ -1196,7 +1196,7 @@ async def set_home_load(  # noqa: C901
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
     # return resulting schedule for test purposes without Api call
-    if (test_count or test_schedule):
+    if test_count or test_schedule:
         # ensure schedule is updated also in cache for dependent devices
         await self.get_device_parm(
             siteId=siteId,
@@ -2038,7 +2038,7 @@ async def set_sb2_use_time(  # noqa: C901
         - If weekday or weekend and same active, modify selected and disable the same setting
         - If all and same active, modify weekday and copy to weekend, otherwise modify all independently
         - How to activate the same switch? Delete the unwanted daytype, which will copy the other and enable the same switch
-    - => If no day structure identified, define default 0-24 hour, use default tariff low peek and fixed site price (0 if not defined)
+    - => If no day structure identified, define default 0-24 hour, use default tariff low peak and fixed site price (0 if not defined)
     - Optional start hour
         - Default to start of current hour interval if end hour not provided, else use start hour of end hour interval
             - If no interval exists, use 0
@@ -2053,7 +2053,7 @@ async def set_sb2_use_time(  # noqa: C901
         - If end hour exceeds existing interval, increase start hour of next interval with start hour < end and end hour > end
     - Optional tariff
         - Default to existing interval tariff
-            - If no exists, use off peek tariff
+            - If no exists, use off peak tariff
         - Set given tariff
     - Optional tariff price
         - Default to existing day tariff prices and currency (no change)
@@ -2243,7 +2243,10 @@ async def set_sb2_use_time(  # noqa: C901
     def_tariff_type = SolixDefaults.TARIFF_DEF if tariff_type is None else tariff_type
     def_tariff_price = (
         tariff_price
-        or str((self.sites.get("site_details") or {}).get("price") or "")
+        or str(
+            ((self.sites.get(siteId) or {}).get("site_details") or {}).get("price")
+            or ""
+        )
         or SolixDefaults.TARIFF_PRICE_DEF
     )
 
@@ -2622,6 +2625,29 @@ async def set_sb2_use_time(  # noqa: C901
                 split_season = {}
 
     schedule[rate_plan_name] = new_ranges or None
+    # toggle usage mode in schedule back to possible mode if no use_time plan remains
+    if (
+        not new_ranges
+        and schedule.get("mode_type") == SolarbankUsageMode.use_time.value
+    ):
+        # Allow automatic modes only when smart meter or smart plugs available in site
+        schedule["mode_type"] = (
+            SolarbankUsageMode.smartmeter.value
+            if len(
+                ((self.sites.get(siteId) or {}).get("grid_info") or {}).get("grid_list")
+                or []
+            )
+            > 0
+            else SolarbankUsageMode.smartplugs.value
+            if len(
+                ((self.sites.get(siteId) or {}).get("smart_plug_info") or {}).get(
+                    "smartplug_list"
+                )
+                or []
+            )
+            > 0
+            else SolarbankUsageMode.manual.value
+        )
     self._logger.debug(
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )
@@ -2636,10 +2662,26 @@ async def set_sb2_use_time(  # noqa: C901
         )
         return schedule
     # Make the Api call with final schedule and return result, the set call will also update api dict
-    return await self.set_device_parm(
+    resp = await self.set_device_parm(
         siteId=siteId,
         paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
         paramData=schedule,
         deviceSn=deviceSn,
         toFile=toFile,
     )
+    # Check site price type and switch back to fixed if no use time plan remains
+    # The mobile App only activates use_time price automatically with use_time mode, but does not toggle back to fixed price automatically
+    if (
+        not new_ranges
+        and ((self.sites.get(siteId) or {}).get("site_details") or {}).get("price_type")
+        == SolixPriceTypes.USE_TIME.value
+    ):
+        self._logger.debug(
+            "Toggling api %s price type to: %s",
+            self.apisession.nickname,
+            SolixPriceTypes.FIXED.value,
+        )
+        await self.set_site_price(
+            siteId=siteId, price_type=SolixPriceTypes.FIXED.value, toFile=toFile
+        )
+    return resp

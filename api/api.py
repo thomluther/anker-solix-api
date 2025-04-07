@@ -30,7 +30,10 @@ from .apitypes import (
     SolixDeviceNames,
     SolixDeviceStatus,
     SolixDeviceType,
+    SolixGridStatus,
+    SolixNetworkStatus,
     SolixPriceTypes,
+    SolixRoleStatus,
     SolixTariffTypes,
 )
 from .hesapi import AnkerSolixHesApi
@@ -278,22 +281,35 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 }
                             )
                     elif key in ["status"]:
-                        device.update({key: str(value)})
-                        # decode the status into a description
-                        description = SolixDeviceStatus.unknown.name
-                        for status in SolixDeviceStatus:
-                            if str(value) == status.value:
-                                description = status.name
-                                break
-                        device.update({"status_desc": description})
+                        # decode the device status into a description
+                        device.update(
+                            {
+                                key: str(value),
+                                "status_desc": next(
+                                    iter(
+                                        [
+                                            item.name
+                                            for item in SolixDeviceStatus
+                                            if item.value == str(value)
+                                        ]
+                                    ),
+                                    SolixDeviceStatus.unknown.name,
+                                ),
+                            }
+                        )
                     elif key in ["charging_status"]:
                         device.update({key: str(value)})
-                        # decode the status into a description
-                        description = SolarbankStatus.unknown.name
-                        for status in SolarbankStatus:
-                            if str(value) == status.value:
-                                description = status.name
-                                break
+                        # decode the charging status into a description
+                        description = next(
+                            iter(
+                                [
+                                    item.name
+                                    for item in SolarbankStatus
+                                    if item.value == str(value)
+                                ]
+                            ),
+                            SolarbankStatus.unknown.name,
+                        )
                         # check if battery has bypass during charge (if output during charge)
                         # This key can be passed separately, make sure the other values are looked up in provided data first, then in device details
                         # NOTE: charging power may be updated after initial device details update
@@ -716,14 +732,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
                     # smartmeter specific keys
                     elif key in ["grid_status"]:
-                        device.update({key: str(value)})
                         # decode the grid status into a description
-                        description = SmartmeterStatus.unknown.name
-                        for status in SmartmeterStatus:
-                            if str(value) == status.value:
-                                description = status.name
-                                break
-                        device.update({"grid_status_desc": description})
+                        device.update(
+                            {
+                                key: str(value),
+                                "grid_status_desc": next(
+                                    iter(
+                                        [
+                                            item.name
+                                            for item in SmartmeterStatus
+                                            if item.value == str(value)
+                                        ]
+                                    ),
+                                    SmartmeterStatus.unknown.name,
+                                ),
+                            }
+                        )
                     elif key in [
                         "photovoltaic_to_grid_power",
                         "grid_to_home_power",
@@ -731,7 +755,57 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update({key: str(value)})
 
                     # hes specific keys
-                    elif key in ["hes_data"] and value:
+                    elif key in ["hes_data"] and isinstance(value, dict):
+                        # decode the status into a description
+                        if "online_status" in value:
+                            code = str(value.get("online_status"))
+                            # use same field name as for balcony power devices
+                            value["status_desc"] = next(
+                                iter(
+                                    [
+                                        item.name
+                                        for item in SolixDeviceStatus
+                                        if item.value == code
+                                    ]
+                                ),
+                                SolixDeviceStatus.unknown.name,
+                            )
+                        if "master_slave_status" in value:
+                            code = str(value.get("master_slave_status"))
+                            value["role_status_desc"] = next(
+                                iter(
+                                    [
+                                        item.name
+                                        for item in SolixRoleStatus
+                                        if item.value == code
+                                    ]
+                                ),
+                                SolixRoleStatus.unknown.name,
+                            )
+                        if "grid_status" in value:
+                            code = str(value.get("grid_status"))
+                            value["grid_status_desc"] = next(
+                                iter(
+                                    [
+                                        item.name
+                                        for item in SolixGridStatus
+                                        if item.value == code
+                                    ]
+                                ),
+                                SolixGridStatus.unknown.name,
+                            )
+                        if "network_status" in value:
+                            code = str(value.get("network_status"))
+                            value["network_status_desc"] = next(
+                                iter(
+                                    [
+                                        item.name
+                                        for item in SolixNetworkStatus
+                                        if item.value == code
+                                    ]
+                                ),
+                                SolixNetworkStatus.unknown.name,
+                            )
                         device.update({key: value})
 
                     # generate extra values when certain conditions are met

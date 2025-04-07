@@ -350,10 +350,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
 
                     if devtype == api.SolixDeviceType.SOLARBANK.value:
                         CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
                         )
                         CONSOLE.info(
-                            f"{'Charge Status':<{col1}}: {dev.get('charging_status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('charging_status', '-')!s}"
+                            f"{'Charge Status':<{col1}}: {str(dev.get('charging_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('charging_status', '-')!s}"
                         )
                         soc = f"{dev.get('battery_soc', '---'):>4} %"
                         CONSOLE.info(
@@ -428,7 +428,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             common.print_schedule(dev.get("schedule") or {})
                     elif devtype == api.SolixDeviceType.INVERTER.value:
                         CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(
@@ -436,10 +436,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                     elif devtype == api.SolixDeviceType.SMARTMETER.value:
                         CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
                         )
                         CONSOLE.info(
-                            f"{'Grid Status':<{col1}}: {dev.get('grid_status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('grid_status', '-')!s}"
+                            f"{'Grid Status':<{col1}}: {str(dev.get('grid_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('grid_status', '-')!s}"
                         )
                         unit = "W"
                         CONSOLE.info(
@@ -447,7 +447,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                     elif devtype == api.SolixDeviceType.SMARTPLUG.value:
                         CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(
@@ -463,20 +463,26 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     ]:
                         if hes := dev.get("hes_data") or {}:
                             CONSOLE.info(
-                                f"{'Station ID':<{col1}}: {hes.get('station_id', 'Unknown'):<{col2}}     (Type: {str(hes.get('type', '---')).upper()})"
+                                f"{'Station ID':<{col1}}: {hes.get('station_id', '-------'):<{col2}}     (Type: {str(hes.get('type', '---')).upper()})"
                             )
                             CONSOLE.info(
-                                f"{'Online status':<{col1}}: {hes.get('online_status', '---'):>3} {'':<{col2-4}} {'Net status':<{col3}}: {hes.get('network_status', '---'):>3}"
+                                f"{'Cloud Status':<{col1}}: {str(hes.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {hes.get('online_status', '-')!s}"
                             )
                             CONSOLE.info(
-                                f"{'Grid status':<{col1}}: {hes.get('grid_status', '---'):>3} {'':<{col2-4}} {'Master/Slave':<{col3}}: {hes.get('master_slave_status', '---'):>3}"
+                                f"{'Network Status':<{col1}}: {str(hes.get('network_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {hes.get('network_status', '-')!s}"
+                            )
+                            CONSOLE.info(
+                                f"{'Grid Status':<{col1}}: {str(hes.get('grid_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {hes.get('grid_status', '-')!s}"
+                            )
+                            CONSOLE.info(
+                                f"{'Role Status':<{col1}}: {str(hes.get('role_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {hes.get('master_slave_status', '-')!s}"
                             )
                         if "status_desc" in dev:
                             CONSOLE.info(
-                                f"{'Cloud Status':<{col1}}: {dev.get('status_desc', 'Unknown'):<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                                f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
                             )
                         if avg := dev.get("average_power") or {}:
-                            unit = avg.get("power_unit") or ""
+                            unit = str(avg.get("power_unit") or "").upper()
                             CONSOLE.info(
                                 f"{'Valid ⌀ before':<{col1}}: {avg.get('valid_time', 'Unknown'):<{col2}} {'Last Check':<{col3}}: {avg.get('last_check', 'Unknown')!s}"
                             )

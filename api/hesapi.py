@@ -22,7 +22,6 @@ from .apitypes import (
     ApiCategories,
     SolixDeviceCategory,
     SolixDeviceNames,
-    SolixDeviceStatus,
     SolixDeviceType,
     SolixSiteType,
 )
@@ -136,15 +135,6 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             )
                     elif key in ["alias_name"] and value:
                         device.update({"alias": str(value)})
-                    elif key in ["status"]:
-                        device.update({"status": str(value)})
-                        # decode the status into a description
-                        description = SolixDeviceStatus.unknown.name
-                        for status in SolixDeviceStatus:
-                            if str(value) == status.value:
-                                description = status.name
-                                break
-                        device.update({"status_desc": description})
                     elif key in [
                         # Examples for boolean key values
                         "auto_upgrade",
@@ -334,18 +324,14 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             # Add energy offset info to site cache
                             mysite.update(
                                 {
-                                    "energy_offset_seconds": (avg_data.get(
-                                        "offset_seconds"
-                                    ) or 0)
+                                    "energy_offset_seconds": (
+                                        avg_data.get("offset_seconds") or 0
+                                    )
                                     - 10,
                                     "energy_offset_check": avg_data.get("last_check"),
                                     "energy_offset_tz": 1800
                                     * round(
-                                        round(
-                                            avg_data.get(
-                                                "offset_seconds"
-                                            ) or 0
-                                        )
+                                        round(avg_data.get("offset_seconds") or 0)
                                         / 1800
                                     ),
                                 }
