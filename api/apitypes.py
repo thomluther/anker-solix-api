@@ -139,6 +139,9 @@ API_ENDPOINTS = {
     "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
     "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
+    "get_device_pv_status": "charging_pv_svc/getPvStatus", # post method get the current activity status and power generation of a device
+    "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics", # post method the get total statistics (generated power, saved money, saved CO2) of a device
+    "get_device_pv_statistics": "charging_pv_svc/statisticsPv", # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -379,6 +382,10 @@ API_FILEPREFIXES = {
     "charging_get_configs": "charging_configs",
     "charging_get_sns": "charging_sns",
     "charging_get_monetary_units": "charging_monetary_units",
+    # charging_pv_svc endpoint file prefixes
+    "get_device_pv_status": "device_pv_status",
+    "get_device_pv_total_statistics": "device_pv_total_statistics",
+    "get_device_pv_statistics": "device_pv_statistics",
     # charging_energy_service endpoint file prefixes
     "hes_get_product_info": "hes_product_info",
     "hes_get_heat_pump_plan": "hes_heat_pump_plan",
