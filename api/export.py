@@ -702,6 +702,70 @@ class AnkerSolixApiExport:
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                 )
 
+            # export device pv status and statistics for inverters
+            for sn, device in self.api_power.devices.items():
+                if device.get("type") != api.SolixDeviceType.INVERTER.value:
+                    continue
+
+                self._logger.info("")
+                self._logger.info(
+                    "Exporting inverter specific data for device %s SN %s...",
+                    device.get("name", ""),
+                    self._randomize(sn, "_sn"),
+                )
+
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_pv_status"],
+                    filename=f"{API_FILEPREFIXES['get_device_pv_status']}_{self._randomize(sn, '_sn')}.json",
+                    payload={"sns": sn},
+                    replace=[(sn, "<deviceSn>")],
+                )
+
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_pv_total_statistics"],
+                    filename=f"{API_FILEPREFIXES['get_device_pv_total_statistics']}_{self._randomize(sn, '_sn')}.json",
+                    payload={"sn": sn},
+                    replace=[],
+                )
+
+                # day statistic
+                today = datetime.today().strftime("%Y-%m-%d")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_pv_statistics"],
+                    filename=f"{API_FILEPREFIXES['get_device_pv_statistics']}_day_{self._randomize(sn, '_sn')}.json",
+                    payload={"sn": sn, "type": "day", "start": today, "end": "", "version": "1"},
+                    replace=[],
+                )
+
+                # week statistic
+                first_week_day = (datetime.today() - timedelta(days=datetime.today().weekday())).strftime("%Y-%m-%d")
+                last_week_day = (datetime.today() + timedelta(days=6 - datetime.today().weekday())).strftime("%Y-%m-%d")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_pv_statistics"],
+                    filename=f"{API_FILEPREFIXES['get_device_pv_statistics']}_week_{self._randomize(sn, '_sn')}.json",
+                    payload={"sn": sn, "type": "week", "start": first_week_day, "end": last_week_day, "version": "1"},
+                    replace=[],
+                )
+
+                # month statistic
+                current_month = datetime.today().strftime("%Y-%m")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_pv_statistics"],
+                    filename=f"{API_FILEPREFIXES['get_device_pv_statistics']}_month_{self._randomize(sn, '_sn')}.json",
+                    payload={"sn": sn, "type": "month", "start": current_month, "end": "", "version": "1"},
+                    replace=[],
+                )
+
+                # year statistic
+                current_year = datetime.today().strftime("%Y")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_device_pv_statistics"],
+                    filename=f"{API_FILEPREFIXES['get_device_pv_statistics']}_year_{self._randomize(sn, '_sn')}.json",
+                    payload={"sn": sn, "type": "year", "start": current_year, "end": "", "version": "1"},
+                    replace=[],
+                )
+
+
         except (errors.AnkerSolixError, ClientError) as err:
             if isinstance(err, ClientError):
                 self._logger.warning(

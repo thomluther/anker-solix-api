@@ -1,0 +1,35 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "data": [
+      {
+        "device_sn": "JJY4QAVAFKT9",
+        "product_code": "A5143",
+        "bt_ble_id": "E377907D0C1D",
+        "bt_ble_mac": "E377907D0C1D",
+        "device_name": "MI80 Microinverter(BLE)",
+        "alias_name": "MI80 Microinverter(BLE)",
+        "img_url": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/anker-power/0f8e0ca7-dda9-4e70-940d-fe08e1fc89ea/picl_A5143_normal.png",
+        "link_time": 1742648615,
+        "wifi_online": false,
+        "wifi_name": "wifi-network-1",
+        "relate_type": [
+          "ble"
+        ],
+        "charge": false,
+        "bws_surplus": 0,
+        "device_sw_version": "v0.0.1",
+        "has_manual": false,
+        "hes_data": null,
+        "tag": "",
+        "tag_img": "",
+        "platform_tag": "",
+        "platform_logo": "",
+        "rssi": "",
+        "intgr_device": null
+      }
+    ]
+  },
+  "trace_id": "8caf40f2f046b2aaf02f43bcfbe510ac"
+}

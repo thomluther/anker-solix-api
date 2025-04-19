@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "has_unread_msg": false,
+    "system_msg": false,
+    "device_msg": false
+  },
+  "trace_id": "49555276bdce5a8c24bf51691f9a5aac"
+}
