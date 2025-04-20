@@ -836,6 +836,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                             or device.get("alias", "")
                                         )
                                         .replace(" 2", "")
+                                        .replace(" 3", "")
                                         .replace("Solarbank E", "")
                                         .replace(" Pro", "")
                                         .replace(" Plus", "")
@@ -846,6 +847,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     or device.get("sub_package_num")
                                     or 0
                                 )
+                                # TODO(#SB3): Expansions for SB2 + 3 can have mixed capacity, how to identify expansion capacity?
                                 if str(cap).isdigit() and str(exp).isdigit():
                                     cap = int(cap) * (1 + int(exp))
                             soc = devData.get("battery_power", "") or device.get(

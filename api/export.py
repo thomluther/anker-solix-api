@@ -35,7 +35,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "2.6.0.0"
+VERSION: str = "2.6.1.0"
 
 
 class AnkerSolixApiExport:
@@ -698,7 +698,21 @@ class AnkerSolixApiExport:
                     endpoint=API_ENDPOINTS["get_device_attributes"],
                     filename=f"{API_FILEPREFIXES['get_device_attributes']}_{self._randomize(sn, '_sn')}.json",
                     # TODO: Empty attributes list will not list any attributes, possible attributes and devices are unknown yet
-                    payload={"device_sn": sn, "attributes": []},
+                    # Only rssi delivered response value so far, test further possible attributes on queries
+                    payload={
+                        "device_sn": sn,
+                        "attributes": [
+                            "rssi",
+                            "temperature",
+                            "cycles",
+                            "status",
+                            "wifi_signal",
+                            "switch",
+                            "ssid",
+                            "led",
+                            "backup",
+                        ],
+                    },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                 )
 
