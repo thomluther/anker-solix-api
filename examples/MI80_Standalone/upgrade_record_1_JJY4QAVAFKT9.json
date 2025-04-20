@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "JJY4QAVAFKT9",
+    "site_id": "",
+    "upgrade_record_list": []
+  },
+  "trace_id": "bf4fd54f62f099539bf3926b5accca43"
+}
