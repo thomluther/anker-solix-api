@@ -1,0 +1,17 @@
+{
+  "JJY4QAVAFKT9": {
+    "device_sn": "JJY4QAVAFKT9",
+    "device_pn": "A5143",
+    "type": "inverter",
+    "bt_ble_mac": "E377907D0C1D",
+    "name": "MI80 Microinverter(BLE)",
+    "alias": "MI80 Microinverter(BLE)",
+    "wifi_online": false,
+    "wifi_name": "wifi-network-1",
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v0.0.1",
+    "tag": "",
+    "rssi": ""
+  }
+}
