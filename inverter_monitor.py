@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+"""Example exec module to test standalone inverter Api."""
 
 import asyncio
 from datetime import datetime, timedelta
@@ -6,7 +8,7 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api, errors
+from api import api, errors  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -39,10 +41,10 @@ async def main() -> bool:
 
     selection = input(f"Input Source number (0-{len(example_list)}) or [q]uit: ")
     if (
-            selection.upper() in ["Q", "QUIT"]
-            or not selection.isdigit()
-            or int(selection) < 0
-            or int(selection) > len(example_list)
+        selection.upper() in ["Q", "QUIT"]
+        or not selection.isdigit()
+        or int(selection) < 0
+        or int(selection) > len(example_list)
     ):
         return False
 
@@ -91,28 +93,26 @@ async def main() -> bool:
                 )
                 for d in devices
             ]
-
-            for idx, sitename in enumerate(devices_names):
-                CONSOLE.info("(%s) %s", idx, sitename)
-            selection = input(
-                f"Enter device number (0-{len(devices_names) - 1}): "
-            )
-            if not selection.isdigit() or 0 < int(selection) >= len(devices_names):
-                CONSOLE.error("Invalid selection")
-                return False
-
-            device_sn = devices[int(selection)].get("device_sn")
+            if devices_names > 1:
+                for idx, sitename in enumerate(devices_names):
+                    CONSOLE.info("(%s) %s", idx, sitename)
+                selection = input(f"Enter device number (0-{len(devices_names) - 1}): ")
+                if not selection.isdigit() or 0 < int(selection) >= len(devices_names):
+                    CONSOLE.error("Invalid selection")
+                    return False
+                device_sn = devices[int(selection)].get("device_sn")
 
             # query user for refresh rate
             refresh = 30
-            resp = input(
-                "How many seconds refresh interval should be used? (5-600, default: 30): "
-            )
-            if not resp:
-                response = 30
-            elif resp.isdigit() and 5 >= int(resp) <= 600:
+            if not (
+                resp := input(
+                    "How many seconds refresh interval should be used? (5-600, default: 30): "
+                )
+            ):
+                resp = 30
+            if resp.isdigit() and 5 >= int(resp) <= 600:
                 refresh = int(resp)
-            else :
+            else:
                 CONSOLE.error("Invalid selection")
                 return False
 
@@ -147,8 +147,7 @@ async def main() -> bool:
                 CONSOLE.info(device_status | device_total_statistics)
 
                 if refresh == 0:
-                    break;
-
+                    break
     except (ClientError, errors.AnkerSolixError) as err:
         CONSOLE.error("%s: %s", type(err), err)
         CONSOLE.info("Api Requests: %s", myapi.request_count)
@@ -156,6 +155,7 @@ async def main() -> bool:
         return False
 
     return True
+
 
 # run async main
 if __name__ == "__main__":

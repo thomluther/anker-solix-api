@@ -1349,10 +1349,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
 
     async def get_device_pv_status(self, deviceSn: str, fromFile: bool = False) -> dict:
-        """Gets the current pv status for an inverter device
+        """Get the current pv status for an inverter device.
 
         Example data:
-        {"sn": "JJY4QAVAFKT9", "power": 169, "status": 1}
+        {"pvStatuses": [{"sn": "JJY4QAVAFKT9","power": 169,"status": 1}]}
         """
 
         data = {"sns": deviceSn}
@@ -1365,13 +1365,19 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_device_pv_status"], json=data
             )
-        response = resp.get("data") or {}
-
-        statuses = response.get("pvStatuses") or []
-        return statuses[0] if len(statuses) > 0 else None
+        # update device details only if valid response for a given sn
+        if (data := resp.get("data") or {}) and deviceSn:
+            # update devices dict with new power data
+            for dev in data.get("pvStatuses") or []:
+                # convert to string to merge with other response format
+                power = dev.get("power")
+                self._update_dev(
+                    {"device_sn": deviceSn, "photovoltaic_power": "" if power is None else str(power)}
+                )
+        return data
 
     async def get_device_pv_total_statistics(self, deviceSn: str, fromFile: bool = False) -> dict:
-        """Gets the total pv statistic data for an inverter device
+        """Get the total pv statistic data for an inverter device.
 
         Example data:
         {"energy": 66.15, "energyUnit": "kWh", "reductionCo2": 66, "reductionCo2Unit": "kg",
@@ -1386,51 +1392,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         else:
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_device_pv_total_statistics"], json=data
-            )
-
-        return resp.get("data") or {}
-
-    async def get_device_pv_statistics(
-            self,
-            deviceSn: str,
-            type: str,
-            start: str,
-            end: str,
-            fromFile: bool = False,
-    ) -> dict:
-        """Get pv statistics data for an inverter device on a daily, weekly, monthly or yearly basis
-
-        - type is either day, week, month or year
-        - start is the day (YYYY-MM-DD), month (YYYY-MM) or year (YYYY) in question
-        - end is the last day of a week (YYYY-MM-DD), if the type is week
-
-        Example data (type year):
-        {'curve': [], 'energy': [{'money': 0, 'energy': 0, 'index': 1}, {'money': 0, 'energy': 0, 'index': 2},
-        {'money': 0, 'energy': 15.35, 'index': 3}, {'money': 0, 'energy': 50.81, 'index': 4},
-        {'money': 0, 'energy': 0, 'index': 5}, {'money': 0, 'energy': 0, 'index': 6},
-        {'money': 0, 'energy': 0, 'index': 7}, {'money': 0, 'energy': 0, 'index': 8},
-        {'money': 0, 'energy': 0, 'index': 9}, {'money': 0, 'energy': 0, 'index': 10},
-        {'money': 0, 'energy': 0, 'index': 11}, {'money': 0, 'energy': 0, 'index': 12}],
-        'energyUnit': 'kWh', 'solarGeneraion': 66.15, 'money': 0, 'moneyUnit': '', 'loadPercent': '',
-        'ppsPercent': '', 'generationTime': 0, 'maxPower': 0}
-        """
-
-        data = {
-            "sn": deviceSn,
-            "type": type,
-            "start": start,
-            "end": end,
-            "version": "1",
-        }
-
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_device_pv_statistics']}_{type}_{deviceSn}.json"
-           )
-        else:
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["get_device_pv_statistics"], json=data
             )
 
         return resp.get("data") or {}

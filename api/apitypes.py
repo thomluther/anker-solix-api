@@ -221,6 +221,12 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/add_message',
     'power_service/v1/del_message',
 
+related to micro inverter without system: 4 + 3 used => 7 total
+    'charging_pv_svc/getMiStatus',
+    'charging_pv_svc/selectUserTieredElecPrice',
+    'charging_pv_svc/updateUserTieredElecPrice',
+    'charging_pv_svc/set_aps_power',
+
 App related: 10 + 2 used => 12 total
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
@@ -305,15 +311,6 @@ related to Prime charger models: 11 + 0 used => 11 total
     'mini_power/v1/app/power/get_day_power_data',
     'mini_power/v1/app/style/get_clock_screensavers',  # works for {'product_code': 'A2345'} => Prime charger
 
-related to micro inverter without system: 7 + 0 => 7 total
-    'charging_pv_svc/getMiStatus',
-    'charging_pv_svc/statisticsPv',
-    'charging_pv_svc/getPvTotalStatistics',
-    'charging_pv_svc/selectUserTieredElecPrice',
-    'charging_pv_svc/updateUserTieredElecPrice',
-    'charging_pv_svc/set_aps_power',
-    'charging_pv_svc/getPvStatus',
-
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
 The combination of the provided token and MD5 hashed user_id authenticate the client to the server.
@@ -368,6 +365,10 @@ API_FILEPREFIXES = {
     "api_account": "api_account",
     "api_sites": "api_sites",
     "api_devices": "api_devices",
+    # charging_pv_svc endpoint file prefixes
+    "get_device_pv_status": "device_pv_status",
+    "get_device_pv_total_statistics": "device_pv_total_statistics",
+    "get_device_pv_statistics": "device_pv_statistics",
     # charging_energy_service endpoint file prefixes
     "charging_get_error_info": "charging_error_info",
     "charging_get_system_running_info": "charging_system_running_info",
@@ -392,10 +393,6 @@ API_FILEPREFIXES = {
     "charging_get_configs": "charging_configs",
     "charging_get_sns": "charging_sns",
     "charging_get_monetary_units": "charging_monetary_units",
-    # charging_pv_svc endpoint file prefixes
-    "get_device_pv_status": "device_pv_status",
-    "get_device_pv_total_statistics": "device_pv_total_statistics",
-    "get_device_pv_statistics": "device_pv_statistics",
     # charging_energy_service endpoint file prefixes
     "hes_get_product_info": "hes_product_info",
     "hes_get_heat_pump_plan": "hes_heat_pump_plan",

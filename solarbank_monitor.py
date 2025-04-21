@@ -168,15 +168,16 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
                             for s in sites
                         ]
-                        for idx, sitename in enumerate(site_names):
-                            CONSOLE.info("(%s) %s", idx, sitename)
-                        selection = input(
-                            f"Enter site number (0-{len(site_names) - 1}) or nothing for All: "
-                        )
-                        if selection.isdigit() and 1 <= int(selection) < len(
-                            site_names
-                        ):
-                            site_selected = site_names[int(selection)].split(",")[0]
+                        if len(site_names) > 2:
+                            for idx, sitename in enumerate(site_names):
+                                CONSOLE.info("(%s) %s", idx, sitename)
+                            selection = input(
+                                f"Enter site number (0-{len(site_names) - 1}) or nothing for All: "
+                            )
+                            if selection.isdigit() and 1 <= int(selection) < len(
+                                site_names
+                            ):
+                                site_selected = site_names[int(selection)].split(",")[0]
                         # ask which endpoint limit should be applied
                         selection = input(
                             f"Enter Api endpoint limit for request throttling (1-50, 0 = disabled) [Default: {myapi.apisession.endpointLimit()}]: "
