@@ -135,7 +135,7 @@ async def main() -> bool:
                 next_refresh = now + timedelta(seconds=refresh)
 
                 device_status = await myapi.get_device_pv_status(
-                    deviceSn=device_sn,
+                    devices=device_sn,
                     fromFile=use_file,
                 )
 

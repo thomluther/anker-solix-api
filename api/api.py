@@ -192,9 +192,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         and value
                     ):
                         device.update({key: str(value)})
-                    elif key in ["bt_ble_id"] and value and not devData.get("bt_ble_mac"):
+                    elif (
+                        key in ["bt_ble_id"] and value and not devData.get("bt_ble_mac")
+                    ):
                         # Make sure that BT ID is added if mac not in data
-                        device.update({"bt_ble_mac": str(value).replace(":","")})
+                        device.update({"bt_ble_mac": str(value).replace(":", "")})
                     elif key in ["wifi_signal"]:
                         # Make sure that key is added, but update only if new value provided to avoid deletion of value from rssi calculation
                         if value or device.get(key) is None:
@@ -1347,36 +1349,57 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             )
         return resp.get("data") or {}
 
-
-    async def get_device_pv_status(self, deviceSn: str, fromFile: bool = False) -> dict:
+    async def get_device_pv_status(
+        self, devices: str | list[str], fromFile: bool = False
+    ) -> dict:
         """Get the current pv status for an inverter device.
 
         Example data:
         {"pvStatuses": [{"sn": "JJY4QAVAFKT9","power": 169,"status": 1}]}
         """
 
-        data = {"sns": deviceSn}
+        sns = (
+            devices
+            if isinstance(devices, str)
+            else ",".join(devices)
+            if isinstance(devices, list)
+            else ""
+        )
+        data = {"sns": sns}
         if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_device_pv_status']}_{deviceSn}.json"
-           )
+            # combine status of each device file into single response for multiple devices
+            resp = {}
+            for sn in sns.split(","):
+                sn_resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_pv_status']}_{sn.strip()}.json"
+                )
+                if not resp:
+                    resp = sn_resp
+                else:
+                    new = (sn_resp.get("data") or {}).get("pvStatuses") or []
+                    resp.update({"data": {"pvStatuses": list((resp.get("data") or {}).get("pvStatuses") or []) + new}})
         else:
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_device_pv_status"], json=data
             )
         # update device details only if valid response for a given sn
-        if (data := resp.get("data") or {}) and deviceSn:
+        if (data := resp.get("data") or {}) and sns:
             # update devices dict with new power data
             for dev in data.get("pvStatuses") or []:
                 # convert to string to merge with other response format
                 power = dev.get("power")
                 self._update_dev(
-                    {"device_sn": deviceSn, "photovoltaic_power": "" if power is None else str(power)}
+                    {
+                        "device_sn": dev.get("sn") or "",
+                        "photovoltaic_power": "" if power is None else str(power),
+                    }
                 )
         return data
 
-    async def get_device_pv_total_statistics(self, deviceSn: str, fromFile: bool = False) -> dict:
+    async def get_device_pv_total_statistics(
+        self, deviceSn: str, fromFile: bool = False
+    ) -> dict:
         """Get the total pv statistic data for an inverter device.
 
         Example data:
@@ -1388,7 +1411,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             resp = await self.apisession.loadFromFile(
                 Path(self.testDir())
                 / f"{API_FILEPREFIXES['get_device_pv_total_statistics']}_{deviceSn}.json"
-           )
+            )
         else:
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_device_pv_total_statistics"], json=data
