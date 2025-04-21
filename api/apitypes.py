@@ -139,9 +139,9 @@ API_ENDPOINTS = {
     "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
     "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
-    "get_device_pv_status": "charging_pv_svc/getPvStatus", # post method get the current activity status and power generation of a device
-    "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics", # post method the get total statistics (generated power, saved money, saved CO2) of a device
-    "get_device_pv_statistics": "charging_pv_svc/statisticsPv", # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
+    "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of a device
+    "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics",  # post method the get total statistics (generated power, saved money, saved CO2) of a device
+    "get_device_pv_statistics": "charging_pv_svc/statisticsPv",  # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -226,6 +226,8 @@ related to micro inverter without system: 4 + 3 used => 7 total
     'charging_pv_svc/selectUserTieredElecPrice',
     'charging_pv_svc/updateUserTieredElecPrice',
     'charging_pv_svc/set_aps_power',
+    'charging_common_svc/location/get',
+    'charging_common_svc/location/set',
 
 App related: 10 + 2 used => 12 total
     'app/devicemanage/update_relate_device_info',
@@ -489,7 +491,7 @@ class SolarbankUsageMode(IntEnum):
     manual = 3  # manual time plan for home load output
     backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
     use_time = 5  # Use Time plan with SB2 AC and smart meter
-    #smartmode = 6   # TODO(SB3) update code once known
+    # smartmode = 6   # TODO(SB3) update code once known
 
 
 class SolixTariffTypes(IntEnum):
@@ -509,7 +511,7 @@ class SolixPriceTypes(StrEnum):
 
     FIXED = "fixed"
     USE_TIME = "use_time"
-    #DYNAMIC = "dynamic" # TODO(SB3) update code once known
+    # DYNAMIC = "dynamic" # TODO(SB3) update code once known
 
 
 class SolixDayTypes(StrEnum):
@@ -530,7 +532,7 @@ class SolarbankRatePlan:
     manual: str = "custom_rate_plan"
     backup: str = "manual_backup"
     use_time: str = "use_time"
-    #smartmode: str = "smart_plan" # TODO(SB3) update code once known
+    # smartmode: str = "smart_plan" # TODO(SB3) update code once known
 
 
 @dataclass(frozen=True)
@@ -621,7 +623,7 @@ class SolixSiteType:
     t_9 = SolixDeviceType.HES.value  # Main A5103
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
-    #t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro, can also add SB1 ?
+    # t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro, can also add SB1 ?
 
 
 @dataclass(frozen=True)
