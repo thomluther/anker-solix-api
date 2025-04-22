@@ -433,7 +433,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(
-                            f"{'AC Power':<{col1}}: {dev.get('generate_power', '----'):>3} {unit}"
+                            f"{'AC Power':<{col1}}: {dev.get('generate_power', '----'):>4} {unit:<{col2 - 5}} {'Inverter Limit':<{col3}}: {dev.get('preset_inverter_limit', '---'):>4} {unit}"
                         )
                     elif devtype == api.SolixDeviceType.SMARTMETER.value:
                         CONSOLE.info(
@@ -550,9 +550,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Solar Ch AC':<{col1}}: {today.get('solar_production_microinverter') or '-.--':>6} {unit:<{col2 - 7}} {'Solar Ch AC':<{col3}}: {yesterday.get('solar_production_microinverter') or '-.--':>6} {unit}"
                                 )
-                            CONSOLE.info(
-                                f"{'Charged':<{col1}}: {today.get('battery_charge') or '-.--':>6} {unit:<{col2 - 7}} {'Charged':<{col3}}: {yesterday.get('battery_charge') or '-.--':>6} {unit}"
-                            )
+                            if value := today.get("battery_charge"):
+                                CONSOLE.info(
+                                    f"{'Charged':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Charged':<{col3}}: {yesterday.get('battery_charge') or '-.--':>6} {unit}"
+                                )
                             if value := today.get("solar_to_battery"):
                                 CONSOLE.info(
                                     f"{'Charged Solar':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Charged Solar':<{col3}}: {yesterday.get('solar_to_battery') or '-.--':>6} {unit}"
@@ -561,9 +562,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Charged Grid':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Charged Grid':<{col3}}: {yesterday.get('grid_to_battery') or '-.--':>6} {unit}"
                                 )
-                            CONSOLE.info(
-                                f"{'Discharged':<{col1}}: {today.get('battery_discharge') or '-.--':>6} {unit:<{col2 - 7}} {'Discharged':<{col3}}: {yesterday.get('battery_discharge') or '-.--':>6} {unit}"
-                            )
+                            if value := today.get("battery_discharge"):
+                                CONSOLE.info(
+                                    f"{'Discharged':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Discharged':<{col3}}: {yesterday.get('battery_discharge') or '-.--':>6} {unit}"
+                                )
                             if value := today.get("home_usage"):
                                 CONSOLE.info(
                                     f"{'House Usage':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'House Usage':<{col3}}: {yesterday.get('home_usage') or '-.--':>6} {unit}"
@@ -603,9 +605,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'-' + plug_t.get('alias', 'Plug ' + str(idx + 1)):<{col1}}: {plug_t.get('energy') or '-.--':>6} {unit:<{col2 - 7}} {'-' + plug_y.get('alias', 'Plug ' + str(idx + 1)):<{col3}}: {plug_y.get('energy') or '-.--':>6} {unit}"
                                 )
-                            CONSOLE.info(
-                                f"{'Sol/Bat/Gri %':<{col1}}: {float(today.get('solar_percentage') or '0') * 100:>3.0f}/{float(today.get('battery_percentage') or '0') * 100:>3.0f}/{float(today.get('other_percentage') or '0') * 100:>3.0f} {'%':<{col2 - 12}} {'Sol/Bat/Gri %':<{col3}}: {float(yesterday.get('solar_percentage') or '0') * 100:>3.0f}/{float(yesterday.get('battery_percentage') or '0') * 100:>3.0f}/{float(yesterday.get('other_percentage') or '0') * 100:>3.0f} %"
-                            )
+                            if value := today.get("solar_percentage"):
+                                CONSOLE.info(
+                                    f"{'Sol/Bat/Gri %':<{col1}}: {float(value or '0') * 100:>3.0f}/{float(today.get('battery_percentage') or '0') * 100:>3.0f}/{float(today.get('other_percentage') or '0') * 100:>3.0f} {'%':<{col2 - 12}} {'Sol/Bat/Gri %':<{col3}}: {float(yesterday.get('solar_percentage') or '0') * 100:>3.0f}/{float(yesterday.get('battery_percentage') or '0') * 100:>3.0f}/{float(yesterday.get('other_percentage') or '0') * 100:>3.0f} %"
+                                )
 
                 # ask to reload or switch to next file or wait for refresh cycle of real time monitoring
                 CONSOLE.info("=" * 80)

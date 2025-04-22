@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 from datetime import datetime
 import logging
+from os import replace
 from pathlib import Path
 
 from aiohttp import ClientSession
@@ -54,8 +55,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
     # import outsourced methods
     from .energy import (  # pylint: disable=import-outside-toplevel
+        device_pv_energy_daily,
         energy_analysis,
         energy_daily,
+        get_device_pv_statistics,
         home_load_chart,
     )
     from .schedule import (  # pylint: disable=import-outside-toplevel
@@ -154,6 +157,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             )
                     elif key in ["device_sw_version"] and value:
                         device.update({"sw_version": str(value)})
+                    elif key in ["preset_inverter_limit"] and str(value):
+                        device.update({"preset_inverter_limit": str(value).lower().replace("w","")})
                     elif (
                         key
                         in [
@@ -1164,11 +1169,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data["price"] = (
             float(price) if isinstance(price, float | int) else details.get("price")
         )
-        data["site_price_unit"] = (
-            unit
-            if unit in ["€", "$", "£", "¥", "₹", "원"]
-            else details.get("site_price_unit")
-        )
+        data["site_price_unit"] = unit if unit else details.get("site_price_unit")
         data["site_co2"] = (
             float(co2) if isinstance(co2, float | int) else details.get("site_co2")
         )
@@ -1357,7 +1358,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         Example data:
         {"pvStatuses": [{"sn": "JJY4QAVAFKT9","power": 169,"status": 1}]}
         """
-
         sns = (
             devices
             if isinstance(devices, str)
@@ -1378,7 +1378,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     resp = sn_resp
                 else:
                     new = (sn_resp.get("data") or {}).get("pvStatuses") or []
-                    resp.update({"data": {"pvStatuses": list((resp.get("data") or {}).get("pvStatuses") or []) + new}})
+                    resp.update(
+                        {
+                            "data": {
+                                "pvStatuses": (
+                                    (resp.get("data") or {}).get("pvStatuses") or []
+                                ) + new
+                            }
+                        }
+                    )
         else:
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_device_pv_status"], json=data
@@ -1388,11 +1396,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # update devices dict with new power data
             for dev in data.get("pvStatuses") or []:
                 # convert to string to merge with other response format
-                power = dev.get("power")
                 self._update_dev(
                     {
                         "device_sn": dev.get("sn") or "",
-                        "photovoltaic_power": "" if power is None else str(power),
+                        "generate_power": "" if dev.get("power") is None else str(dev.get("power")),
+                        "status": "" if dev.get("status") is None else str(dev.get("status")),
                     }
                 )
         return data
@@ -1416,5 +1424,179 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_device_pv_total_statistics"], json=data
             )
+        data = resp.get("data") or {}
+        # Save data in virtual site of api cache
+        siteId = f"{SolixDeviceType.VIRTUAL.value}-{deviceSn}"
+        if data and (mysite := self.sites.get(siteId)):
+            # create statistics dictionary as used in scene_info for other sites to allow direct replacement
+            stats = []
+            # Total Energy
+            stats.append(
+                {
+                    "type": "1",
+                    "total": ""
+                    if data.get("energy") is None
+                    else str(data.get("energy")),
+                    "unit": str(data.get("energyUnit") or "").lower(),
+                }
+            )
+            # Total carbon
+            stats.append(
+                {
+                    "type": "2",
+                    "total": ""
+                    if data.get("reductionCo2") is None
+                    else str(data.get("reductionCo2")),
+                    "unit": str(data.get("reductionCo2Unit") or "").lower(),
+                }
+            )
+            # Total savings
+            stats.append(
+                {
+                    "type": "3",
+                    "total": ""
+                    if data.get("saveMoney") is None
+                    else str(data.get("saveMoney")),
+                    "unit": str(data.get("saveMoneyUnit") or ""),
+                }
+            )
+            # Add stats and other system infos to sites cache
+            myinfo: dict = mysite.get("solar_info") or {}
+            myinfo.update({"micro_inverter_power_limit": data.get("powerConfig")})
+            mysite.update({"solar_info": myinfo, "statistics": stats})
+            self.sites[siteId] = mysite
+            # Update device cache with device details
+            self._update_dev(
+                {
+                    "device_sn": deviceSn,
+                    "preset_inverter_limit": data.get("powerConfig"),
+                }
+            )
+        return data
 
-        return resp.get("data") or {}
+    async def get_device_pv_price(self, deviceSn: str, fromFile: bool = False) -> dict:
+        """Get the PV price set for the stand alone inverter.
+
+        Example data:
+        {"currencyUnit": "€","tieredElecPrices": [
+            {"from": "00:00","to": "23:59","price": 0.4}]}
+        """
+        data = {"sn": deviceSn}
+        if fromFile:
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_pv_price']}_modified_{deviceSn}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_device_pv_price']}_{deviceSn}.json"
+                )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_device_pv_price"], json=data
+            )
+        data = resp.get("data") or {}
+        if tiers := data.get("tieredElecPrices") or []:
+            # update virtual site details in sites dict with price info (only first tier is applied)
+            siteId = f"{SolixDeviceType.VIRTUAL.value}-{deviceSn}"
+            self._update_site(
+                siteId,
+                {
+                    "price": (tiers[0] or {}).get("price"),
+                    "site_price_unit": data.get("currencyUnit") or "",
+                },
+            )
+        return data
+
+    async def set_device_pv_price(
+        self,
+        deviceSn: str,
+        price: float | None = None,
+        unit: str | None = None,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Set the PV device price and the unit.
+
+        Example input:
+        {"sn": "E071000XXXXX","currencyUnit": "€","tieredElecPrices": [
+            {"from": "00:00","to": "23:59","price": 0.40}]}
+        """
+        # First get the old settings from api dict or Api call to update only requested parameter
+        siteId = f"{SolixDeviceType.VIRTUAL.value}-{deviceSn}"
+        if not (details := (self.sites.get(siteId) or {}).get("site_details") or {}):
+            data = await self.get_device_pv_price(deviceSn=deviceSn, fromFile=toFile)
+            if tiers := data.get("tieredElecPrices") or []:
+                details = {
+                    "price": (tiers[0] or {}).get("price"),
+                    "site_price_unit": data.get("currencyUnit") or "",
+                }
+            else:
+                details = {}
+        if not details or not isinstance(details, dict):
+            return False
+        # Prepare payload from details
+        data: dict = {}
+        data["currencyUnit"] = unit if unit else details.get("site_price_unit")
+        # limit tiers to single full day tier since others are ignored by the cloud
+        data["tieredElecPrices"] = [
+            {
+                "from": "00:00",
+                "to": "23:59",
+                "price": float(price)
+                if isinstance(price, float | int)
+                else details.get("price"),
+            }
+        ]
+        # Make the Api call and check for return code
+        if toFile:
+            # Write updated response to file for testing purposes
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_device_pv_price']}_modified_{deviceSn}.json",
+                data={
+                    "code": 0,
+                    "msg": "success!",
+                    "data": data,
+                },
+            ):
+                return False
+        else:
+            data["sn"] = deviceSn
+            code = (
+                await self.apisession.request(
+                    "post", API_ENDPOINTS["set_device_pv_price"], json=data
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return False
+        # update the data in api dict and return active data
+        return await self.get_device_pv_price(deviceSn=deviceSn, fromFile=toFile)
+
+    async def set_device_pv_power(
+        self,
+        deviceSn: str,
+        limit: int,
+    ) -> bool:
+        """Set the PV device power limit in Watt.
+
+        It is assumed, this is the persistant inverter limit which has limited write cycles in the inverter HW
+        Example input:
+        {"sn": "E071000XXXXX","power": 800}
+        """
+        # validate parameter
+        if not (isinstance(limit, float | int) and limit >= 0):
+            return False
+        # Prepare payload from details
+        data = {"sn": deviceSn, "power": int(limit)}
+        # Make the Api call and check for return code
+        code = (
+            await self.apisession.request(
+                "post", API_ENDPOINTS["set_device_pv_power"], json=data
+            )
+        ).get("code")
+        if not isinstance(code, int) or int(code) != 0:
+            return False
+        return True

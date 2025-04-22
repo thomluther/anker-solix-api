@@ -217,8 +217,8 @@ class AnkerSolixApiExport:
                     self.client.nickname,
                 )
                 await self.api_power.update_sites(fromFile=True)
-                await self.api_power.update_site_details(fromFile=True)
                 await self.api_power.update_device_details(fromFile=True)
+                await self.api_power.update_site_details(fromFile=True)
                 await self.api_power.update_device_energy(fromFile=True)
                 self._logger.info("")
                 self._logger.info(
@@ -251,21 +251,6 @@ class AnkerSolixApiExport:
                     self.api_power.devices,
                     skip_randomize=True,
                 )
-                # restore real client cache data for re-use of sites and devices in other Api services
-                self.api_power.account = old_account
-                self.api_power.sites = old_sites
-                self.api_power.devices = old_devices
-                # skip restore of default test dir in client session since it may not exist
-                if Path(old_testdir).is_dir() and old_testdir != self.export_path:
-                    self.api_power.testDir(old_testdir)
-                    self._logger.debug(
-                        "Restored original test folder for api %s client session.",
-                        self.client.nickname,
-                    )
-                # Notify optional callable that cache was restored
-                if toggle_cache:
-                    toggle_cache(True)
-
                 # Always export account dictionary
                 self._logger.info("")
                 self._logger.info(
@@ -284,7 +269,6 @@ class AnkerSolixApiExport:
                     Path(self.export_path) / filename,
                     self.api_power.account,
                 )
-
                 # Print stats
                 self._logger.info(
                     "Api %s request stats: %s",
@@ -292,6 +276,17 @@ class AnkerSolixApiExport:
                     self.client.request_count,
                 )
 
+                # restore real client cache data for re-use of sites and devices in other Api services
+                self.api_power.account = old_account
+                self.api_power.sites = old_sites
+                self.api_power.devices = old_devices
+                # skip restore of default test dir in client session since it may not exist
+                if Path(old_testdir).is_dir() and old_testdir != self.export_path:
+                    self.api_power.testDir(old_testdir)
+                    self._logger.debug(
+                        "Restored original test folder for api %s client session.",
+                        self.client.nickname,
+                    )
                 # restore old api session delay
                 if old_delay != self.request_delay:
                     self.client.requestDelay(old_delay)
@@ -300,6 +295,9 @@ class AnkerSolixApiExport:
                         self.client.nickname,
                         old_delay,
                     )
+                # Notify optional callable that cache was restored
+                if toggle_cache:
+                    toggle_cache(True)
 
                 # remove queue file handler again before zipping folder
                 self._logger.removeHandler(qh)
@@ -732,6 +730,12 @@ class AnkerSolixApiExport:
                     await self.query(
                         endpoint=API_ENDPOINTS["get_device_pv_total_statistics"],
                         filename=f"{API_FILEPREFIXES['get_device_pv_total_statistics']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"sn": sn},
+                        replace=[(sn, "<deviceSn>")],
+                    )
+                    await self.query(
+                        endpoint=API_ENDPOINTS["get_device_pv_price"],
+                        filename=f"{API_FILEPREFIXES['get_device_pv_price']}_{self._randomize(sn, '_sn')}.json",
                         payload={"sn": sn},
                         replace=[(sn, "<deviceSn>")],
                     )

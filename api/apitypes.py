@@ -142,6 +142,9 @@ API_ENDPOINTS = {
     "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
     "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics",  # post method the get total statistics (generated power, saved money, saved CO2) of a device
     "get_device_pv_statistics": "charging_pv_svc/statisticsPv",  # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
+    "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice", # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice", # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_power": "charging_pv_svc/set_aps_power", # post method to set stand alone inverter limit
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -221,13 +224,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/add_message',
     'power_service/v1/del_message',
 
-related to micro inverter without system: 4 + 3 used => 7 total
+related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
-    'charging_pv_svc/selectUserTieredElecPrice',
-    'charging_pv_svc/updateUserTieredElecPrice',
-    'charging_pv_svc/set_aps_power',
-    'charging_common_svc/location/get',
-    'charging_common_svc/location/set',
 
 App related: 10 + 2 used => 12 total
     'app/devicemanage/update_relate_device_info',
@@ -252,6 +250,8 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/preprocess_utility_rate_plan",
     "charging_energy_service/ack_utility_rate_plan",
     "charging_energy_service/adjust_station_price_unit",
+    "charging_common_svc/location/get",  # Get default and identifier location for identifier_id, identifier_type, business_type with longitude, latitude, country_code, place_id, display_name, formatted_address
+    "charging_common_svc/location/set",  # Set default and identifier location
 
 Home Energy System related (X1): 37 + 14 used => 51 total
     "charging_hes_svc/adjust_station_price_unit",
@@ -371,6 +371,7 @@ API_FILEPREFIXES = {
     "get_device_pv_status": "device_pv_status",
     "get_device_pv_total_statistics": "device_pv_total_statistics",
     "get_device_pv_statistics": "device_pv_statistics",
+    "get_device_pv_price": "device_pv_price",
     # charging_energy_service endpoint file prefixes
     "charging_get_error_info": "charging_error_info",
     "charging_get_system_running_info": "charging_system_running_info",
@@ -451,6 +452,7 @@ class SolixDeviceType(Enum):
 
     ACCOUNT = "account"
     SYSTEM = "system"
+    VIRTUAL = "virtual"
     SOLARBANK = "solarbank"
     INVERTER = "inverter"
     SMARTMETER = "smartmeter"
@@ -612,7 +614,8 @@ class SolixDeviceCapacity:
 class SolixSiteType:
     """Dataclass for Anker Solix System/Site types according to the main device in site rules."""
 
-    t_1 = SolixDeviceType.INVERTER.value  # Main A5143
+    t_0 = SolixDeviceType.VIRTUAL.value  # Virtual site, only standalone inverter A5143
+    t_1 = SolixDeviceType.PPS.value  # Main A5143 + FS1200
     t_2 = SolixDeviceType.SOLARBANK.value  # Main A17C0 SB1
     t_3 = SolixDeviceType.HES.value  # Main A5103, Note: This is not listed in actual site rules, but X1 export showing type 3 instead of 9 as site rules say
     t_4 = SolixDeviceType.POWERPANEL.value  # Main A17B1
