@@ -720,7 +720,7 @@ async def poll_device_details(
                 "type": SolixDeviceType.SYSTEM.value,
                 "site_info": {
                     "site_id": site_id,
-                    "site_name": f"{SolixDeviceType.INVERTER.value.capitalize()} {SolixDeviceType.SYSTEM.value}",
+                    "site_name": f"Standalone {SolixDeviceType.INVERTER.value}",
                     "ms_type": 1,  # admin
                     "power_site_type": 0,  # virtual type
                     "support_device_models": [device.get("device_pn")],
