@@ -46,13 +46,16 @@ async def main() -> bool:
                 CONSOLE.info(
                     "CACHED"
                 )  # Login validation will be done during first API call
-            # Refresh the site and device info of the API
-            CONSOLE.info("\nUpdating Site Info...")
-            if (await myapi.update_sites()) == {}:
+            # Refresh the site and admin device info of the API
+            CONSOLE.info("\nUpdating site info...")
+            await myapi.update_sites()
+            CONSOLE.info("Updating admin device info...")
+            await myapi.get_bind_devices()
+            if not myapi.sites:
                 CONSOLE.info("NO INFO")
                 return False
             CONSOLE.info("OK")
-            CONSOLE.info("\nSites: %s", len(myapi.sites))
+            CONSOLE.info("Found sites: %s", len(myapi.sites))
             CONSOLE.debug(json.dumps(myapi.sites, indent=2))
 
             for site_id, site in myapi.sites.items():
@@ -61,7 +64,11 @@ async def main() -> bool:
                     myapi.powerpanelApi and site_id in myapi.powerpanelApi.sites
                 )
                 hes = bool(myapi.hesApi and site_id in myapi.hesApi.sites)
-                CONSOLE.info("Found site %s ID %s", site_name, site_id)
+                inverter = bool(
+                    str(site_id).startswith(SolixDeviceType.VIRTUAL.value)
+                    and site.get("solar_list")
+                )
+                CONSOLE.info("\nFound site '%s' ID: %s", site_name, site_id)
                 CONSOLE.info(
                     "Site Type %s: %s",
                     (site.get("site_info") or {}).get("power_site_type") or "??",
@@ -69,45 +76,50 @@ async def main() -> bool:
                     if powerpanel
                     else "Home Energy System"
                     if hes
+                    else "Standalone Inverter"
+                    if inverter
                     else "Balcony Power",
                 )
                 try:
                     daystr = input(
-                        "\nEnter start day for daily energy data (yyyy-mm-dd) or enter to skip site: "
+                        "Enter start day for daily energy data (yyyy-mm-dd) or enter to skip site: "
                     )
                     if daystr == "":
                         CONSOLE.info(
-                            "Skipped site %s, checking for next site...", site_name
+                            "Skipped site '%s', checking for next site...", site_name
                         )
                         continue
                     startday = datetime.fromisoformat(daystr)
                     numdays = int(input("How many days to query (1-366): "))
-                    daytotals = input(
-                        "Do you want to include daily total data (e.g. battery charge, grid import/export) which may require several API queries per day? (Y/N): "
-                    )
-                    daytotals = daytotals.upper() in ["Y", "YES", "TRUE", 1]
+                    if inverter:
+                        daytotals = False
+                    else:
+                        daytotals = input(
+                            "Do you want to include daily total data (e.g. battery charge, grid import/export) which may require several API queries per day? (Y/N): "
+                        )
+                    daytotals = str(daytotals).upper() in ["Y", "YES", "TRUE", 1]
                     prefix = input(
-                        f"CSV filename prefix for export ({site_name.replace(' ','_')}_daily_energy_{daystr}): "
+                        f"CSV filename prefix for export ({site_name.replace(' ', '_')}_daily_energy_{daystr}): "
                     )
                     if prefix == "":
-                        prefix = f"{site_name.replace(' ','_')}_daily_energy_{daystr}"
+                        prefix = f"{site_name.replace(' ', '_')}_daily_energy_{daystr}"
                     filename = f"{prefix}_{site_name}.csv"
                 except ValueError:
                     return False
                 # delay requests, endpoint limit appears to be around 25 per minute
                 # As of Feb 2025, endpoint limit appears to be reduced to 10-12 per minute
                 if numdays > 3:
-                    # myapi.apisession.requestDelay(5.1)
                     CONSOLE.info(
                         "Queries may take several minutes depending on system configuration and throttling ...please wait..."
                     )
                 else:
-                    # myapi.apisession.requestDelay(0.3)
                     CONSOLE.info(
                         "Queries may take up to %s seconds with %.1f seconds delay ...please wait...",
                         round(
                             (
-                                (4 * (numdays - 1) * daytotals + 4)
+                                numdays
+                                if inverter
+                                else (4 * (numdays - 1) * daytotals + 4)
                                 if powerpanel or hes
                                 else (2 * numdays * daytotals + 5)
                             )
@@ -137,10 +149,25 @@ async def main() -> bool:
                         },
                         showProgress=True,
                     )
+                elif inverter:
+                    data = await myapi.device_pv_energy_daily(
+                        deviceSn=site_id.split("-")[1],
+                        startDay=startday,
+                        numDays=numdays,
+                        showProgress=True,
+                    )
                 else:
                     data = await myapi.energy_daily(
                         siteId=site_id,
-                        deviceSn=next(iter((site.get("solarbank_info") or {}).get("solarbank_list") or []),{}).get("device_sn"),  # mandatory parameter but can be empty since not distinguished for site energy stats
+                        deviceSn=next(
+                            iter(
+                                (site.get("solarbank_info") or {}).get("solarbank_list")
+                                or []
+                            ),
+                            {},
+                        ).get(
+                            "device_sn"
+                        ),  # mandatory parameter but can be empty since not distinguished for site energy stats
                         startDay=startday,
                         numDays=numdays,
                         dayTotals=daytotals,
@@ -172,8 +199,8 @@ async def main() -> bool:
                         "No data received for site %s ID %s", site_name, site_id
                     )
                     return False
-                # CONSOLE.info(myapi.apisession.request_count.get_details())
-                CONSOLE.info(f"Api Requests: {myapi.request_count}")
+            # CONSOLE.info(myapi.apisession.request_count.get_details())
+            CONSOLE.info(f"\nApi Requests: {myapi.request_count}")
             return True
 
     except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001

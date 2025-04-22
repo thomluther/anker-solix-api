@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-"""Example exec module to use the Anker API for continuously querying and displaying important solarbank parameters.
+"""Example exec module to use the Anker API for continuously querying and displaying important parameters of Anker Solix sites and devices.
 
 This module will prompt for the Anker account details if not pre-set in the header.  Upon successful authentication,
 you will see the solarbank parameters displayed and refreshed at regular interval.
 
-Note: When the system owning account is used, more details for the solarbank
-can be queried and displayed.
+Note: When the system owning account is used, more details for the systems and devices can be queried and displayed.
 
 Attention: During execution of this module, the used account cannot be used in
 the Anker App since it will be kicked out on each refresh.
@@ -33,8 +32,10 @@ CONSOLE: logging.Logger = common.CONSOLE
 
 REFRESH = 0  # default No refresh interval
 DETAILSREFRESH = 10  # Multiplier for device details refresh
-INTERACTIVE = True
-SHOWAPICALLS = False
+INTERACTIVE = True  # Interactive allows to select examples and exports as input for tests and debug
+SHOWAPICALLS = (
+    False  # Enable to show Api calls and cache details for additional debugging
+)
 
 
 def clearscreen():
@@ -59,9 +60,9 @@ def get_subfolders(folder: str | Path) -> list:
 async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     None
 ):
-    """Run Main routine to start Solarbank monitor in a loop."""
+    """Run Main routine to start the monitor in a loop."""
     global REFRESH  # pylint: disable=global-statement  # noqa: PLW0603
-    CONSOLE.info("Solarbank Monitor:")
+    CONSOLE.info("Anker Solix Monitor:")
     # get list of possible example and export folders to test the monitor against
     exampleslist: list = get_subfolders(
         Path(__file__).parent / "examples"
@@ -212,7 +213,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     CONSOLE.info("Using input source folder: %s", myapi.testDir())
                 else:
                     CONSOLE.info(
-                        "Solarbank Monitor (refresh %s s, details refresh countdown %s):",
+                        "Anker Solix Monitor (refresh %s s, details refresh countdown %s):",
                         REFRESH,
                         next_dev_refr,
                     )
@@ -300,22 +301,22 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             ) > 0:
                                 # print hes totals
                                 CONSOLE.info(
-                                    f"{'Parallel Devs':<{col1}}: {hes.get('numberOfParallelDevice', '---'):>3} {'':<{col2-4}} {'Battery count':<{col3}}: {hes.get('batCount', '---'):>3}"
+                                    f"{'Parallel Devs':<{col1}}: {hes.get('numberOfParallelDevice', '---'):>3} {'':<{col2 - 4}} {'Battery count':<{col3}}: {hes.get('batCount', '---'):>3}"
                                 )
                                 CONSOLE.info(
                                     f"{'Main SN':<{col1}}: {hes.get('main_sn', 'unknown'):<{col2}} {'System Code':<{col3}}: {hes.get('systemCode', 'unknown')}"
                                 )
                                 feat1 = hes.get("connected")
                                 CONSOLE.info(
-                                    f"{'Connected':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2-4}} {'Repost time':<{col3}}: {hes.get('rePostTime', '---'):>3} min?"
+                                    f"{'Connected':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2 - 4}} {'Repost time':<{col3}}: {hes.get('rePostTime', '---'):>3} min?"
                                 )
                                 CONSOLE.info(
-                                    f"{'Net status':<{col1}}: {hes.get('net', '---'):>3} {'':<{col2-4}} {'Real net':<{col3}}: {hes.get('realNet', '---'):>3}"
+                                    f"{'Net status':<{col1}}: {hes.get('net', '---'):>3} {'':<{col2 - 4}} {'Real net':<{col3}}: {hes.get('realNet', '---'):>3}"
                                 )
                                 feat1 = hes.get("isAddHeatPump")
                                 feat2 = hes.get("supportDiesel")
                                 CONSOLE.info(
-                                    f"{'Has heat pump':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2-4}} {'Support diesel':<{col3}}: {'YES' if feat2 else '---' if feat2 is None else ' NO':>3}"
+                                    f"{'Has heat pump':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2 - 4}} {'Support diesel':<{col3}}: {'YES' if feat2 else '---' if feat2 is None else ' NO':>3}"
                                 )
                             CONSOLE.info("-" * 80)
                     else:

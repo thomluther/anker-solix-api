@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Example exec module to test the Anker API for various methods or direct endpoint requests with various parameters."""
+"""Example exec module to test the Anker API for various methods or direct endpoint requests with various parameters related to solarbank devices."""
 
 import asyncio
 from datetime import datetime
@@ -28,7 +28,9 @@ def _out(jsondata):
     CONSOLE.info(json.dumps(jsondata, indent=2))
 
 
-async def test_api_methods(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
+async def test_api_methods(myapi: api.AnkerSolixApi) -> None:
+    """Test Api methods of the library."""
+
     _system = list(myapi.sites.values())[0]
     siteid = _system["site_info"]["site_id"]
     devicesn = _system["solarbank_info"]["solarbank_list"][0]["device_sn"]
@@ -91,59 +93,61 @@ async def test_api_methods(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(await myapi.get_site_rules())
 
 
-async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
+async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:
+    """Test Api endpoints for solarbanks."""
+
     _system = list(myapi.sites.values())[0]
     siteid = _system["site_info"]["site_id"]
     devicesn = _system["solarbank_info"]["solarbank_list"][0]["device_sn"]
-    _out(await myapi.apisession.request("post", api.API_ENDPOINTS["homepage"], json={}))  # pylint: disable=protected-access
+    _out(await myapi.apisession.request("post", api.API_ENDPOINTS["homepage"], json={}))
     _out(
         await myapi.apisession.request("post", api.API_ENDPOINTS["site_list"], json={})
-    )  # pylint: disable=protected-access
+    )
     _out(
         await myapi.apisession.request(
             "post", api.API_ENDPOINTS["bind_devices"], json={}
         )
-    )  # pylint: disable=protected-access
+    )
     _out(
         await myapi.apisession.request(
             "post", api.API_ENDPOINTS["user_devices"], json={}
         )
-    )  # pylint: disable=protected-access
+    )
     _out(
         await myapi.apisession.request(
             "post", api.API_ENDPOINTS["charging_devices"], json={}
         )
-    )  # pylint: disable=protected-access
+    )
     _out(
         await myapi.apisession.request(
             "post", api.API_ENDPOINTS["get_auto_upgrade"], json={}
         )
-    )  # pylint: disable=protected-access
+    )
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["site_detail"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["site_detail"],
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["wifi_list"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["wifi_list"],
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_site_price"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["get_site_price"],
             json={"site_id": siteid},
         )
     )
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["solar_info"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["solar_info"],
             json={
                 "site_id": siteid,
                 "solarbank_sn": devicesn,
@@ -153,7 +157,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_cutoff"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["get_cutoff"],
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -163,7 +167,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_device_fittings"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["get_device_fittings"],
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -173,7 +177,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_device_load"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["get_device_load"],
             json={
                 "site_id": siteid,
                 "device_sn": devicesn,
@@ -183,7 +187,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["get_device_parm"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["get_device_parm"],
             json={
                 "site_id": siteid,
                 "param_type": "4",
@@ -193,24 +197,26 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["compatible_process"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["compatible_process"],
             json={"solarbank_sn": devicesn},
         )
     )
     _out(
         await myapi.apisession.request(
             "post",
-            api.API_ENDPOINTS["home_load_chart"],  # pylint: disable=protected-access
+            api.API_ENDPOINTS["home_load_chart"],
             json={"site_id": siteid},
         )
     )
 
 
-async def test_api_from_json_files(myapi: api.AnkerSolixApi) -> None:  # noqa: D103
+async def test_api_from_json_files(myapi: api.AnkerSolixApi) -> None:
+    """Test Api library from json files."""
+
     myapi.testDir(Path(Path(__file__).parent) / "examples" / JSONFOLDER)
     await myapi.update_sites(fromFile=True)
-    await myapi.update_site_details(fromFile=True)
     await myapi.update_device_details(fromFile=True)
+    await myapi.update_site_details(fromFile=True)
     await myapi.update_device_energy(fromFile=True)
     _out(myapi.account)
     _out(myapi.sites)
@@ -219,6 +225,7 @@ async def test_api_from_json_files(myapi: api.AnkerSolixApi) -> None:  # noqa: D
 
 async def main() -> None:
     """Create the aiohttp session and run the example."""
+
     CONSOLE.info("Testing Solix API:")
     async with ClientSession() as websession:
         myapi = api.AnkerSolixApi(
@@ -242,7 +249,7 @@ async def main() -> None:
             else:
                 CONSOLE.info("Cached Login response:")
             _out(
-                myapi.apisession._login_response  # pylint: disable=protected-access  # noqa: SLF001
+                myapi.apisession._login_response  # noqa: SLF001
             )  # show used login response for API requests
 
         # test site api methods
@@ -250,8 +257,8 @@ async def main() -> None:
             await test_api_from_json_files(myapi)
         else:
             await myapi.update_sites()
-            await myapi.update_site_details()
             await myapi.update_device_details()
+            await myapi.update_site_details()
             await myapi.update_device_energy()
             CONSOLE.info("Account Overview:")
             _out(myapi.account)
