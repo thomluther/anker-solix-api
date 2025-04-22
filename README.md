@@ -84,8 +84,8 @@ async def main() -> None:
             common.user(), common.password(), common.country(), websession, _LOGGER
         )
         await myapi.update_sites()
-        await myapi.update_site_details()
         await myapi.update_device_details()
+        await myapi.update_site_details()
         await myapi.update_device_energy()
         CONSOLE.info("Account Overview:")
         _out(myapi.account)
