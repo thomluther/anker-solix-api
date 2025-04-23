@@ -142,9 +142,9 @@ API_ENDPOINTS = {
     "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
     "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics",  # post method the get total statistics (generated power, saved money, saved CO2) of a device
     "get_device_pv_statistics": "charging_pv_svc/statisticsPv",  # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
-    "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice", # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
-    "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice", # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
-    "set_device_pv_power": "charging_pv_svc/set_aps_power", # post method to set stand alone inverter limit
+    "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice",  # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice",  # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_power": "charging_pv_svc/set_aps_power",  # post method to set stand alone inverter limit
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -573,6 +573,7 @@ class SolixDeviceNames:
 
     SHEM3: str = "Shelly 3EM"
     SHEMP3: str = "Shelly Pro 3EM"
+    SHPPS: str = "Shelly Plus Plug S"
 
 
 @dataclass(frozen=True)
@@ -626,7 +627,7 @@ class SolixSiteType:
     t_9 = SolixDeviceType.HES.value  # Main A5103
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
-    # t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro, can also add SB1 ?
+    t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
 
 
 @dataclass(frozen=True)
@@ -658,6 +659,7 @@ class SolixDeviceCategory:
     SHEMP3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Pro Smart Meter
     # Smart Plug
     A17X8: str = SolixDeviceType.SMARTPLUG.value  # SOLIX Smart Plug
+    SHPPS: str = SolixDeviceType.SMARTPLUG.value  # Shelly Smart Plug
     # Portable Power Stations (PPS)
     A1720: str = (
         SolixDeviceType.PPS.value
@@ -704,6 +706,7 @@ class SolixDeviceCategory:
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
     A17A2: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 50
+    A17A3: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 23L
     A17A4: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 40L
     A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L
 
@@ -758,7 +761,7 @@ class SolarbankDeviceMetrics:
         # "micro_inverter_low_power_limit",
         # "other_input_power",
     }
-    # SOLIX Solarbank 6 E2700, with 4 MPPT channel and AC socket
+    # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {
         "sub_package_num",
         "bat_charge_power",
@@ -811,7 +814,7 @@ class SolixDefaults:
     ENDPOINT_LIMIT_DEF: int = 10
     # Inverter limit
     MICRO_INVERTER_LIMIT_MIN: int = 0
-    MICRO_INVERTER_LIMIT_MAX: int = 1200
+    MICRO_INVERTER_LIMIT_MAX: int = 800
 
 
 class SolixDeviceStatus(StrEnum):

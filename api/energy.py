@@ -42,7 +42,7 @@ async def energy_daily(  # noqa: C901
         # get first data period from file or api
         justify_daytotals = bool(
             dayTotals
-            and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
+            and ((self.devices.get(deviceSn) or {}).get("generation") or 0) >= 2
         )
         if fromFile:
             resp = (
@@ -134,7 +134,7 @@ async def energy_daily(  # noqa: C901
     # Get home usage energy types if device is solarbank generation 2 or smart meter or smart plugs
     if (
         SolixDeviceType.SOLARBANK.value in devTypes
-        and ((self.devices.get(deviceSn) or {}).get("generation") or 0) > 1
+        and ((self.devices.get(deviceSn) or {}).get("generation") or 0) >= 2
     ) or (
         {SolixDeviceType.SMARTMETER.value, SolixDeviceType.SMARTPLUG.value} & devTypes
     ):

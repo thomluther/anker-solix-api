@@ -341,7 +341,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         )
                         demand = devData.get("home_load_power") or 0
                         # use house demand for preset if in auto mode
-                        if generation > 1 and (
+                        if generation >= 2 and (
                             (
                                 device.get("preset_usage_mode")
                                 or SolixDefaults.USAGE_MODE
@@ -371,7 +371,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     description = SolarbankStatus.charge_bypass.name
                         elif (
                             description == SolarbankStatus.detection.name
-                            and generation > 1
+                            and generation >= 2
                             and charge is not None
                             and homeload is not None
                             and preset is not None
@@ -382,7 +382,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     description = SolarbankStatus.protection_charge.name
                         elif (
                             description == SolarbankStatus.bypass.name
-                            and generation > 1
+                            and generation >= 2
                             and charge is not None
                         ):
                             with contextlib.suppress(ValueError):
@@ -447,6 +447,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 }
                             )
                             if ac_type:
+                                # update default with site currency if found
+                                if not (curr_def := (mysite.get("site_details") or {}).get("site_price_unit") or ""):
+                                    curr_def = SolixDefaults.CURRENCY_DEF
                                 device.update(
                                     {
                                         "preset_manual_backup_start": 0,
@@ -454,7 +457,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "preset_backup_option": False,
                                         "preset_tariff": SolixTariffTypes.NONE.value,
                                         "preset_tariff_price": SolixDefaults.TARIFF_PRICE_DEF,
-                                        "preset_tariff_currency": SolixDefaults.CURRENCY_DEF,
+                                        "preset_tariff_currency": curr_def,
                                     }
                                 )
                         else:
@@ -605,7 +608,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                             "preset_tariff_price": price
                                             or SolixDefaults.TARIFF_PRICE_DEF,
                                             "preset_tariff_currency": season.get("unit")
-                                            or SolixDefaults.CURRENCY_DEF,
+                                            or curr_def,
                                         }
                                     )
 
