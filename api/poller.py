@@ -726,6 +726,8 @@ async def poll_device_details(
                     "support_device_models": [device.get("device_pn")],
                     "current_site_device_models": [device.get("device_pn")],
                 },
+                "site_id": site_id,
+                "power_site_type": 0,  # virtual type
                 "site_type": SolixDeviceType.VIRTUAL.value,
                 "site_admin": True,
                 "solar_list": [
