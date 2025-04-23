@@ -30,7 +30,7 @@ CONSOLE: logging.Logger = common.CONSOLE
 # enable debug mode for the console handler
 # CONSOLE.handlers[0].setLevel(logging.DEBUG)
 # set a json folder to debug cache population from json files
-JSONFOLDER = Path(__file__).parent / "examples" / "MI80_Standalone"
+JSONFOLDER = ""  # Path(__file__).parent / "examples" / "MI80_Standalone"
 
 
 async def main() -> bool:
