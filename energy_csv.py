@@ -29,6 +29,8 @@ import common
 CONSOLE: logging.Logger = common.CONSOLE
 # enable debug mode for the console handler
 # CONSOLE.handlers[0].setLevel(logging.DEBUG)
+# set a json folder to debug cache population from json files
+JSONFOLDER = "" # Path(__file__).parent / "examples" / "MI80_Standalone"
 
 
 async def main() -> bool:
@@ -36,21 +38,38 @@ async def main() -> bool:
     CONSOLE.info("Exporting daily Energy data for Anker Solarbank:")
     try:
         async with ClientSession() as websession:
-            CONSOLE.info("\nTrying authentication...")
-            myapi = AnkerSolixApi(
-                common.user(), common.password(), common.country(), websession, CONSOLE
-            )
-            if await myapi.async_authenticate():
-                CONSOLE.info("OK")
+            if JSONFOLDER:
+                CONSOLE.info("\nStarting Api session from folder: %s", JSONFOLDER)
+                myapi = AnkerSolixApi(
+                    "",
+                    "",
+                    "",
+                    websession,
+                    CONSOLE,
+                )
+                myapi.testDir(JSONFOLDER)
+                use_file = True
             else:
-                CONSOLE.info(
-                    "CACHED"
-                )  # Login validation will be done during first API call
+                CONSOLE.info("\nTrying authentication...")
+                myapi = AnkerSolixApi(
+                    common.user(),
+                    common.password(),
+                    common.country(),
+                    websession,
+                    CONSOLE,
+                )
+                if await myapi.async_authenticate():
+                    CONSOLE.info("OK")
+                else:
+                    CONSOLE.info(
+                        "CACHED"
+                    )  # Login validation will be done during first API call
+                use_file = False
             # Refresh the site and admin device info of the API
             CONSOLE.info("\nUpdating site info...")
-            await myapi.update_sites()
-            CONSOLE.info("Updating admin device info...")
-            await myapi.get_bind_devices()
+            await myapi.update_sites(fromFile=use_file)
+            CONSOLE.info("Updating device details info...")
+            await myapi.update_device_details(fromFile=use_file)
             if not myapi.sites:
                 CONSOLE.info("NO INFO")
                 return False
@@ -71,7 +90,7 @@ async def main() -> bool:
                 CONSOLE.info("\nFound site '%s' ID: %s", site_name, site_id)
                 CONSOLE.info(
                     "Site Type %s: %s",
-                    (site.get("site_info") or {}).get("power_site_type") or "??",
+                    (site.get("site_info") or {}).get("power_site_type", "??"),
                     "Power Panel"
                     if powerpanel
                     else "Home Energy System"
@@ -137,6 +156,7 @@ async def main() -> bool:
                             SolixDeviceType.POWERPANEL.value,
                         },
                         showProgress=True,
+                        fromFile=use_file,
                     )
                 elif hes:
                     data = await myapi.hesApi.energy_daily(
@@ -148,6 +168,7 @@ async def main() -> bool:
                             SolixDeviceType.HES.value,
                         },
                         showProgress=True,
+                        fromFile=use_file,
                     )
                 elif inverter:
                     data = await myapi.device_pv_energy_daily(
@@ -155,6 +176,7 @@ async def main() -> bool:
                         startDay=startday,
                         numDays=numdays,
                         showProgress=True,
+                        fromFile=use_file,
                     )
                 else:
                     data = await myapi.energy_daily(
@@ -179,6 +201,7 @@ async def main() -> bool:
                             SolixDeviceType.SMARTPLUG.value,
                         },
                         showProgress=True,
+                        fromFile=use_file,
                     )
                 CONSOLE.debug(json.dumps(data, indent=2))
                 # Write csv file
