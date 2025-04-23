@@ -809,6 +809,9 @@ class SolixDefaults:
     REQUEST_DELAY_DEF: float = 0.3
     # Request limit per endpoint per minute
     ENDPOINT_LIMIT_DEF: int = 10
+    # Inverter limit
+    MICRO_INVERTER_LIMIT_MIN: int = 0
+    MICRO_INVERTER_LIMIT_MAX: int = 1200
 
 
 class SolixDeviceStatus(StrEnum):

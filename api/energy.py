@@ -560,14 +560,8 @@ async def device_pv_energy_daily(
             startDay=startDay,
             endDay=startDay + timedelta(days=numDays - 1),
         )
-    fileNumDays = 0
-    fileStartDay = None
-    for item in resp.get("energy", []):
-        daystr = (startDay + timedelta(days=fileNumDays)).strftime("%Y-%m-%d")
-        if fromFile:
-            if fileStartDay is None:
-                fileStartDay = daystr
-            fileNumDays += 1
+    for idx, item in enumerate(resp.get("energy", [])):
+        daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
         entry = table.get(daystr, {"date": daystr})
         entry.update(
             {
