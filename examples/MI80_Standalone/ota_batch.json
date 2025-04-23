@@ -4,7 +4,7 @@
   "data": {
     "update_infos": [
       {
-        "device_sn": "JJY4QAVAFKT9",
+        "device_sn": "3IEDXXFMD2I3",
         "need_update": false,
         "upgrade_type": 0,
         "lastPackage": {
@@ -22,5 +22,5 @@
       }
     ]
   },
-  "trace_id": "ff3894b7ae299fc73defcd7a3090e435"
+  "trace_id": "e1266c43ddd8ac21c26bf68b6ca5afff"
 }

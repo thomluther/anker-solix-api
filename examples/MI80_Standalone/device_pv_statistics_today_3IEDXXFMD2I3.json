@@ -529,847 +529,847 @@
         "isFuture": false
       },
       {
-        "power": 0,
+        "power": 1,
         "time": "06:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 0,
+        "power": 6,
         "time": "06:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 6,
+        "power": 11,
         "time": "06:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 4,
+        "power": 15,
         "time": "06:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 6,
+        "power": 18,
         "time": "06:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 11,
+        "power": 24,
         "time": "06:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 14,
+        "power": 27,
         "time": "06:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 18,
+        "power": 33,
         "time": "06:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 26,
+        "power": 45,
         "time": "06:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 29,
+        "power": 55,
         "time": "07:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 23,
+        "power": 60,
         "time": "07:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 19,
+        "power": 84,
         "time": "07:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 14,
+        "power": 95,
         "time": "07:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 14,
+        "power": 90,
         "time": "07:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 20,
+        "power": 115,
         "time": "07:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 17,
+        "power": 123,
         "time": "07:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 33,
+        "power": 134,
         "time": "07:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 54,
+        "power": 143,
         "time": "07:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 57,
+        "power": 166,
         "time": "07:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 61,
+        "power": 185,
         "time": "07:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 66,
+        "power": 190,
         "time": "07:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 77,
+        "power": 198,
         "time": "08:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 94,
+        "power": 200,
         "time": "08:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 98,
+        "power": 249,
         "time": "08:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 114,
+        "power": 266,
         "time": "08:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 136,
+        "power": 259,
         "time": "08:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 129,
+        "power": 283,
         "time": "08:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 111,
+        "power": 251,
         "time": "08:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 93,
+        "power": 237,
         "time": "08:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 77,
+        "power": 308,
         "time": "08:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 86,
+        "power": 0,
         "time": "08:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 102,
+        "power": 0,
         "time": "08:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 95,
+        "power": 0,
         "time": "08:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 79,
+        "power": 0,
         "time": "09:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 88,
+        "power": 0,
         "time": "09:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 100,
+        "power": 0,
         "time": "09:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 98,
+        "power": 0,
         "time": "09:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 99,
+        "power": 0,
         "time": "09:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 107,
+        "power": 0,
         "time": "09:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 80,
+        "power": 0,
         "time": "09:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 71,
+        "power": 0,
         "time": "09:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 126,
+        "power": 0,
         "time": "09:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 129,
+        "power": 0,
         "time": "09:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 102,
+        "power": 0,
         "time": "09:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 105,
+        "power": 0,
         "time": "09:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 96,
+        "power": 0,
         "time": "10:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 87,
+        "power": 0,
         "time": "10:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 88,
+        "power": 0,
         "time": "10:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 96,
+        "power": 0,
         "time": "10:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 94,
+        "power": 0,
         "time": "10:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 105,
+        "power": 0,
         "time": "10:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 124,
+        "power": 0,
         "time": "10:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 137,
+        "power": 0,
         "time": "10:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 174,
+        "power": 0,
         "time": "10:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 177,
+        "power": 0,
         "time": "10:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 196,
+        "power": 0,
         "time": "10:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 186,
+        "power": 0,
         "time": "10:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 171,
+        "power": 0,
         "time": "11:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 148,
+        "power": 0,
         "time": "11:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 160,
+        "power": 0,
         "time": "11:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 116,
+        "power": 0,
         "time": "11:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 120,
+        "power": 0,
         "time": "11:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 152,
+        "power": 0,
         "time": "11:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 151,
+        "power": 0,
         "time": "11:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 135,
+        "power": 0,
         "time": "11:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 102,
+        "power": 0,
         "time": "11:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 109,
+        "power": 0,
         "time": "11:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 115,
+        "power": 0,
         "time": "11:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 87,
+        "power": 0,
         "time": "11:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 46,
+        "power": 0,
         "time": "12:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 38,
+        "power": 0,
         "time": "12:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 43,
+        "power": 0,
         "time": "12:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 59,
+        "power": 0,
         "time": "12:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 68,
+        "power": 0,
         "time": "12:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 67,
+        "power": 0,
         "time": "12:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 60,
+        "power": 0,
         "time": "12:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 49,
+        "power": 0,
         "time": "12:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 55,
+        "power": 0,
         "time": "12:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 51,
+        "power": 0,
         "time": "12:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 51,
+        "power": 0,
         "time": "12:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 55,
+        "power": 0,
         "time": "12:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 78,
+        "power": 0,
         "time": "13:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 83,
+        "power": 0,
         "time": "13:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 89,
+        "power": 0,
         "time": "13:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 103,
+        "power": 0,
         "time": "13:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 95,
+        "power": 0,
         "time": "13:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 93,
+        "power": 0,
         "time": "13:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 98,
+        "power": 0,
         "time": "13:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 116,
+        "power": 0,
         "time": "13:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 122,
+        "power": 0,
         "time": "13:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 116,
+        "power": 0,
         "time": "13:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 119,
+        "power": 0,
         "time": "13:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 120,
+        "power": 0,
         "time": "13:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 122,
+        "power": 0,
         "time": "14:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 118,
+        "power": 0,
         "time": "14:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 106,
+        "power": 0,
         "time": "14:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 101,
+        "power": 0,
         "time": "14:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 99,
+        "power": 0,
         "time": "14:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 87,
+        "power": 0,
         "time": "14:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 88,
+        "power": 0,
         "time": "14:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 103,
+        "power": 0,
         "time": "14:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 109,
+        "power": 0,
         "time": "14:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 108,
+        "power": 0,
         "time": "14:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 121,
+        "power": 0,
         "time": "14:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 123,
+        "power": 0,
         "time": "14:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 122,
+        "power": 0,
         "time": "15:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 115,
+        "power": 0,
         "time": "15:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 107,
+        "power": 0,
         "time": "15:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 105,
+        "power": 0,
         "time": "15:15",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 111,
+        "power": 0,
         "time": "15:20",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 150,
+        "power": 0,
         "time": "15:25",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 184,
+        "power": 0,
         "time": "15:30",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 189,
+        "power": 0,
         "time": "15:35",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 186,
+        "power": 0,
         "time": "15:40",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 201,
+        "power": 0,
         "time": "15:45",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 243,
+        "power": 0,
         "time": "15:50",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 227,
+        "power": 0,
         "time": "15:55",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 208,
+        "power": 0,
         "time": "16:00",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 177,
+        "power": 0,
         "time": "16:05",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 151,
+        "power": 0,
         "time": "16:10",
         "valuePtr": null,
         "isFix": false,
         "isFuture": false
       },
       {
-        "power": 163,
+        "power": 0,
         "time": "16:15",
         "valuePtr": null,
         "isFix": false,
@@ -2022,13 +2022,13 @@
     ],
     "energy": [],
     "energyUnit": "kWh",
-    "solarGeneraion": 0.99,
-    "money": 0,
-    "moneyUnit": "",
+    "solarGeneraion": 0.33,
+    "money": 0.1,
+    "moneyUnit": "\u20ac",
     "loadPercent": "",
     "ppsPercent": "",
     "generationTime": 0,
     "maxPower": 0
   },
-  "trace_id": "abf0c3ac4ef64c737cd4bcfe4fa5dc69"
+  "trace_id": "6a678e0acbf2fd1c38ba1e2bf3cfa7fa"
 }
