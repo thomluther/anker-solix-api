@@ -1,9 +1,10 @@
 {
-  "JJY4QAVAFKT9": {
-    "device_sn": "JJY4QAVAFKT9",
+  "3IEDXXFMD2I3": {
+    "device_sn": "3IEDXXFMD2I3",
+    "is_admin": true,
     "device_pn": "A5143",
     "type": "inverter",
-    "bt_ble_mac": "E377907D0C1D",
+    "bt_ble_mac": "4CB20A26EEBE",
     "name": "MI80 Microinverter(BLE)",
     "alias": "MI80 Microinverter(BLE)",
     "wifi_online": false,
@@ -12,6 +13,13 @@
     "bws_surplus": "0",
     "sw_version": "v0.0.1",
     "tag": "",
-    "rssi": ""
+    "rssi": "",
+    "is_ota_update": false,
+    "ota_version": "",
+    "site_id": "virtual-3IEDXXFMD2I3",
+    "generate_power": "302",
+    "status": "1",
+    "status_desc": "online",
+    "preset_inverter_limit": "800"
   }
 }
