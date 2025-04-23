@@ -561,6 +561,7 @@ async def poll_sites(  # noqa: C901
         for sn, dev in api.devices.items()
         if dev.get("site_id") in virtual_sites
         and dev.get("type") == SolixDeviceType.INVERTER.value
+        and {SolixDeviceType.INVERTER.value} - exclude
     ]:
         await api.get_device_pv_status(devices=inverters, fromFile=fromFile)
     # update account dictionary with Api metrics
@@ -738,7 +739,9 @@ async def poll_device_details(
                 ],
                 "solar_info": {},
             }
-            await api.get_device_pv_status(devices=sn, fromFile=fromFile)
+            # query power if inverter not excluded
+            if {SolixDeviceType.INVERTER.value} - exclude:
+                await api.get_device_pv_status(devices=sn, fromFile=fromFile)
         # Fetch details that only work for site admins and real sites
         elif (
             device.get("is_admin", False)
