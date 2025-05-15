@@ -14,5 +14,6 @@ coverage.xml
 **/authcache
 **/exports
 /node_modules/
+/ankertest.py
 /client.py
 /daily_energy_*.csv

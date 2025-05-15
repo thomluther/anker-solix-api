@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
-from typing import ClassVar
+from typing import Any, ClassVar
 
 # API servers per region. Country assignment not clear, defaulting to EU server
 API_SERVERS = {
@@ -11,11 +11,14 @@ API_SERVERS = {
     "com": "https://ankerpower-api.anker.com",
 }
 API_LOGIN = "passport/login"
+API_KEY_EXCHANGE = "openapi/oauth/key/exchange"
 API_HEADERS = {
-    "Content-Type": "application/json",
-    "Model-Type": "DESKTOP",
-    "App-Name": "anker_power",
-    "Os-Type": "android",
+    "content-type": "application/json",
+    "model-type": "DESKTOP",
+    # "model-type": "PHONE",
+    # "app-version": "3.6.0",
+    "app-name": "anker_power",
+    "os-type": "android",
 }
 API_COUNTRIES = {
     "com": [
@@ -436,14 +439,17 @@ LOGIN_RESPONSE: dict = {
     "token_id": int,
     "geo_key": str,
     "privilege": int,
+    "phone_code": str,
     "phone": str,
     "phone_number": str,
-    "phone_code": str,
+    "phone_code_2fa": str,
+    "phone_2fa": str,
     "server_secret_info": {"public_key": str},
     "params": list,
     "trust_list": list,
     "fa_info": {"step": int, "info": str},
     "country_code": str,
+    "ap_cloud_user_id": str,
 }
 
 
@@ -772,11 +778,19 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        "micro_inverter_power",  # This is external inverter input, counts to Solar power
+        # "micro_inverter_power",  # external inverter input not supported by SB3
         "micro_inverter_power_limit",
         "micro_inverter_low_power_limit",
         "grid_to_battery_power",
         "other_input_power",
+    }
+    # Inverter Output Settings
+    INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {
+        "A5143": ["600", "800"],
+        "A17C1": ["350", "600", "800"],
+        "A17C2": ["350", "600", "800"],
+        "A17C3": ["350", "600", "800"],
+        "A17C5": ["350", "600", "800", "1200"],
     }
 
 
