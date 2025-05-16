@@ -125,7 +125,7 @@ class AnkerSolixClientSession:
         self.compress_data: bool = False
         # handler for encryption
         self.encrypt_payload: bool = False
-        self._eh: AnkerEncryptionHandler = None
+        self._eh: AnkerEncryptionHandler | None = None
 
     @property
     def email(self) -> str:
@@ -142,7 +142,7 @@ class AnkerSolixClientSession:
         """Get the server used for the active session."""
         return self._api_base
 
-    def logger(self, logger: logging.Logger | None = None) -> str:
+    def logger(self, logger: logging.Logger | None = None) -> logging.Logger:
         """Get or set the logger for API client."""
         if logger:
             self._logger = logger
@@ -226,8 +226,7 @@ class AnkerSolixClientSession:
         if self._timezone:
             header.update({"timezone": self._timezone})
         if self._token:
-            header.update({"gtoken": self._gtoken})
-            header.update({"x-auth-token": self._token})
+            header.update({"gtoken": self._gtoken, "x-auth-token": self._token})
         if self.compress_data:
             header.update(
                 {
@@ -393,7 +392,7 @@ class AnkerSolixClientSession:
             self._loggedIn = False
         return self._loggedIn
 
-    async def request(  # noqa: C901
+    async def request(
         self,
         method: str,
         endpoint: str,
