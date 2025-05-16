@@ -14,8 +14,8 @@
 
 This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter etc).
 
-🚨 This is by no means an official Anker Api.
-It can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
+> [!WARNING]
+> 🚨 This is by no means an official Anker Api. It can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
 
 # Python Versions
 
@@ -220,7 +220,7 @@ When using monitoring from local json file folder, the values will not change. B
 > [!NOTE]
 > When the system owning account is used, more details for the owning sites and devices can be queried and displayed.
 
-> [!IMPORTANT]
+> [!WARNING]
 > **When executing this module with real time data from your Anker account, the used account cannot be used in the Anker App since it will be kicked out on each refresh.**
 
 ## energy_csv.py
