@@ -69,14 +69,14 @@ class AnkerSolixClientSession:
 
         # Flag for retry of any or certain error
         self._retry_attempt: bool | int = False
+
         # ensure folder for authentication caching exists
-        Path(Path(Path(__file__).parent) / "authcache").mkdir(
-            parents=True, exist_ok=True
-        )
+        temp_dir = tempfile.gettempdir()
+        authcache_dir = Path(temp_dir) / "authcache"
+        authcache_dir.mkdir(parents=True, exist_ok=True)
+
         # filename for authentication cache
-        self._authFile: str = str(
-            Path(Path(__file__).parent) / "authcache" / f"{email}.json"
-        )
+        self._authFile: str = str(authcache_dir / f"{email}.json")
         self._authFileTime: float = 0
 
         # Timezone format: 'GMT+01:00'
