@@ -1,5 +1,5 @@
 """Anker Power/Solix Cloud API class to handle a client connection session for an account."""
-
+import tempfile
 from asyncio import sleep
 from base64 import b64decode, b64encode
 import contextlib
