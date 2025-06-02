@@ -34,7 +34,7 @@ REFRESH = 0  # default No refresh interval
 DETAILSREFRESH = 10  # Multiplier for device details refresh
 INTERACTIVE = True  # Interactive allows to select examples and exports as input for tests and debug
 SHOWAPICALLS = (
-    False  # Enable to show Api calls and cache details for additional debugging
+    True  # Enable to show Api calls and cache details for additional debugging
 )
 
 
@@ -527,7 +527,44 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 "site_price_unit"
                             ) or ""
                             CONSOLE.info(
-                                f"{'Max savings':<{col1}}: {totals[2].get('total', '---.--'):>7} {totals[2].get('unit', ''):<{col2 - 9}}  {'Price kWh':<{col3}}: {price:>7} {unit}"
+                                f"{'Max savings':<{col1}}: {totals[2].get('total', '---.--'):>7} {totals[2].get('unit', ''):<{col2 - 9}}  {'Price kWh':<{col3}}: {price:>7} {unit} (Fix)"
+                            )
+                        if ai_profits := site.get("aiems_profit"):
+                            unit = ai_profits.get("unit") or ""
+                            CONSOLE.info(
+                                f"{'AI savings':<{col1}}: {ai_profits.get('aiems_profit_total', '---.--'):>7} {unit:<{col2 - 9}}  {'SM difference':<{col3}}: {ai_profits.get('aiems_self_use_diff', '---.--'):>7} {unit} ({ai_profits.get('percentage', '---.--')} %)"
+                            )
+                        if (
+                            price_type := (site.get("site_details") or {}).get(
+                                "price_type"
+                            )
+                            or ""
+                        ):
+                            dynamic = (site.get("site_details") or {}).get(
+                                "dynamic_price"
+                            ) or {}
+                            dyn_price = None
+                            dyn_unit = None
+                            if dev := myapi.devices.get(
+                                (
+                                    next(
+                                        iter(
+                                            (site.get("solarbank_info") or {}).get(
+                                                "solarbank_list"
+                                            )
+                                            or [{}]
+                                        ),
+                                        {},
+                                    )
+                                ).get("device_sn")
+                                or ""
+                            ):
+                                dyn_price = dev.get("preset_tariff_price")
+                                dyn_unit = dev.get("preset_tariff_currency")
+                            if provider := dynamic.get("company") or "":
+                                provider = f"{provider} ({dynamic.get('country') or '--'}/{dynamic.get('area') or '---'})"
+                            CONSOLE.info(
+                                f"{'Active Price':<{col1}}: {dyn_price or price:>7} {dyn_unit or unit} {'('+price_type.capitalize()+')':<{col2-10}} {'Price Provider':<{col3}}: {provider or '----------'}"
                             )
                         if energy := site.get("energy_details") or {}:
                             today: dict = energy.get("today") or {}
@@ -688,7 +725,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         logging.INFO if SHOWAPICALLS else logging.DEBUG,
                         myapi.request_count.get_details(last_hour=True),
                     )
-                    CONSOLE.debug(json.dumps(myapi.devices, indent=2))
+                    CONSOLE.log(
+                        logging.INFO if SHOWAPICALLS else logging.DEBUG,
+                        json.dumps(myapi.sites, indent=2),
+                    )
+                    CONSOLE.log(
+                        logging.INFO if SHOWAPICALLS else logging.DEBUG,
+                        json.dumps(myapi.devices, indent=2),
+                    )
                     for sec in range(REFRESH):
                         now = datetime.now().astimezone()
                         if sys.stdin is sys.__stdin__:

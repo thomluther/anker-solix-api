@@ -107,8 +107,8 @@ API_ENDPOINTS = {
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
-    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules)
-    "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules), NOT IMPLEMENTED YET
+    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 9 12 13]
+    "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
     "wifi_list": "power_service/v1/site/get_wifi_info_list",  # List of available networks for provided site id
     "get_site_price": "power_service/v1/site/get_site_price",  # List defined power price and CO2 for given site, works only for site owner account
     "update_site_price": "power_service/v1/site/update_site_price",  # Update power price and CO2 for given site, works only for site owner account
@@ -140,6 +140,14 @@ API_ENDPOINTS = {
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
     "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
     "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
+    "get_forecast_schedule": "power_service/v1/site/get_schedule", # get remaining energy and negative price slots, works as member, {"site_id": siteId}
+    "get_co2_ranking": "power_service/v1/site/co2_ranking", # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
+    "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available", # Get available site id_s for dynamic prices of account, works as member but list empty
+    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option", # Get available provider list for device_pn, works as member, {"device_pn": "A5102"}
+    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail", # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
+    "get_device_income": "power_service/v1/app/device/get_device_income", # {"device_sn": deviceSn, "start_time": "00:00"})) # Get income data for device, works for member
+    "get_ai_ems_status": "power_service/v1/ai_ems/get_status", # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
+    "get_ai_ems_profit": "power_service/v1/ai_ems/profit", # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
     "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
     "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
@@ -184,7 +192,7 @@ API_HES_SVC_ENDPOINTS = {
     "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
 }
 
-""" Other endpoints neither implemented nor explored: 41 + 40 used => 81
+""" Other endpoints neither implemented nor explored: 45 + 48 used => 93
     'power_service/v1/site/can_create_site',
     'power_service/v1/site/create_site',
     'power_service/v1/site/update_site',
@@ -199,6 +207,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
     'power_service/v1/site/get_comb_addable_sites',
     'power_service/v1/site/shift_power_site_type',
+    'power_service/v1/site/local_net',
+    'power_service/v1/site/set_device_feature', # Set device feature for site_id and smart_plug list, may require owner, usage unknown, {"site_id": siteId, "smart_plug" : [value]})
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
@@ -220,6 +230,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/device/remove_param_config_key'
     'power_service/v1/app/device/set_device_attrs', # attributes must be list of strings, only 'rssi' found working so far
     'power_service/v1/app/device/get_mes_device_info', # shows laser_sn field but no more info
+    'power_service/v1/app/shelly_ctrl_device', # {"device_sn": deviceSn, "op_type": "parameter", "value": value})) # Control shelly device settings, may require owner, usage known
+    'power_service/v1/app/whitelist/feature/check', # Unclear what this is used for, requires check_list with objects for unknown feature_code e.g. {"check_list": [{"feature_code": "smartmeter", "product_code": "A17C5"}]}
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
@@ -230,7 +242,7 @@ API_HES_SVC_ENDPOINTS = {
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
 
-App related: 10 + 2 used => 12 total
+App related: 12 + 2 used => 14 total
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
     'app/cloudstor/get_app_up_token_without_login',
@@ -242,9 +254,11 @@ App related: 10 + 2 used => 12 total
     'app/push/clear_count',
     'app/push/register_push_token',
 
-Passport related: 2 + 0 used => 2 total
+Passport related: 4 + 0 used => 4 total
     'passport/get_user_param', # specify param_type which must be parsable as list of int, but does not show anything in response
     'passport/get_subscriptions,  #  get user email, accept_survey, subscribe, phone_number, sms_subscribe
+    '/passport/subscription_configs',  # get show_sms
+    '/passport/discount_desc',  # get title, sub_title, button and sub_button
 
 PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/sync_installation_inspection", #Unknown at this time
@@ -253,16 +267,19 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_energy_service/preprocess_utility_rate_plan",
     "charging_energy_service/ack_utility_rate_plan",
     "charging_energy_service/adjust_station_price_unit",
+
     "charging_common_svc/location/get",  # Get default and identifier location for identifier_id, identifier_type, business_type with longitude, latitude, country_code, place_id, display_name, formatted_address
     "charging_common_svc/location/set",  # Set default and identifier location
+    "charging_common_svc/location/support",
 
-Home Energy System related (X1): 37 + 14 used => 51 total
+Home Energy System related (X1): 38 + 14 used => 52 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
     "charging_hes_svc/check_device_bluetooth_password",
     "charging_hes_svc/check_function",
     "charging_hes_svc/device_command",
+    "charging_hes_svc/deal_share_data",
     "charging_hes_svc/download_energy_statistics",
     "charging_hes_svc/get_auto_disaster_prepare_status",
     "charging_hes_svc/get_auto_disaster_prepare_detail",
@@ -367,6 +384,14 @@ API_FILEPREFIXES = {
     "get_device_attributes": "device_attrs",
     "get_message_unread": "message_unread",
     "get_currency_list": "currency_list",
+    "get_co2_ranking": "co2_ranking",
+    "get_forecast_schedule": "forecast_schedule",
+    "get_dynamic_price_sites": "dynamic_price_sites",
+    "get_dynamic_price_providers": "dynamic_price_providers",
+    "get_dynamic_price_details": "dynamic_price_details",
+    "get_device_income": "device_income",
+    "get_ai_ems_status": "ai_ems_status",
+    "get_ai_ems_profit": "ai_ems_profit",
     "api_account": "api_account",
     "api_sites": "api_sites",
     "api_devices": "api_devices",
@@ -467,6 +492,7 @@ class SolixDeviceType(Enum):
     POWERPANEL = "powerpanel"
     POWERCOOLER = "powercooler"
     HES = "hes"
+    SOLARBANK_PPS = "solarbank_pps"
 
 
 class SolixParmType(Enum):
@@ -475,11 +501,14 @@ class SolixParmType(Enum):
     SOLARBANK_SCHEDULE = "4"
     SOLARBANK_2_SCHEDULE = "6"
     SOLARBANK_SCHEDULE_ENFORCED = "9"
+    SOLARBANK_TARIFF_SCHEDULE = "12"
+    SOLARBANK_AUTHORIZATIONS = "13"
 
 
 class SolarbankPowerMode(IntEnum):
     """Enumeration for Anker Solix Solarbank 1 Power setting modes."""
 
+    unknown = 0
     normal = 1
     advanced = 2
 
@@ -487,25 +516,15 @@ class SolarbankPowerMode(IntEnum):
 class SolarbankDischargePriorityMode(IntEnum):
     """Enumeration for Anker Solix Solarbank 1 Discharge priority setting modes."""
 
+    unknown = -1
     off = 0
     on = 1
 
 
-class SolarbankUsageMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank 2 Power Usage modes."""
-
-    smartmeter = 1  # AC output based on measured smart meter power
-    smartplugs = 2  # AC output based on measured smart plug power
-    manual = 3  # manual time plan for home load output
-    backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
-    use_time = 5  # Use Time plan with SB2 AC and smart meter
-    # smartmode = 6   # TODO(SB3) update code once known
-
-
 class SolixTariffTypes(IntEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
+    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
-    NONE = 0  # Pseudo type to reflect no tariff defined
+    UNKNOWN = 0  # Pseudo type to reflect no known tariff defined
     PEAK = 1  # maximize PV and Battery usage, no AC charge
     MID_PEAK = 2  # maximize PV and Battery usage, no AC charge
     OFF_PEAK = 3  # maximize PV and Battery usage, no AC charge, discharge only above 80% SOC, Reserve charge utilized only for PEAK & MID PEAK times
@@ -515,32 +534,50 @@ class SolixTariffTypes(IntEnum):
 
 
 class SolixPriceTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC Use Time Tariff Types."""
+    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
+    UNKNOWN = "unknown"
     FIXED = "fixed"
     USE_TIME = "use_time"
-    # DYNAMIC = "dynamic" # TODO(SB3) update code once known
+    DYNAMIC = "dynamic"
 
 
 class SolixDayTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC Use Time Day Types."""
+    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Day Types."""
 
     WEEKDAY = "weekday"
     WEEKEND = "weekend"
     ALL = "all"
 
 
+class SolarbankUsageMode(IntEnum):
+    """Enumeration for Anker Solix Solarbank 2/3 Power Usage modes."""
+
+    unknown = 0  # AC output based on measured smart meter power
+    smartmeter = 1  # AC output based on measured smart meter power
+    smartplugs = 2  # AC output based on measured smart plug power
+    manual = 3  # manual time plan for home load output
+    backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
+    use_time = 5  # Use Time plan with AC types and smart meter
+    dynamic_price = 6  # TODO(SB3): To be confirmed
+    smart = 7   # Smart mode for AI based charging and discharging
+    time_slot = 8  # Time slot mode for dynamic tariffs
+
+
 @dataclass(frozen=True)
 class SolarbankRatePlan:
-    """Dataclass for Anker Solix Solarbank 2 rate plan types."""
+    """Dataclass for Anker Solix Solarbank 2/3 rate plan types per usage mode."""
 
     # rate plan per usage mode
+    unknown: str = ""
     smartmeter: str = ""  # does not use a plan
     smartplugs: str = "blend_plan"
     manual: str = "custom_rate_plan"
     backup: str = "manual_backup"
     use_time: str = "use_time"
-    # smartmode: str = "smart_plan" # TODO(SB3) update code once known
+    dynamic_price: str = "dynamic_price"
+    smart: str = ""  # does not use a plan "ai_ems"
+    time_slot: str = "time_slot"
 
 
 @dataclass(frozen=True)
@@ -634,6 +671,7 @@ class SolixSiteType:
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
     t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
+    t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782, Solarbank PPS with Smart Meter support for US market
 
 
 @dataclass(frozen=True)
@@ -661,6 +699,7 @@ class SolixDeviceCategory:
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
     # Smart Meter
     A17X7: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter
+    A17X7US: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter for US
     SHEM3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Smart Meter
     SHEMP3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Pro Smart Meter
     # Smart Plug
@@ -695,6 +734,7 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
+    A1782: str = SolixDeviceType.SOLARBANK_PPS.value  # SOLIX Infini Power Station with SM support
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     # Home Power Panels
     A17B1: str = (
@@ -779,8 +819,8 @@ class SolarbankDeviceMetrics:
         "to_home_load",
         "pei_heating_power",
         # "micro_inverter_power",  # external inverter input not supported by SB3
-        "micro_inverter_power_limit",
-        "micro_inverter_low_power_limit",
+        # "micro_inverter_power_limit",  # external inverter input not supported by SB3
+        # "micro_inverter_low_power_limit",  # external inverter input not supported by SB3
         "grid_to_battery_power",
         "other_input_power",
     }
@@ -873,7 +913,7 @@ class SmartmeterStatus(StrEnum):
 class SolixGridStatus(StrEnum):
     """Enumeration for Anker Solix grid status."""
 
-    # TODO Update grid status description once known
+    # TODO(X1) Update grid status description once known
     ok = "0"  # normal grid state when hes pcu grid status is ok
     unknown = "unknown"
 
@@ -882,7 +922,7 @@ class SolixRoleStatus(StrEnum):
     """Enumeration for Anker Solix role status of devices."""
 
     # The device role status codes as used for HES devices
-    # TODO: The proper description of those codes has to be confirmed
+    # TODO(X1): The proper description of those codes has to be confirmed
     primary = "1"  # Master role in Api
     subordinate = "2"  # Slave role in Api, to be confirmed!!!
     unknown = "unknown"
@@ -891,7 +931,7 @@ class SolixRoleStatus(StrEnum):
 class SolixNetworkStatus(StrEnum):
     """Enumeration for Anker Solix HES network status."""
 
-    # TODO: The proper description of those codes has to be confirmed
+    # TODO(X1): The proper description of those codes has to be confirmed
     wifi = "1"  # to be confirmed
     lan = "2"  # this was seen on LAN connected systems
     mobile = "3"  # HES systems support also 5G connections, code to be confirmed
@@ -917,7 +957,7 @@ class SolarbankTimeslot:
 
 @dataclass
 class Solarbank2Timeslot:
-    """Dataclass to define customizable attributes of an Anker Solix Solarbank 2 time slot as used for the schedule definition, update or deletion."""
+    """Dataclass to define customizable attributes of an Anker Solix Solarbank 2/3 time slot as used for the schedule definition, update or deletion."""
 
     start_time: datetime | None
     end_time: datetime | None

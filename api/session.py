@@ -430,7 +430,7 @@ class AnkerSolixClientSession:
         mergedHeaders = self.generate_header()
         mergedHeaders.update(headers)
         # TODO(ENCRYPTION): Handle payload encryption once known
-        if self._loggedIn and self.encrypt_payload:
+        if self.encrypt_payload and self._login_response:
             if not self._eh and self._token:
                 # init encryption handler
                 self._eh = AnkerEncryptionHandler(
@@ -475,13 +475,13 @@ class AnkerSolixClientSession:
             #     'x-app-key': '' # empty is fine
             #     'x-encryption-info': 'algo_ecdh'
             #     'x-replay-info': 'replay'
-            #     'x-auth-ts': [authentication timestamp] # Unix Timestamp in ms as string
+            #     'x-auth-ts': [authentication timestamp] # Unix Timestamp in s as string
             #     'x-key-ident': [generated key ident] # 16 Byte MD5 hash
             #     'x-request-once': [generated request once] # 16 Byte MD5 hash
-            #     'x-request-ts': [request timestamp] # Unix Timestamp in ms as string
+            #     'x-request-ts': [request timestamp] # Unix Timestamp in s as string
             #     'x-signature': [generated signature] # 32 Byte SHA256 hash
             # Response will return encrypted body and a signature field
-            timestamp = generateTimestamp(in_ms=True)
+            timestamp = generateTimestamp()
             mergedHeaders.update(
                 self._eh.generate_x_header(timestamp=timestamp, data=json)
                 | {
@@ -774,7 +774,7 @@ class AnkerSolixClientSession:
 class AnkerEncryptionHandler:
     """Anker Solix encryption handler class.
 
-    ATTENTION: This class is experimental and does not work yet since various x header field value generarition is unknown.
+    ATTENTION: This class is experimental and does not work yet since various x header field value generation is unknown.
     """
 
     def __init__(
@@ -800,29 +800,33 @@ class AnkerEncryptionHandler:
         if not self._logger.hasHandlers():
             self._logger.addHandler(logging.StreamHandler())
 
-    def _generate_client_key(self) -> str:
+    def _generate_client_key(self, timestamp: str) -> str:
         """Generate the client public key in Anker's format."""
         # Get raw public key bytes
         raw_public_key = self.public_key.public_bytes(
             encoding=serialization.Encoding.X962,
             format=serialization.PublicFormat.UncompressedPoint,
         )
-        # Create timestamp in milliseconds
-        timestamp = generateTimestamp(in_ms=True)
         # Construct the key with timestamp and marker as observed in Api communication
         key_data = bytearray()
         key_data.extend(timestamp.encode())  # First 16 bytes: timestamp
-        key_data.append(0x1F)  # Marker byte
+        key_data.append(0x1F)  # Marker byte ?
         key_data.extend(raw_public_key)  # Public key uncompressed point format in bytes
         # return base64 encoded string representation of key format
         return b64encode(key_data).decode()
 
     def generate_x_header(self, timestamp: str, data: dict) -> dict:
         """Generate extra header fields for encryption."""
-        # request_once using timestamp in ms and random? data (to be adjusted as required)
+        # request_once using timestamp in s and random? data (to be adjusted as required)
         request_once = md5(timestamp.encode() + randbytes(16))
+        request_once = md5(
+            timestamp.encode() + self._login_response.get("geo_key").encode()
+        )
         # key_ident using timestamp in ms and random? data (to be adjusted as required)
         key_ident = md5(timestamp.encode() + randbytes(16))
+        key_ident = md5(
+            timestamp.encode() + self._login_response.get("auth_token").encode()
+        )
         # SHA256 signature using timestamp, request-once, key_ident and body?  (to be adjusted as required)
         signature = hashlib.sha256(
             timestamp.encode()
@@ -850,16 +854,17 @@ class AnkerEncryptionHandler:
         """Perform the key exchange with Anker's server and return shared secret."""
         if not isinstance(headers, dict):
             headers = {}
-        timestamp = generateTimestamp(in_ms=True)
+        timestamp = generateTimestamp()
         if not auth_ts:
             auth_ts = timestamp
         # Prepare request
         url = f"{api_base}/{API_KEY_EXCHANGE}"
-        data = {"client_public_key": self._generate_client_key()}
+        data = {"client_public_key": self._generate_client_key(timestamp=auth_ts)}
         # obtain encryption header fields and add/modify fields for key exchange request
         headers.update(
             self.generate_x_header(timestamp=timestamp, data=data)
             | {
+                "content-type": "application/json",
                 "x-auth-ts": auth_ts,
             }
         )
@@ -913,7 +918,7 @@ class AnkerEncryptionHandler:
                     f"response={body_text}",
                 ) from err
 
-    def derive_shared_key(self, server_public_key_b64) -> bytes:
+    def derive_shared_key(self, server_public_key_b64: str) -> bytes:
         """Derive the shared AES key from the server's public key."""
         # Decode server's public key
         server_key_bytes = b64decode(server_public_key_b64)

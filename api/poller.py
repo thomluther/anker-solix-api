@@ -777,7 +777,6 @@ async def poll_device_details(
                     api._update_dev({"device_sn": sn} | dict(wifi_list[wifi_index - 1]))
 
             # Fetch device type specific details, if device type not excluded
-
             if dev_Type in ({SolixDeviceType.SOLARBANK.value} - exclude):
                 # Fetch active Power Cutoff setting for solarbanks
                 if {ApiCategories.solarbank_cutoff} - exclude:
@@ -789,7 +788,7 @@ async def poll_device_details(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
                 # queries for solarbank 1 only
-                if ((api.devices.get(sn) or {}).get("generation") or 0) < 2:
+                if (device.get("generation") or 0) < 2:
                     # Fetch available OTA update for solarbanks, does not work for solarbank 2 with device SN
                     # DISABLED: Not reliable for Solarbank 1 either, SN can also be "", so not clear what the response actually reports
                     # api._logger.debug("Getting api %s OTA update info for device", api.apisession.nickname)
@@ -835,6 +834,17 @@ async def poll_device_details(
                         deviceSn=sn,
                         fromFile=fromFile,
                     )
+            # Fetch dynamic price providers once per day if supported for device
+            if (device.get("generation") or 0) >= 3:
+                model = device.get("device_pn")
+                if (datetime.now().strftime("%Y-%m-%d")) != (api.account.get(f"price_providers_{model}") or {}).get("date"):
+                    api._logger.debug(
+                        "Getting api %s dynamic price providers for %s",
+                        api.apisession.nickname,
+                        model
+                    )
+                    await api.get_price_providers(model=model, fromFile=fromFile)
+
 
         # Merge additional powerpanel data
         if api.powerpanelApi:

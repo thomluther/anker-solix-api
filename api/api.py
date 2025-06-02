@@ -157,7 +157,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["device_sw_version"] and value:
                         device.update({"sw_version": str(value)})
                     elif key in ["preset_inverter_limit"] and str(value):
-                        device.update({"preset_inverter_limit": str(value).lower().replace("w","")})
+                        device.update(
+                            {
+                                "preset_inverter_limit": str(value)
+                                .lower()
+                                .replace("w", "")
+                            }
+                        )
                     elif (
                         key
                         in [
@@ -447,14 +453,19 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             )
                             if ac_type:
                                 # update default with site currency if found
-                                if not (curr_def := (mysite.get("site_details") or {}).get("site_price_unit") or ""):
+                                if not (
+                                    curr_def := (mysite.get("site_details") or {}).get(
+                                        "site_price_unit"
+                                    )
+                                    or ""
+                                ):
                                     curr_def = SolixDefaults.CURRENCY_DEF
                                 device.update(
                                     {
                                         "preset_manual_backup_start": 0,
                                         "preset_manual_backup_end": 0,
                                         "preset_backup_option": False,
-                                        "preset_tariff": SolixTariffTypes.NONE.value,
+                                        "preset_tariff": SolixTariffTypes.UNKNOWN.value,
                                         "preset_tariff_price": SolixDefaults.TARIFF_PRICE_DEF,
                                         "preset_tariff_currency": curr_def,
                                     }
@@ -603,7 +614,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     device.update(
                                         {
                                             "preset_tariff": tariff
-                                            or SolixTariffTypes.NONE.value,
+                                            or SolixTariffTypes.UNKNOWN.value,
                                             "preset_tariff_price": price
                                             or SolixDefaults.TARIFF_PRICE_DEF,
                                             "preset_tariff_currency": season.get("unit")
@@ -886,7 +897,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
-                        "Api %s error %s occurred when updating device details for key %s with value %s: %s",
+                        "Api %s error %s occurred when updating device details for key '%s' with value %s: %s",
                         self.apisession.nickname,
                         type(err),
                         key,
@@ -943,6 +954,55 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if self.hesApi:
             self.hesApi.recycleDevices(activeDevices=set(self.devices.keys()))
         return resp
+
+    def solarbank_usage_mode_options(self, deviceSn: str) -> set:
+        """Get the valid solarbank usage mode options based on Api cache data."""
+        options: set = set()
+        if isinstance(deviceSn, str) and (device := self.devices.get(deviceSn) or {}):
+            site = self.sites.get(device.get("site_id") or "") or {}
+            # Add smart meter usage mode if smart meter installed
+            if smartmeter := (site.get("grid_info") or {}).get("grid_list"):
+                options.add(SolarbankUsageMode.smartmeter.name)
+            # Add smart plugs usage mode if no smart plugs installed
+            if smartplug := (site.get("smart_plug_info") or {}).get("smartplug_list"):
+                options.add(SolarbankUsageMode.smartplugs.name)
+            # Add options introduced with SB2 AC
+            if "grid_to_battery_power" in device:
+                options.add(SolarbankUsageMode.backup.name)
+                if smartmeter or smartplug:
+                    options.add(SolarbankUsageMode.use_time.name)
+            # Add options introduced with SB3
+            if (device.get("generation") or 0) >= 3 and (smartmeter or smartplug):
+                options.add(SolarbankUsageMode.smart.name)
+                options.add(SolarbankUsageMode.time_slot.name)
+        return options
+
+    def price_type_options(self, siteId: str) -> set:
+        """Get the valid price type options for a site ID based on Api cache data."""
+        options: set = set()
+        if isinstance(siteId, str) and (site := self.sites.get(siteId) or {}):
+            options = {
+                t.value for t in SolixPriceTypes if "unknown" not in t.name.lower()
+            }
+            # Remove specific types if no smart meter or smart plugs in site
+            if not (
+                ((site.get("grid_info") or {}).get("grid_list") or [])
+                or ((site.get("smart_plug_info") or {}).get("smartplug_list"))
+            ):
+                options.discard(SolixPriceTypes.USE_TIME.value)
+                options.discard(SolixPriceTypes.DYNAMIC.value)
+            # remove options if no required plan defined in schedule
+            if sn := next(
+                iter((site.get("solarbank_info") or {}).get("solarbank_list") or []), {}
+            ).get("device_sn"):
+                schedule = (self.devices.get(sn) or {}).get("schedule") or {}
+            else:
+                schedule = {}
+            if not schedule.get(SolarbankRatePlan.use_time):
+                options.discard(SolixPriceTypes.USE_TIME.value)
+            if not schedule.get("dynamic_price"):
+                options.discard(SolixPriceTypes.DYNAMIC.value)
+        return options
 
     async def get_homepage(self, fromFile: bool = False) -> dict:
         """Get the latest homepage info.
@@ -1112,7 +1172,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         Example data:
         {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"site_co2": 0,"site_price_unit": "\u20ac"}
         Enhanced data from 2025 to support dynamic prices for systems:
-        {"site_id": "8b0bdb3e-c2c6-95dc-5a3d-dfa4356ab0d8","price": 0.29,"site_co2": 0,"site_price_unit": "\u20ac","price_type": "fixed","current_mode": 3}
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.29,"site_co2": 0,"site_price_unit": "\u20ac", "price_type": "dynamic",
+        "current_mode": 7, "use_time": null, "dynamic_price": {
+            "country": "DE", "company": "Nordpool", "area": "GER", "pct": null}
+        "accuracy": 2}
         """
         data = {"site_id": siteId}
         if fromFile:
@@ -1134,8 +1197,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = resp.get("data") or {}
         # update site details in sites dict
         details = data.copy()
-        if "site_id" in details:
-            details.pop("site_id")
+        details.pop("site_id",None)
         self._update_site(siteId, details)
         return data
 
@@ -1145,15 +1207,21 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         price: float | None = None,
         unit: str | None = None,
         co2: float | None = None,
-        price_type: str | None = None,  # "fixed" | "use_time"
+        price_type: str | None = None,  # "fixed" | "use_time" | "dynamic"
+        provider: dict | str
+        | None = None,  # {"country": "DE","company": "Nordpool","area": "GER"} or "DE/Nordpool/GER"
         toFile: bool = False,
     ) -> bool | dict:
         """Set the power price, the unit, CO2 and price type for a site.
 
         Example input:
         {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0}
-        Additional fields have been added to support dynamic prices
-        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0, "price_type": "fixed"}
+        Additional fields have been added to support dynamic prices, dynamic_price ignored if type not dynamic
+        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0, "price_type": "dynamic", "dynamic_price": {
+            "country": "DE",
+            "company": "Nordpool",
+            "area": "GER",
+        }}
         """
         # First get the old settings from api dict or Api call to update only requested parameter
         if not (details := (self.sites.get(siteId) or {}).get("site_details") or {}):
@@ -1161,8 +1229,27 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if not details or not isinstance(details, dict):
             return False
         # Validate parameters
+        if isinstance(provider,str):
+            if len(keys := provider.split("/")) == 3:
+                provider = {}
+                if keys[0] not in ["","-"]:
+                    provider["country"] = keys[0]
+                if keys[1] not in ["","-"]:
+                    provider["company"] = keys[1]
+                if keys[2] not in ["","-"]:
+                    provider["area"] = keys[2]
+        provider = (
+            provider
+            if isinstance(provider, dict)
+            and "country" in provider
+            and "company" in provider
+            and "area" in provider
+            else None
+        )
         price_type = (
-            str(price_type).lower()
+            SolixPriceTypes.DYNAMIC.value
+            if provider
+            else str(price_type).lower()
             if str(price_type).lower() in {item.value for item in SolixPriceTypes}
             else None
         )
@@ -1177,6 +1264,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         )
         if "price_type" in details or price_type:
             data["price_type"] = price_type if price_type else details.get("price_type")
+        if "dynamic_price" in details or provider:
+            data["dynamic_price"] = provider if provider else details.get("dynamic_price")
 
         # Make the Api call and check for return code
         data["site_id"] = siteId
@@ -1188,7 +1277,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 data={
                     "code": 0,
                     "msg": "success!",
-                    "data": data | {"current_mode": details.get("current_mode")},
+                    "data": details | data,
                 },
             ):
                 return False
@@ -1202,6 +1291,60 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 return False
         # update the data in api dict and return active data
         return await self.get_site_price(siteId=siteId, fromFile=toFile)
+
+    async def get_price_providers(self, model: str, fromFile: bool = False) -> dict:
+        """Get the dynamic price provides for a given device model.
+
+        Example data:
+        {"country_info": [
+            {"country": "DE","company_info": [
+                {"company": "Nordpool","area_info": [
+                    {"area": "GER","area_name": "GER"}]}]}
+        ]}
+        """
+        data = {"device_pn": model}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_dynamic_price_providers']}_{model}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_dynamic_price_providers"], json=data
+            )
+        # update account details with providers for this model
+        if (data := resp.get("data") or {}):
+            self._update_account(
+                {
+                    f"price_providers_{model}": {
+                        "date": datetime.now().strftime("%Y-%m-%d")
+                    }
+                    | data
+                }
+            )
+        return data
+
+    def price_provider_options(self, siteId: str) -> set:
+        """Get the valid price provider options for the site ID on Api cache data.
+
+        Active dynamic Price example:
+        "dynamic_price": {"country": "DE","company": "Nordpool","area": "GER","pct": null,"currency": "\u20ac","adjust_coef": null}
+        """
+        options: set = set()
+        if isinstance(siteId, str) and (site := self.sites.get(siteId) or {}):
+            for model in  (site.get("site_info") or {}).get("current_site_device_models") or []:
+                # add options from provider list
+                for country in (self.account.get(f"price_providers_{model}") or {}).get(
+                    "country_info"
+                ) or []:
+                    for company in country.get("company_info") or []:
+                        for area in company.get("area_info") or []:
+                            options.add(
+                                f"{country.get('country') or '-'}/{company.get('company') or '-'}/{area.get('area') or '-'}"
+                            )
+                if options:
+                    break
+        return options
 
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False
@@ -1385,7 +1528,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "data": {
                                 "pvStatuses": (
                                     (resp.get("data") or {}).get("pvStatuses") or []
-                                ) + new
+                                )
+                                + new
                             }
                         }
                     )
@@ -1401,8 +1545,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 self._update_dev(
                     {
                         "device_sn": dev.get("sn") or "",
-                        "generate_power": "" if dev.get("power") is None else str(dev.get("power")),
-                        "status": "" if dev.get("status") is None else str(dev.get("status")),
+                        "generate_power": ""
+                        if dev.get("power") is None
+                        else str(dev.get("power")),
+                        "status": ""
+                        if dev.get("status") is None
+                        else str(dev.get("status")),
                     }
                 )
         return data
@@ -1601,7 +1749,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             return False
         if toFile:
             # Get last data of file to be modified
-            if not (data := await self.get_device_pv_total_statistics(deviceSn=deviceSn, fromFile=toFile)):
+            if not (
+                data := await self.get_device_pv_total_statistics(
+                    deviceSn=deviceSn, fromFile=toFile
+                )
+            ):
                 return False
             data["powerConfig"] = f"{int(limit)}W"
             # Write updated response to file for testing purposes
@@ -1627,4 +1779,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if not isinstance(code, int) or int(code) != 0:
                 return False
         # update the data in api dict and return active data
-        return await self.get_device_pv_total_statistics(deviceSn=deviceSn, fromFile=toFile)
+        return await self.get_device_pv_total_statistics(
+            deviceSn=deviceSn, fromFile=toFile
+        )
