@@ -8,6 +8,8 @@ Furthermore the API class can use the json files for debugging and testing of va
 """
 
 import asyncio
+import os
+import tempfile
 from collections.abc import Callable
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -86,6 +88,8 @@ class AnkerSolixApiExport:
         if not export_path:
             # default to exports self.export_path in parent path of api library
             self.export_path = Path(__file__).parent / ".." / "exports"
+            if not os.access(self.export_path, os.W_OK):
+                self.export_path = Path(tempfile.gettempdir()) / "exports"
         else:
             self.export_path = Path(export_path)
         if not export_folder:
