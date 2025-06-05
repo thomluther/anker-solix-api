@@ -962,6 +962,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         options: set = set()
         if isinstance(deviceSn, str) and (device := self.devices.get(deviceSn) or {}):
             site = self.sites.get(device.get("site_id") or "") or {}
+            options.add(SolarbankUsageMode.manual.name)
             # Add smart meter usage mode if smart meter installed
             if smartmeter := (site.get("grid_info") or {}).get("grid_list"):
                 options.add(SolarbankUsageMode.smartmeter.name)
@@ -974,7 +975,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 if smartmeter or smartplug:
                     options.add(SolarbankUsageMode.use_time.name)
             # Add options introduced with SB3
-            if (device.get("generation") or 0) >= 3 and (smartmeter or smartplug):
+            if (device.get("generation") or 0) >= 3 and (smartmeter):
                 options.add(SolarbankUsageMode.smart.name)
                 options.add(SolarbankUsageMode.time_slot.name)
         return options
@@ -1199,7 +1200,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         data = resp.get("data") or {}
         # update site details in sites dict
         details = data.copy()
-        details.pop("site_id",None)
+        details.pop("site_id", None)
         self._update_site(siteId, details)
         return data
 
@@ -1210,7 +1211,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         unit: str | None = None,
         co2: float | None = None,
         price_type: str | None = None,  # "fixed" | "use_time" | "dynamic"
-        provider: dict | str
+        provider: dict
+        | str
         | None = None,  # {"country": "DE","company": "Nordpool","area": "GER"} or "DE/Nordpool/GER"
         toFile: bool = False,
     ) -> bool | dict:
@@ -1231,13 +1233,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if not details or not isinstance(details, dict):
             return False
         # Validate parameters
-        if isinstance(provider,str) and len(keys := provider.split("/")) == 3:
+        if isinstance(provider, str) and len(keys := provider.split("/")) == 3:
             provider = {}
-            if keys[0] not in ["","-"]:
+            if keys[0] not in ["", "-"]:
                 provider["country"] = keys[0]
-            if keys[1] not in ["","-"]:
+            if keys[1] not in ["", "-"]:
                 provider["company"] = keys[1]
-            if keys[2] not in ["","-"]:
+            if keys[2] not in ["", "-"]:
                 provider["area"] = keys[2]
         provider = (
             provider
@@ -1266,7 +1268,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if "price_type" in details or price_type:
             data["price_type"] = price_type if price_type else details.get("price_type")
         if "dynamic_price" in details or provider:
-            data["dynamic_price"] = provider if provider else details.get("dynamic_price")
+            data["dynamic_price"] = (
+                provider if provider else details.get("dynamic_price")
+            )
 
         # Make the Api call and check for return code
         data["site_id"] = siteId
@@ -1314,7 +1318,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 "post", API_ENDPOINTS["get_dynamic_price_providers"], json=data
             )
         # update account details with providers for this model
-        if (data := resp.get("data") or {}):
+        if data := resp.get("data") or {}:
             self._update_account(
                 {
                     f"price_providers_{model}": {
@@ -1334,7 +1338,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """
         options: set = set()
         if isinstance(siteId, str) and (site := self.sites.get(siteId) or {}):
-            for model in  (site.get("site_info") or {}).get("current_site_device_models") or []:
+            for model in (site.get("site_info") or {}).get(
+                "current_site_device_models"
+            ) or []:
                 # add options from provider list
                 for country in (self.account.get(f"price_providers_{model}") or {}).get(
                     "country_info"
@@ -1348,7 +1354,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     break
         return options
 
-    async def get_dynamic_prices(self, country: str, company: str, area: str, date: datetime | None = None, deviceSn: str | None = None, fromFile: bool = False) -> dict:
+    async def get_dynamic_prices(
+        self,
+        country: str,
+        company: str,
+        area: str,
+        date: datetime | None = None,
+        deviceSn: str | None = None,
+        fromFile: bool = False,
+    ) -> dict:
         """Get the dynamic price details for a given provider and date.
 
         Example data:
@@ -1362,7 +1376,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # country parameter is not required for query
             "company": company,
             "area": area,
-            "date": str(int(date.timestamp() if isinstance(date,datetime) else datetime.now().timestamp())),
+            "date": str(
+                int(
+                    date.timestamp()
+                    if isinstance(date, datetime)
+                    else datetime.now().timestamp()
+                )
+            ),
             "device_sn": deviceSn or "",
         }
         if fromFile:
@@ -1375,7 +1395,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 "post", API_ENDPOINTS["get_dynamic_price_details"], json=data
             )
         # update account details with spot prices for provider
-        if (data := resp.get("data") or {}):
+        if data := resp.get("data") or {}:
             self._update_account(
                 {
                     f"price_details_{country}_{company}_{area}": {
