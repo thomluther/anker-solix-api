@@ -22,7 +22,11 @@ import sys
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from api import api, errors  # pylint: disable=no-name-in-module
-from api.apitypes import SolarbankUsageMode  # pylint: disable=no-name-in-module
+from api.apitypes import (  # pylint: disable=no-name-in-module
+    SolarbankAiemsStatus,
+    SolarbankUsageMode,
+    SolixPriceTypes,
+)
 import common
 
 # use Console logger from common module
@@ -34,7 +38,7 @@ REFRESH = 0  # default No refresh interval
 DETAILSREFRESH = 10  # Multiplier for device details refresh
 INTERACTIVE = True  # Interactive allows to select examples and exports as input for tests and debug
 SHOWAPICALLS = (
-    True  # Enable to show Api calls and cache details for additional debugging
+    False  # Enable to show Api calls and cache details for additional debugging
 )
 
 
@@ -338,6 +342,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     CONSOLE.info(
                         f"{'Wifi state':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} {'Signal':<{col3}}: {dev.get('wifi_signal') or '---':>4} % ({dev.get('rssi') or '---'} dBm)"
                     )
+                    if support := dev.get("is_support_wired"):
+                        online = dev.get("wired_connected")
+                        CONSOLE.info(
+                            f"{'Wired state':<{col1}}: {('Unknown' if online is None else 'Connected' if online else 'Disconnected'):<{col2}} {'Support Wired':<{col3}}: {('Unknown' if support is None else 'YES' if support else 'NO')}"
+                        )
                     upgrade = dev.get("auto_upgrade")
                     ota = dev.get("is_ota_update")
                     CONSOLE.info(
@@ -357,6 +366,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Charge Status':<{col1}}: {str(dev.get('charging_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('charging_status', '-')!s}"
                         )
+                        if aiems := (dev.get("schedule") or {}).get("ai_ems") or {}:
+                            status = aiems.get("status")
+                            CONSOLE.info(
+                                f"{'AI Status':<{col1}}: {str(SolarbankAiemsStatus(status).name if status in iter(SolarbankUsageMode) else '-----').capitalize() + ' (' + str(status) + ')':<{col2}} {'AI Enabled':<{col3}}: {'YES' if aiems.get('enable') else 'NO'}"
+                            )
                         soc = f"{dev.get('battery_soc', '---'):>4} %"
                         CONSOLE.info(
                             f"{'State Of Charge':<{col1}}: {soc:<{col2}} {'Min SOC':<{col3}}: {dev.get('power_cutoff', '--')!s:>4} %"
@@ -386,9 +400,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Other Input':<{col1}}: {dev.get('other_input_power', '---'):>4} {unit:<{col2 - 5}} {'Heating Power':<{col3}}: {dev.get('pei_heating_power', '---'):>4} {unit}"
                             )
-                        if "micro_inverter_power" in dev:
+                        if "grid_to_battery_power" in dev:
                             CONSOLE.info(
-                                f"{'Inverter Power':<{col1}}: {dev.get('micro_inverter_power', '---'):>4} {unit:<{col2 - 5}} {'Grid to Battery':<{col3}}: {dev.get('grid_to_battery_power', '---'):>4} {unit}"
+                                f"{'Grid to Battery':<{col1}}: {dev.get('grid_to_battery_power', '---'):>4} {unit:<{col2 - 5}} {'Inverter Power':<{col3}}: {dev.get('micro_inverter_power', '---'):>4} {unit}"
                             )
                         if "micro_inverter_power_limit" in dev:
                             CONSOLE.info(
@@ -512,60 +526,112 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         for s, d in myapi.sites.items()
                         if (not site_selected or s == site_selected)
                     ]:
+                        details = site.get("site_details") or {}
                         CONSOLE.info("=" * 80)
                         CONSOLE.info(
                             f"Energy details for System {(site.get('site_info') or {}).get('site_name', 'Unknown')} (Site ID: {site_id}):"
                         )
                         if len(totals := site.get("statistics") or []) >= 3:
                             CONSOLE.info(
-                                f"{'Total Produced':<{col1}}: {totals[0].get('total', '---.--'):>7} {str(totals[0].get('unit', '')).upper():<{col2 - 9}}  {'Carbon saved':<{col3}}: {totals[1].get('total', '---.--'):>7} {str(totals[1].get('unit', '')).upper()}"
+                                f"{'Total Produced':<{col1}}: {totals[0].get('total', '---.--'):>6} {str(totals[0].get('unit', '')).upper():<{col2 - 8}}  {'Carbon saved':<{col3}}: {totals[1].get('total', '---.--'):>6} {str(totals[1].get('unit', '')).upper()}"
                             )
-                            price = (site.get("site_details") or {}).get(
-                                "price"
-                            ) or "--.--"
-                            unit = (site.get("site_details") or {}).get(
-                                "site_price_unit"
-                            ) or ""
+                            price = (
+                                f"{float(price):.2f}"
+                                if (price := str(details.get("price") or ""))
+                                .replace("-", "", 1).replace(".", "", 1)
+                                .isdigit()
+                                else "--.--"
+                            )
+                            unit = details.get("site_price_unit") or ""
                             CONSOLE.info(
-                                f"{'Max savings':<{col1}}: {totals[2].get('total', '---.--'):>7} {totals[2].get('unit', ''):<{col2 - 9}}  {'Price kWh':<{col3}}: {price:>7} {unit} (Fix)"
+                                f"{'Max savings':<{col1}}: {totals[2].get('total', '---.--'):>6} {totals[2].get('unit', ''):<{col2 - 8}}  {'Price kWh':<{col3}}: {price:>6} {unit} (Fix)"
                             )
                         if ai_profits := site.get("aiems_profit"):
                             unit = ai_profits.get("unit") or ""
                             CONSOLE.info(
-                                f"{'AI savings':<{col1}}: {ai_profits.get('aiems_profit_total', '---.--'):>7} {unit:<{col2 - 9}}  {'SM difference':<{col3}}: {ai_profits.get('aiems_self_use_diff', '---.--'):>7} {unit} ({ai_profits.get('percentage', '---.--')} %)"
+                                f"{'AI savings':<{col1}}: {ai_profits.get('aiems_profit_total', '---.--'):>6} {unit:<{col2 - 8}}  {'SM difference':<{col3}}: {ai_profits.get('aiems_self_use_diff', '---.--'):>6} {unit} ({ai_profits.get('percentage', '---.--')} %)"
                             )
-                        if (
-                            price_type := (site.get("site_details") or {}).get(
-                                "price_type"
-                            )
-                            or ""
-                        ):
-                            dynamic = (site.get("site_details") or {}).get(
-                                "dynamic_price"
-                            ) or {}
+                        price_type = details.get("price_type") or ""
+                        dynamic = details.get("dynamic_price") or {}
+                        if price_type or dynamic:
                             dyn_price = None
                             dyn_unit = None
-                            if dev := myapi.devices.get(
-                                (
-                                    next(
-                                        iter(
-                                            (site.get("solarbank_info") or {}).get(
-                                                "solarbank_list"
-                                            )
-                                            or [{}]
-                                        ),
-                                        {},
+                            if price_type in [SolixPriceTypes.DYNAMIC.value]:
+                                dyn_price = (
+                                    f"{float(price):.2f}"
+                                    if (
+                                        price := details.get("dynamic_price_total")
+                                        or ""
                                     )
-                                ).get("device_sn")
-                                or ""
+                                    .replace("-", "", 1).replace(".", "", 1)
+                                    .isdigit()
+                                    else "--.--"
+                                )
+                                dyn_unit = details.get("spot_price_unit") or ""
+                            elif price_type in [SolixPriceTypes.USE_TIME.value] and (
+                                dev := myapi.devices.get(
+                                    (
+                                        next(
+                                            iter(
+                                                (site.get("solarbank_info") or {}).get(
+                                                    "solarbank_list"
+                                                )
+                                                or [{}]
+                                            ),
+                                            {},
+                                        )
+                                    ).get("device_sn")
+                                    or ""
+                                )
                             ):
-                                dyn_price = dev.get("preset_tariff_price")
+                                dyn_price = (
+                                    f"{float(price):.2f}"
+                                    if (price := dev.get("preset_tariff_price") or "")
+                                    .replace("-", "", 1).replace(".", "", 1)
+                                    .isdigit()
+                                    else "---.--"
+                                )
                                 dyn_unit = dev.get("preset_tariff_currency")
                             if provider := dynamic.get("company") or "":
                                 provider = f"{provider} ({dynamic.get('country') or '--'}/{dynamic.get('area') or '---'})"
                             CONSOLE.info(
-                                f"{'Active Price':<{col1}}: {dyn_price or price:>7} {dyn_unit or unit} {'('+price_type.capitalize()+')':<{col2-10}} {'Price Provider':<{col3}}: {provider or '----------'}"
+                                f"{'Active Price':<{col1}}: {dyn_price or price:>6} {(dyn_unit or unit) + ' (' + (price_type.capitalize() or "------") + ')':<{col2 - 7}} {'Price Provider':<{col3}}: {provider or '----------'}"
                             )
+                            if (spot := details.get("spot_price_mwh")) is not None:
+                                spot = (
+                                    f"{float(price):.2f}"
+                                    if (price := spot).replace("-", "", 1).replace(".", "", 1).isdigit()
+                                    else "---.--"
+                                )
+                                today = (
+                                    f"{float(price):.2f}"
+                                    if (
+                                        price := details.get("spot_price_mwh_avg_today")
+                                        or ""
+                                    )
+                                    .replace("-", "", 1).replace(".", "", 1)
+                                    .isdigit()
+                                    else "---.--"
+                                )
+                                tomorrow = (
+                                    f"{float(price):.2f}"
+                                    if (
+                                        price := details.get(
+                                            "spot_price_mwh_avg_tomorrow"
+                                        )
+                                        or ""
+                                    )
+                                    .replace("-", "", 1).replace(".", "", 1)
+                                    .isdigit()
+                                    else "---.--"
+                                )
+                                unit = details.get("spot_price_unit") or ""
+                                CONSOLE.info(
+                                    f"{'Spot Price':<{col1}}: {spot:>6} {unit + '/MWh ('+(details.get("spot_price_time") or "--:--")+')':<{col2-7}} {'Avg today/tomor':<{col3}}: {today:>6} / {tomorrow:>6} {unit + '/MWh'}"
+                                )
+                                CONSOLE.info(
+                                    f"{'Price Fee':<{col1}}: {details.get('dynamic_price_fee') or '-.----':>8} {unit:<{col2 - 9}} {'Price VAT':<{col3}}: {details.get('dynamic_price_vat') or '--.--':>6} %"
+                                )
                         if energy := site.get("energy_details") or {}:
                             today: dict = energy.get("today") or {}
                             yesterday: dict = energy.get("last_period") or {}

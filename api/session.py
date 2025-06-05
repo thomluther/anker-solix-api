@@ -1,6 +1,5 @@
 """Anker Power/Solix Cloud API class to handle a client connection session for an account."""
-import tempfile
-import os
+
 from asyncio import sleep
 from base64 import b64decode, b64encode
 import contextlib
@@ -10,8 +9,10 @@ from datetime import datetime
 import hashlib
 import json
 import logging
+import os
 from pathlib import Path
 from random import randbytes, randrange
+import tempfile
 
 import aiofiles
 from aiohttp import ClientSession
@@ -64,16 +65,14 @@ class AnkerSolixClientSession:
         self._password: str = password
         self._session: ClientSession = websession
         self._loggedIn: bool = False
-        self._testdir: str = str(
-            Path(Path(__file__).parent) / ".." / "examples" / "example1"
-        )
+        self._testdir: str = str((Path(__file__).parent / ".." / "examples" / "example1").resolve())
 
         # Flag for retry of any or certain error
         self._retry_attempt: bool | int = False
 
         # ensure folder for authentication caching exists
-        auth_cache_dir = Path(Path(__file__).parent) / "authcache"
-        if not os.access(auth_cache_dir, os.W_OK):
+        auth_cache_dir = Path(__file__).parent / "authcache"
+        if not os.access(auth_cache_dir.parent, os.W_OK):
             auth_cache_dir = Path(tempfile.gettempdir()) / "authcache"
         auth_cache_dir.mkdir(parents=True, exist_ok=True)
 

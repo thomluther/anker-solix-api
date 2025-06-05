@@ -8,6 +8,7 @@ pip install aiofiles
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 import logging
 from pathlib import Path
 
@@ -85,9 +86,10 @@ class AnkerSolixBaseApi:
         return self.sites | self.devices | {self.apisession.email: self.account}
 
     def clearCaches(self) -> None:
-        """Clear the api cache dictionaries except the account cache."""
+        """Clear the api cache dictionaries."""
         self.sites = {}
         self.devices = {}
+        self.account = {}
 
     def recycleDevices(
         self, extraDevices: set | None = None, activeDevices: set | None = None
@@ -166,13 +168,113 @@ class AnkerSolixBaseApi:
 
         This method is used to consolidate site details from various less frequent requests that are not covered with the update_sites poller method.
         """
-        # lookup old site details if any
-        if siteId in self.sites:
-            site_details = (self.sites[siteId]).get("site_details") or {}
-            site_details.update(details)
-        else:
-            site_details = details
-            self.sites[siteId] = {}
+        # get existing site details
+        site_details = (self.sites.get(siteId) or {}).get("site_details") or {}
+        # Implement site details update code with key filtering, conversion, consolidation, calculation or dependency updates
+        for key, value in details.items():
+            if key in ["spot_prices"] and value:
+                # key to indicate actual price extraction from provided forecast data
+                now = datetime.now()
+                # use correct prices depending on actual time and poll time
+                today = now.strftime("%Y-%m-%d") in value.get("poll_time")
+                nextday = (now - timedelta(days=1)).strftime("%Y-%m-%d") in value.get(
+                    "poll_time"
+                )
+                prices = (
+                    value.get("today_price_trend") or []
+                    if today
+                    else value.get("tomorrow_price_trend") or []
+                    if nextday
+                    else []
+                )
+                slot = next(
+                    iter(
+                        [
+                            s
+                            for s in prices
+                            if isinstance(s, dict)
+                            and s.get("time") <= now.strftime("%H:%M")
+                        ][-1:]
+                    ),
+                    {},
+                )
+                site_details["spot_price_time"] = slot.get("time") or ""
+                # convert spot price to MWh if required
+                site_details["spot_price_mwh"] = (
+                    str(float(spotprice))
+                    if (
+                        (spotprice := (slot.get("price") or ""))
+                        .replace("-", "", 1)
+                        .replace(".", "", 1)
+                        .isdigit()
+                    )
+                    else ""
+                )
+                site_details["spot_price_mwh_avg_today"] = (
+                    str(float(price))
+                    if (
+                        (
+                            price := (
+                                value.get(
+                                    "today_avg_price" if today else "tomorrow_avg_price"
+                                )
+                                or ""
+                            )
+                        )
+                        .replace("-", "", 1)
+                        .replace(".", "", 1)
+                        .isdigit()
+                    )
+                    else ""
+                )
+                site_details["spot_price_mwh_avg_tomorrow"] = (
+                    str(float(price))
+                    if (
+                        (
+                            price := (
+                                value.get("tomorrow_avg_price" if today else "") or ""
+                            )
+                        )
+                        .replace("-", "", 1)
+                        .replace(".", "", 1)
+                        .isdigit()
+                    )
+                    else ""
+                )
+                unit = value.get("currency") or ""
+                # lookup unit symbol in currency list
+                unit = (
+                    next(
+                        iter(
+                            item
+                            for item in self.account.get("currency_list") or []
+                            if item.get("name") == unit
+                        ),
+                        {},
+                    )
+                ).get("symbol") or unit
+                site_details["spot_price_unit"] = unit
+                # preset fee and vat if not available
+                site_details["dynamic_price_fee"] = (
+                    site_details.get("dynamic_price_fee") or ""
+                )
+                site_details["dynamic_price_vat"] = (
+                    site_details.get("dynamic_price_vat") or ""
+                )
+                # calculate total dynamic price
+                if fee := site_details.get("dynamic_price_fee") or "":
+                    vat = site_details.get("dynamic_price_vat") or ""
+                    site_details["dynamic_price_total"] = (
+                        f"{(float(spotprice) / 1000 + float(fee)) * (1 + float(vat) / 100):0.4f}"
+                        if (
+                            spotprice.replace("-", "", 1).replace(".", "", 1).isdigit()
+                            and fee.replace("-", "", 1).replace(".", "", 1).isdigit()
+                            and vat.replace("-", "", 1).replace(".", "", 1).isdigit()
+                        )
+                        else ""
+                    )
+            else:
+                site_details[key] = value
         self.sites[siteId]["site_details"] = site_details
 
     def _update_dev(

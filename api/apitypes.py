@@ -521,6 +521,15 @@ class SolarbankDischargePriorityMode(IntEnum):
     on = 1
 
 
+class SolarbankAiemsStatus(IntEnum):
+    """Enumeration for Anker Solix Solarbank Anker Intelligence status."""
+
+    unknown = 0
+    untrained = 3
+    learning = 4 # TODO(SB3): Needs to be validated
+    trained = 5
+
+
 class SolixTariffTypes(IntEnum):
     """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 

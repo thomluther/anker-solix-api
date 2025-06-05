@@ -8,8 +8,6 @@ Furthermore the API class can use the json files for debugging and testing of va
 """
 
 import asyncio
-import os
-import tempfile
 from collections.abc import Callable
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -17,11 +15,13 @@ from functools import partial
 import json
 import logging
 import logging.handlers
+import os
 from pathlib import Path
 import queue
 import random
 import shutil
 import string
+import tempfile
 from typing import Any
 
 import aiofiles
@@ -87,8 +87,8 @@ class AnkerSolixApiExport:
 
         if not export_path:
             # default to exports self.export_path in parent path of api library
-            self.export_path = Path(__file__).parent / ".." / "exports"
-            if not os.access(self.export_path, os.W_OK):
+            self.export_path = (Path(__file__).parent / ".." / "exports").resolve()
+            if not (os.access(self.export_path.parent, os.W_OK) or os.access(self.export_path, os.W_OK)):
                 self.export_path = Path(tempfile.gettempdir()) / "exports"
         else:
             self.export_path = Path(export_path)
@@ -120,9 +120,7 @@ class AnkerSolixApiExport:
             # avoid filesystem problems with * in user nicknames
             self.export_folder = self.client.nickname.replace("*", "x")
         # complete path and ensure parent self.export_path for export exists
-        self.export_path: Path = Path.resolve(
-            Path(self.export_path) / self.export_folder
-        )
+        self.export_path: Path = (Path(self.export_path) / self.export_folder).resolve()
         try:
             # clear export folder if it exists already
             if self.export_path.exists():
@@ -805,14 +803,10 @@ class AnkerSolixApiExport:
                         "attributes": [
                             "rssi",
                             "temperature",
-                            "battery_cycles",
-                            "state_of_health",
-                            "status",
+                            "priority", # Smart plug attribute?
+                            "auto_switch", # Smart plug attribute?
+                            "running_time", # Smart plug attribute?
                             "wifi_signal",
-                            "switch",
-                            "ssid",
-                            "led",
-                            "micro_inverter_power_limit",
                         ],
                     },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
