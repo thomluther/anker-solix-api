@@ -143,7 +143,7 @@ API_ENDPOINTS = {
     "get_forecast_schedule": "power_service/v1/site/get_schedule", # get remaining energy and negative price slots, works as member, {"site_id": siteId}
     "get_co2_ranking": "power_service/v1/site/co2_ranking", # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
     "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available", # Get available site id_s for dynamic prices of account, works as member but list empty
-    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option", # Get available provider list for device_pn, works as member, {"device_pn": "A5102"}
+    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option", # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
     "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail", # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
     "get_device_income": "power_service/v1/app/device/get_device_income", # {"device_sn": deviceSn, "start_time": "00:00"})) # Get income data for device, works for member
     "get_ai_ems_status": "power_service/v1/ai_ems/get_status", # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
@@ -568,7 +568,7 @@ class SolarbankUsageMode(IntEnum):
     manual = 3  # manual time plan for home load output
     backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
     use_time = 5  # Use Time plan with AC types and smart meter
-    dynamic_price = 6  # TODO(SB3): To be confirmed
+    #smart_learning = 6  # TODO(SB3): To be confirmed
     smart = 7   # Smart mode for AI based charging and discharging
     time_slot = 8  # Time slot mode for dynamic tariffs
 
@@ -584,7 +584,7 @@ class SolarbankRatePlan:
     manual: str = "custom_rate_plan"
     backup: str = "manual_backup"
     use_time: str = "use_time"
-    dynamic_price: str = "dynamic_price"
+    #smart_learning: str = "" # TODO(SB3): To be confirmed if this is a valid mode and plan
     smart: str = ""  # does not use a plan "ai_ems"
     time_slot: str = "time_slot"
 
@@ -878,6 +878,37 @@ class SolixDefaults:
     # Inverter limit
     MICRO_INVERTER_LIMIT_MIN: int = 0
     MICRO_INVERTER_LIMIT_MAX: int = 800
+    # Dynamic tariff defaults
+    DYNAMIC_TARIFF_PRICE_FEE: ClassVar[dict[str,float]] = {
+        "UK": 0.1131,
+        "SE": 0.0643,
+        "AT": 0.11332,
+        "BE": 0.01316,
+        "FR": 0.1329,
+        "DE": 0.17895,
+        "PL": 0.0786,
+        "DEFAULT": 0,
+    }
+    DYNAMIC_TARIFF_SELL_FEE: ClassVar[dict[str,float]] = {
+        "UK": 0.03,
+        "SE": 0.2,
+        "AT": 0.0973,
+        "BE": 0.01305,
+        "FR": 0.127,
+        "DE": 0.0794,
+        "PL": 0,
+        "DEFAULT": 0,
+    }
+    DYNAMIC_TARIFF_PRICE_VAT: ClassVar[dict[str,float]] = {
+        "UK": 5,
+        "SE": 25,
+        "AT": 20,
+        "BE": 21,
+        "FR": 20,
+        "DE": 19,
+        "PL": 23,
+        "DEFAULT": 0,
+    }
 
 
 class SolixDeviceStatus(StrEnum):

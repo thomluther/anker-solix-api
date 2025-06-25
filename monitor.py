@@ -236,6 +236,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     admin = dev.get("is_admin", False)
                     siteid = dev.get("site_id", "")
                     site = myapi.sites.get(siteid) or {}
+                    customized = dev.get("customized") or {}
                     if not (siteid and siteid in shown_sites):
                         CONSOLE.info("=" * 80)
                         if siteid:
@@ -377,7 +378,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                         energy = f"{dev.get('battery_energy', '----'):>4} Wh"
                         CONSOLE.info(
-                            f"{'Battery Energy':<{col1}}: {energy:<{col2}} {'Capacity':<{col3}}: {dev.get('battery_capacity', '----')!s:>4} Wh"
+                            f"{'Battery Energy':<{col1}}: {energy:<{col2}} {'Capacity':<{col3}}: {customized.get('battery_capacity') or dev.get('battery_capacity', '----')!s:>4} Wh"
                         )
                         unit = dev.get("power_unit", "W")
                         if dev.get("generation", 0) > 1:
@@ -527,6 +528,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if (not site_selected or s == site_selected)
                     ]:
                         details = site.get("site_details") or {}
+                        customized = site.get("customized") or {}
                         CONSOLE.info("=" * 80)
                         CONSOLE.info(
                             f"Energy details for System {(site.get('site_info') or {}).get('site_name', 'Unknown')} (Site ID: {site_id}):"
@@ -538,7 +540,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             price = (
                                 f"{float(price):.2f}"
                                 if (price := str(details.get("price") or ""))
-                                .replace("-", "", 1).replace(".", "", 1)
+                                .replace("-", "", 1)
+                                .replace(".", "", 1)
                                 .isdigit()
                                 else "--.--"
                             )
@@ -549,7 +552,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if ai_profits := site.get("aiems_profit"):
                             unit = ai_profits.get("unit") or ""
                             CONSOLE.info(
-                                f"{'AI savings':<{col1}}: {ai_profits.get('aiems_profit_total', '---.--'):>6} {unit:<{col2 - 8}}  {'SM difference':<{col3}}: {ai_profits.get('aiems_self_use_diff', '---.--'):>6} {unit} ({ai_profits.get('percentage', '---.--')} %)"
+                                f"{'AI savings':<{col1}}: {ai_profits.get('aiems_profit_total', '---.--'):>6} {unit:<{col2 - 8}}  {'AI Advantage':<{col3}}: {ai_profits.get('aiems_self_use_diff', '---.--'):>6} {unit} ({ai_profits.get('percentage', '---.--')} %)"
                             )
                         price_type = details.get("price_type") or ""
                         dynamic = details.get("dynamic_price") or {}
@@ -563,7 +566,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                         price := details.get("dynamic_price_total")
                                         or ""
                                     )
-                                    .replace("-", "", 1).replace(".", "", 1)
+                                    .replace("-", "", 1)
+                                    .replace(".", "", 1)
                                     .isdigit()
                                     else "--.--"
                                 )
@@ -587,7 +591,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 dyn_price = (
                                     f"{float(price):.2f}"
                                     if (price := dev.get("preset_tariff_price") or "")
-                                    .replace("-", "", 1).replace(".", "", 1)
+                                    .replace("-", "", 1)
+                                    .replace(".", "", 1)
                                     .isdigit()
                                     else "---.--"
                                 )
@@ -595,12 +600,15 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             if provider := dynamic.get("company") or "":
                                 provider = f"{provider} ({dynamic.get('country') or '--'}/{dynamic.get('area') or '---'})"
                             CONSOLE.info(
-                                f"{'Active Price':<{col1}}: {dyn_price or price:>6} {(dyn_unit or unit) + ' (' + (price_type.capitalize() or "------") + ')':<{col2 - 7}} {'Price Provider':<{col3}}: {provider or '----------'}"
+                                f"{'Active Price':<{col1}}: {dyn_price or price:>6} {(dyn_unit or unit) + ' (' + (price_type.capitalize() or '------') + ')':<{col2 - 7}} {'Price Provider':<{col3}}: {provider or '----------'}"
                             )
                             if (spot := details.get("spot_price_mwh")) is not None:
                                 spot = (
                                     f"{float(price):.2f}"
-                                    if (price := spot).replace("-", "", 1).replace(".", "", 1).isdigit()
+                                    if (price := spot)
+                                    .replace("-", "", 1)
+                                    .replace(".", "", 1)
+                                    .isdigit()
                                     else "---.--"
                                 )
                                 today = (
@@ -609,7 +617,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                         price := details.get("spot_price_mwh_avg_today")
                                         or ""
                                     )
-                                    .replace("-", "", 1).replace(".", "", 1)
+                                    .replace("-", "", 1)
+                                    .replace(".", "", 1)
                                     .isdigit()
                                     else "---.--"
                                 )
@@ -621,18 +630,22 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                         )
                                         or ""
                                     )
-                                    .replace("-", "", 1).replace(".", "", 1)
+                                    .replace("-", "", 1)
+                                    .replace(".", "", 1)
                                     .isdigit()
                                     else "---.--"
                                 )
                                 unit = details.get("spot_price_unit") or ""
+                                time = str(details.get('spot_price_time') or "")[-5:]
                                 CONSOLE.info(
-                                    f"{'Spot Price':<{col1}}: {spot:>6} {unit + '/MWh ('+(details.get("spot_price_time") or "--:--")+')':<{col2-7}} {'Avg today/tomor':<{col3}}: {today:>6} / {tomorrow:>6} {unit + '/MWh'}"
+                                    f"{'Spot Price':<{col1}}: {spot:>6} {unit + '/MWh (' + (time or '--:--') + ')':<{col2 - 7}} {'Avg today/tomor':<{col3}}: {today:>6} / {tomorrow:>6} {unit + '/MWh'}"
                                 )
+
                                 CONSOLE.info(
                                     f"{'Price Fee':<{col1}}: {details.get('dynamic_price_fee') or '-.----':>8} {unit:<{col2 - 9}} {'Price VAT':<{col3}}: {details.get('dynamic_price_vat') or '--.--':>6} %"
                                 )
                         if energy := site.get("energy_details") or {}:
+                            CONSOLE.info("-" * 80)
                             today: dict = energy.get("today") or {}
                             yesterday: dict = energy.get("last_period") or {}
                             unit = "kWh"
@@ -733,7 +746,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                         myapi.request_count.recycle(last_time=datetime.now())
                         resp = input(
-                            "[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file or [Q]uit: "
+                            "[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file, [C]ustomize or [Q]uit: "
                         )
                         if resp.upper() in ["S", "SITE"]:
                             # set device details refresh to future to reload only site info
@@ -741,6 +754,50 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             break
                         if resp.upper() in ["A", "ALL"]:
                             next_dev_refr = 0
+                            break
+                        if resp.upper() in ["C", "USTOMIZE"]:
+                            CONSOLE.info("Site IDs and Device SNs for customization:")
+                            cache: dict = myapi.sites | myapi.devices
+                            for idx, item in enumerate(
+                                itemlist := list(cache.keys()),
+                                start=1,
+                            ):
+                                CONSOLE.info(
+                                    "(%s) %s - %s",
+                                    idx,
+                                    item,
+                                    cache.get(item).get("name")
+                                    or (cache.get(item).get("site_info") or {}).get(
+                                        "site_name"
+                                    ),
+                                )
+                            CONSOLE.info("(q) Quit")
+                            while use_file:
+                                select = input(
+                                    f"Select ID (1-{len(itemlist)}) or [c]ancel: "
+                                )
+                                if select.upper() in ["C", "CANCEL"]:
+                                    break
+                                if select.isdigit() and 1 <= (
+                                    select := int(select)
+                                ) <= len(itemlist):
+                                    break
+                            if isinstance(select, int):
+                                item = itemlist[select - 1]
+                                key = input(f"Enter key to be customized in '{item}': ")
+                                value = json.loads(f'{input(f"Enter '{key}' value in JSON format: ").replace("'",'"')}')
+                                myapi.customizeCacheId(id=item, key=key, value=value)
+                                CONSOLE.info(
+                                    "Customized part of %s:\n%s",
+                                    item,
+                                    json.dumps(
+                                        myapi.getCaches().get(item).get("customized")
+                                        or {},
+                                        indent=2,
+                                    ),
+                                )
+                                input("Hit enter to refresh all data...")
+                                next_dev_refr = 0
                             break
                         if resp.upper() in ["O", "OTHER"] and exampleslist:
                             CONSOLE.info("Select the input source for the monitor:")

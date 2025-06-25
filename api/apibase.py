@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 from pathlib import Path
+from typing import Any
 
 from aiohttp import ClientSession
 
@@ -18,6 +19,7 @@ from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
+    SolixDefaults,
     SolixDeviceType,
 )
 from .session import AnkerSolixClientSession
@@ -90,6 +92,43 @@ class AnkerSolixBaseApi:
         self.sites = {}
         self.devices = {}
         self.account = {}
+
+    def customizeCacheId(self, id: str, key: str, value: Any) -> None:
+        """Customize a cache identifier with a key and value pair."""
+        if isinstance(id, str) and isinstance(key, str):
+            if id in self.sites:
+                data = self.sites.get(id)
+                customized = data.get("customized") or {}
+                customized[key] = value
+                data["customized"] = customized
+                # trigger an update of keys depending on customized value
+                if key in (data.get("site_details") or {}):
+                    if key in ["dynamic_price_vat", "dynamic_price_fee"]:
+                        # update whole dynamic price forecast
+                        self._update_site(
+                            siteId=id,
+                            details=self.extractPriceData(siteId=id, forceCalc=True),
+                        )
+                    else:
+                        self._update_site(siteId=id, details={key: data["site_details"][key]})
+                elif key in data:
+                    pass
+            elif id in self.devices:
+                data = self.devices.get(id)
+                customized = data.get("customized") or {}
+                customized[key] = value
+                data["customized"] = customized
+                # trigger an update of keys depending on customized value
+                if key in data:
+                    self._update_dev(devData={"device_sn": id, key: data[key]})
+            elif id == self.apisession.email:
+                data = self.account
+                customized = data.get("customized") or {}
+                customized[key] = value
+                data["customized"] = customized
+                # trigger an update of keys depending on customized value
+                if key in data:
+                    self._update_account(details={key: data.get(key)})
 
     def recycleDevices(
         self, extraDevices: set | None = None, activeDevices: set | None = None
@@ -172,107 +211,8 @@ class AnkerSolixBaseApi:
         site_details = (self.sites.get(siteId) or {}).get("site_details") or {}
         # Implement site details update code with key filtering, conversion, consolidation, calculation or dependency updates
         for key, value in details.items():
-            if key in ["spot_prices"] and value:
-                # key to indicate actual price extraction from provided forecast data
-                now = datetime.now()
-                # use correct prices depending on actual time and poll time
-                today = now.strftime("%Y-%m-%d") in value.get("poll_time")
-                nextday = (now - timedelta(days=1)).strftime("%Y-%m-%d") in value.get(
-                    "poll_time"
-                )
-                prices = (
-                    value.get("today_price_trend") or []
-                    if today
-                    else value.get("tomorrow_price_trend") or []
-                    if nextday
-                    else []
-                )
-                slot = next(
-                    iter(
-                        [
-                            s
-                            for s in prices
-                            if isinstance(s, dict)
-                            and s.get("time") <= now.strftime("%H:%M")
-                        ][-1:]
-                    ),
-                    {},
-                )
-                site_details["spot_price_time"] = slot.get("time") or ""
-                # convert spot price to MWh if required
-                site_details["spot_price_mwh"] = (
-                    str(float(spotprice))
-                    if (
-                        (spotprice := (slot.get("price") or ""))
-                        .replace("-", "", 1)
-                        .replace(".", "", 1)
-                        .isdigit()
-                    )
-                    else ""
-                )
-                site_details["spot_price_mwh_avg_today"] = (
-                    str(float(price))
-                    if (
-                        (
-                            price := (
-                                value.get(
-                                    "today_avg_price" if today else "tomorrow_avg_price"
-                                )
-                                or ""
-                            )
-                        )
-                        .replace("-", "", 1)
-                        .replace(".", "", 1)
-                        .isdigit()
-                    )
-                    else ""
-                )
-                site_details["spot_price_mwh_avg_tomorrow"] = (
-                    str(float(price))
-                    if (
-                        (
-                            price := (
-                                value.get("tomorrow_avg_price" if today else "") or ""
-                            )
-                        )
-                        .replace("-", "", 1)
-                        .replace(".", "", 1)
-                        .isdigit()
-                    )
-                    else ""
-                )
-                unit = value.get("currency") or ""
-                # lookup unit symbol in currency list
-                unit = (
-                    next(
-                        iter(
-                            item
-                            for item in self.account.get("currency_list") or []
-                            if item.get("name") == unit
-                        ),
-                        {},
-                    )
-                ).get("symbol") or unit
-                site_details["spot_price_unit"] = unit
-                # preset fee and vat if not available
-                site_details["dynamic_price_fee"] = (
-                    site_details.get("dynamic_price_fee") or ""
-                )
-                site_details["dynamic_price_vat"] = (
-                    site_details.get("dynamic_price_vat") or ""
-                )
-                # calculate total dynamic price
-                if fee := site_details.get("dynamic_price_fee") or "":
-                    vat = site_details.get("dynamic_price_vat") or ""
-                    site_details["dynamic_price_total"] = (
-                        f"{(float(spotprice) / 1000 + float(fee)) * (1 + float(vat) / 100):0.4f}"
-                        if (
-                            spotprice.replace("-", "", 1).replace(".", "", 1).isdigit()
-                            and fee.replace("-", "", 1).replace(".", "", 1).isdigit()
-                            and vat.replace("-", "", 1).replace(".", "", 1).isdigit()
-                        )
-                        else ""
-                    )
+            if key in [] and value:
+                pass
             else:
                 site_details[key] = value
         self.sites[siteId]["site_details"] = site_details
@@ -942,3 +882,148 @@ class AnkerSolixBaseApi:
                 "post", API_ENDPOINTS["get_currency_list"]
             )
         return resp.get("data") or {}
+
+    def lookup_currency_symbol(self, currency: str) -> str | None:
+        """Get the currency symbol from the currency list if available."""
+        # lookup symbol in currency list
+        if isinstance(currency, str):
+            return (
+                next(
+                    iter(
+                        item
+                        for item in self.account.get("currency_list") or []
+                        if item.get("name") == currency
+                    ),
+                    {},
+                )
+            ).get("symbol") or None
+        return None
+
+    def extractPriceData(self, siteId: str, forceCalc: bool = False) -> dict:
+        """Get the dynamic price information extracted from cache data using spot prices, fees and taxes."""
+        priceData = {}
+        site = self.sites.get(siteId) or {} if isinstance(siteId, str) else {}
+        # get provider details or use provided details
+        provider = (site.get("site_details") or {}).get("dynamic_price") or {}
+        country = provider.get("country") or ""
+        company = provider.get("company") or ""
+        area = provider.get("area") or ""
+        if site and (
+            spot_prices := self.account.get(f"price_details_{country}_{company}_{area}")
+        ):
+            # get customized site data
+            customized = site.get("customized") or {}
+            now = datetime.now()
+            # get last poll time from site details
+            last_calc = (site.get("site_details") or {}).get(
+                "dynamic_price_poll_time"
+            ) or ""
+            poll_time = spot_prices.get("poll_time")
+            # lookup unit symbol in currency list
+            unit = spot_prices.get("currency") or ""
+            priceData["spot_price_unit"] = self.lookup_currency_symbol(unit) or unit
+            # preset fee and vat, use customized values with priority, defaults last
+            # TODO(SB3): Add fee and tax values active on the system once data can be queried
+            priceData["dynamic_price_fee"] = customized.get("dynamic_price_fee") or str(
+                SolixDefaults.DYNAMIC_TARIFF_PRICE_FEE.get(country)
+                or SolixDefaults.DYNAMIC_TARIFF_PRICE_FEE.get("DEFAULT")
+            )
+            priceData["dynamic_price_vat"] = customized.get("dynamic_price_vat") or str(
+                SolixDefaults.DYNAMIC_TARIFF_PRICE_VAT.get(country)
+                or SolixDefaults.DYNAMIC_TARIFF_PRICE_VAT.get("DEFAULT")
+            )
+            # update dynamic prices if new poll data available
+            if poll_time and (last_calc != poll_time or forceCalc):
+                fee = str(priceData.get("dynamic_price_fee"))
+                fee = (
+                    float(fee)
+                    if fee.replace("-", "", 1).replace(".", "", 1).isdigit()
+                    else 0
+                )
+                vat = priceData.get("dynamic_price_vat")
+                vat = (
+                    float(vat)
+                    if vat.replace("-", "", 1).replace(".", "", 1).isdigit()
+                    else 0
+                )
+                date = datetime.fromisoformat(poll_time)
+                trend = []
+                # calculate total dynamic price
+                for day in [0, 1]:
+                    daystring = (date + timedelta(day)).strftime("%Y-%m-%d")
+                    trend.extend(
+                        {
+                            "timestamp": f"{daystring} {item.get('time')}",
+                            "price": f"{(float(spotprice) / 1000 + fee) * (1 + vat / 100):0.4f}",
+                            "spot_mwh": spotprice,
+                        }
+                        for item in (
+                            spot_prices.get(
+                                "today_price_trend"
+                                if day == 0
+                                else "tomorrow_price_trend"
+                            )
+                            or []
+                        )
+                        if (
+                            (spotprice := item.get("price") or "")
+                            .replace("-", "", 1)
+                            .replace(".", "", 1)
+                            .isdigit()
+                        )
+                    )
+                priceData["dynamic_price_forecast"] = trend
+                priceData["dynamic_price_poll_time"] = poll_time
+            else:
+                # get previous calculation
+                priceData["dynamic_price_forecast"] = (
+                    site.get("site_details") or {}
+                ).get("dynamic_price_forecast") or []
+            # extract correct prices depending on actual time
+            today = now.strftime("%Y-%m-%d") in spot_prices.get("poll_time")
+            nowstring = now.strftime("%Y-%m-%d %H:%M")
+            slot = next(
+                iter(
+                    [
+                        s
+                        for s in priceData["dynamic_price_forecast"] or []
+                        if isinstance(s, dict) and str(s.get("timestamp")) <= nowstring
+                    ][-1:]
+                ),
+                {},
+            )
+            priceData["spot_price_time"] = slot.get("timestamp") or ""
+            priceData["spot_price_mwh"] = slot.get("spot_mwh") or ""
+            priceData["dynamic_price_total"] = slot.get("price") or ""
+            priceData["spot_price_mwh_avg_today"] = (
+                str(float(price))
+                if (
+                    (
+                        price := (
+                            spot_prices.get(
+                                "today_avg_price" if today else "tomorrow_avg_price"
+                            )
+                            or ""
+                        )
+                    )
+                    .replace("-", "", 1)
+                    .replace(".", "", 1)
+                    .isdigit()
+                )
+                else ""
+            )
+            priceData["spot_price_mwh_avg_tomorrow"] = (
+                str(float(price))
+                if (
+                    (
+                        price := (
+                            spot_prices.get("tomorrow_avg_price" if today else "") or ""
+                        )
+                    )
+                    .replace("-", "", 1)
+                    .replace(".", "", 1)
+                    .isdigit()
+                )
+                else ""
+            )
+        return priceData

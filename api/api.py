@@ -53,14 +53,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     """Define the API class to handle API data for Anker balcony power sites and devices using power_service endpoints."""
 
     # import outsourced methods
-    from .energy import (  # pylint: disable=import-outside-toplevel
+    from .energy import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
         device_pv_energy_daily,
         energy_analysis,
         energy_daily,
         get_device_pv_statistics,
         home_load_chart,
     )
-    from .schedule import (  # pylint: disable=import-outside-toplevel
+    from .schedule import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
         get_device_load,
         get_device_parm,
         set_device_load,
@@ -273,6 +273,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         ):
                             device[key] = int(value)
                             calc_capacity = True
+                    elif key in ["battery_capacity"] and str(value).isdigit():
+                        device[key] = value
+                        calc_capacity = True
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
                     elif key in ["set_load_power", "parallel_home_load"] and value:
                         # Value may include unit, remove unit to have content consistent
@@ -882,11 +885,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 and str(cap).isdigit()
                                 and str(soc).isdigit()
                             ):
+                                # Get optional customized capacity for calculation if changed externally
+                                custom_cap = (
+                                    custom_cap
+                                    if (
+                                        custom_cap := (
+                                            device.get("customized") or {}
+                                        ).get("battery_capacity")
+                                    )
+                                    and str(custom_cap).isdigit()
+                                    else cap
+                                )
                                 device.update(
                                     {
                                         "battery_capacity": str(cap),
                                         "battery_energy": str(
-                                            int(int(cap) * int(soc) / 100)
+                                            int(int(custom_cap) * int(soc) / 100)
                                         ),
                                     }
                                 )
@@ -962,22 +976,28 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         options: set = set()
         if isinstance(deviceSn, str) and (device := self.devices.get(deviceSn) or {}):
             site = self.sites.get(device.get("site_id") or "") or {}
+            # manual mode is always possible
             options.add(SolarbankUsageMode.manual.name)
             # Add smart meter usage mode if smart meter installed
             if smartmeter := (site.get("grid_info") or {}).get("grid_list"):
                 options.add(SolarbankUsageMode.smartmeter.name)
             # Add smart plugs usage mode if no smart plugs installed
-            if smartplug := (site.get("smart_plug_info") or {}).get("smartplug_list"):
+            if (site.get("smart_plug_info") or {}).get("smartplug_list"):
                 options.add(SolarbankUsageMode.smartplugs.name)
-            # Add options introduced with SB2 AC
+            # Add options introduced with SB2 AC for AC charging
             if "grid_to_battery_power" in device:
                 options.add(SolarbankUsageMode.backup.name)
-                if smartmeter or smartplug:
+                # Add use time if plan is defined
+                if smartmeter and (device.get("schedule") or {}).get(
+                    SolarbankRatePlan.use_time
+                ):
                     options.add(SolarbankUsageMode.use_time.name)
             # Add options introduced with SB3
-            if (device.get("generation") or 0) >= 3 and (smartmeter):
+            if (device.get("generation") or 0) >= 3 and smartmeter:
                 options.add(SolarbankUsageMode.smart.name)
-                options.add(SolarbankUsageMode.time_slot.name)
+                # Add time slot if plan is defined
+                if (device.get("schedule") or {}).get(SolarbankRatePlan.time_slot):
+                    options.add(SolarbankUsageMode.time_slot.name)
         return options
 
     def price_type_options(self, siteId: str) -> set:
@@ -1001,9 +1021,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 schedule = (self.devices.get(sn) or {}).get("schedule") or {}
             else:
                 schedule = {}
-            if not schedule.get(SolarbankRatePlan.use_time):
+            details = site.get("site_details") or {}
+            if not (
+                schedule.get(SolarbankRatePlan.use_time)
+                or details.get(SolixPriceTypes.USE_TIME.value)
+            ):
                 options.discard(SolixPriceTypes.USE_TIME.value)
-            if not schedule.get("dynamic_price"):
+            if not (schedule.get("dynamic_price") or details.get("dynamic_price")):
                 options.discard(SolixPriceTypes.DYNAMIC.value)
         return options
 
@@ -1331,7 +1355,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         return data
 
     def price_provider_options(self, siteId: str) -> set:
-        """Get the valid price provider options for the site ID on Api cache data.
+        """Get the valid price provider options for the site ID from Api cache data.
 
         Active dynamic Price example:
         "dynamic_price": {"country": "DE","company": "Nordpool","area": "GER","pct": null,"currency": "\u20ac","adjust_coef": null}

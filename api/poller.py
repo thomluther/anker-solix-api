@@ -558,19 +558,12 @@ async def poll_sites(  # noqa: C901
 
     # Extract actual dynamic price for sites supporting it if not excluded
     if {ApiCategories.site_price} - exclude:
-        for site_id, site in api.sites.items():
+        for site_id in api.sites:
             # filter requested site id and sites supporting dynamic prices
-            if site_id == (siteId or site_id) and (
-                provider := (site.get("site_details") or {}).get("dynamic_price") or {}
-            ):
-                # extract the actual spot price and unit through update site method
+            if site_id == (siteId or site_id):
+                # extract the actual spot price and unit for sites supporting dynamic prices
                 api._update_site(
-                    siteId=site_id,
-                    details={
-                        "spot_prices": api.account.get(
-                            f"price_details_{provider.get('country') or ''}_{provider.get('company') or ''}_{provider.get('area') or ''}"
-                        )
-                    },
+                    siteId=site_id, details=api.extractPriceData(siteId=site_id)
                 )
     # actions for all filtered virtual sites that represent standalone inverters
     if inverters := [
@@ -672,7 +665,7 @@ async def poll_site_details(
                 or []
                 if m in ["A17C5"]
             }:
-                # fetch provider list for model only once per day
+                # fetch provider list for supported models only once per day
                 if (datetime.now().strftime("%Y-%m-%d")) != (
                     api.account.get(f"price_providers_{model}") or {}
                 ).get("date"):
@@ -754,14 +747,9 @@ async def poll_site_details(
                                     }
                                 }
                             )
-                        # extract the actual spot price and unit through update site method
+                        # extract the actual spot price and unit for sites supporting dynamic prices
                         api._update_site(
-                            siteId=site_id,
-                            details={
-                                "spot_prices": api.account.get(
-                                    f"price_details_{country}_{company}_{area}"
-                                )
-                            },
+                            siteId=site_id, details=api.extractPriceData(siteId=site_id)
                         )
 
     # update account dictionary with number of requests
