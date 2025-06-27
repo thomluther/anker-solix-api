@@ -939,7 +939,7 @@ class SolarbankStatus(StrEnum):
     full_bypass = "6"  # seen at cold temperature, when battery must not be charged and the Solarbank bypasses all directly to inverter, also solar power < 25 W. More often with SB2
     standby = "7"
     unknown = "unknown"
-    # TODO(AC): Is there a new mode for AC charging? Can it be distinguished from existing values?
+    # TODO(SB3): Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
 class SmartmeterStatus(StrEnum):

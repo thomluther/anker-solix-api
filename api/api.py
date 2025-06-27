@@ -872,7 +872,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     or device.get("sub_package_num")
                                     or 0
                                 )
-                                # TODO(#SB3): Expansions for SB2 + 3 can have mixed capacity, how to identify expansion capacity?
+                                # Expansions for SB2 + 3 can have mixed capacity, which cannot be identified
                                 if str(cap).isdigit() and str(exp).isdigit():
                                     cap = int(cap) * (1 + int(exp))
                             soc = devData.get("battery_power", "") or device.get(
@@ -885,7 +885,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 and str(cap).isdigit()
                                 and str(soc).isdigit()
                             ):
-                                # Get optional customized capacity for calculation if changed externally
+                                # Get optional customized capacity for correct energy calculation if adjusted externally
                                 custom_cap = (
                                     custom_cap
                                     if (
@@ -974,7 +974,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     def solarbank_usage_mode_options(self, deviceSn: str) -> set:
         """Get the valid solarbank usage mode options based on Api cache data."""
         options: set = set()
-        if isinstance(deviceSn, str) and (device := self.devices.get(deviceSn) or {}):
+        if (
+            isinstance(deviceSn, str)
+            and (device := self.devices.get(deviceSn) or {})
+            and device.get("is_admin")
+        ):
             site = self.sites.get(device.get("site_id") or "") or {}
             # manual mode is always possible
             options.add(SolarbankUsageMode.manual.name)
@@ -1003,18 +1007,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     def price_type_options(self, siteId: str) -> set:
         """Get the valid price type options for a site ID based on Api cache data."""
         options: set = set()
-        if isinstance(siteId, str) and (site := self.sites.get(siteId) or {}):
-            options = {
-                t.value for t in SolixPriceTypes if "unknown" not in t.name.lower()
-            }
-            # Remove specific types if no smart meter or smart plugs in site
-            if not (
-                ((site.get("grid_info") or {}).get("grid_list") or [])
-                or ((site.get("smart_plug_info") or {}).get("smartplug_list"))
-            ):
-                options.discard(SolixPriceTypes.USE_TIME.value)
-                options.discard(SolixPriceTypes.DYNAMIC.value)
-            # remove options if no required plan defined in schedule
+        if (
+            isinstance(siteId, str)
+            and (site := self.sites.get(siteId) or {})
+            and site.get("site_admin")
+        ):
+            # always add fixed price
+            options.add(SolixPriceTypes.FIXED.value)
+            # add options if required plan defined in schedule
             if sn := next(
                 iter((site.get("solarbank_info") or {}).get("solarbank_list") or []), {}
             ).get("device_sn"):
@@ -1022,13 +1022,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             else:
                 schedule = {}
             details = site.get("site_details") or {}
-            if not (
+            if (
                 schedule.get(SolarbankRatePlan.use_time)
                 or details.get(SolixPriceTypes.USE_TIME.value)
             ):
-                options.discard(SolixPriceTypes.USE_TIME.value)
-            if not (schedule.get("dynamic_price") or details.get("dynamic_price")):
-                options.discard(SolixPriceTypes.DYNAMIC.value)
+                options.add(SolixPriceTypes.USE_TIME.value)
+            if schedule.get("dynamic_price") or details.get("dynamic_price"):
+                options.add(SolixPriceTypes.DYNAMIC.value)
         return options
 
     async def get_homepage(self, fromFile: bool = False) -> dict:
@@ -1430,6 +1430,32 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 }
             )
         return data
+
+
+    async def get_co2_ranking(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get the CO2 ranking for the site.
+
+        Example data:
+        {"show": true,"ranking": "999+","co2": "33.46","tree": "1.6","content": "Not to be underestimated","level": {
+            "tree": 2,"bubble": 2}}
+        """
+        data = {"site_id": siteId}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_co2_ranking']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_co2_ranking"], json=data
+            )
+        data = resp.get("data") or {}
+        # update site details in sites dict
+        details = data.copy()
+        details.pop("show", None)
+        self._update_site(siteId, {"co2_ranking": details})
+        return data
+
 
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False

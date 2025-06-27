@@ -159,7 +159,6 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         sites = (await myapi.get_site_list(fromFile=use_file)).get(
                             "site_list"
                         ) or []
-                        CONSOLE.info("Select which Site to be monitored:")
                         site_names = ["All"] + [
                             (
                                 ", ".join(
@@ -174,6 +173,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             for s in sites
                         ]
                         if len(site_names) > 2:
+                            CONSOLE.info("Select which Site to be monitored:")
                             for idx, sitename in enumerate(site_names):
                                 CONSOLE.info("(%s) %s", idx, sitename)
                             selection = input(
@@ -537,6 +537,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Total Produced':<{col1}}: {totals[0].get('total', '---.--'):>6} {str(totals[0].get('unit', '')).upper():<{col2 - 8}}  {'Carbon saved':<{col3}}: {totals[1].get('total', '---.--'):>6} {str(totals[1].get('unit', '')).upper()}"
                             )
+                            if co2 := details.get("co2_ranking") or {}:
+                                CONSOLE.info(
+                                    f"{'CO2 Ranking':<{col1}}: {co2.get('ranking') or '----':>6} {'(' + str(co2.get('tree') or '--.-') + ' Trees)':<{col2 - 8}}  {'Message':<{col3}}: {co2.get('content')}"
+                                )
                             price = (
                                 f"{float(price):.2f}"
                                 if (price := str(details.get("price") or ""))
