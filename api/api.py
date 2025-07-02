@@ -12,6 +12,7 @@ import contextlib
 from datetime import datetime
 import logging
 from pathlib import Path
+from typing import Any
 
 from aiohttp import ClientSession
 
@@ -32,6 +33,7 @@ from .apitypes import (
     SolixDeviceType,
     SolixGridStatus,
     SolixNetworkStatus,
+    SolixPriceProvider,
     SolixPriceTypes,
     SolixRoleStatus,
     SolixTariffTypes,
@@ -164,6 +166,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 .replace("w", "")
                             }
                         )
+                    elif key in ["intgr_device"]:
+                        # keys to be updated independent of value
+                        device[key] = value
                     elif (
                         key
                         in [
@@ -189,13 +194,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "bws_surplus",
                         "current_power",
                         "tag",
-                        "err_code",
+                        "platform_tag",
                         "ota_version",
                         "bat_charge_power",
                     ] or (
                         key
                         in [
-                            # keys with string values that should only updated if value returned
+                            # keys with string values that should only be updated if value returned
                             "wifi_name",
                             "bt_ble_mac",
                             "energy_today",
@@ -782,6 +787,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     ]:
                         device[key] = str(value)
 
+                    # smartplug specific keys
+                    elif key in ["err_code", "priority", "auto_switch", "running_time"]:
+                        device[key] = value
+
                     # hes specific keys
                     elif key in ["hes_data"] and isinstance(value, dict):
                         # decode the status into a description
@@ -971,6 +980,25 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             self.hesApi.recycleDevices(activeDevices=set(self.devices.keys()))
         return resp
 
+    def customizeCacheId(self, id: str, key: str, value: Any) -> None:
+        """Customize a cache identifier with a key and value pair."""
+        if isinstance(id, str) and isinstance(key, str):
+            # make sure to customize caches of sub instances and merge them again with Api
+            if self.powerpanelApi and id in self.powerpanelApi.getCaches():
+                self.powerpanelApi.customizeCacheId(id=id, key=key, value=value)
+                if id in self.sites:
+                    (self.sites.get(id)).update(self.powerpanelApi.sites.get(id))
+                elif id in self.devices:
+                    (self.devices.get(id)).update(self.powerpanelApi.sites.get(id))
+            elif self.hesApi and id in self.hesApi.getCaches():
+                self.hesApi.customizeCacheId(id=id, key=key, value=value)
+                if id in self.sites:
+                    (self.sites.get(id)).update(self.hesApi.sites.get(id))
+                elif id in self.devices:
+                    (self.devices.get(id)).update(self.hesApi.sites.get(id))
+            else:
+                super().customizeCacheId(id=id, key=key, value=value)
+
     def solarbank_usage_mode_options(self, deviceSn: str) -> set:
         """Get the valid solarbank usage mode options based on Api cache data."""
         options: set = set()
@@ -1022,9 +1050,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             else:
                 schedule = {}
             details = site.get("site_details") or {}
-            if (
-                schedule.get(SolarbankRatePlan.use_time)
-                or details.get(SolixPriceTypes.USE_TIME.value)
+            if schedule.get(SolarbankRatePlan.use_time) or details.get(
+                SolixPriceTypes.USE_TIME.value
             ):
                 options.add(SolixPriceTypes.USE_TIME.value)
             if schedule.get("dynamic_price") or details.get("dynamic_price"):
@@ -1235,9 +1262,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         unit: str | None = None,
         co2: float | None = None,
         price_type: str | None = None,  # "fixed" | "use_time" | "dynamic"
-        provider: dict
-        | str
-        | None = None,  # {"country": "DE","company": "Nordpool","area": "GER"} or "DE/Nordpool/GER"
+        provider: SolixPriceProvider | str | dict | None = None,
         toFile: bool = False,
     ) -> bool | dict:
         """Set the power price, the unit, CO2 and price type for a site.
@@ -1257,20 +1282,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if not details or not isinstance(details, dict):
             return False
         # Validate parameters
-        if isinstance(provider, str) and len(keys := provider.split("/")) == 3:
-            provider = {}
-            if keys[0] not in ["", "-"]:
-                provider["country"] = keys[0]
-            if keys[1] not in ["", "-"]:
-                provider["company"] = keys[1]
-            if keys[2] not in ["", "-"]:
-                provider["area"] = keys[2]
         provider = (
             provider
-            if isinstance(provider, dict)
-            and "country" in provider
-            and "company" in provider
-            and "area" in provider
+            if isinstance(provider, SolixPriceProvider)
+            else SolixPriceProvider(provider=provider)
+            if isinstance(provider, str | dict)
             else None
         )
         price_type = (
@@ -1293,7 +1309,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             data["price_type"] = price_type if price_type else details.get("price_type")
         if "dynamic_price" in details or provider:
             data["dynamic_price"] = (
-                provider if provider else details.get("dynamic_price")
+                provider.asdict() if provider else details.get("dynamic_price")
             )
 
         # Make the Api call and check for return code
@@ -1306,7 +1322,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 data={
                     "code": 0,
                     "msg": "success!",
-                    "data": details | data,
+                    "data": data,
                 },
             ):
                 return False
@@ -1320,142 +1336,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 return False
         # update the data in api dict and return active data
         return await self.get_site_price(siteId=siteId, fromFile=toFile)
-
-    async def get_price_providers(self, model: str, fromFile: bool = False) -> dict:
-        """Get the dynamic price provides for a given device model.
-
-        Example data:
-        {"country_info": [
-            {"country": "DE","company_info": [
-                {"company": "Nordpool","area_info": [
-                    {"area": "GER","area_name": "GER"}]}]}
-        ]}
-        """
-        data = {"device_pn": model}
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_dynamic_price_providers']}_{model}.json"
-            )
-        else:
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["get_dynamic_price_providers"], json=data
-            )
-        # update account details with providers for this model
-        if data := resp.get("data") or {}:
-            self._update_account(
-                {
-                    f"price_providers_{model}": {
-                        # Add poll date to verify if repolling makes sense
-                        "date": datetime.now().strftime("%Y-%m-%d")
-                    }
-                    | data
-                }
-            )
-        return data
-
-    def price_provider_options(self, siteId: str) -> set:
-        """Get the valid price provider options for the site ID from Api cache data.
-
-        Active dynamic Price example:
-        "dynamic_price": {"country": "DE","company": "Nordpool","area": "GER","pct": null,"currency": "\u20ac","adjust_coef": null}
-        """
-        options: set = set()
-        if isinstance(siteId, str) and (site := self.sites.get(siteId) or {}):
-            for model in (site.get("site_info") or {}).get(
-                "current_site_device_models"
-            ) or []:
-                # add options from provider list
-                for country in (self.account.get(f"price_providers_{model}") or {}).get(
-                    "country_info"
-                ) or []:
-                    for company in country.get("company_info") or []:
-                        for area in company.get("area_info") or []:
-                            options.add(
-                                f"{country.get('country') or '-'}/{company.get('company') or '-'}/{area.get('area') or '-'}"
-                            )
-                if options:
-                    break
-        return options
-
-    async def get_dynamic_prices(
-        self,
-        country: str,
-        company: str,
-        area: str,
-        date: datetime | None = None,
-        deviceSn: str | None = None,
-        fromFile: bool = False,
-    ) -> dict:
-        """Get the dynamic price details for a given provider and date.
-
-        Example data:
-        {"release_time":"13:00","today_price_trend":[
-            {"time":"00:00","price":"81.76"},{"time":"01:00","price":"75.31"},{"time":"02:00","price":"75.00"},...,{"time":"23:00","price":"98.23"}],
-        "tomorrow_price_trend":[
-            {"time":"00:00","price":"111.49"},{"time":"01:00","price":"109.91"},{"time":"02:00","price":"102.02"},...,{"time":"23:00","price":"95.49"}],
-        "currency":"EUR","today_avg_price":"87.04","tomorrow_avg_price":"71.69"}
-        """
-        data = {
-            # country parameter is not required for query
-            "company": company,
-            "area": area,
-            "date": str(
-                int(
-                    date.timestamp()
-                    if isinstance(date, datetime)
-                    else datetime.now().timestamp()
-                )
-            ),
-            "device_sn": deviceSn or "",
-        }
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_dynamic_price_details']}_{country}_{company}_{area}.json"
-            )
-        else:
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["get_dynamic_price_details"], json=data
-            )
-        # update account details with spot prices for provider
-        if data := resp.get("data") or {}:
-            self._update_account(
-                {
-                    f"price_details_{country}_{company}_{area}": {
-                        # Add poll date and time to verify if repolling makes sense
-                        "poll_time": datetime.now().strftime("%Y-%m-%d %H:%M")
-                    }
-                    | data
-                }
-            )
-        return data
-
-
-    async def get_co2_ranking(self, siteId: str, fromFile: bool = False) -> dict:
-        """Get the CO2 ranking for the site.
-
-        Example data:
-        {"show": true,"ranking": "999+","co2": "33.46","tree": "1.6","content": "Not to be underestimated","level": {
-            "tree": 2,"bubble": 2}}
-        """
-        data = {"site_id": siteId}
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_co2_ranking']}_{siteId}.json"
-            )
-        else:
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["get_co2_ranking"], json=data
-            )
-        data = resp.get("data") or {}
-        # update site details in sites dict
-        details = data.copy()
-        details.pop("show", None)
-        self._update_site(siteId, {"co2_ranking": details})
-        return data
-
 
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False

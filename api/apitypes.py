@@ -1,6 +1,6 @@
 """Default definitions required for the Anker Power/Solix Cloud API."""
 
-from dataclasses import dataclass
+from dataclasses import InitVar, asdict, dataclass
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
 from typing import Any, ClassVar
@@ -140,14 +140,14 @@ API_ENDPOINTS = {
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
     "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
     "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
-    "get_forecast_schedule": "power_service/v1/site/get_schedule", # get remaining energy and negative price slots, works as member, {"site_id": siteId}
-    "get_co2_ranking": "power_service/v1/site/co2_ranking", # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
-    "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available", # Get available site id_s for dynamic prices of account, works as member but list empty
-    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option", # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
-    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail", # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
-    "get_device_income": "power_service/v1/app/device/get_device_income", # {"device_sn": deviceSn, "start_time": "00:00"})) # Get income data for device, works for member
-    "get_ai_ems_status": "power_service/v1/ai_ems/get_status", # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
-    "get_ai_ems_profit": "power_service/v1/ai_ems/profit", # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
+    "get_forecast_schedule": "power_service/v1/site/get_schedule",  # get remaining energy and negative price slots, works as member, {"site_id": siteId}
+    "get_co2_ranking": "power_service/v1/site/co2_ranking",  # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
+    "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
+    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
+    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
+    "get_device_income": "power_service/v1/app/device/get_device_income",  # {"device_sn": deviceSn, "start_time": "00:00"})) # Get income data for device, works for member
+    "get_ai_ems_status": "power_service/v1/ai_ems/get_status",  # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
+    "get_ai_ems_profit": "power_service/v1/ai_ems/profit",  # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
     "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
     "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
     "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
@@ -526,7 +526,7 @@ class SolarbankAiemsStatus(IntEnum):
 
     unknown = 0
     untrained = 3
-    learning = 4 # TODO(SB3): Needs to be validated
+    learning = 4
     trained = 5
 
 
@@ -568,8 +568,8 @@ class SolarbankUsageMode(IntEnum):
     manual = 3  # manual time plan for home load output
     backup = 4  # This is used to reflect active backup mode in scene_info, but this mode cannot be set directly in schedule and mode is just temporary
     use_time = 5  # Use Time plan with AC types and smart meter
-    #smart_learning = 6  # TODO(SB3): To be confirmed
-    smart = 7   # Smart mode for AI based charging and discharging
+    # smart_learning = 6  # TODO(SB3): To be confirmed
+    smart = 7  # Smart mode for AI based charging and discharging
     time_slot = 8  # Time slot mode for dynamic tariffs
 
 
@@ -584,7 +584,7 @@ class SolarbankRatePlan:
     manual: str = "custom_rate_plan"
     backup: str = "manual_backup"
     use_time: str = "use_time"
-    #smart_learning: str = "" # TODO(SB3): To be confirmed if this is a valid mode and plan
+    # smart_learning: str = "" # TODO(SB3): To be confirmed if this is a valid mode and plan
     smart: str = ""  # does not use a plan "ai_ems"
     time_slot: str = "time_slot"
 
@@ -680,7 +680,9 @@ class SolixSiteType:
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
     t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
-    t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782, Solarbank PPS with Smart Meter support for US market
+    t_13 = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # Main A1782, Solarbank PPS with Smart Meter support for US market
 
 
 @dataclass(frozen=True)
@@ -743,7 +745,9 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
-    A1782: str = SolixDeviceType.SOLARBANK_PPS.value  # SOLIX Infini Power Station with SM support
+    A1782: str = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # SOLIX Infini Power Station with SM support
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     # Home Power Panels
     A17B1: str = (
@@ -879,7 +883,7 @@ class SolixDefaults:
     MICRO_INVERTER_LIMIT_MIN: int = 0
     MICRO_INVERTER_LIMIT_MAX: int = 800
     # Dynamic tariff defaults
-    DYNAMIC_TARIFF_PRICE_FEE: ClassVar[dict[str,float]] = {
+    DYNAMIC_TARIFF_PRICE_FEE: ClassVar[dict[str, float]] = {
         "UK": 0.1131,
         "SE": 0.0643,
         "AT": 0.11332,
@@ -889,7 +893,7 @@ class SolixDefaults:
         "PL": 0.0786,
         "DEFAULT": 0,
     }
-    DYNAMIC_TARIFF_SELL_FEE: ClassVar[dict[str,float]] = {
+    DYNAMIC_TARIFF_SELL_FEE: ClassVar[dict[str, float]] = {
         "UK": 0.03,
         "SE": 0.2,
         "AT": 0.0973,
@@ -899,7 +903,7 @@ class SolixDefaults:
         "PL": 0,
         "DEFAULT": 0,
     }
-    DYNAMIC_TARIFF_PRICE_VAT: ClassVar[dict[str,float]] = {
+    DYNAMIC_TARIFF_PRICE_VAT: ClassVar[dict[str, float]] = {
         "UK": 5,
         "SE": 25,
         "AT": 20,
@@ -1005,3 +1009,32 @@ class Solarbank2Timeslot:
     weekdays: set[int | str] | None = (
         None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
     )
+
+
+@dataclass(order=True, kw_only=True)
+class SolixPriceProvider:
+    """Dataclass to define dynamic price provider attributes and representation of them."""
+
+    country: str | None = None
+    company: str | None = None
+    area: str | None = None
+    provider: InitVar[dict | str | None] = None
+
+    def __post_init__(self, provider) -> None:
+        """Init the dataclass from an optional provider representation or priceinfo dictionary."""
+        if isinstance(provider, dict):
+            self.country = provider.get("country")
+            self.company = provider.get("company")
+            self.area = provider.get("area")
+        elif isinstance(provider, str) and (keys := provider.split("/")):
+            self.country = s if (s:=(keys[0:1] or [None])[0]) != "-" else None
+            self.company = s if (s:=(keys[1:2] or [None])[0]) != "-" else None
+            self.area = s if (s:=(keys[2:3] or [None])[0]) != "-" else None
+
+    def __str__(self) -> str:
+        """Print the class fields."""
+        return f"{self.country or '-'}/{self.company or '-'}/{self.area or '-'}"
+
+    def asdict(self) -> dict:
+        """Return a dictionary representation of the class fields."""
+        return asdict(self)

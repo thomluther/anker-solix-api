@@ -18,6 +18,7 @@ from .apitypes import (
     SolixDayTypes,
     SolixDefaults,
     SolixParmType,
+    SolixPriceProvider,
     SolixPriceTypes,
     SolixTariffTypes,
 )
@@ -1822,8 +1823,10 @@ async def set_sb2_home_load(  # noqa: C901
     price_type = ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
         "price_type"
     )
-    new_price_type: str = None
-    provider: dict | None = schedule.get("dynamic_price") or None
+    new_price_type: str | None = None
+    provider = (
+        SolixPriceProvider(provider=p) if (p := schedule.get("dynamic_price") or {}) else None
+    )
     if mode_type in iter(SolarbankUsageMode) and price_type:
         if (
             mode_type in [SolarbankUsageMode.use_time.value]
@@ -2734,7 +2737,6 @@ async def set_sb2_use_time(  # noqa: C901
     )
     # Make also the price type change if required by usage mode change
     # The mobile App only activates use_time price automatically with use_time mode, but may not toggle back to fixed price automatically
-    # The time_slot mode requires dynamic tariffs, so toggle will be done automatically once time_slot mode is activated
     price_type = ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
         "price_type"
     )

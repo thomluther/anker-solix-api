@@ -34,6 +34,7 @@ from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     ApiEndpointServices,
+    SolixPriceProvider,
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -447,6 +448,13 @@ class AnkerSolixApiExport:
                     payload={"site_id": siteId},
                     replace=[(siteId, "<siteId>")],
                 )
+                self._logger.info("Exporting CO2 ranking...")
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_co2_ranking"],
+                    filename=f"{API_FILEPREFIXES['get_co2_ranking']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                )
 
         except (errors.AnkerSolixError, ClientError) as err:
             if isinstance(err, ClientError):
@@ -536,22 +544,18 @@ class AnkerSolixApiExport:
                     for country in (resp.get("data") or {}).get("country_info") or []:
                         for company in country.get("company_info") or []:
                             for area in company.get("area_info") or []:
-                                ctry = country.get("country") or "-"
-                                comp = company.get("company") or "-"
-                                ar = area.get("area") or "-"
+                                provider = SolixPriceProvider(country=country.get("country"),company=company.get("company"),area=area.get("area"))
                                 self._logger.info(
-                                    "Exporting device model %s dynamic price details for %s/%s/%s...",
+                                    "Exporting device model %s dynamic price details for %s...",
                                     model,
-                                    ctry,
-                                    comp,
-                                    ar,
+                                    provider,
                                 )
                                 await self.query(
                                     endpoint=API_ENDPOINTS["get_dynamic_price_details"],
-                                    filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{ctry}_{comp}_{ar}.json",
+                                    filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/','_')}.json",
                                     payload={
-                                        "company": comp,
-                                        "area": ar,
+                                        "company": provider.company,
+                                        "area": provider.area,
                                         "date": str(int(datetime.today().timestamp())),
                                         "device_sn": "",
                                     },
@@ -599,13 +603,6 @@ class AnkerSolixApiExport:
                     payload={"site_id": siteId},
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
-                )
-                self._logger.info("Exporting CO2 ranking...")
-                await self.query(
-                    endpoint=API_ENDPOINTS["get_co2_ranking"],
-                    filename=f"{API_FILEPREFIXES['get_co2_ranking']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={"site_id": siteId},
-                    replace=[(siteId, "<siteId>")],
                 )
                 # Additional exports for site types support AI mode
                 if power_site_type in [12]:

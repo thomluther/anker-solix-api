@@ -25,6 +25,7 @@ from api import api, errors  # pylint: disable=no-name-in-module
 from api.apitypes import (  # pylint: disable=no-name-in-module
     SolarbankAiemsStatus,
     SolarbankUsageMode,
+    SolixPriceProvider,
     SolixPriceTypes,
 )
 import common
@@ -332,6 +333,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     CONSOLE.info(
                         f"{'Serialnumber':<{col1}}: {sn:<{col2}} {'Admin':<{col3}}: {'YES' if admin else 'NO'}"
                     )
+                    if integrated := dev.get("intgr_device") or {}:
+                        CONSOLE.info(
+                            f"{'Integrator':<{col1}}: {str(integrated.get('integrator')).capitalize():<{col2}} {'Access group':<{col3}}: {integrated.get('access_group')!s}"
+                        )
                     for fsn, fitting in (dev.get("fittings") or {}).items():
                         CONSOLE.info(
                             f"{'Accessory':<{col1}}: {fitting.get('device_name', ''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
@@ -466,6 +471,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
                         )
+                        CONSOLE.info(
+                            f"{'Device Error':<{col1}}: {'YES' if dev.get('err_code') else ' NO':<{col2}} {'Error code':<{col3}}: {dev.get('err_code', '---')!s}"
+                        )
+                        feat1 = dev.get("auto_switch")
+                        feat2 = dev.get("priority")
+                        CONSOLE.info(
+                            f"{'AI switched':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'(Prio: ' + ('-' if feat2 is None else str(feat2)) + ')':<{col2 - 4}} {'Runtime':<{col3}}: {json.dumps(dev.get('running_time', '-------')):>3}"
+                        )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(
                             f"{'Plug Power':<{col1}}: {dev.get('current_power', ''):>4} {unit:<{col2 - 5}} {'Tag':<{col3}}: {dev.get('tag', '')}"
@@ -543,7 +556,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 )
                             price = (
                                 f"{float(price):.2f}"
-                                if (price := str(details.get("price") or ""))
+                                if (price := str(details.get("price")))
                                 .replace("-", "", 1)
                                 .replace(".", "", 1)
                                 .isdigit()
@@ -559,15 +572,21 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'AI savings':<{col1}}: {ai_profits.get('aiems_profit_total', '---.--'):>6} {unit:<{col2 - 8}}  {'AI Advantage':<{col3}}: {ai_profits.get('aiems_self_use_diff', '---.--'):>6} {unit} ({ai_profits.get('percentage', '---.--')} %)"
                             )
                         price_type = details.get("price_type") or ""
-                        dynamic = details.get("dynamic_price") or {}
+                        dynamic = (
+                            details.get("dynamic_price")
+                            or customized.get("dynamic_price")
+                            or {}
+                        )
+                        dyn_details = details.get("dynamic_price_details") or {}
+                        provider = SolixPriceProvider(provider=dynamic)
                         if price_type or dynamic:
                             dyn_price = None
                             dyn_unit = None
-                            if price_type in [SolixPriceTypes.DYNAMIC.value]:
+                            if price_type in [SolixPriceTypes.DYNAMIC.value] or dynamic:
                                 dyn_price = (
                                     f"{float(price):.2f}"
                                     if (
-                                        price := details.get("dynamic_price_total")
+                                        price := dyn_details.get("dynamic_price_total")
                                         or ""
                                     )
                                     .replace("-", "", 1)
@@ -575,7 +594,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     .isdigit()
                                     else "--.--"
                                 )
-                                dyn_unit = details.get("spot_price_unit") or ""
+                                dyn_unit = dyn_details.get("spot_price_unit") or ""
                             elif price_type in [SolixPriceTypes.USE_TIME.value] and (
                                 dev := myapi.devices.get(
                                     (
@@ -601,12 +620,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     else "---.--"
                                 )
                                 dyn_unit = dev.get("preset_tariff_currency")
-                            if provider := dynamic.get("company") or "":
-                                provider = f"{provider} ({dynamic.get('country') or '--'}/{dynamic.get('area') or '---'})"
                             CONSOLE.info(
-                                f"{'Active Price':<{col1}}: {dyn_price or price:>6} {(dyn_unit or unit) + ' (' + (price_type.capitalize() or '------') + ')':<{col2 - 7}} {'Price Provider':<{col3}}: {provider or '----------'}"
+                                f"{'Active Price':<{col1}}: {dyn_price or price:>6} {(dyn_unit or unit) + ' (' + (price_type.capitalize() or '------') + ')':<{col2 - 7}} {'Price Provider':<{col3}}: {provider!s}"
                             )
-                            if (spot := details.get("spot_price_mwh")) is not None:
+                            if (spot := dyn_details.get("spot_price_mwh")) is not None:
                                 spot = (
                                     f"{float(price):.2f}"
                                     if (price := spot)
@@ -618,7 +635,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 today = (
                                     f"{float(price):.2f}"
                                     if (
-                                        price := details.get("spot_price_mwh_avg_today")
+                                        price := dyn_details.get(
+                                            "spot_price_mwh_avg_today"
+                                        )
                                         or ""
                                     )
                                     .replace("-", "", 1)
@@ -629,7 +648,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 tomorrow = (
                                     f"{float(price):.2f}"
                                     if (
-                                        price := details.get(
+                                        price := dyn_details.get(
                                             "spot_price_mwh_avg_tomorrow"
                                         )
                                         or ""
@@ -639,14 +658,16 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     .isdigit()
                                     else "---.--"
                                 )
-                                unit = details.get("spot_price_unit") or ""
-                                time = str(details.get('spot_price_time') or "")[-5:]
+                                unit = dyn_details.get("spot_price_unit") or ""
+                                time = str(dyn_details.get("spot_price_time") or "")[
+                                    -5:
+                                ]
                                 CONSOLE.info(
                                     f"{'Spot Price':<{col1}}: {spot:>6} {unit + '/MWh (' + (time or '--:--') + ')':<{col2 - 7}} {'Avg today/tomor':<{col3}}: {today:>6} / {tomorrow:>6} {unit + '/MWh'}"
                                 )
 
                                 CONSOLE.info(
-                                    f"{'Price Fee':<{col1}}: {details.get('dynamic_price_fee') or '-.----':>8} {unit:<{col2 - 9}} {'Price VAT':<{col3}}: {details.get('dynamic_price_vat') or '--.--':>6} %"
+                                    f"{'Price Fee':<{col1}}: {dyn_details.get('dynamic_price_fee') or '-.----':>8} {unit:<{col2 - 9}} {'Price VAT':<{col3}}: {dyn_details.get('dynamic_price_vat') or '--.--':>6} %"
                                 )
                         if energy := site.get("energy_details") or {}:
                             CONSOLE.info("-" * 80)
@@ -789,7 +810,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             if isinstance(select, int):
                                 item = itemlist[select - 1]
                                 key = input(f"Enter key to be customized in '{item}': ")
-                                value = json.loads(f'{input(f"Enter '{key}' value in JSON format: ").replace("'",'"')}')
+                                value = json.loads(
+                                    f"{input(f"Enter '{key}' value in JSON format: ").replace("'", '"')}"
+                                )
                                 myapi.customizeCacheId(id=item, key=key, value=value)
                                 CONSOLE.info(
                                     "Customized part of %s:\n%s",

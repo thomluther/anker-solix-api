@@ -347,6 +347,14 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
             # Fetch details that work for all account types
             if {SolixDeviceType.POWERPANEL.value} - exclude:
+                # Fetch CO2 Ranking
+                if not ({ApiCategories.powerpanel_energy} & exclude):
+                    self._logger.debug(
+                        "Getting api %s CO2 ranking",
+                        self.apisession.nickname,
+                    )
+                await self.get_co2_ranking(siteId=site_id, fromFile=fromFile)
+
                 # Fetch details that only work for site admins
                 if site.get("site_admin", False):
                     # Add extra power panel site polling that may make sense

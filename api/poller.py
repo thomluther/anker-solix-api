@@ -12,6 +12,7 @@ from .apitypes import (
     SolarbankStatus,
     SolixDeviceType,
     SolixParmType,
+    SolixPriceProvider,
     SolixSiteType,
 )
 from .hesapi import AnkerSolixHesApi
@@ -559,12 +560,12 @@ async def poll_sites(  # noqa: C901
     # Extract actual dynamic price for sites supporting it if not excluded
     if {ApiCategories.site_price} - exclude:
         for site_id in api.sites:
-            # filter requested site id and sites supporting dynamic prices
-            if site_id == (siteId or site_id):
-                # extract the actual spot price and unit for sites supporting dynamic prices
-                api._update_site(
-                    siteId=site_id, details=api.extractPriceData(siteId=site_id)
-                )
+            # filter requested site id or all sites
+            if site_id == (siteId or site_id) and (
+                dp := api.extractPriceData(siteId=site_id)
+            ):
+                # save the actual extracted dynamic price details for sites supporting dynamic prices
+                api._update_site(siteId=site_id, details={"dynamic_price_details": dp})
     # actions for all filtered virtual sites that represent standalone inverters
     if inverters := [
         sn
@@ -674,7 +675,9 @@ async def poll_site_details(
             if {ApiCategories.site_price} - exclude:
                 for model in {
                     m
-                    for m in (site.get("site_info") or {}).get("current_site_device_models")
+                    for m in (site.get("site_info") or {}).get(
+                        "current_site_device_models"
+                    )
                     or []
                     if m in ["A17C5"]
                 }:
@@ -688,82 +691,28 @@ async def poll_site_details(
                             model,
                         )
                         await api.get_price_providers(model=model, fromFile=fromFile)
-                    # determine active provider for admin sites or only possible provider for member sites
-                    provider = None
-                    if "dynamic_price" in (site.get("site_details") or {}):
-                        # admin site
-                        if provider := (
-                            (site.get("site_details") or {}).get("dynamic_price") or {}
-                        ):
-                            country = provider.get("country") or ""
-                            company = provider.get("company") or ""
-                            area = provider.get("area") or ""
-                    elif (
-                        len(options := list(api.price_provider_options(siteId=site_id)))
-                        == 1
-                        and isinstance(provider := options[0], str)
-                        and len(keys := provider.split("/")) == 3
-                    ):
-                        country = keys[0]
-                        company = keys[1]
-                        area = keys[2]
-                        api._update_site(
-                            siteId=site_id,
-                            details={
-                                "dynamic_price": {
-                                    "country": country,
-                                    "company": company,
-                                    "area": area,
-                                }
-                            },
+                    # determine active provider for admin site or customized provider for member site
+                    if (
+                        provider := (site.get("site_details") or {}).get(
+                            "dynamic_price"
                         )
-                    # Poll prices only if provider is configured or could be identified
-                    if provider:
-                        if not (
-                            lastpoll := (
-                                api.account.get(f"price_details_{country}_{company}_{area}")
-                                or {}
-                            ).get("poll_time")
-                        ):
-                            # initialize with old date for first poll
-                            lastpoll = (datetime.now() - timedelta(days=1)).strftime(
-                                "%Y-%m-%d %H:%M"
+                        or (site.get("customized") or {}).get("dynamic_price")
+                        or {}
+                    ):
+                        # Ensure actual provider prices are available
+                        await api.refresh_provider_prices(
+                            provider=SolixPriceProvider(provider=provider),
+                            fromFile=fromFile,
+                        )
+                    # extract the actual spot price and unit for sites supporting dynamic prices
+                    api._update_site(
+                        siteId=site_id,
+                        details={
+                            "dynamic_price_details": api.extractPriceData(
+                                siteId=site_id
                             )
-                        # fetch provider prices once per hour or if missing
-                        lastpoll = datetime.fromisoformat(lastpoll)
-                        if (
-                            lastpoll.date() != datetime.now().date()
-                            or lastpoll.hour != datetime.now().hour
-                            or not (
-                                api.account.get(f"price_details_{country}_{company}_{area}")
-                                or {}
-                            ).get("today_price_trend")
-                        ):
-                            api._logger.debug(
-                                "Getting api %s dynamic price details for provider %s",
-                                api.apisession.nickname,
-                                f"{country}/{company}/{area}",
-                            )
-                            if not await api.get_dynamic_prices(
-                                country=country,
-                                company=company,
-                                area=area,
-                                fromFile=fromFile,
-                            ):
-                                # If no response, still add poll date and time to verify if repolling makes sense
-                                api._update_account(
-                                    {
-                                        f"price_details_{country}_{company}_{area}": {
-                                            "poll_time": datetime.now().strftime(
-                                                "%Y-%m-%d %H:%M"
-                                            )
-                                        }
-                                    }
-                                )
-                            # extract the actual spot price and unit for sites supporting dynamic prices
-                            api._update_site(
-                                siteId=site_id, details=api.extractPriceData(siteId=site_id)
-                            )
+                        },
+                    )
 
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})
