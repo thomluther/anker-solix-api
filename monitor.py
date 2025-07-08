@@ -324,6 +324,12 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Has heat pump':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2 - 4}} {'Support diesel':<{col3}}: {'YES' if feat2 else '---' if feat2 is None else ' NO':>3}"
                                 )
+                            if ai_runtime := (site.get("site_details") or {}).get("ai_ems_runtime"):
+                                runtime = timedelta(seconds=int(sec) * (-1)) if str(sec := ai_runtime.get('left_time')).replace("-","").replace(".","").isdigit() else None
+                                status = ai_runtime.get('status')
+                                CONSOLE.info(
+                                    f"{'AI collection':<{col1}}: {('-' if runtime.days < 0 else '') + str(abs(runtime)):<{col2}} {'Collect status':<{col3}}: {str(ai_runtime.get('status_desc')).capitalize()} ({status})"
+                                )
                             CONSOLE.info("-" * 80)
                     else:
                         CONSOLE.info("-" * 80)
@@ -511,25 +517,34 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
                             )
+                        if "battery_capacity" in dev:
+                            CONSOLE.info(
+                                f"{'Capacity':<{col1}}: {customized.get('battery_capacity') or dev.get('battery_capacity', '-----')!s:>5} {"Wh":<{col2 - 6}} {'Battery Count':<{col3}}: {dev.get("batCount") or "1"}"
+                            )
                         if avg := dev.get("average_power") or {}:
                             unit = str(avg.get("power_unit") or "").upper()
                             CONSOLE.info(
                                 f"{'Valid ⌀ before':<{col1}}: {avg.get('valid_time', 'Unknown'):<{col2}} {'Last Check':<{col3}}: {avg.get('last_check', 'Unknown')!s}"
                             )
                             CONSOLE.info(
-                                f"{'Battery SOC':<{col1}}: {avg.get('state_of_charge') or '---':>4} %"
+                                f"{'Battery SOC':<{col1}}: {avg.get('state_of_charge') or '---':>5} {"%":<{col2 - 6}} {'Battery Energy':<{col3}}: {dev.get('battery_energy', '-----'):>5} Wh"
                             )
                             CONSOLE.info(
-                                f"{'Solar Power ⌀':<{col1}}: {avg.get('solar_power_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Home Usage ⌀':<{col3}}: {avg.get('home_usage_avg') or '-.--':>4} {unit}"
+                                f"{'Solar Power ⌀':<{col1}}: {avg.get('solar_power_avg') or '-.--':>5} {unit:<{col2 - 6}} {'Home Usage ⌀':<{col3}}: {avg.get('home_usage_avg') or '-.--':>5} {unit}"
                             )
                             CONSOLE.info(
-                                f"{'Charge Power ⌀':<{col1}}: {avg.get('charge_power_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Discharge Pwr ⌀':<{col3}}: {avg.get('discharge_power_avg') or '-.--':>4} {unit}"
+                                f"{'Charge Power ⌀':<{col1}}: {avg.get('charge_power_avg') or '-.--':>5} {unit:<{col2 - 6}} {'Discharge Pwr ⌀':<{col3}}: {avg.get('discharge_power_avg') or '-.--':>5} {unit}"
                             )
                             CONSOLE.info(
-                                f"{'Grid Import ⌀':<{col1}}: {avg.get('grid_import_avg') or '-.--':>4} {unit:<{col2 - 5}} {'Grid Export ⌀':<{col3}}: {avg.get('grid_export_avg') or '-.--':>4} {unit}"
+                                f"{'Grid Import ⌀':<{col1}}: {avg.get('grid_import_avg') or '-.--':>5} {unit:<{col2 - 6}} {'Grid Export ⌀':<{col3}}: {avg.get('grid_export_avg') or '-.--':>5} {unit}"
                             )
 
                     else:
+                        if "battery_capacity" in dev:
+                            CONSOLE.info(
+                                f"{'Capacity':<{col1}}: {customized.get('battery_capacity') or dev.get('battery_capacity', '----')!s:>4} {"Wh":<{col2 - 5}} {'Battery Count':<{col3}}: {dev.get("batCount") or "Unknown"}"
+                            )
+
                         CONSOLE.warning(
                             "No Solarbank, Inverter, Smart Meter, Smart Plug, Power Panel or HES device, further device details will be skipped"
                         )

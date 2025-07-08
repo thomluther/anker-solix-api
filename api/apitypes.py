@@ -493,6 +493,7 @@ class SolixDeviceType(Enum):
     POWERCOOLER = "powercooler"
     HES = "hes"
     SOLARBANK_PPS = "solarbank_pps"
+    CHARGER = "charger"
 
 
 class SolixParmType(Enum):
@@ -528,6 +529,21 @@ class SolarbankAiemsStatus(IntEnum):
     untrained = 3
     learning = 4
     trained = 5
+
+
+class SolarbankAiemsRuntimeStatus(IntEnum):
+    """Enumeration for Anker Solix Solarbank Anker Intelligence runtime status.
+
+    Following combinations of ai_ems status abd ai_ems runtime information were seen:
+    - left_time > 0 with runtime status 0 => learning phase status 4 without runtime failure
+    - left_time < 0 with runtime status 1 => trained and continues collecting data
+    - left_time < 0 with runtime status 2 => untrained, most likely failure during learning or learning stopped
+    """
+
+    unknown = -1
+    inactive = 0
+    running = 1
+    failure = 2
 
 
 class SolixTariffTypes(IntEnum):
@@ -650,6 +666,7 @@ class SolixDeviceCapacity:
     A1755: int = 768  # SOLIX C800X Portable Power Station
     A1760: int = 1024  # Anker PowerHouse 555 Portable Power Station
     A1761: int = 1056  # SOLIX C1000(X) Portable Power Station
+    A1762: int = 1056  # SOLIX Portable Power Station 1000
     # A17C1: int = 1056  # SOLIX C1000 Expansion Battery # same PN as Solarbank 2?
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
@@ -658,8 +675,10 @@ class SolixDeviceCapacity:
     A1780_1: int = 2048  # Expansion Battery for F2000
     A1780P: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767) with WIFI
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
+    A1782: int = 3072  # SOLIX F3000 Portable Power Station
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
+    A1790P: int = 3840  # SOLIX F3800 Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
 
 
@@ -680,9 +699,7 @@ class SolixSiteType:
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
     t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
-    t_13 = (
-        SolixDeviceType.SOLARBANK_PPS.value
-    )  # Main A1782, Solarbank PPS with Smart Meter support for US market
+    t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782, Solarbank PPS with Smart Meter support for US market SOLIX F3000 Portable Power Station
 
 
 @dataclass(frozen=True)
@@ -736,6 +753,7 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 555 Portable Power Station
     A1761: str = SolixDeviceType.PPS.value  # SOLIX C1000(X) Portable Power Station
+    A1762: str = SolixDeviceType.PPS.value  # SOLIX Portable Power Station 1000
     A1770: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 757 Portable Power Station
@@ -749,6 +767,7 @@ class SolixDeviceCategory:
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX Infini Power Station with SM support
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
+    A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
     # Home Power Panels
     A17B1: str = (
         SolixDeviceType.POWERPANEL.value
@@ -768,6 +787,9 @@ class SolixDeviceCategory:
     A17A3: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 23L
     A17A4: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 40L
     A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L
+    # Charging Stations
+    A2345: str = SolixDeviceType.CHARGER.value  # Anker 250W Prime Charger
+    A91B2: str = SolixDeviceType.CHARGER.value  # Anker 240W Charging Station
 
 
 @dataclass(frozen=True)
@@ -1027,9 +1049,9 @@ class SolixPriceProvider:
             self.company = provider.get("company")
             self.area = provider.get("area")
         elif isinstance(provider, str) and (keys := provider.split("/")):
-            self.country = s if (s:=(keys[0:1] or [None])[0]) != "-" else None
-            self.company = s if (s:=(keys[1:2] or [None])[0]) != "-" else None
-            self.area = s if (s:=(keys[2:3] or [None])[0]) != "-" else None
+            self.country = s if (s := (keys[0:1] or [None])[0]) != "-" else None
+            self.company = s if (s := (keys[1:2] or [None])[0]) != "-" else None
+            self.area = s if (s := (keys[2:3] or [None])[0]) != "-" else None
 
     def __str__(self) -> str:
         """Print the class fields."""

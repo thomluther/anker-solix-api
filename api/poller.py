@@ -360,7 +360,7 @@ async def poll_sites(  # noqa: C901
                     new_sites.update({myid: mysite})
                     # add count of same solarbanks to device details and other metrics that might be device related
                     if sn := api._update_dev(
-                        solarbank
+                        solarbank.copy()
                         | {
                             "data_valid": data_valid,
                             "solarbank_count": sb_count,
@@ -616,16 +616,22 @@ async def poll_site_details(
     if api.hesApi:
         await api.hesApi.update_site_details(fromFile=fromFile, exclude=exclude)
     for site_id, site in api.sites.items():
-        # check if power panel site type to refresh runtime stats in sites cache
+        # check if power panel site type to refresh runtime stats and merge site details in sites cache
         if site.get("site_type") == SolixDeviceType.POWERPANEL.value:
             api.sites[site_id]["statistics"] = (
                 (api.powerpanelApi.sites.get(site_id) or {}).get("statistics") or {}
             ).copy()
+            details = api.sites[site_id].get("site_details") or {}
+            details.update((api.powerpanelApi.sites.get(site_id) or {}).get("site_details") or {})
+            api.sites[site_id]["site_details"] = details
         # check if hes site type to refresh runtime stats in sites cache
         elif site.get("site_type") == SolixDeviceType.HES.value:
             api.sites[site_id]["statistics"] = (
                 (api.hesApi.sites.get(site_id) or {}).get("statistics") or {}
             ).copy()
+            details = api.sites[site_id].get("site_details") or {}
+            details.update((api.hesApi.sites.get(site_id) or {}).get("site_details") or {})
+            api.sites[site_id]["site_details"] = details
         # Fetch details for virtual sites
         if site.get("site_type") == SolixDeviceType.VIRTUAL.value:
             deviceSn = site_id.split("-")[1]
@@ -647,30 +653,31 @@ async def poll_site_details(
                         api.apisession.nickname,
                     )
                     await api.get_device_pv_price(deviceSn=deviceSn, fromFile=fromFile)
-        # Fetch details that only work for site admins and real sites
-        elif site.get("site_admin", False):
-            # Fetch site price and CO2 settings
-            if {ApiCategories.site_price} - exclude:
-                api._logger.debug(
-                    "Getting api %s price and CO2 settings for site",
-                    api.apisession.nickname,
-                )
-                await api.get_site_price(siteId=site_id, fromFile=fromFile)
-        # Fetch solarbank data that works for member sites
+        # Fetch solarbank data that works for member or admin sites
         if site.get("site_type") in [SolixDeviceType.SOLARBANK.value]:
-            # Fetch CO2 Ranking
-            if not (
-                {
-                    SolixDeviceType.SOLARBANK.value,
-                    ApiCategories.solarbank_energy,
-                }
-                & exclude
-            ):
+            # First fetch details that only work for site admins
+            if site.get("site_admin", False):
+                # Fetch site price and CO2 settings
+                if {ApiCategories.site_price} - exclude:
+                    api._logger.debug(
+                        "Getting api %s price and CO2 settings for site",
+                        api.apisession.nickname,
+                    )
+                    await api.get_site_price(siteId=site_id, fromFile=fromFile)
+            # Fetch CO2 Ranking if not excluded
+            if not ({ApiCategories.solarbank_energy} & exclude):
                 api._logger.debug(
                     "Getting api %s CO2 ranking",
                     api.apisession.nickname,
                 )
-            await api.get_co2_ranking(siteId=site_id, fromFile=fromFile)
+                await api.get_co2_ranking(siteId=site_id, fromFile=fromFile)
+            # Fetch AI EMS runtime stats for sites supporting it
+            if site.get("power_site_type") in [12]:
+                api._logger.debug(
+                    "Getting api %s AI EMS runtime",
+                    api.apisession.nickname,
+                )
+                await api.get_ai_ems_runtime(siteId=site_id, fromFile=fromFile)
             # Fetch dynamic price providers and prices if supported for site
             if {ApiCategories.site_price} - exclude:
                 for model in {
@@ -705,15 +712,15 @@ async def poll_site_details(
                             fromFile=fromFile,
                         )
                     # extract the actual spot price and unit for sites supporting dynamic prices
+                    # The dynamic_price_details key is also a marker for sites supporting dynamic tariffs
                     api._update_site(
                         siteId=site_id,
                         details={
                             "dynamic_price_details": api.extractPriceData(
-                                siteId=site_id
+                                siteId=site_id, initialize=True
                             )
                         },
                     )
-
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})
     return api.sites

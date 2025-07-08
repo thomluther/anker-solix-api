@@ -21,6 +21,7 @@ from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
     SmartmeterStatus,
+    SolarbankAiemsRuntimeStatus,
     SolarbankDeviceMetrics,
     SolarbankRatePlan,
     SolarbankStatus,
@@ -33,7 +34,6 @@ from .apitypes import (
     SolixDeviceType,
     SolixGridStatus,
     SolixNetworkStatus,
-    SolixPriceProvider,
     SolixPriceTypes,
     SolixRoleStatus,
     SolixTariffTypes,
@@ -108,8 +108,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
         This method is used to consolidate various device related key values from various requests under a common set of device keys.
         """
-        sn = devData.pop("device_sn", None)
-        if sn:
+        if sn := devData.pop("device_sn", None):
             device: dict = self.devices.get(sn) or {}  # lookup old device info if any
             device["device_sn"] = str(sn)
             if devType:
@@ -125,6 +124,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 try:
                     if key in ["product_code", "device_pn"] and value:
                         device["device_pn"] = str(value)
+                        # try to get capacity from category definitions
+                        if hasattr(SolixDeviceCapacity, str(value)):
+                            # get battery capacity from known PNs
+                            device["battery_capacity"] = str(
+                                getattr(SolixDeviceCapacity, str(value))
+                            )
                         # try to get type for standalone device from category definitions if not defined yet
                         if hasattr(SolixDeviceCategory, str(value)):
                             dev_type = str(
@@ -279,6 +284,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device[key] = int(value)
                             calc_capacity = True
                     elif key in ["battery_capacity"] and str(value).isdigit():
+                        # This is used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
                         calc_capacity = True
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
@@ -858,23 +864,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 if hasattr(SolixDeviceCapacity, pn):
                                     # get battery capacity from known PNs
                                     cap = getattr(SolixDeviceCapacity, pn)
-                                elif (
-                                    device.get("type")
-                                    == SolixDeviceType.SOLARBANK.value
-                                ):
-                                    # Derive battery capacity in Wh from latest solarbank name or alias if available
-                                    cap = (
-                                        (
-                                            device.get("name", "")
-                                            or devData.get("device_name", "")
-                                            or device.get("alias", "")
-                                        )
-                                        .replace(" 2", "")
-                                        .replace(" 3", "")
-                                        .replace("Solarbank E", "")
-                                        .replace(" Pro", "")
-                                        .replace(" Plus", "")
-                                    )
                                 # consider battery packs for total device capacity
                                 exp = (
                                     devData.get("sub_package_num")
@@ -989,13 +978,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 if id in self.sites:
                     (self.sites.get(id)).update(self.powerpanelApi.sites.get(id))
                 elif id in self.devices:
-                    (self.devices.get(id)).update(self.powerpanelApi.sites.get(id))
+                    (self.devices.get(id)).update(self.powerpanelApi.devices.get(id))
             elif self.hesApi and id in self.hesApi.getCaches():
                 self.hesApi.customizeCacheId(id=id, key=key, value=value)
                 if id in self.sites:
                     (self.sites.get(id)).update(self.hesApi.sites.get(id))
                 elif id in self.devices:
-                    (self.devices.get(id)).update(self.hesApi.sites.get(id))
+                    (self.devices.get(id)).update(self.hesApi.devices.get(id))
             else:
                 super().customizeCacheId(id=id, key=key, value=value)
 
@@ -1027,8 +1016,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # Add options introduced with SB3
             if (device.get("generation") or 0) >= 3 and smartmeter:
                 options.add(SolarbankUsageMode.smart.name)
-                # Add time slot if plan is defined
-                if (device.get("schedule") or {}).get(SolarbankRatePlan.time_slot):
+                # Add time slot if plan is in features
+                if (site.get("feature_switch") or {}).get("enable_timeslot"):
                     options.add(SolarbankUsageMode.time_slot.name)
         return options
 
@@ -1220,123 +1209,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         await self.get_power_cutoff(deviceSn=deviceSn)
         return True
 
-    async def get_site_price(self, siteId: str, fromFile: bool = False) -> dict:
-        """Get the power price set for the site.
-
-        Example data:
-        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"site_co2": 0,"site_price_unit": "\u20ac"}
-        Enhanced data from 2025 to support dynamic prices for systems:
-        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.29,"site_co2": 0,"site_price_unit": "\u20ac", "price_type": "dynamic",
-        "current_mode": 7, "use_time": null, "dynamic_price": {
-            "country": "DE", "company": "Nordpool", "area": "GER", "pct": null}
-        "accuracy": 2}
-        """
-        data = {"site_id": siteId}
-        if fromFile:
-            # For file data, verify first if there is a modified file to be used for testing
-            if not (
-                resp := await self.apisession.loadFromFile(
-                    Path(self.testDir())
-                    / f"{API_FILEPREFIXES['get_site_price']}_modified_{siteId}.json"
-                )
-            ):
-                resp = await self.apisession.loadFromFile(
-                    Path(self.testDir())
-                    / f"{API_FILEPREFIXES['get_site_price']}_{siteId}.json"
-                )
-        else:
-            resp = await self.apisession.request(
-                "post", API_ENDPOINTS["get_site_price"], json=data
-            )
-        data = resp.get("data") or {}
-        # update site details in sites dict
-        details = data.copy()
-        details.pop("site_id", None)
-        self._update_site(siteId, details)
-        return data
-
-    async def set_site_price(
-        self,
-        siteId: str,
-        price: float | None = None,
-        unit: str | None = None,
-        co2: float | None = None,
-        price_type: str | None = None,  # "fixed" | "use_time" | "dynamic"
-        provider: SolixPriceProvider | str | dict | None = None,
-        toFile: bool = False,
-    ) -> bool | dict:
-        """Set the power price, the unit, CO2 and price type for a site.
-
-        Example input:
-        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0}
-        Additional fields have been added to support dynamic prices, dynamic_price ignored if type not dynamic
-        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0, "price_type": "dynamic", "dynamic_price": {
-            "country": "DE",
-            "company": "Nordpool",
-            "area": "GER",
-        }}
-        """
-        # First get the old settings from api dict or Api call to update only requested parameter
-        if not (details := (self.sites.get(siteId) or {}).get("site_details") or {}):
-            details = await self.get_site_price(siteId=siteId, fromFile=toFile)
-        if not details or not isinstance(details, dict):
-            return False
-        # Validate parameters
-        provider = (
-            provider
-            if isinstance(provider, SolixPriceProvider)
-            else SolixPriceProvider(provider=provider)
-            if isinstance(provider, str | dict)
-            else None
-        )
-        price_type = (
-            SolixPriceTypes.DYNAMIC.value
-            if provider
-            else str(price_type).lower()
-            if str(price_type).lower() in {item.value for item in SolixPriceTypes}
-            else None
-        )
-        # Prepare payload from details
-        data: dict = {}
-        data["price"] = (
-            float(price) if isinstance(price, float | int) else details.get("price")
-        )
-        data["site_price_unit"] = unit if unit else details.get("site_price_unit")
-        data["site_co2"] = (
-            float(co2) if isinstance(co2, float | int) else details.get("site_co2")
-        )
-        if "price_type" in details or price_type:
-            data["price_type"] = price_type if price_type else details.get("price_type")
-        if "dynamic_price" in details or provider:
-            data["dynamic_price"] = (
-                provider.asdict() if provider else details.get("dynamic_price")
-            )
-
-        # Make the Api call and check for return code
-        data["site_id"] = siteId
-        if toFile:
-            # Write updated response to file for testing purposes
-            if not await self.apisession.saveToFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['get_site_price']}_modified_{siteId}.json",
-                data={
-                    "code": 0,
-                    "msg": "success!",
-                    "data": data,
-                },
-            ):
-                return False
-        else:
-            code = (
-                await self.apisession.request(
-                    "post", API_ENDPOINTS["update_site_price"], json=data
-                )
-            ).get("code")
-            if not isinstance(code, int) or int(code) != 0:
-                return False
-        # update the data in api dict and return active data
-        return await self.get_site_price(siteId=siteId, fromFile=toFile)
-
     async def get_device_fittings(
         self, siteId: str, deviceSn: str, fromFile: bool = False
     ) -> dict:
@@ -1485,6 +1357,38 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 "post", API_ENDPOINTS["get_upgrade_record"], json=data
             )
         return resp.get("data") or {}
+
+    async def get_ai_ems_runtime(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get AI EMS runtime statistics for site.
+
+        Example data:
+        {"status": 0,"result": "fail","left_time": 78451}
+        """
+        data = {"site_id": siteId}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_ai_ems_status']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_ai_ems_status"], json=data
+            )
+        if data := resp.get("data") or {}:
+            # add data to site_details
+            mydata = data.copy()
+            mydata["status_desc"] = next(
+                iter(
+                    [
+                        item.name
+                        for item in SolarbankAiemsRuntimeStatus
+                        if item.value == mydata.get("status")
+                    ]
+                ),
+                SolarbankAiemsRuntimeStatus.unknown.name,
+            )
+            self._update_site(siteId=siteId, details={"ai_ems_runtime": mydata})
+        return data
 
     async def get_device_pv_status(
         self, devices: str | list[str], fromFile: bool = False
