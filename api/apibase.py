@@ -581,7 +581,9 @@ class AnkerSolixBaseApi:
             )
         data = resp.get("data") or {}
         main = data.get("main_switch")
-        devicelist = data.get("device_list") or []  # could be null for non owning account
+        devicelist = (
+            data.get("device_list") or []
+        )  # could be null for non owning account
         for device in devicelist:
             dev_ota = device.get("auto_upgrade")
             if isinstance(dev_ota, bool):
@@ -1275,6 +1277,7 @@ class AnkerSolixBaseApi:
             or {}
         ):
             now = datetime.now()
+            nowstring = now.strftime("%Y-%m-%d %H:%M")
             last_details = details.get("dynamic_price_details") or {}
             # get last poll time from site details
             poll_time = spot_prices.get("poll_time")
@@ -1331,6 +1334,7 @@ class AnkerSolixBaseApi:
                     )
                 priceData["dynamic_price_forecast"] = trend
                 priceData["dynamic_price_poll_time"] = poll_time
+                priceData["dynamic_price_calc_time"] = nowstring
             elif (
                 SolixPriceProvider(provider=last_details.get("dynamic_price_provider"))
                 == provider
@@ -1340,11 +1344,13 @@ class AnkerSolixBaseApi:
                     last_details.get("dynamic_price_forecast") or []
                 )
                 priceData["dynamic_price_poll_time"] = (
-                    last_details.get("dynamic_price_poll_time") or []
+                    last_details.get("dynamic_price_poll_time") or ""
+                )
+                priceData["dynamic_price_calc_time"] = (
+                    last_details.get("dynamic_price_calc_time") or ""
                 )
             # extract correct prices depending on actual time
             today = now.strftime("%Y-%m-%d") in poll_time
-            nowstring = now.strftime("%Y-%m-%d %H:%M")
             slot = next(
                 iter(
                     [
