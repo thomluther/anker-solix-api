@@ -253,7 +253,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
                             site_type = str(site.get("site_type", ""))
                             CONSOLE.info(
-                                f"{'Type ID':<{col1}}: {str((site.get('site_info') or {}).get('power_site_type', '--')) + (' (' + site_type.capitalize() + ')') if site_type else '':<{col2}} Device models  : {','.join((site.get('site_info') or {}).get('current_site_device_models', []))}"
+                                f"{'Type ID':<{col1}}: {str((site.get('site_info') or {}).get('power_site_type', '--')) + (' (' + site_type.capitalize() + ')') if site_type else '':<{col2}} Device Models  : {','.join((site.get('site_info') or {}).get('current_site_device_models', []))}"
                             )
                             offset = site.get("energy_offset_seconds")
                             CONSOLE.info(
@@ -270,7 +270,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     f"{'Cloud-Updated':<{col1}}: {update_time:<{col2}} {'Valid Data':<{col3}}: {'YES' if site.get('data_valid') else 'NO'} (Requeries: {site.get('requeries')})"
                                 )
                                 CONSOLE.info(
-                                    f"{'SOC total':<{col1}}: {soc:<{col2}} {'Dischrg Pwr Tot':<{col3}}: {sb.get('battery_discharge_power', '---'):>4} {unit}"
+                                    f"{'SOC Total':<{col1}}: {soc:<{col2}} {'Dischrg Pwr Tot':<{col3}}: {sb.get('battery_discharge_power', '---'):>4} {unit}"
                                 )
                                 CONSOLE.info(
                                     f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power', '---'):>4} {unit:<{col2 - 5}} {'Battery Pwr Tot':<{col3}}: {str(sb.get('total_charging_power')).split('.', maxsplit=1)[0]:>4} W"
@@ -324,11 +324,20 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Has heat pump':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2 - 4}} {'Support diesel':<{col3}}: {'YES' if feat2 else '---' if feat2 is None else ' NO':>3}"
                                 )
-                            if ai_runtime := (site.get("site_details") or {}).get("ai_ems_runtime"):
-                                runtime = timedelta(seconds=int(sec) * (-1)) if str(sec := ai_runtime.get('left_time')).replace("-","").replace(".","").isdigit() else None
-                                status = ai_runtime.get('status')
+                            if ai_runtime := (site.get("site_details") or {}).get(
+                                "ai_ems_runtime"
+                            ):
+                                runtime = (
+                                    timedelta(seconds=int(sec) * (-1))
+                                    if str(sec := ai_runtime.get("left_time"))
+                                    .replace("-", "")
+                                    .replace(".", "")
+                                    .isdigit()
+                                    else None
+                                )
+                                status = ai_runtime.get("status")
                                 CONSOLE.info(
-                                    f"{'AI collection':<{col1}}: {('-' if runtime.days < 0 else '') + str(abs(runtime)):<{col2}} {'Collect status':<{col3}}: {str(ai_runtime.get('status_desc')).capitalize()} ({status})"
+                                    f"{'AI Collection':<{col1}}: {('-' if runtime.days < 0 else '') + str(abs(runtime)):<{col2}} {'Collect Status':<{col3}}: {str(ai_runtime.get('status_desc')).capitalize()} ({status})"
                                 )
                             CONSOLE.info("-" * 80)
                     else:
@@ -341,7 +350,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     )
                     if integrated := dev.get("intgr_device") or {}:
                         CONSOLE.info(
-                            f"{'Integrator':<{col1}}: {str(integrated.get('integrator')).capitalize():<{col2}} {'Access group':<{col3}}: {integrated.get('access_group')!s}"
+                            f"{'Integrator':<{col1}}: {str(integrated.get('integrator')).capitalize():<{col2}} {'Access Group':<{col3}}: {integrated.get('access_group')!s}"
                         )
                     for fsn, fitting in (dev.get("fittings") or {}).items():
                         CONSOLE.info(
@@ -352,7 +361,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     )
                     online = dev.get("wifi_online")
                     CONSOLE.info(
-                        f"{'Wifi state':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} {'Signal':<{col3}}: {dev.get('wifi_signal') or '---':>4} % ({dev.get('rssi') or '---'} dBm)"
+                        f"{'Wifi State':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} {'Signal':<{col3}}: {dev.get('wifi_signal') or '---':>4} % ({dev.get('rssi') or '---'} dBm)"
                     )
                     if support := dev.get("is_support_wired"):
                         online = dev.get("wired_connected")
@@ -373,10 +382,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
 
                     if devtype == api.SolixDeviceType.SOLARBANK.value:
                         CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                         )
                         CONSOLE.info(
-                            f"{'Charge Status':<{col1}}: {str(dev.get('charging_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('charging_status', '-')!s}"
+                            f"{'Charge Status':<{col1}}: {str(dev.get('charging_status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('charging_status', '-')!s}"
                         )
                         if aiems := (dev.get("schedule") or {}).get("ai_ems") or {}:
                             status = aiems.get("status")
@@ -394,7 +403,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         unit = dev.get("power_unit", "W")
                         if dev.get("generation", 0) > 1:
                             CONSOLE.info(
-                                f"{'Exp. Batteries':<{col1}}: {dev.get('sub_package_num', '-'):>4} {'Pcs':<{col2 - 5}} {'AC socket':<{col3}}: {dev.get('ac_power', '---'):>4} {unit}"
+                                f"{'Exp. Batteries':<{col1}}: {dev.get('sub_package_num', '-'):>4} {'Pcs':<{col2 - 5}} {'AC Socket':<{col3}}: {dev.get('ac_power', '---'):>4} {unit}"
                             )
                         CONSOLE.info(
                             f"{'Solar Power':<{col1}}: {dev.get('input_power', '---'):>4} {unit:<{col2 - 5}} {'Output Power':<{col3}}: {dev.get('output_power', '---'):>4} {unit}"
@@ -422,7 +431,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
 
                         CONSOLE.info(
-                            f"{'Battery charge':<{col1}}: {dev.get('bat_charge_power', '---'):>4} {unit:<{col2 - 5}}"
+                            f"{'Battery Charge':<{col1}}: {dev.get('bat_charge_power', '---'):>4} {unit:<{col2 - 5}}"
                         )
                         preset = dev.get("set_output_power") or "---"
                         site_preset = dev.get("set_system_output_power") or "---"
@@ -456,7 +465,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             common.print_schedule(dev.get("schedule") or {})
                     elif devtype == api.SolixDeviceType.INVERTER.value:
                         CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(
@@ -464,10 +473,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                     elif devtype == api.SolixDeviceType.SMARTMETER.value:
                         CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                         )
                         CONSOLE.info(
-                            f"{'Grid Status':<{col1}}: {str(dev.get('grid_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('grid_status', '-')!s}"
+                            f"{'Grid Status':<{col1}}: {str(dev.get('grid_status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('grid_status', '-')!s}"
                         )
                         unit = "W"
                         CONSOLE.info(
@@ -475,10 +484,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                     elif devtype == api.SolixDeviceType.SMARTPLUG.value:
                         CONSOLE.info(
-                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                         )
                         CONSOLE.info(
-                            f"{'Device Error':<{col1}}: {'YES' if dev.get('err_code') else ' NO':<{col2}} {'Error code':<{col3}}: {dev.get('err_code', '---')!s}"
+                            f"{'Device Error':<{col1}}: {'YES' if dev.get('err_code') else ' NO':<{col2}} {'Error Code':<{col3}}: {dev.get('err_code', '---')!s}"
                         )
                         feat1 = dev.get("auto_switch")
                         feat2 = dev.get("priority")
@@ -491,7 +500,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                         if dev.get("energy_today"):
                             CONSOLE.info(
-                                f"{'Energy today':<{col1}}: {dev.get('energy_today') or '-.--':>4} {'kWh':<{col2 - 5}} {'Last Period':<{col3}}: {dev.get('energy_last_period') or '-.--':>4} kWh"
+                                f"{'Energy Today':<{col1}}: {dev.get('energy_today') or '-.--':>4} {'kWh':<{col2 - 5}} {'Last Period':<{col3}}: {dev.get('energy_last_period') or '-.--':>4} kWh"
                             )
                     elif devtype in [
                         api.SolixDeviceType.POWERPANEL.value,
@@ -502,24 +511,24 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Station ID':<{col1}}: {hes.get('station_id', '-------'):<{col2}}     (Type: {str(hes.get('type', '---')).upper()})"
                             )
                             CONSOLE.info(
-                                f"{'Cloud Status':<{col1}}: {str(hes.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {hes.get('online_status', '-')!s}"
+                                f"{'Cloud Status':<{col1}}: {str(hes.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {hes.get('online_status', '-')!s}"
                             )
                             CONSOLE.info(
-                                f"{'Network Status':<{col1}}: {str(hes.get('network_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {hes.get('network_status', '-')!s}"
+                                f"{'Network Status':<{col1}}: {str(hes.get('network_status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {hes.get('network_status', '-')!s}"
                             )
                             CONSOLE.info(
-                                f"{'Grid Status':<{col1}}: {str(hes.get('grid_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {hes.get('grid_status', '-')!s}"
+                                f"{'Grid Status':<{col1}}: {str(hes.get('grid_status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {hes.get('grid_status', '-')!s}"
                             )
                             CONSOLE.info(
-                                f"{'Role Status':<{col1}}: {str(hes.get('role_status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {hes.get('master_slave_status', '-')!s}"
+                                f"{'Role Status':<{col1}}: {str(hes.get('role_status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {hes.get('master_slave_status', '-')!s}"
                             )
                         if "status_desc" in dev:
                             CONSOLE.info(
-                                f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status code':<{col3}}: {dev.get('status', '-')!s}"
+                                f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                             )
                         if "battery_capacity" in dev:
                             CONSOLE.info(
-                                f"{'Capacity':<{col1}}: {customized.get('battery_capacity') or dev.get('battery_capacity', '-----')!s:>5} {"Wh":<{col2 - 6}} {'Battery Count':<{col3}}: {dev.get("batCount") or "1"}"
+                                f"{'Capacity':<{col1}}: {customized.get('battery_capacity') or dev.get('battery_capacity', '-----')!s:>5} {'Wh':<{col2 - 6}} {'Battery Count':<{col3}}: {dev.get('batCount') or '1'}"
                             )
                         if avg := dev.get("average_power") or {}:
                             unit = str(avg.get("power_unit") or "").upper()
@@ -527,7 +536,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Valid ⌀ before':<{col1}}: {avg.get('valid_time', 'Unknown'):<{col2}} {'Last Check':<{col3}}: {avg.get('last_check', 'Unknown')!s}"
                             )
                             CONSOLE.info(
-                                f"{'Battery SOC':<{col1}}: {avg.get('state_of_charge') or '---':>5} {"%":<{col2 - 6}} {'Battery Energy':<{col3}}: {dev.get('battery_energy', '-----'):>5} Wh"
+                                f"{'Battery SOC':<{col1}}: {avg.get('state_of_charge') or '---':>5} {'%':<{col2 - 6}} {'Battery Energy':<{col3}}: {dev.get('battery_energy', '-----'):>5} Wh"
                             )
                             CONSOLE.info(
                                 f"{'Solar Power ⌀':<{col1}}: {avg.get('solar_power_avg') or '-.--':>5} {unit:<{col2 - 6}} {'Home Usage ⌀':<{col3}}: {avg.get('home_usage_avg') or '-.--':>5} {unit}"
@@ -542,7 +551,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     else:
                         if "battery_capacity" in dev:
                             CONSOLE.info(
-                                f"{'Capacity':<{col1}}: {customized.get('battery_capacity') or dev.get('battery_capacity', '----')!s:>4} {"Wh":<{col2 - 5}} {'Battery Count':<{col3}}: {dev.get("batCount") or "Unknown"}"
+                                f"{'Capacity':<{col1}}: {customized.get('battery_capacity') or dev.get('battery_capacity', '----')!s:>4} {'Wh':<{col2 - 5}} {'Battery Count':<{col3}}: {dev.get('batCount') or 'Unknown'}"
                             )
 
                         CONSOLE.warning(
@@ -563,7 +572,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                         if len(totals := site.get("statistics") or []) >= 3:
                             CONSOLE.info(
-                                f"{'Total Produced':<{col1}}: {totals[0].get('total', '---.--'):>6} {str(totals[0].get('unit', '')).upper():<{col2 - 8}}  {'Carbon saved':<{col3}}: {totals[1].get('total', '---.--'):>6} {str(totals[1].get('unit', '')).upper()}"
+                                f"{'Total Produced':<{col1}}: {totals[0].get('total', '---.--'):>6} {str(totals[0].get('unit', '')).upper():<{col2 - 8}}  {'Carbon Saved':<{col3}}: {totals[1].get('total', '---.--'):>6} {str(totals[1].get('unit', '')).upper()}"
                             )
                             if co2 := details.get("co2_ranking") or {}:
                                 CONSOLE.info(
@@ -579,12 +588,12 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
                             unit = details.get("site_price_unit") or ""
                             CONSOLE.info(
-                                f"{'Max savings':<{col1}}: {totals[2].get('total', '---.--'):>6} {totals[2].get('unit', ''):<{col2 - 8}}  {'Price kWh':<{col3}}: {price:>6} {unit} (Fix)"
+                                f"{'Max Savings':<{col1}}: {totals[2].get('total', '---.--'):>6} {totals[2].get('unit', ''):<{col2 - 8}}  {'Price kWh':<{col3}}: {price:>6} {unit} (Fix)"
                             )
                         if ai_profits := site.get("aiems_profit"):
                             unit = ai_profits.get("unit") or ""
                             CONSOLE.info(
-                                f"{'AI savings':<{col1}}: {ai_profits.get('aiems_profit_total', '---.--'):>6} {unit:<{col2 - 8}}  {'AI Advantage':<{col3}}: {ai_profits.get('aiems_self_use_diff', '---.--'):>6} {unit} ({ai_profits.get('percentage', '---.--')} %)"
+                                f"{'AI Savings':<{col1}}: {ai_profits.get('aiems_profit_total', '---.--'):>6} {unit:<{col2 - 8}}  {'AI Advantage':<{col3}}: {ai_profits.get('aiems_self_use_diff', '---.--'):>6} {unit} ({ai_profits.get('percentage', '---.--')} %)"
                             )
                         price_type = details.get("price_type") or ""
                         dynamic = (
@@ -684,11 +693,36 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Price Fee':<{col1}}: {dyn_details.get('dynamic_price_fee') or '-.----':>8} {unit:<{col2 - 9}} {'Price VAT':<{col3}}: {dyn_details.get('dynamic_price_vat') or '--.--':>6} %"
                                 )
+                                CONSOLE.info(
+                                    f"{'Poll Time':<{col1}}: {dyn_details.get('dynamic_price_poll_time') or '':<{col2}} {'Calc Time':<{col3}}: {dyn_details.get('dynamic_price_calc_time') or ''}"
+                                )
                         if energy := site.get("energy_details") or {}:
-                            CONSOLE.info("-" * 80)
                             today: dict = energy.get("today") or {}
                             yesterday: dict = energy.get("last_period") or {}
+                            forecast: dict = energy.get("pv_forecast_details") or {}
                             unit = "kWh"
+                            if value := forecast.get("forecast_24h"):
+                                CONSOLE.info(
+                                    f"{'PV Trend 24h':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Local Time':<{col3}}: {forecast.get('local_time') or ''}"
+                                )
+                                u = (forecast.get("trend_unit") or "").capitalize()
+                                power = forecast.get("trend_next_hour") or ""
+                                if "k" not in u.lower():
+                                    power = (
+                                        f"{float(power):.0f}"
+                                        if str(power)
+                                        .replace(".", "", 1)
+                                        .replace("-", "", 1)
+                                        .isdigit()
+                                        else ""
+                                    )
+                                CONSOLE.info(
+                                    f"{'PV Trend Next h':<{col1}}: {power or '----':>6} {u + '  (' + str(forecast.get('fc_next_hour') or '')[-5:] + ')':<{col2 - 7}} {'Trend Poll Time':<{col3}}: {forecast.get('poll_time') or ''}"
+                                )
+                                CONSOLE.info(
+                                    f"{'PV Trend Today':<{col1}}: {forecast.get('forecast_today') or '-.--':>6} {unit:<{col2 - 7}} {'PV Trend Tomor.':<{col3}}: {forecast.get('forecast_tomorrow') or '-.--':>6} {unit}"
+                                )
+                            CONSOLE.info("-" * 80)
                             CONSOLE.info(
                                 f"{'Today':<{col1}}: {today.get('date', '----------'):<{col2}} {'Yesterday':<{col3}}: {yesterday.get('date', '----------')!s}"
                             )
@@ -697,15 +731,15 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
                             if value := today.get("solar_production_pv1"):
                                 CONSOLE.info(
-                                    f"{'Solar Ch 1/2':<{col1}}: {today.get('solar_production_pv1') or '-.--':>6} / {today.get('solar_production_pv2') or '-.--':>5} {unit:<{col2 - 15}} {'Solar Ch 1/2':<{col3}}: {yesterday.get('solar_production_pv1') or '-.--':>6} / {yesterday.get('solar_production_pv2') or '-.--':>5} {unit}"
+                                    f"{'Solar Ch 1/2':<{col1}}: {value or '-.--':>6} / {today.get('solar_production_pv2') or '-.--':>5} {unit:<{col2 - 15}} {'Solar Ch 1/2':<{col3}}: {yesterday.get('solar_production_pv1') or '-.--':>6} / {yesterday.get('solar_production_pv2') or '-.--':>5} {unit}"
                                 )
                             if value := today.get("solar_production_pv3"):
                                 CONSOLE.info(
-                                    f"{'Solar Ch 3/4':<{col1}}: {today.get('solar_production_pv3') or '-.--':>6} / {today.get('solar_production_pv4') or '-.--':>5} {unit:<{col2 - 15}} {'Solar Ch 3/4':<{col3}}: {yesterday.get('solar_production_pv3') or '-.--':>6} / {yesterday.get('solar_production_pv4') or '-.--':>5} {unit}"
+                                    f"{'Solar Ch 3/4':<{col1}}: {value or '-.--':>6} / {today.get('solar_production_pv4') or '-.--':>5} {unit:<{col2 - 15}} {'Solar Ch 3/4':<{col3}}: {yesterday.get('solar_production_pv3') or '-.--':>6} / {yesterday.get('solar_production_pv4') or '-.--':>5} {unit}"
                                 )
                             if value := today.get("solar_production_microinverter"):
                                 CONSOLE.info(
-                                    f"{'Solar Ch AC':<{col1}}: {today.get('solar_production_microinverter') or '-.--':>6} {unit:<{col2 - 7}} {'Solar Ch AC':<{col3}}: {yesterday.get('solar_production_microinverter') or '-.--':>6} {unit}"
+                                    f"{'Solar Ch AC':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Solar Ch AC':<{col3}}: {yesterday.get('solar_production_microinverter') or '-.--':>6} {unit}"
                                 )
                             if value := today.get("battery_charge"):
                                 CONSOLE.info(

@@ -1396,3 +1396,30 @@ class AnkerSolixBaseApi:
                 else ""
             )
         return priceData
+
+    def extractSolarForecast(self, siteId: str) -> None:
+        """Get the current solar forecast data in cached details."""
+        if not (
+            site := self.sites.get(siteId) or {} if isinstance(siteId, str) else {}
+        ):
+            return
+        if (
+            fcdetails := (site.get("energy_details") or {}).get("pv_forecast_details")
+            or {}
+        ):
+            now = datetime.now()
+            nexthour = (now + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
+            # extract correct data depending on actual time
+            slot = next(
+                iter(
+                    [
+                        s
+                        for s in fcdetails.get("trend") or []
+                        if isinstance(s, dict) and str(s.get("timestamp")) <= nexthour
+                    ][-1:]
+                ),
+                {},
+            )
+            # do inplace update
+            fcdetails["fc_next_hour"] = slot.get("timestamp") or ""
+            fcdetails["trend_next_hour"] = slot.get("power") or ""

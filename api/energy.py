@@ -3,7 +3,12 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .apitypes import API_ENDPOINTS, API_FILEPREFIXES, SolixDeviceType
+from .apitypes import (
+    API_ENDPOINTS,
+    API_FILEPREFIXES,
+    SolarbankUsageMode,
+    SolixDeviceType,
+)
 
 
 async def energy_daily(  # noqa: C901
@@ -472,8 +477,8 @@ async def energy_analysis(
     'charging_pre': '0.49', 'electricity_pre': '0.51', 'others_pre': '0',
     'statistics': [{'type': '1', 'total': '7.51', 'unit': 'kwh'}, {'type': '2', 'total': '7.49', 'unit': 'kg'}, {'type': '3', 'total': '3.00', 'unit': '€'}],
     'battery_discharging_total': '', 'solar_to_grid_total': '', 'grid_to_home_total': '', 'ac_out_put_total': '', 'home_usage_total': '', 'solar_total': '17.3105',
-    'trend_unit': '', 'battery_to_home_total': '', 'smart_plug_info': {'smartplug_list': [],'total_power': '0.00'}}
-
+    'forecast_total': "4.49",'trend_unit': 'w', 'battery_to_home_total': '', 'smart_plug_info': {'smartplug_list': [],'total_power': '0.00'},
+    'forecast_trend': [{'time': '02:00','value': '0.00','rods': null},{'time': '03:00','value': '0.00','rods': null}]}
     Responses for solar_production:
     Daily: Solar Energy, Extra Totals: charge, discharge, overall stats (Energy, CO2, Money), 3 x percentage share, solar_to_grid, solar_to_home, solar_to_battery
     Responses for solar_production_*:
@@ -519,6 +524,114 @@ async def home_load_chart(self, siteId: str, deviceSn: str | None = None) -> dic
         "post", API_ENDPOINTS["home_load_chart"], json=data
     )
     return resp.get("data") or {}
+
+
+async def refresh_pv_forecast(
+    self,
+    siteId: str,
+    fromFile: bool = False,
+) -> dict:
+    """Refresh the solar forecast data, max once per hour."""
+    if not (site := self.sites.get(siteId) or {} if isinstance(siteId, str) else {}):
+        return {}
+    # check if smart mode is active
+    # Check site info but also schedule info in devices if just enabled before it is reflected in site info
+    smartmode = site.get("user_scene_mode") == SolarbankUsageMode.smart.value or [
+        d
+        for d in self.devices.values()
+        if d.get("site_id") == siteId
+        and (d.get("schedule") or {}).get("mode_type") == SolarbankUsageMode.smart.value
+    ]
+    # get existing forecast information
+    now = datetime.now()
+    fcdetails = (site.get("energy_details") or {}).get("pv_forecast_details") or {}
+    # get last poll time or initialize with old date for first poll
+    lastpoll = fcdetails.get("poll_time") or (now - timedelta(days=2)).strftime(
+        "%Y-%m-%d %H:%M"
+    )
+    lastpoll = datetime.fromisoformat(lastpoll)
+    new_trend = []
+    # fetch new forecast max once per hour or if missing, but only if smartmode active
+    if smartmode and (
+        lastpoll.date() != now.date()
+        or lastpoll.hour != now.hour
+        or not (trend := fcdetails.get("trend"))
+    ):
+        self._logger.debug(
+            "Getting api %s solar forecast",
+            self.apisession.nickname,
+        )
+        # new trend query will provide only up to 24 future hours
+        # query at 23:00 provides only 00:00 of next day and also total forcast of next day, therefore this will be skipped for today
+        for day in range(0 if now.hour < 23 else 1, 2 if now.hour > 0 else 1):
+            checkdate = now + timedelta(days=day)
+            if fromFile:
+                # use the same file twice for testing
+                data = (
+                    await self.apisession.loadFromFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['energy_solar_production']}_today_{siteId}.json"
+                    )
+                ).get("data") or {}
+            else:
+                data = await self.energy_analysis(
+                    siteId=siteId,
+                    deviceSn="",
+                    rangeType="day",
+                    devType="solar_production",
+                    startDay=checkdate,
+                    endDay=checkdate,
+                )
+            new_trend += [
+                {
+                    "timestamp": " ".join(
+                        [checkdate.strftime("%Y-%m-%d"), slot.get("time") or ""]
+                    ),
+                    "power": slot.get("value") or "",
+                }
+                for slot in data.get("forecast_trend") or []
+            ]
+            fcdetails["forecast_24h"] = data.get("forecast_total") or ""
+            # remove last timestamp of 00:00 if smaller than previous to avoid duplicates with next day
+            if ((new_trend[-1:] or [{}])[0].get("timestamp") or "") < (
+                (new_trend[-2:-1] or [{}])[0].get("timestamp") or ""
+            ):
+                new_trend = new_trend[:-1]
+        fcdetails["trend_unit"] = data.get("trend_unit") or ""
+        fcdetails["local_time"] = data.get("local_time") or ""
+        fcdetails["poll_time"] = now.strftime("%Y-%m-%d %H:%M")
+    # keep old trend of today and update only the provided trend slots
+    old_trend = fcdetails.get("trend") or []
+    checkdate = now.strftime("%Y-%m-%d")
+    new_start = (new_trend[:1] or [{}])[0].get("timestamp") or ""
+    unit = fcdetails.get("trend_unit") or ""
+    trend = [
+        slot
+        for slot in old_trend
+        if checkdate in (ot := slot.get("timestamp") or "") and (not new_start or ot < new_start)
+    ]
+    trend += new_trend
+    fcdetails["trend"] = trend
+    daily_kwh = sum(
+        [
+            float(slot.get("power"))
+            for slot in trend
+            if checkdate in slot.get("timestamp")
+            and str(slot.get("power")).replace(".", "",1).isdigit()
+        ]
+    ) / (1 if "k" in unit.lower() else 1000)
+    fcdetails["forecast_today"] = f"{daily_kwh:.2f}"
+    checkdate = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+    daily_kwh = sum(
+        [
+            float(slot.get("power"))
+            for slot in trend
+            if checkdate in slot.get("timestamp")
+            and str(slot.get("power")).replace(".", "",1).isdigit()
+        ]
+    ) / (1 if "k" in unit.lower() else 1000)
+    fcdetails["forecast_tomorrow"] = f"{daily_kwh:.2f}"
+    return fcdetails
 
 
 async def device_pv_energy_daily(

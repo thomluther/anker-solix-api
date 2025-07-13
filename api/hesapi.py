@@ -24,6 +24,7 @@ from .apitypes import (
     SolixDeviceCategory,
     SolixDeviceNames,
     SolixDeviceType,
+    SolixPriceProvider,
     SolixSiteType,
 )
 from .helpers import convertToKwh
@@ -329,7 +330,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             }
                         )
                     # Get product list once for device names if no admin and save it in account cache
-                    if "products" not in self.account:
+                    if not admin and "products" not in self.account:
                         self._update_account(
                             {"products": await self.get_products(fromFile=fromFile)}
                         )
@@ -426,8 +427,14 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         elif not (avg_data or {}).get("intraday"):
                             # remove avg data from energy details to indicate no update was done for energy details routine
                             (mysite.get("energy_details") or {}).pop("intraday", None)
-                    new_sites.update({myid: mysite})
 
+                    # Extract actual dynamic price if supported and not excluded
+                    if {ApiCategories.site_price} - exclude:
+                        if dp := self.extractPriceData(siteId=myid):
+                            # save the actual extracted dynamic price details
+                            self._update_site(siteId=myid, details={"dynamic_price_details": dp})
+
+                    new_sites.update({myid: mysite})
         # Write back the updated sites
         self.sites = new_sites
         return self.sites
@@ -480,6 +487,49 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     self.apisession.nickname,
                 )
             await self.get_co2_ranking(siteId=site_id, fromFile=fromFile)
+            # Fetch dynamic price providers and prices if supported for site
+            if {ApiCategories.site_price} - exclude:
+                for model in {
+                    m
+                    for m in (site.get("site_info") or {}).get(
+                        "current_site_device_models"
+                    )
+                    or []
+                    if m in ["A5101", "A5102", "A5103"]
+                }:
+                    # fetch provider list for supported models only once per day
+                    if (datetime.now().strftime("%Y-%m-%d")) != (
+                        self.account.get(f"price_providers_{model}") or {}
+                    ).get("date"):
+                        self._logger.debug(
+                            "Getting api %s dynamic price providers for %s",
+                            self.apisession.nickname,
+                            model,
+                        )
+                        await self.get_price_providers(model=model, fromFile=fromFile)
+                    # determine active provider for admin site or customized provider for member site
+                    if (
+                        provider := (site.get("site_details") or {}).get(
+                            "dynamic_price"
+                        )
+                        or (site.get("customized") or {}).get("dynamic_price")
+                        or {}
+                    ):
+                        # Ensure actual provider prices are available
+                        await self.refresh_provider_prices(
+                            provider=SolixPriceProvider(provider=provider),
+                            fromFile=fromFile,
+                        )
+                    # extract the actual spot price and unit for sites supporting dynamic prices
+                    # The dynamic_price_details key is also a marker for sites supporting dynamic tariffs
+                    self._update_site(
+                        siteId=site_id,
+                        details={
+                            "dynamic_price_details": self.extractPriceData(
+                                siteId=site_id, initialize=True
+                            )
+                        },
+                    )
         return self.sites
 
     async def update_device_energy(

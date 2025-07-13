@@ -61,6 +61,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         energy_daily,
         get_device_pv_statistics,
         home_load_chart,
+        refresh_pv_forecast,
     )
     from .schedule import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
         get_device_load,
