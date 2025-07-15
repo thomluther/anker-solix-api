@@ -706,21 +706,34 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     f"{'PV Trend 24h':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Local Time':<{col3}}: {forecast.get('local_time') or ''}"
                                 )
                                 u = (forecast.get("trend_unit") or "").capitalize()
-                                power = forecast.get("trend_next_hour") or ""
+                                thishour = forecast.get("trend_this_hour") or ""
                                 if "k" not in u.lower():
-                                    power = (
-                                        f"{float(power):.0f}"
-                                        if str(power)
+                                    thishour = (
+                                        f"{float(thishour):.0f}"
+                                        if str(thishour)
+                                        .replace(".", "", 1)
+                                        .replace("-", "", 1)
+                                        .isdigit()
+                                        else ""
+                                    )
+                                nexthour = forecast.get("trend_next_hour") or ""
+                                if "k" not in u.lower():
+                                    nexthour = (
+                                        f"{float(nexthour):.0f}"
+                                        if str(nexthour)
                                         .replace(".", "", 1)
                                         .replace("-", "", 1)
                                         .isdigit()
                                         else ""
                                     )
                                 CONSOLE.info(
-                                    f"{'PV Trend Next h':<{col1}}: {power or '----':>6} {u + '  (' + str(forecast.get('fc_next_hour') or '')[-5:] + ')':<{col2 - 7}} {'Trend Poll Time':<{col3}}: {forecast.get('poll_time') or ''}"
+                                    f"{'PV This/Next h':<{col1}}: {thishour or '-----':>6} / {nexthour or '-----':>5} {u:<{col2 - 15}} {'Trend Poll Time':<{col3}}: {forecast.get('poll_time') or ''}  {'(' + str(forecast.get('time_this_hour') or '--:--')[-5:] + ')'}"
                                 )
                                 CONSOLE.info(
                                     f"{'PV Trend Today':<{col1}}: {forecast.get('forecast_today') or '-.--':>6} {unit:<{col2 - 7}} {'PV Trend Tomor.':<{col3}}: {forecast.get('forecast_tomorrow') or '-.--':>6} {unit}"
+                                )
+                                CONSOLE.info(
+                                    f"{'Produced Today':<{col1}}: {forecast.get('produced_today') or '-.--':>6} {unit:<{col2 - 7}} {'Remain Today':<{col3}}: {forecast.get('remaining_today') or '-.--':>6} {unit}"
                                 )
                             CONSOLE.info("-" * 80)
                             CONSOLE.info(

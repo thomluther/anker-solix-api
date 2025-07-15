@@ -1408,18 +1408,33 @@ class AnkerSolixBaseApi:
             or {}
         ):
             now = datetime.now()
-            nexthour = (now + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
+            thishour = (
+                (now + timedelta(hours=1)).replace(minute=0).strftime("%Y-%m-%d %H:%M")
+            )
             # extract correct data depending on actual time
-            slot = next(
-                iter(
+            if fcdetails.get("time_this_hour") != thishour:
+                slot = (
                     [
                         s
                         for s in fcdetails.get("trend") or []
-                        if isinstance(s, dict) and str(s.get("timestamp")) <= nexthour
+                        if str(s.get("timestamp")) == thishour
                     ][-1:]
-                ),
-                {},
-            )
-            # do inplace update
-            fcdetails["fc_next_hour"] = slot.get("timestamp") or ""
-            fcdetails["trend_next_hour"] = slot.get("power") or ""
+                    or [{}]
+                )[0]
+                # do inplace update
+                fcdetails["time_this_hour"] = slot.get("timestamp") or ""
+                fcdetails["trend_this_hour"] = slot.get("power") or ""
+                nexthour = (
+                    (now + timedelta(hours=2)).replace(minute=0).strftime("%Y-%m-%d %H:%M")
+                )
+                slot = (
+                    [
+                        s
+                        for s in fcdetails.get("trend") or []
+                        if str(s.get("timestamp")) == nexthour
+                    ][-1:]
+                    or [{}]
+                )[0]
+                # do inplace update
+                fcdetails["time_next_hour"] = slot.get("timestamp") or ""
+                fcdetails["trend_next_hour"] = slot.get("power") or ""
