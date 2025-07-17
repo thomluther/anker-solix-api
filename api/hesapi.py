@@ -1621,3 +1621,49 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         }
                     )
         return data
+
+    async def get_system_profit(
+        self,
+        siteId: str,
+        startDay: datetime = datetime.today(),
+        rangeType: str = "day",
+        fromFile: bool = False,
+    ) -> dict:
+        """Get the HES device info for site.
+
+        This contains the complete hes device structure for a given site and can be used to find all device SN per site
+        Example data:
+        {"savings": ["45.1","77.6","163.6","173.3","186.4","194.2","96.9","0.0","0.0","0.0","0.0","0.0"],
+        "savingsUnit": "\u20ac","saveCarbons": ["112.02","276.65","643.34","715.30","797.19","764.81","391.07","0.00","0.00","0.00","0.00","0.00"],
+        "saveCarbonsUnit": "kg","powerGenerations": ["112.36","277.49","645.28","717.45","799.59","767.12","392.25","0.00","0.00","0.00","0.00","0.00"],
+        "powerGenerationsUnit": "kWh","aggregates": [{
+            "title": "Proportion of self-use","value":"47%","unit":"","type":"","percent":"","imported":false,"showPercent":""}],
+        "percents": [{"type": "hes","value": "27%"},{"type": "solar","value": "20%"},{"type": "grid","value": "53%"}],"selfPowerPercent": "47%"}
+        """
+        startDay = startDay if isinstance(startDay, datetime) else datetime.today()
+        # TODO: Format of start for week type is actually unknown and may have to be corrected
+        data = {
+            "siteId": siteId,
+            "dateType": rangeType if rangeType in ["week", "month", "year"] else "day",
+            "start": startDay.strftime("%Y")
+            if rangeType == "year" else
+            startDay.strftime("%Y-%m") if rangeType == "month" else  startDay.strftime("%Y-%m-%d")
+        }
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['hes_get_system_profit']}_{rangeType}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_HES_SVC_ENDPOINTS["get_system_profit"], json=data
+            )
+        data = resp.get("data") or {}
+        # update profit in site details
+        if (site := self.sites.get(siteId) or {}):
+            details = site.get("site_details") or {}
+            details.update({"profit": data})
+            site.update({"site_details": details})
+            self.sites.update({siteId: site})
+        return data
+

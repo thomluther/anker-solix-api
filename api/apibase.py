@@ -927,6 +927,28 @@ class AnkerSolixBaseApi:
         self._update_site(siteId, {"co2_ranking": details})
         return data
 
+    async def get_power_limit(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get the power limit for the site.
+
+        Example data:
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","power_unit": "kwh","legal_power_limit": 1200,"device_info": [
+            {"device_pn": "A17C5","device_sn": "9JVB42LJK8J0P5RY","device_name": "Solarbank 3",
+            "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+            "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0}],
+        "current_power": 0,"all_power_limit": 0,"ae100_info": null,"parallel_type": "Single"}
+        """
+        data = {"site_id": siteId}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_site_power_limit']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["get_site_power_limit"], json=data
+            )
+        return resp.get("data") or {}
+
     async def get_price_providers(self, model: str, fromFile: bool = False) -> dict:
         """Get the dynamic price provides for a given device model.
 

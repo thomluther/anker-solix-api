@@ -156,6 +156,7 @@ API_ENDPOINTS = {
     "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice",  # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
     "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice",  # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
     "set_device_pv_power": "charging_pv_svc/set_aps_power",  # post method to set stand alone inverter limit
+    "get_site_power_limit": "power_service/v1/site/get_power_limit", # needs owner, lists power limits for system
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -180,6 +181,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_heat_pump_plan": "charging_hes_svc/get_heat_pump_plan_json",  # heat pump plan, works with shared account
     "get_electric_plan_list": "charging_hes_svc/get_electric_utility_and_electric_plan_list",  # Energy plan if available for country & state combination, works with shared account
     "get_system_running_info": "charging_hes_svc/get_system_running_info",  # system runtime info, works with shared account
+    "get_system_profit": "charging_hes_svc/get_system_profit_detail", # works as member, {"siteId": siteId,"dateType": "year","start": "2025","end": ""} [day 2025-01-01, week, month 2025-01, year 2025], weekly syntax unklear
     "energy_statistics": "charging_hes_svc/get_energy_statistics",  # Energy stats for HES, # source type [solar hes grid home]
     "get_monetary_units": "charging_hes_svc/get_world_monetary_unit",  # monetary unit list for system, works with shared account
     "get_install_info": "charging_hes_svc/get_install_info",  # get system install info, works with shared account. Shows installation location
@@ -190,9 +192,10 @@ API_HES_SVC_ENDPOINTS = {
     "get_conn_net_tips": "charging_hes_svc/get_conn_net_tips",  # no shared account access, needs HES site?
     "get_hes_dev_info": "charging_hes_svc/get_hes_dev_info",  # works with shared account, lists hes device structure and SNs
     "report_device_data": "charging_hes_svc/report_device_data",  # no shared account access, needs HES site and installer system?
+
 }
 
-""" Other endpoints neither implemented nor explored: 45 + 48 used => 93
+""" Other endpoints neither implemented nor explored: 47 + 49 used => 96
     'power_service/v1/site/can_create_site',
     'power_service/v1/site/create_site',
     'power_service/v1/site/update_site',
@@ -206,9 +209,11 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/site/update_site_devices',
     'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
     'power_service/v1/site/get_comb_addable_sites',
+    'power_service/v1/app/user/get_user_params', # works as member, {"params": []} parameters are unknown
+    "power_service/v1/app/user/set_user_params",
     'power_service/v1/site/shift_power_site_type',
     'power_service/v1/site/local_net',
-    'power_service/v1/site/set_device_feature', # Set device feature for site_id and smart_plug list, may require owner, usage unknown, {"site_id": siteId, "smart_plug" : [value]})
+    'power_service/v1/site/set_device_feature', # Set device feature for site_id and smart_plug list, may require owner, usage unknown, {"site_id": siteId, "smart_plug" : [value]}) May be used for automatic control of plugs in smart mode?
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
@@ -242,7 +247,7 @@ API_HES_SVC_ENDPOINTS = {
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
 
-App related: 12 + 2 used => 14 total
+App related: 11 + 2 used => 13 total
     'app/devicemanage/update_relate_device_info',
     'app/cloudstor/get_app_up_token_general',
     'app/cloudstor/get_app_up_token_without_login',
@@ -251,6 +256,7 @@ App related: 12 + 2 used => 14 total
     'app/devicerelation/up_alias_name',  # Update Alias name of device? Fails with (10003) Failed to request
     'app/devicerelation/un_relate_and_unbind_device',
     'app/devicerelation/relate_device',
+    'app/news/get_popups',
     'app/push/clear_count',
     'app/push/register_push_token',
 
@@ -272,7 +278,7 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_common_svc/location/set",  # Set default and identifier location
     "charging_common_svc/location/support",
 
-Home Energy System related (X1): 38 + 14 used => 52 total
+Home Energy System related (X1): 38 + 15 used => 53 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -290,10 +296,10 @@ Home Energy System related (X1): 38 + 14 used => 52 total
     "charging_hes_svc/get_device_card_list",
     "charging_hes_svc/get_device_card_details",
     "charging_hes_svc/get_external_device_config",
+    "charging_hes_svc/get_history_setting", # needs owner
     "charging_hes_svc/get_site_mi_list",
     "charging_hes_svc/get_station_config_and_status",
     "charging_hes_svc/get_system_device_time",
-    "charging_hes_svc/get_system_profit_detail",
     "charging_hes_svc/get_tou_price_plan_detail",
     "charging_hes_svc/get_user_fault_info",
     "charging_hes_svc/get_utility_rate_plan",
@@ -311,6 +317,13 @@ Home Energy System related (X1): 38 + 14 used => 52 total
     "charging_hes_svc/restart_peak_session",
     "charging_hes_svc/start",
     "charging_hes_svc/sync_back_up_history",
+
+Home Energy System related (X1): 5 + 0 used => 5 total
+    "charging_hes_dynamic_price_svc/get_area_by_code", # needs owner
+    "charging_hes_dynamic_price_svc/get_price_company", # needs owner
+    "charging_hes_dynamic_price_svc/get_price", # needs owner
+    "charging_hes_dynamic_price_svc/save_time_of_use", # needs owner
+    "charging_hes_dynamic_price_svc/save_dynamic_price", # needs owner
 
 related to what, seem to work with Power Panel sites: 6 + 0 used => 6 total
     'charging_disaster_prepared/get_site_device_disaster', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
@@ -358,6 +371,7 @@ API_FILEPREFIXES = {
     "site_rules": "list_site_rules",
     "get_installation": "installation",
     "get_site_price": "price",
+    "get_site_power_limit": "power_limit",
     "get_device_parm": "device_parm",
     "get_product_categories": "list_products",
     "get_product_accessories": "list_accessories",
@@ -443,6 +457,7 @@ API_FILEPREFIXES = {
     "hes_get_install_info": "hes_install_info",
     "hes_get_wifi_info": "hes_wifi_info",
     "hes_get_installer_info": "hes_installer_info",
+    "hes_get_system_profit": "hes_system_profit",
     "hes_get_system_running_time": "hes_system_running_time",
     "hes_get_mi_layout": "hes_mi_layout",
     "hes_get_conn_net_tips": "hes_conn_net_tips",

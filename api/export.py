@@ -38,7 +38,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.0.1.0"
+VERSION: str = "3.1.0.0"
 
 
 class AnkerSolixApiExport:
@@ -89,7 +89,10 @@ class AnkerSolixApiExport:
         if not export_path:
             # default to exports self.export_path in parent path of api library
             self.export_path = (Path(__file__).parent / ".." / "exports").resolve()
-            if not (os.access(self.export_path.parent, os.W_OK) or os.access(self.export_path, os.W_OK)):
+            if not (
+                os.access(self.export_path.parent, os.W_OK)
+                or os.access(self.export_path, os.W_OK)
+            ):
                 self.export_path = Path(tempfile.gettempdir()) / "exports"
         else:
             self.export_path = Path(export_path)
@@ -472,7 +475,15 @@ class AnkerSolixApiExport:
                     for country in (resp.get("data") or {}).get("country_info") or []:
                         for company in country.get("company_info") or []:
                             for area in company.get("area_info") or []:
-                                providers.add(str(SolixPriceProvider(country=country.get("country"),company=company.get("company"),area=area.get("area"))))
+                                providers.add(
+                                    str(
+                                        SolixPriceProvider(
+                                            country=country.get("country"),
+                                            company=company.get("company"),
+                                            area=area.get("area"),
+                                        )
+                                    )
+                                )
             # export prices for all provider options
             for provider in [SolixPriceProvider(provider=p) for p in providers]:
                 self._logger.info(
@@ -481,7 +492,7 @@ class AnkerSolixApiExport:
                 )
                 await self.query(
                     endpoint=API_ENDPOINTS["get_dynamic_price_details"],
-                    filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/','_')}.json",
+                    filename=f"{API_FILEPREFIXES['get_dynamic_price_details']}_{str(provider).replace('/', '_')}.json",
                     payload={
                         "company": provider.company,
                         "area": provider.area,
@@ -604,6 +615,15 @@ class AnkerSolixApiExport:
                     filename=f"{API_FILEPREFIXES['get_installation']}_{self._randomize(siteId, 'site_id')}.json",
                     payload={"site_id": siteId},
                     replace=[(siteId, "<siteId>")],
+                )
+                self._logger.info("Exporting site power limit...")
+                # works only for site owners
+                await self.query(
+                    endpoint=API_ENDPOINTS["get_site_power_limit"],
+                    filename=f"{API_FILEPREFIXES['get_site_power_limit']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={"site_id": siteId},
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
                 )
                 self._logger.info("Exporting site price...")
                 # works only for site owners
@@ -810,9 +830,9 @@ class AnkerSolixApiExport:
                         "attributes": [
                             "rssi",
                             "temperature",
-                            "priority", # Smart plug attribute?
-                            "auto_switch", # Smart plug attribute?
-                            "running_time", # Smart plug attribute?
+                            "priority",  # Smart plug attribute?
+                            "auto_switch",  # Smart plug attribute?
+                            "running_time",  # Smart plug attribute?
                             "wifi_signal",
                         ],
                     },
@@ -1202,6 +1222,22 @@ class AnkerSolixApiExport:
                             "dateType": "day",
                             "start": datetime.today().strftime("%Y-%m-%d"),
                             "end": datetime.today().strftime("%Y-%m-%d"),
+                        },
+                        replace=[(siteId, "<siteId>")],
+                    )
+                # get various profits of today and actual year per month
+                for stat_type in ["day", "year"]:
+                    self._logger.info(
+                        "Exporting HES site profit data for %s...",
+                        stat_type.upper(),
+                    )
+                    response = await self.query(
+                        endpoint=API_HES_SVC_ENDPOINTS["get_system_profit"],
+                        filename=f"{API_FILEPREFIXES['hes_get_system_profit']}_{stat_type}_{self._randomize(siteId, 'site_id')}.json",
+                        payload={
+                            "siteId": siteId,
+                            "dateType": stat_type,
+                            "start": datetime.today().strftime("%Y-%m-%d") if stat_type == "day" else datetime.today().strftime("%Y"),
                         },
                         replace=[(siteId, "<siteId>")],
                     )
