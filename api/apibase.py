@@ -101,7 +101,12 @@ class AnkerSolixBaseApi:
             if id in self.sites:
                 data = self.sites.get(id)
                 customized = data.get("customized") or {}
-                customized[key] = value
+                # merge with existing dict if value is dict
+                customized[key] = (
+                    ((customized.get(key) or {}) | value)
+                    if isinstance(value, dict)
+                    else value
+                )
                 data["customized"] = customized
                 # trigger an update of cached data depending on customized value
                 # customized keys that are used as alternate value must be handled separately since they may not exist in cache
@@ -125,6 +130,9 @@ class AnkerSolixBaseApi:
                             )
                         },
                     )
+                elif key in ["pv_forecast_details"] and value:
+                    # update whole solar forecast in energy details
+                    self.extractSolarForecast(siteId=id)
                 elif key in (data.get("site_details") or {}):
                     # trigger dependent updates by rewriting old value to cache update method
                     self._update_site(
@@ -1411,7 +1419,27 @@ class AnkerSolixBaseApi:
             thishour = (
                 (now + timedelta(hours=1)).replace(minute=0).strftime("%Y-%m-%d %H:%M")
             )
-            # extract correct data depending on actual time
+            # first check if historical trend data from customization can be merged
+            if (
+                customized_fc := (site.get("customized") or {}).get(
+                    "pv_forecast_details"
+                )
+                or {}
+            ) and (old_trend := customized_fc.get("trend")):
+                # keep historical trend of today
+                checkdate = now.strftime("%Y-%m-%d")
+                new_trend = fcdetails.get("trend") or []
+                new_start = (new_trend[:1] or [{}])[0].get("timestamp") or ""
+                trend = [
+                    slot
+                    for slot in old_trend
+                    if checkdate in (ot := slot.get("timestamp") or "")
+                    and (not new_start or ot < new_start)
+                ]
+                fcdetails["trend"] = trend + new_trend
+                # remove customization once merged
+                customized_fc.pop("trend", None)
+            # extract correct hourly data depending on actual time
             if fcdetails.get("time_this_hour") != thishour:
                 slot = (
                     [
@@ -1425,7 +1453,9 @@ class AnkerSolixBaseApi:
                 fcdetails["time_this_hour"] = slot.get("timestamp") or ""
                 fcdetails["trend_this_hour"] = slot.get("power") or ""
                 nexthour = (
-                    (now + timedelta(hours=2)).replace(minute=0).strftime("%Y-%m-%d %H:%M")
+                    (now + timedelta(hours=2))
+                    .replace(minute=0)
+                    .strftime("%Y-%m-%d %H:%M")
                 )
                 slot = (
                     [

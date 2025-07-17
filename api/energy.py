@@ -565,6 +565,7 @@ async def refresh_pv_forecast(
         # queries provide also 00:00 at end of day, which is duplicate of first slot next day
         # total forecast is summary of all 24 future hours, not split per queried day
         produced_today = ""
+        trend_unit = ""
         for day in range(
             0 if not trend or now.hour < 23 else 1, 2 if now.hour > 0 else 1
         ):
@@ -586,31 +587,34 @@ async def refresh_pv_forecast(
                     startDay=checkdate,
                     endDay=checkdate,
                 )
+            trend_unit = data.get("trend_unit") or ""
+            trend_unit = str(trend_unit).lower()
+            decimals = 2 if "k" in trend_unit else 0
             if day == 0:
                 produced_today = data.get("solar_total") or ""
                 # extract and accumulate hourly production values for today
                 unit = data.get("power_unit") or ""
                 unit = str(unit).lower()
-                trend_unit = data.get("trend_unit") or ""
-                trend_unit = str(trend_unit).lower()
-                for h in range(24):
+                for h in range(now.hour + 1):
                     # summarize and normalize hourly production to trend unit
                     starttime = time(hour=h, minute=1).strftime("%H:%M")
                     endtime = time(hour=h + 1).strftime("%H:%M") if h < 23 else "24:00"
-                    hourly = mean(
-                        mylist := [
-                            float(slot.get("value"))
-                            for slot in data.get("power") or []
-                            if starttime < (slot.get("time") or "") <= endtime
-                            and str(slot.get("value")).replace(".", "", 1).isdigit()
-                        ]
-                    ) * (
-                        1000
-                        if "k" in unit and "k" not in trend_unit
-                        else 0.001
-                        if "k" in trend_unit and "k" not in unit
-                        else 1
-                    )
+                    # Add empty power for hours that have no values, future hours will be skipped by loop
+                    if values := [
+                        float(slot.get("value"))
+                        for slot in data.get("power") or []
+                        if starttime < (slot.get("time") or "") <= endtime
+                        and str(slot.get("value")).replace(".", "", 1).isdigit()
+                    ]:
+                        hourly = mean(values) * (
+                            1000
+                            if "k" in unit and "k" not in trend_unit
+                            else 0.001
+                            if "k" in trend_unit and "k" not in unit
+                            else 1
+                        )
+                    else:
+                        hourly = None
                     produced.append(
                         {
                             "timestamp": " ".join(
@@ -623,7 +627,7 @@ async def refresh_pv_forecast(
                                     endtime if h < 23 else "00:00",
                                 ]
                             ),
-                            "power": f"{hourly:.2f}",
+                            "power": "" if hourly is None else f"{hourly:.{decimals}f}",
                         }
                     )
             new_trend += [
@@ -631,7 +635,9 @@ async def refresh_pv_forecast(
                     "timestamp": " ".join(
                         [checkdate.strftime("%Y-%m-%d"), slot.get("time") or ""]
                     ),
-                    "power": slot.get("value") or "",
+                    "power": f"{float(slot.get('value')):.{decimals}f}"
+                    if str(slot.get("value")).replace(".", "", 1).isdigit()
+                    else "",
                 }
                 for slot in data.get("forecast_trend") or []
             ]
@@ -642,9 +648,7 @@ async def refresh_pv_forecast(
             ) or len(new_trend) == 1:
                 new_trend = new_trend[:-1]
         # update fields that may change from new fetch
-        fcdetails["trend_unit"] = (
-            str(data.get("trend_unit")).upper() if data.get("trend_unit") else ""
-        )
+        fcdetails["trend_unit"] = trend_unit.upper()
         fcdetails["local_time"] = data.get("local_time") or ""
         fcdetails["poll_time"] = now.strftime("%Y-%m-%d %H:%M")
         fcdetails["produced_hourly"] = produced
