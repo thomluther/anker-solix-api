@@ -160,8 +160,8 @@ async def get_device_parm(
 ) -> dict:
     r"""Get device parameters (e.g. solarbank schedule). This can be queried for each siteId responded in the site_list query.
 
-    Working paramType is 4 for SB1 schedules, 6 for SB2 schedules, 9 for enforced SB1 schedules when in coupled SB2 system, but can be modified if necessary.
-    SB3 also supports 12 and 13 to list various options/settings for Smart mode and dynamic tariff plans
+    Working paramType is 4 for SB1 schedules, 6 for SB2 schedules, 9 for enforced SB1 schedules when in coupled SB2 system (9 no longer supported since Jul 2025?), but can be modified if necessary.
+    SB3 also supports 12 and 13 to list various options/settings for Smart mode and dynamic tariff plans.
     Example data for provided site_id with param_type 4 for SB1:
     {"param_data": "{\"ranges\":[
         {\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},
@@ -184,6 +184,20 @@ async def get_device_parm(
             \"charge_priority\":0,\"power_setting_mode\":null,\"device_power_loads\":null,\"priority_discharge_switch\":0}],
         \"min_load\":0,\"max_load\":800,\"step\":0,\"is_charge_priority\":0,\"default_charge_priority\":0,\"is_zero_output_tips\":0,\"display_advanced_mode\":0,\"advanced_mode_min_load\":0,
         \"is_show_install_mode\":1,\"display_priority_discharge_tips\":0,\"priority_discharge_upgrade_devices\":\"\",\"default_home_load\":200,\"is_show_priority_discharge\":0}"
+    Example data for provided site_id with param_type 12 for SB3 system:
+    {"param_data":"{\"price_type\":\"dynamic\",
+        \"use_time\":[{\"sea\":{\"start_month\":1,\"end_month\":12},\"weekday\":[
+            {\"start_time\":0,\"end_time\":18,\"type\":3},{\"start_time\":18,\"end_time\":21,\"type\":1},{\"start_time\":21,\"end_time\":24,\"type\":3}],
+            \"weekend\":[{\"start_time\":0,\"end_time\":18,\"type\":3},{\"start_time\":18,\"end_time\":21,\"type\":1},{\"start_time\":21,\"end_time\":24,\"type\":3}],
+            \"weekday_price\":[{\"price\":\"0.2\",\"type\":3},{\"price\":\"0.4\",\"type\":1}],
+            \"weekend_price\":[{\"price\":\"0.2\",\"type\":3},{\"price\":\"0.4\",\"type\":1}],
+            \"unit\":\"\u20ac\",\"is_same\":false}],
+        \"dynamic_price\":{\"country\":\"DE\",\"company\":\"Nordpool\",\"area\":\"GER\",\"pct\":null,\"currency\":\"\u20ac\",\"adjust_coef\":null},
+        \"fixed_price\":{\"price\":\"0.4\",\"unit\":\"\u20ac\",\"accuracy\":2},
+        \"time_slot_data\":null}"}
+    Example data for provided site_id with param_type 13 for SB3 system:
+    {"param_data":"{\"step\":5,\"ai_ems\":null,\"max_load\":1200,\"min_load\":null,\"data_auth\":true,\"mode_type\":null,
+        \"blend_plan\":null,\"custom_rate_plan\":null,\"default_home_load\":null}"}
     """
     if not isinstance(testSchedule, dict):
         testSchedule = None

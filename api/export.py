@@ -660,7 +660,7 @@ class AnkerSolixApiExport:
                     #         replace=[(siteId, "<siteId>")],
                     #     )
 
-                for parmtype in ["4", "6", "9", "12", "13"]:
+                for parmtype in ["4", "6", "12", "13", "16"]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
                     )
