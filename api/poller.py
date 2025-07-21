@@ -10,6 +10,7 @@ from .apibase import AnkerSolixBaseApi
 from .apitypes import (
     ApiCategories,
     SolarbankStatus,
+    SolarbankUsageMode,
     SolixDeviceType,
     SolixParmType,
     SolixPriceProvider,
@@ -714,6 +715,7 @@ async def poll_site_details(
                         # Ensure actual provider prices are available
                         await api.refresh_provider_prices(
                             provider=SolixPriceProvider(provider=provider),
+                            siteId=site_id,
                             fromFile=fromFile,
                         )
                     # extract the actual spot price and unit for sites supporting dynamic prices
@@ -1174,24 +1176,26 @@ async def poll_device_energy(  # noqa: C901
                     )
             # Fetch solar forecast if supported for site
             # solar forecast only works in Smart mode which requires a Smart Meter
-            if not (
-                {
-                    SolixDeviceType.SOLARBANK.value,
-                    ApiCategories.solarbank_energy,
-                }
-                & exclude
-            ) and (site.get("site_info") or {}).get("power_site_type") in [12] and (site.get("grid_info") or {}).get("grid_list"):
+            if (
+                not (
+                    {
+                        SolixDeviceType.SOLARBANK.value,
+                        ApiCategories.solarbank_energy,
+                    }
+                    & exclude
+                )
+                and SolarbankUsageMode.smart.name
+                in api.solarbank_usage_mode_options(siteId=site_id, ignoreAdmin=True)
+                # and (site.get("site_info") or {}).get("power_site_type") in [12]
+                # and (site.get("grid_info") or {}).get("grid_list")
+            ):
                 # initialize fetch of solar forecast data
                 api._logger.debug(
                     "Getting api %s solar forecast for %s",
                     api.apisession.nickname,
                     site_id,
                 )
-                energy = site.get("energy_details") or {}
-                energy["pv_forecast_details"] = await api.refresh_pv_forecast(siteId=site_id, fromFile=fromFile)
-                site["energy_details"] = energy
-                # extract the actual forecast for site
-                api.extractSolarForecast(siteId=site_id)
+                await api.refresh_pv_forecast(siteId=site_id, fromFile=fromFile)
 
     # update account dictionary with number of requests
     api._update_account(

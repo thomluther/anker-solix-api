@@ -989,15 +989,39 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             else:
                 super().customizeCacheId(id=id, key=key, value=value)
 
-    def solarbank_usage_mode_options(self, deviceSn: str) -> set:
+    def solarbank_usage_mode_options(
+        self, deviceSn: str | None = None, siteId: str | None = None, ignoreAdmin: bool = False
+    ) -> set:
         """Get the valid solarbank usage mode options based on Api cache data."""
         options: set = set()
+        device = {}
+        site = {}
+        # first get valid site and solarbank from cache depending on provided parameters
         if (
             isinstance(deviceSn, str)
             and (device := self.devices.get(deviceSn) or {})
-            and device.get("is_admin")
+            and (ignoreAdmin or device.get("is_admin"))
+            and device.get("type") == SolixDeviceType.SOLARBANK.value
+            and device.get("generation") >= 2
         ):
             site = self.sites.get(device.get("site_id") or "") or {}
+        elif (
+            isinstance(siteId, str)
+            and (site := self.sites.get(siteId) or {})
+            and (ignoreAdmin or site.get("site_admin"))
+        ):
+            # get first solarbank of site that supports usage modes
+            device = (
+                [
+                    dev
+                    for dev in self.devices.values()
+                    if dev.get("site_id") == siteId
+                    and dev.get("type") == SolixDeviceType.SOLARBANK.value
+                    and dev.get("generation") >= 2
+                ][:1]
+                or [{}]
+            )[0]
+        if site and device:
             # manual mode is always possible
             options.add(SolarbankUsageMode.manual.name)
             # Add smart meter usage mode if smart meter installed
@@ -1010,9 +1034,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if "grid_to_battery_power" in device:
                 options.add(SolarbankUsageMode.backup.name)
                 # Add use time if plan is defined
-                if smartmeter and (device.get("schedule") or {}).get(
+                if smartmeter and (ignoreAdmin or (device.get("schedule") or {}).get(
                     SolarbankRatePlan.use_time
-                ):
+                )):
                     options.add(SolarbankUsageMode.use_time.name)
             # Add options introduced with SB3
             if (device.get("generation") or 0) >= 3 and smartmeter:

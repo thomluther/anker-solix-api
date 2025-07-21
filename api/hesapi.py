@@ -518,6 +518,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # Ensure actual provider prices are available
                         await self.refresh_provider_prices(
                             provider=SolixPriceProvider(provider=provider),
+                            siteId=site_id,
                             fromFile=fromFile,
                         )
                     # extract the actual spot price and unit for sites supporting dynamic prices

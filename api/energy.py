@@ -531,10 +531,12 @@ async def refresh_pv_forecast(
     self,
     siteId: str,
     fromFile: bool = False,
-) -> dict:
-    """Refresh the solar forecast data, max once per hour."""
+) -> None:
+    """Refresh the solar forecast data, max once per hour. It will only be done if energy details polled previously."""
     if not (site := self.sites.get(siteId) or {} if isinstance(siteId, str) else {}):
-        return {}
+        return
+    if not (energy := site.get("energy_details") or {}):
+        return
     # Check if smart mode is active, use site info but also schedule info in devices if just enabled before it is reflected in site info
     smartmode = site.get("user_scene_mode") == SolarbankUsageMode.smart.value or [
         d
@@ -542,9 +544,10 @@ async def refresh_pv_forecast(
         if d.get("site_id") == siteId
         and (d.get("schedule") or {}).get("mode_type") == SolarbankUsageMode.smart.value
     ]
-    now = datetime.now()
+    # consider different timezone if recognized in energy data
+    now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
     # get existing forecast information
-    fcdetails = (site.get("energy_details") or {}).get("pv_forecast_details") or {}
+    fcdetails = energy.get("pv_forecast_details") or {}
     # get last poll time or initialize with old date for first poll
     lastpoll = fcdetails.get("poll_time") or (now - timedelta(days=2)).strftime(
         "%Y-%m-%d %H:%M"
@@ -552,7 +555,10 @@ async def refresh_pv_forecast(
     lastpoll = datetime.fromisoformat(lastpoll)
     trend = fcdetails.get("trend") or []
     new_trend = []
-    produced = []
+    energy_today = energy.get("today") or {}
+    # set the default produced solar fields depending on time and previous intraday polls
+    produced = fcdetails.get("produced_hourly") or []
+    produced_today = ""
     # fetch new forecast max once per hour or if missing, but only if smartmode active
     if smartmode and (
         lastpoll.date() != now.date() or lastpoll.hour != now.hour or not trend
@@ -564,7 +570,6 @@ async def refresh_pv_forecast(
         # new trend query will provide only up to 24 hours in advance, first entry is next full hour with forecast of current hour
         # queries provide also 00:00 at end of day, which is duplicate of first slot next day
         # total forecast is summary of all 24 future hours, not split per queried day
-        produced_today = ""
         trend_unit = ""
         for day in range(
             0 if not trend or now.hour < 23 else 1, 2 if now.hour > 0 else 1
@@ -591,6 +596,7 @@ async def refresh_pv_forecast(
             trend_unit = str(trend_unit).lower()
             decimals = 2 if "k" in trend_unit else 0
             if day == 0:
+                # refresh todays production data
                 produced_today = data.get("solar_total") or ""
                 # extract and accumulate hourly production values for today
                 unit = data.get("power_unit") or ""
@@ -651,8 +657,7 @@ async def refresh_pv_forecast(
         fcdetails["trend_unit"] = trend_unit.upper()
         fcdetails["local_time"] = data.get("local_time") or ""
         fcdetails["poll_time"] = now.strftime("%Y-%m-%d %H:%M")
-        fcdetails["produced_hourly"] = produced
-        fcdetails["produced_today"] = produced_today
+        lastpoll = now
         # clear timestamp for this hour trend to force update of extracted values after new fetch
         fcdetails.pop("time_this_hour", None)
     # keep old trend of today and update only the provided trend slots
@@ -660,6 +665,7 @@ async def refresh_pv_forecast(
     checkdate = now.strftime("%Y-%m-%d")
     new_start = (new_trend[:1] or [{}])[0].get("timestamp") or ""
     unit = fcdetails.get("trend_unit") or ""
+    decimals = 2 if "k" in unit.lower() else 0
     trend = [
         slot
         for slot in old_trend
@@ -696,39 +702,65 @@ async def refresh_pv_forecast(
         )
     ) / (1 if "k" in str(unit).lower() else 1000)
     fcdetails["remaining_today"] = (
-        f"{remain_kwh + (actual_kwh * (60 - now.minute) / 60):.2f}"
+        (f"{remain_kwh + (actual_kwh * (60 - now.minute) / 60):.2f}") if trend else ""
     )
+    # set actual production for today depending on previous polls
+    if not produced_today:
+        # reset actual energy data if last poll was yesterday, otherwise use previous data
+        if lastpoll.strftime("%Y-%m-%d") < now.strftime("%Y-%m-%d"):
+            produced_today = "0"
+        else:
+            # initialize production with previous value to calculate difference
+            produced_today = fcdetails.get("produced_today") or ""
     # update solar production data from more frequent daily energy data if higher
-    energy_today = (site.get("energy_details") or {}).get("today") or {}
     if (
-        energy_today.get("date") == now.strftime("%Y-%m-%d")
+        produced_today.replace(".", "", 1).isdigit()
+        and energy_today.get("date") <= now.strftime("%Y-%m-%d")
         and str(solar_prod := energy_today.get("solar_production") or "")
         .replace(".", "", 1)
         .isdigit()
-        and str(solar_today := fcdetails.get("produced_today") or "")
-        .replace(".", "", 1)
-        .isdigit()
-        and float(solar_prod) > float(solar_today)
+        and float(solar_prod) >= float(produced_today)
     ):
-        fcdetails["produced_today"] = f"{float(solar_prod):.2f}"
-        # get slot of actual hour and add missing energy
+        thishour = (
+            (now + timedelta(hours=1)).replace(minute=0).strftime("%Y-%m-%d %H:%M")
+        )
+        # get slot of actual hour and add missing energy or new slot while hour within existing trend range
         if slot := (
             [
                 s
-                for s in fcdetails.get("produced_hourly") or []
-                if (now + timedelta(hours=1))
-                .replace(minute=0)
-                .strftime("%Y-%m-%d %H:%M")
-                == str(s.get("timestamp"))
+                for s in produced
+                if thishour == str(s.get("timestamp"))
                 and str(s.get("power")).replace(".", "", 1).isdigit()
             ][-1:]
             or [{}]
         )[0]:
             # do inplace update with normalized unit conversion
             slot["power"] = (
-                f"{float(slot['power']) + (float(solar_prod) - float(solar_today)) * (1 if 'k' in unit.lower() else 1000):.2f}"
+                f"{float(slot['power']) + (float(solar_prod) - float(produced_today)) * (1 if 'k' in unit.lower() else 1000):.{decimals}f}"
             )
-
+        # add new production slot while within trend range if smart mode disabled temporarily without new hourly queries
+        elif produced and (
+            (produced[-1:] or [{}])[0].get("timestamp") or ""
+        ) < thishour <= ((trend[-1:] or [{}])[0].get("timestamp") or ""):
+            produced.append(
+                {
+                    "timestamp": thishour,
+                    "power": (
+                        f"{(float(solar_prod) - float(produced_today)) * (1 if 'k' in unit.lower() else 1000):.{decimals}f}"
+                    ),
+                }
+            )
+            # sanitize produced hourly data for today only
+            produced = [
+                slot
+                for slot in produced
+                if slot.get("timestamp")
+                > now.replace(hour=0, minute=1).strftime("%Y-%m-%d %H:%M")
+            ]
+        # update last production value for next refresh
+        produced_today = solar_prod
+    fcdetails["produced_hourly"] = produced
+    fcdetails["produced_today"] = produced_today
     # set initial production prior first trend value for better completion of total forecast for today
     # otherwise forecast for today is only calculated from trend values
     fcdetails["produced_initially"] = (
@@ -738,7 +770,7 @@ async def refresh_pv_forecast(
             sum(
                 [
                     float(slot.get('power'))
-                    for slot in fcdetails.get('produced_hourly') or []
+                    for slot in produced
                     if str(slot.get('timestamp')) < ts
                     and str(slot.get('power')).replace('.', '', 1).isdigit()
                 ]
@@ -759,7 +791,9 @@ async def refresh_pv_forecast(
         ]
     ) / (1 if "k" in unit.lower() else 1000)
     fcdetails["forecast_today"] = (
-        f"{daily_kwh + float(fcdetails.get('produced_initially')):.2f}"
+        (f"{daily_kwh + float(fcdetails.get('produced_initially')):.2f}")
+        if trend
+        else ""
     )
     # calculate available forecast of tomorrow (incomplete most of the time)
     daily_kwh = sum(
@@ -776,8 +810,12 @@ async def refresh_pv_forecast(
             and str(slot.get("power")).replace(".", "", 1).isdigit()
         ]
     ) / (1 if "k" in unit.lower() else 1000)
-    fcdetails["forecast_tomorrow"] = f"{daily_kwh:.2f}"
-    return fcdetails
+    fcdetails["forecast_tomorrow"] = f"{daily_kwh:.2f}" if trend else ""
+    # update data in site energy details
+    energy["pv_forecast_details"] = fcdetails
+    site["energy_details"] = energy
+    # extract the actual forecast for site
+    self.extractSolarForecast(siteId=siteId)
 
 
 async def device_pv_energy_daily(

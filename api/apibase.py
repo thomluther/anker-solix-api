@@ -1224,9 +1224,11 @@ class AnkerSolixBaseApi:
     async def refresh_provider_prices(
         self,
         provider: SolixPriceProvider | str | dict,
+        siteId: str,
+        forceRefresh: bool = False,
         fromFile: bool = False,
     ) -> None:
-        """Refresh the dynamic price information for given provider if required."""
+        """Refresh the dynamic price information for given provider and site ID if required."""
         # validate provider
         if not (
             provider := provider
@@ -1236,19 +1238,27 @@ class AnkerSolixBaseApi:
             else None
         ):
             return
+        # validate site ID
+        if not (
+            site := self.sites.get(siteId) or {} if isinstance(siteId, str) else {}
+        ):
+            return
+        # consider different timezone if recognized in energy data
+        now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
         # get existing price information
         spot_prices = (
             self.account.get(f"price_details_{str(provider).replace('/', '_')}") or {}
         )
         # get last poll time or initialize with old date for first poll
-        lastpoll = spot_prices.get("poll_time") or (
-            datetime.now() - timedelta(days=2)
-        ).strftime("%Y-%m-%d %H:%M")
+        lastpoll = spot_prices.get("poll_time") or (now - timedelta(days=2)).strftime(
+            "%Y-%m-%d %H:%M"
+        )
         lastpoll = datetime.fromisoformat(lastpoll)
         # fetch provider prices max once per hour or if missing
         if (
-            lastpoll.date() != datetime.now().date()
-            or lastpoll.hour != datetime.now().hour
+            forceRefresh
+            or lastpoll.date() != now.date()
+            or lastpoll.hour != now.hour
             or not spot_prices.get("today_price_trend")
         ):
             self._logger.debug(
@@ -1258,6 +1268,7 @@ class AnkerSolixBaseApi:
             )
             await self.get_dynamic_prices(
                 provider=provider,
+                date=now,
                 fromFile=fromFile,
             )
 
@@ -1306,7 +1317,8 @@ class AnkerSolixBaseApi:
             )
             or {}
         ):
-            now = datetime.now()
+            # consider different timezone if recognized in energy data
+            now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
             nowstring = now.strftime("%Y-%m-%d %H:%M")
             last_details = details.get("dynamic_price_details") or {}
             # get last poll time from site details
@@ -1437,7 +1449,8 @@ class AnkerSolixBaseApi:
             fcdetails := (site.get("energy_details") or {}).get("pv_forecast_details")
             or {}
         ):
-            now = datetime.now()
+            # consider different timezone if recognized in energy data
+            now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
             thishour = (
                 (now + timedelta(hours=1)).replace(minute=0).strftime("%Y-%m-%d %H:%M")
             )
@@ -1449,13 +1462,13 @@ class AnkerSolixBaseApi:
                 or {}
             ) and (old_trend := customized_fc.get("trend")):
                 # keep historical trend of today
-                checkdate = now.strftime("%Y-%m-%d")
+                checkdate = now.replace(hour=0, minute=0).strftime("%Y-%m-%d %H:%M")
                 new_trend = fcdetails.get("trend") or []
                 new_start = (new_trend[:1] or [{}])[0].get("timestamp") or ""
                 trend = [
                     slot
                     for slot in old_trend
-                    if checkdate in (ot := slot.get("timestamp") or "")
+                    if (ot := slot.get("timestamp") or "") >= checkdate
                     and (not new_start or ot < new_start)
                 ]
                 fcdetails["trend"] = trend + new_trend
