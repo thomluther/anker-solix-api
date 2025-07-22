@@ -662,15 +662,15 @@ async def refresh_pv_forecast(
         fcdetails.pop("time_this_hour", None)
     # keep old trend of today and update only the provided trend slots
     old_trend = fcdetails.get("trend") or []
-    checkdate = now.strftime("%Y-%m-%d")
+    checkdate = now.replace(hour=0, minute=0).strftime("%Y-%m-%d %H:%M")
     new_start = (new_trend[:1] or [{}])[0].get("timestamp") or ""
     unit = fcdetails.get("trend_unit") or ""
     decimals = 2 if "k" in unit.lower() else 0
     trend = [
         slot
         for slot in old_trend
-        if not new_start
-        or (checkdate in (ot := slot.get("timestamp") or "") and ot < new_start)
+        if (ot := slot.get("timestamp") or "") >= checkdate
+        and (not new_start or ot < new_start)
     ]
     trend += new_trend
     fcdetails["trend"] = trend

@@ -492,7 +492,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         feat1 = dev.get("auto_switch")
                         feat2 = dev.get("priority")
                         CONSOLE.info(
-                            f"{'AI switched':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'(Prio: ' + ('-' if feat2 is None else str(feat2)) + ')':<{col2 - 4}} {'Runtime':<{col3}}: {json.dumps(dev.get('running_time', '-------')):>3}"
+                            f"{'AI switched':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'(Prio: ' + ('-' if feat2 is None else str(feat2)) + ')':<{col2 - 4}} {'Runtime':<{col3}}: {json.dumps(dev.get('running_time')).replace('null', '-------'):>3}"
                         )
                         unit = dev.get("power_unit", "W")
                         CONSOLE.info(

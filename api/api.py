@@ -9,7 +9,7 @@ pip install aiofiles
 from __future__ import annotations
 
 import contextlib
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from pathlib import Path
 from typing import Any
@@ -508,17 +508,20 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     }
                                 )
                         # get actual presets from current slot
-                        now: datetime = datetime.now().time().replace(microsecond=0)
+                        # Consider time zone shifts
+                        tz_offset = (self.sites.get(device.get("site_id") or "") or {}).get("energy_offset_tz") or 0
+                        now = (datetime.now() + timedelta(seconds=tz_offset))
+                        now_time = now.time().replace(microsecond=0)
                         sys_power = None
                         dev_power = None
                         # set now to new daytime if close to end of day
-                        if now >= datetime.strptime("23:59:58", "%H:%M:%S").time():
-                            now = datetime.strptime("00:00", "%H:%M").time()
+                        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
+                            now_time = datetime.strptime("00:00", "%H:%M").time()
                         if generation >= 2:
                             # Solarbank 2 schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
-                            weekday = int(datetime.now().strftime("%w"))
-                            month = datetime.now().month
+                            weekday = int(now.strftime("%w"))
+                            month = now.month
                             # get rate_plan_name depending on use usage mode_type
                             rate_plan_name = getattr(
                                 SolarbankRatePlan,
@@ -559,7 +562,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         end_time = datetime.strptime(
                                             end_time, "%H:%M"
                                         ).time()
-                                    if start_time <= now < end_time:
+                                    if start_time <= now_time < end_time:
                                         sys_power = slot.get("power")
                                         device.update(
                                             {
@@ -583,7 +586,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     {
                                         "preset_usage_mode": SolarbankUsageMode.backup
                                         if switch
-                                        and start < datetime.now().timestamp() < end
+                                        and start < now.timestamp() < end
                                         else mode_type,
                                         "preset_manual_backup_start": start,
                                         "preset_manual_backup_end": end,
@@ -612,7 +615,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                                 slot
                                                 for slot in dayplan
                                                 if (slot.get("start_time") or 0)
-                                                <= now.hour
+                                                <= now_time.hour
                                                 < (slot.get("end_time") or 24)
                                             ]
                                         ),
@@ -664,7 +667,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         end_time = datetime.strptime(
                                             end_time, "%H:%M"
                                         ).time()
-                                    if start_time <= now < end_time:
+                                    if start_time <= now_time < end_time:
                                         preset_power = (
                                             slot.get("appliance_loads") or [{}]
                                         )[0].get("power")

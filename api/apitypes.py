@@ -132,7 +132,7 @@ API_ENDPOINTS = {
     "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
     "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
     "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
-    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smart meter? NOT IMPLEMENTED YET
+    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank 2 and/or smart meter? only "rssi" attribute shows output
     "get_config": "power_service/v1/app/get_config",  # shows empty config list, also for shared account
     "get_installation": "power_service/v1/app/compatible/get_installation",  # shows install_mode and solar_sn, also for shared account
     "set_installation": "power_service/v1/app/compatible/set_installation",  # not explored yet
@@ -209,16 +209,16 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/site/update_site_devices',
     'power_service/v1/site/get_addable_site_list', # show to which defined site a given model type can be added
     'power_service/v1/site/get_comb_addable_sites',
-    'power_service/v1/app/user/get_user_params', # works as member, {"params": []} parameters are unknown
-    "power_service/v1/app/user/set_user_params",
-    'power_service/v1/site/shift_power_site_type',
+    'power_service/v1/app/user/get_user_param', # works as member, {"params": []} parameters are unknown
+    "power_service/v1/app/user/set_user_param",
+    'power_service/v1/site/shift_power_site_type', # maybe to convert to different system type, {"site_id": siteId, "power_site_type": 11}
     'power_service/v1/site/local_net',
     'power_service/v1/site/set_device_feature', # Set device feature for site_id and smart_plug list, may require owner, usage unknown, {"site_id": siteId, "smart_plug" : [value]}) May be used for automatic control of plugs in smart mode?
     'power_service/v1/app/compatible/set_ota_update',
     'power_service/v1/app/compatible/save_ota_complete_status',
     'power_service/v1/app/compatible/check_third_sn',
     'power_service/v1/app/compatible/save_compatible_solar',
-    'power_service/v1/app/compatible/get_confirm_permissions',
+    'power_service/v1/app/compatible/get_confirm_permissions', # works as member, {"device_model": "A17C0"} => "data": {"is_confirm": 1,"confirm_type": "APs"}
     'power_service/v1/app/compatible/confirm_permissions_settings',
     'power_service/v1/app/after_sale/check_popup',
     'power_service/v1/app/after_sale/check_sn',
@@ -240,7 +240,7 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/device/get_relate_belong' # shows belonging of site type for given device
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
-    'power_service/v1/read_message',
+    'power_service/v1/read_message', # payload format unknown
     'power_service/v1/add_message',
     'power_service/v1/del_message',
 
