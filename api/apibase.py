@@ -1017,9 +1017,10 @@ class AnkerSolixBaseApi:
 
         Example data:
         "data": {"currency_list": [
-            {"symbol": "$","name": "USD"},
+            {"symbol": "$","name": "AUD, CAD, USD"},
             {"symbol": "\u20ac","name": "EUR"},
             {"symbol": "z\u0142","name": "PLN"}],
+            {"symbol": "kr","name": "ISK, NOK, SEK"},
             "default_currency": {"symbol": "\u20ac","name": "EUR"}}
         """
         if fromFile:
@@ -1041,7 +1042,7 @@ class AnkerSolixBaseApi:
                     iter(
                         item
                         for item in self.account.get("currency_list") or []
-                        if item.get("name") == currency
+                        if currency in item.get("name")
                     ),
                     {},
                 )

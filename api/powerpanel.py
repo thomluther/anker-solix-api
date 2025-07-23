@@ -8,6 +8,7 @@ pip install aiofiles
 
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime, timedelta
 import logging
 from pathlib import Path
@@ -746,8 +747,52 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             ).get("value")
                             or ""
                         )
+                        # Grid export data is not provided for daily queries.
+                        # Calculate delta from last export total
+                        avg_data["grid_export_avg"] = ""
+                        last_total = (
+                            (
+                                (self.sites.get(siteId) or {}).get("energy_details")
+                                or {}
+                            ).get("today")
+                            or {}
+                        ).get("solar_to_grid")
                         # get todays totals from data to avoid redundant daily query for today
                         entry.update(self.extract_energy(source=source, data=data))
+                        new_total = entry.get("solar_to_grid")
+                        if (
+                            str(new_total)
+                            .replace("-", "", 1)
+                            .replace(".", "", 1)
+                            .isdigit()
+                        ):
+                            if (
+                                str(last_total)
+                                .replace("-", "", 1)
+                                .replace(".", "", 1)
+                                .isdigit()
+                            ):
+                                # Assume new cycle if new < last total
+                                avg_data["grid_export_avg"] = (
+                                    float(new_total) - float(last_total)
+                                    if float(new_total) >= float(last_total)
+                                    else float(new_total)
+                                )
+                                # spread total delta across number of 5 min intervals since last valid time
+                                intervals = (
+                                    datetime.fromisoformat(avg_data["valid_time"])
+                                    - datetime.fromisoformat(old_valid)
+                                ).totalseconds() / 300
+                                # consider unit conversion since totals are always converted to kwh
+                                avg_data["grid_export_avg"] = (
+                                    f"{(avg_data['grid_export_avg'] / intervals * (1 if 'k' in avg_data['power_unit'].lower() else 1000)):.2f}"
+                                )
+                            else:
+                                # first total value, calculate an approximate for first interval (remainder from other avg values)
+                                with contextlib.suppress(ValueError):
+                                    avg_data["grid_export_avg"] = (
+                                        f"{max(0, float(avg_data.get('solar_power_avg')) - float(avg_data.get('charge_power_avg')) + float(avg_data.get('discharge_power_avg')) - float(avg_data.get('home_usage_avg')) + float(avg_data.get('grid_import_avg'))):.2f}"
+                                    )
             # update device dict with relevant info and with required structure
             if avg_data:
                 # Add average power to device details as work around if no other powerpanel usage data will be found in cloud

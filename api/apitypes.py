@@ -516,9 +516,11 @@ class SolixParmType(Enum):
 
     SOLARBANK_SCHEDULE = "4"
     SOLARBANK_2_SCHEDULE = "6"
-    SOLARBANK_SCHEDULE_ENFORCED = "9"
+    SOLARBANK_SCHEDULE_ENFORCED = "9" # No longer supported by cloud as of July 2025
     SOLARBANK_TARIFF_SCHEDULE = "12"
     SOLARBANK_AUTHORIZATIONS = "13"
+    # TODO: Add description for type 16 once known
+    #SOLARBANK_MULTIUSE = "16"
 
 
 class SolarbankPowerMode(IntEnum):
@@ -690,7 +692,7 @@ class SolixDeviceCapacity:
     A1780_1: int = 2048  # Expansion Battery for F2000
     A1780P: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767) with WIFI
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
-    A1782: int = 3072  # SOLIX F3000 Portable Power Station
+    A1782: int = 3072  # SOLIX F3000 Portable Power Station with Smart Meter support
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
     A1790P: int = 3840  # SOLIX F3800 Portable Power Station
@@ -714,7 +716,7 @@ class SolixSiteType:
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
     t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
-    t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782, Solarbank PPS with Smart Meter support for US market SOLIX F3000 Portable Power Station
+    t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782 SOLIX F3000 Portable Power Station (Solarbank PPS) with Smart Meter support for US market
 
 
 @dataclass(frozen=True)
@@ -780,7 +782,7 @@ class SolixDeviceCategory:
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX Infini Power Station with SM support
+    )  # SOLIX F3000  Portable Power Station with SM support (US Market)
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
     # Home Power Panels
