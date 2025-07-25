@@ -128,9 +128,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # try to get capacity from category definitions
                         if hasattr(SolixDeviceCapacity, str(value)):
                             # get battery capacity from known PNs
-                            device["battery_capacity"] = str(
-                                getattr(SolixDeviceCapacity, str(value))
-                            )
+                            if not device.get("battery_capacity"):
+                                device["battery_capacity"] = str(
+                                    getattr(SolixDeviceCapacity, str(value))
+                                )
+                                calc_capacity = True
                         # try to get type for standalone device from category definitions if not defined yet
                         if hasattr(SolixDeviceCategory, str(value)):
                             dev_type = str(
@@ -142,8 +144,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             if len(dev_type) > 1:
                                 device["generation"] = int(dev_type[1])
                     elif key in ["device_name"] and value:
-                        if value != device.get("name", ""):
-                            calc_capacity = True
                         device["name"] = str(value)
                     elif key in ["alias_name"] and value:
                         device["alias"] = str(value)
@@ -172,7 +172,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 .replace("w", "")
                             }
                         )
-                    elif key in ["intgr_device"]:
+                    elif key in ["intgr_device", "pv_name", "pv_power"]:
                         # keys to be updated independent of value
                         device[key] = value
                     elif (
@@ -912,6 +912,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 device["battery_capacity"] = "0"
                             if "battery_energy" not in device:
                                 device["battery_energy"] = "0"
+                        calc_capacity = False
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(

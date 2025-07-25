@@ -408,22 +408,28 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Solar Power':<{col1}}: {dev.get('input_power', '---'):>4} {unit:<{col2 - 5}} {'Output Power':<{col3}}: {dev.get('output_power', '---'):>4} {unit}"
                         )
-                        # show each MPPT for Solarbank 2
+                        # show each MPPT for Solarbank 2+
+                        names = dev.get("pv_name") or {}
                         if "solar_power_1" in dev:
+                            name1 = names.get("pv1_name") or ""
+                            name2 = names.get("pv2_name") or ""
                             CONSOLE.info(
-                                f"{'Solar Ch_1':<{col1}}: {dev.get('solar_power_1', '---'):>4} {unit:<{col2 - 5}} {'Solar Ch_2':<{col3}}: {dev.get('solar_power_2', '---'):>4} {unit}"
+                                f"{'Solar Ch_1':<{col1}}: {dev.get('solar_power_1', '---'):>4} {unit+(' ('+name1+')' if name1 else ''):<{col2 - 5}} {'Solar Ch_2':<{col3}}: {dev.get('solar_power_2', '---'):>4} {unit+str(' ('+name2+')' if name2 else '')}"
                             )
                             if "solar_power_3" in dev:
+                                name1 = names.get("pv3_name") or ""
+                                name2 = names.get("pv4_name") or ""
                                 CONSOLE.info(
-                                    f"{'Solar Ch_3':<{col1}}: {dev.get('solar_power_3', '---'):>4} {unit:<{col2 - 5}} {'Solar Ch_4':<{col3}}: {dev.get('solar_power_4', '---'):>4} {unit}"
+                                    f"{'Solar Ch_3':<{col1}}: {dev.get('solar_power_3', '---'):>4} {unit+(' ('+name1+')' if name1 else ''):<{col2 - 5}} {'Solar Ch_4':<{col3}}: {dev.get('solar_power_4', '---'):>4} {unit+(' ('+name2+')' if name2 else '')}"
                                 )
                         if "pei_heating_power" in dev:
                             CONSOLE.info(
                                 f"{'Other Input':<{col1}}: {dev.get('other_input_power', '---'):>4} {unit:<{col2 - 5}} {'Heating Power':<{col3}}: {dev.get('pei_heating_power', '---'):>4} {unit}"
                             )
                         if "grid_to_battery_power" in dev:
+                            name2 = names.get("micro_inverter_name") or ""
                             CONSOLE.info(
-                                f"{'Grid to Battery':<{col1}}: {dev.get('grid_to_battery_power', '---'):>4} {unit:<{col2 - 5}} {'Inverter Power':<{col3}}: {dev.get('micro_inverter_power', '---'):>4} {unit}"
+                                f"{'Grid to Battery':<{col1}}: {dev.get('grid_to_battery_power', '---'):>4} {unit:<{col2 - 5}} {'Inverter Power':<{col3}}: {dev.get('micro_inverter_power', '---'):>4} {unit+(' ('+name2+')' if name2 else '')}"
                             )
                         if "micro_inverter_power_limit" in dev:
                             CONSOLE.info(
@@ -528,7 +534,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
                         if "battery_capacity" in dev:
                             CONSOLE.info(
-                                f"{'Capacity':<{col1}}: {customized.get('battery_capacity') or dev.get('battery_capacity', '-----')!s:>5} {'Wh':<{col2 - 6}} {'Battery Count':<{col3}}: {dev.get('batCount') or '1'}"
+                                f"{'Capacity':<{col1}}: {customized.get('battery_capacity') or dev.get('battery_capacity', '-----')!s:>5} {'Wh':<{col2 - 6}} {'Battery Count':<{col3}}: {dev.get('batCount') or '-'}"
                             )
                         if avg := dev.get("average_power") or {}:
                             unit = str(avg.get("power_unit") or "").upper()

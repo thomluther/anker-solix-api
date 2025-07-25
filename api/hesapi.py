@@ -228,6 +228,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                     ),
                                 }
                             )
+                        calc_capacity = False
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
@@ -329,8 +330,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 "default_currency": data.get("default_currency") or {},
                             }
                         )
-                    # Get product list once for device names if no admin and save it in account cache
-                    if not admin and "products" not in self.account:
+                    # Get product list once for device names and save it in account cache
+                    if "products" not in self.account:
                         self._update_account(
                             {"products": await self.get_products(fromFile=fromFile)}
                         )
@@ -601,21 +602,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             fromFile=fromFile,
                         )
                     )
-                if fromFile:
-                    # get last date entries from file and replace date with yesterday and today for testing
-                    days = len(data)
-                    if len(data) > 1:
-                        entry: dict = list(data.values())[days - 2]
-                        entry.update({"date": yesterday})
-                        energy["last_period"] = entry
-                    if len(data) > 0:
-                        entry: dict = list(data.values())[days - 1]
-                        entry.update({"date": today})
-                        energy["today"] = entry
-                else:
-                    energy["today"] = data.get(today) or {}
-                    if data.get(yesterday):
-                        energy["last_period"] = data.get(yesterday) or {}
+                energy["today"] = data.get(today) or {}
+                if yesterday in data:
+                    energy["last_period"] = data.get(yesterday) or {}
                 # save energy stats with sites dictionary
                 site["energy_details"] = energy
                 self.sites[site_id] = site
@@ -1057,37 +1046,30 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     endDay=startDay + timedelta(days=numDays - 1),
                     sourceType=source,
                 )
-            fileNumDays = 0
-            fileStartDay = None
             unit = resp.get("energyUnit") or ""
-            for item in resp.get("energy") or []:
-                # No daystring in response, count the index for proper date
-                if daystr := (startDay + timedelta(days=fileNumDays)).strftime(
-                    "%Y-%m-%d"
-                ):
-                    if fromFile and fileStartDay is None:
-                        fileStartDay = daystr
-                    fileNumDays += 1
-                    entry = table.get(daystr, {"date": daystr})
-                    entry.update(
-                        {
-                            "battery_discharge": convertToKwh(
-                                val=item.get("value") or None, unit=unit
-                            ),
-                        }
-                    )
-                    table.update({daystr: entry})
+            items = resp.get("energy") or []
+            # No daystring in response, count the index for proper date and skip previous items
+            # for file usage ensure that last item is used if today is included
+            start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+            for idx, item in enumerate(items[start : start + numDays]):
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+                entry = table.get(daystr, {"date": daystr})
+                entry = table.get(daystr, {"date": daystr})
+                entry.update(
+                    {
+                        "battery_discharge": convertToKwh(
+                            val=item.get("value") or None, unit=unit
+                        ),
+                    }
+                )
+                table.update({daystr: entry})
             # HES has currently no total charge energy or other extra totals for interval. PPS data does not seem to work for hes devices
             # TODO: Once supported, implement the code to get total charge from hes data, ideally from day breakdown like discharge
             # if dayTotals and table:
-            #     if fromFile:
-            #         daylist = [
-            #             datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-            #             for x in range(fileNumDays)
-            #         ]
-            #     else:
-            #         daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-            #     for day in daylist:
+            #     for day in [
+            #         startDay + timedelta(days=x)
+            #         for x in range(min(len(items), numDays) if fromFile else numDays)
+            #     ]:
             #         daystr = day.strftime("%Y-%m-%d")
             #         entry = table.get(daystr, {"date": daystr})
             #         # update response only for real requests if not first day which was already queried
@@ -1149,37 +1131,28 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     else startDay + timedelta(days=numDays - 1),
                     sourceType=source,
                 )
-            fileNumDays = 0
-            fileStartDay = None
             unit = resp.get("energyUnit") or ""
-            for item in resp.get("energy") or []:
-                # No daystring in response, count the index for proper date
-                # daystr = item.get("time", None)
-                if daystr := (startDay + timedelta(days=fileNumDays)).strftime(
-                    "%Y-%m-%d"
-                ):
-                    if fromFile and fileStartDay is None:
-                        fileStartDay = daystr
-                    fileNumDays += 1
-                    entry = table.get(daystr, {"date": daystr})
-                    entry.update(
-                        {
-                            "home_usage": convertToKwh(
-                                val=item.get("value") or None, unit=unit
-                            ),
-                        }
-                    )
-                    table.update({daystr: entry})
+            items = resp.get("energy") or []
+            # No daystring in response, count the index for proper date and skip previous items
+            # for file usage ensure that last item is used if today is included
+            start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+            for idx, item in enumerate(items[start : start + numDays]):
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+                entry = table.get(daystr, {"date": daystr})
+                entry.update(
+                    {
+                        "home_usage": convertToKwh(
+                            val=item.get("value") or None, unit=unit
+                        ),
+                    }
+                )
+                table.update({daystr: entry})
             # Home has consumption breakdown and shares for given interval. If requested, make daily queries for given interval
             if dayTotals and table:
-                if fromFile:
-                    daylist = [
-                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                        for x in range(fileNumDays)
-                    ]
-                else:
-                    daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                for day in daylist:
+                for day in [
+                    startDay + timedelta(days=x)
+                    for x in range(min(len(items), numDays) if fromFile else numDays)
+                ]:
                     daystr = day.strftime("%Y-%m-%d")
                     entry = table.get(daystr, {"date": daystr})
                     # update response only for real requests if not first day which was already queried
@@ -1242,37 +1215,28 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     else startDay + timedelta(days=numDays - 1),
                     sourceType=source,
                 )
-            fileNumDays = 0
-            fileStartDay = None
             unit = resp.get("energyUnit") or ""
-            for item in resp.get("energy") or []:
-                # No daystring in response, count the index for proper date
-                # daystr = item.get("time", None)
-                if daystr := (startDay + timedelta(days=fileNumDays)).strftime(
-                    "%Y-%m-%d"
-                ):
-                    if fromFile and fileStartDay is None:
-                        fileStartDay = daystr
-                    fileNumDays += 1
-                    entry = table.get(daystr, {"date": daystr})
-                    entry.update(
-                        {
-                            "grid_import": convertToKwh(
-                                val=item.get("value") or None, unit=unit
-                            ),
-                        }
-                    )
-                    table.update({daystr: entry})
+            items = resp.get("energy") or []
+            # No daystring in response, count the index for proper date and skip previous items
+            # for file usage ensure that last item is used if today is included
+            start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+            for idx, item in enumerate(items[start : start + numDays]):
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+                entry = table.get(daystr, {"date": daystr})
+                entry.update(
+                    {
+                        "grid_import": convertToKwh(
+                            val=item.get("value") or None, unit=unit
+                        ),
+                    }
+                )
+                table.update({daystr: entry})
             # Grid import, grid charge and solar export from grid totals for given interval. If requested, make daily queries for given interval
             if dayTotals and table:
-                if fromFile:
-                    daylist = [
-                        datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                        for x in range(fileNumDays)
-                    ]
-                else:
-                    daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-                for day in daylist:
+                for day in [
+                    startDay + timedelta(days=x)
+                    for x in range(min(len(items), numDays) if fromFile else numDays)
+                ]:
                     daystr = day.strftime("%Y-%m-%d")
                     entry = table.get(daystr, {"date": daystr})
                     # update response only for real requests if not first day which was already queried
@@ -1334,35 +1298,28 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 else startDay + timedelta(days=numDays - 1),
                 sourceType=source,
             )
-        fileNumDays = 0
-        fileStartDay = None
         unit = resp.get("energyUnit") or ""
-        for item in resp.get("energy") or []:
-            # No daystring in response, count the index for proper date
-            # daystr = item.get("time", None)
-            if daystr := (startDay + timedelta(days=fileNumDays)).strftime("%Y-%m-%d"):
-                if fromFile and fileStartDay is None:
-                    fileStartDay = daystr
-                fileNumDays += 1
-                entry = table.get(daystr, {"date": daystr})
-                entry.update(
-                    {
-                        "solar_production": convertToKwh(
-                            val=item.get("value") or None, unit=unit
-                        ),
-                    }
-                )
-                table.update({daystr: entry})
+        items = resp.get("energy") or []
+        # No daystring in response, count the index for proper date and skip previous items
+        # for file usage ensure that last item is used if today is included
+        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        for idx, item in enumerate(items[start : start + numDays]):
+            daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+            entry = table.get(daystr, {"date": daystr})
+            entry.update(
+                {
+                    "solar_production": convertToKwh(
+                        val=item.get("value") or None, unit=unit
+                    ),
+                }
+            )
+            table.update({daystr: entry})
         # Solar charge and is only received as total value for given interval. If requested, make daily queries for given interval
         if dayTotals and table:
-            if fromFile:
-                daylist = [
-                    datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                    for x in range(fileNumDays)
-                ]
-            else:
-                daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-            for day in daylist:
+            for day in [
+                startDay + timedelta(days=x)
+                for x in range(min(len(items), numDays) if fromFile else numDays)
+            ]:
                 daystr = day.strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
                 # update response only for real requests if not first day which was already queried
@@ -1593,7 +1550,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         return entry
 
     async def get_hes_wifi_info(self, deviceSn: str, fromFile: bool = False) -> dict:
-        """Get the wifi info of a hes device with admin access.
+        """Get the wifi info of a hes device, works with member access.
 
         Example data:
         {"ssid": "","rssi": 100,"wifiInfos": [

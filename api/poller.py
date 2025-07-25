@@ -538,22 +538,14 @@ async def poll_sites(  # noqa: C901
                         powerpanel = dict(powerpanel).copy()
                         powerpanel.update({"alias_name": powerpanel.pop("device_name")})
                     if sn := api._update_dev(
-                        # merge powerpanel device details if available
-                        powerpanel
-                        | (
-                            (
-                                api.powerpanelApi.devices.get(
-                                    powerpanel.get("device_sn") or ""
-                                )
-                                or {}
-                            )
-                            if api.powerpanelApi
-                            else {}
-                        ),
+                        powerpanel,
                         devType=SolixDeviceType.POWERPANEL.value,
                         siteId=myid,
                         isAdmin=admin,
                     ):
+                        # merge powerpanel device details in place if available from powerpanel api
+                        if api.powerpanelApi:
+                            api.devices[sn] = api.devices[sn] | (api.powerpanelApi.devices.get(sn) or {})
                         api._site_devices.add(sn)
                 # Extract actual dynamic price if supported and not excluded
                 if {ApiCategories.site_price} - exclude:
@@ -1016,21 +1008,9 @@ async def poll_device_energy(  # noqa: C901
                             fromFile=fromFile,
                         )
                     )
-                if fromFile:
-                    # get last date entries from file and replace date with yesterday and today for testing
-                    days = len(data)
-                    if len(data) > 1:
-                        entry: dict = list(data.values())[days - 2]
-                        entry.update({"date": yesterday})
-                        energy["last_period"] = entry
-                    if len(data) > 0:
-                        entry: dict = list(data.values())[days - 1]
-                        entry.update({"date": today})
-                        energy["today"] = entry
-                else:
-                    energy["today"] = data.get(today) or {}
-                    if data.get(yesterday):
-                        energy["last_period"] = data.get(yesterday) or {}
+                energy["today"] = data.get(today) or {}
+                if yesterday in data:
+                    energy["last_period"] = data.get(yesterday) or {}
                 # save energy stats with sites dictionary
                 site["energy_details"] = energy
                 api.sites[site_id] = site
@@ -1045,7 +1025,7 @@ async def poll_device_energy(  # noqa: C901
                 and isinstance(dev_list, list)
                 and (sn := dev_list[0].get("device_sn"))
             ):
-                query_types.add({SolixDeviceType.INVERTER.value})
+                query_types.add(SolixDeviceType.INVERTER.value)
                 query_sn = sn
             if sn := (site.get("grid_info") or {}).get("device_sn"):
                 query_types.discard(SolixDeviceType.INVERTER.value)

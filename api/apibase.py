@@ -1352,7 +1352,7 @@ class AnkerSolixBaseApi:
                 date = datetime.fromisoformat(poll_time)
                 trend = []
                 # calculate total dynamic price
-                for day in [0, 1]:
+                for day in range(2):
                     daystring = (date + timedelta(days=day)).strftime("%Y-%m-%d")
                     trend.extend(
                         {

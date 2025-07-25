@@ -4,6 +4,8 @@ from datetime import datetime, time, timedelta
 from pathlib import Path
 from statistics import mean
 
+from numpy import fromfile
+
 from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
@@ -68,15 +70,15 @@ async def energy_daily(  # noqa: C901
                 else startDay + timedelta(days=numDays - 1),
                 devType="solarbank",
             )
-        fileNumDays = 0
-        fileStartDay = None
-        for item in resp.get("power", []):
-            daystr = item.get("time", None)
+        items = resp.get("power") or []
+        # for file usage ensure that last item is used if today is included
+        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        for idx, item in enumerate(items[start : start + numDays]):
+            if fromfile:
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+            else:
+                daystr = item.get("time")
             if daystr:
-                if fromFile:
-                    if fileStartDay is None:
-                        fileStartDay = daystr
-                    fileNumDays += 1
                 entry = table.get(daystr, {"date": daystr})
                 entry.update(
                     {
@@ -87,14 +89,10 @@ async def energy_daily(  # noqa: C901
                 table.update({daystr: entry})
         # Solarbank 2 has AC socket output and battery to home related totals for given interval. If requested, make daily queries for given interval
         if justify_daytotals and table:
-            if fromFile:
-                daylist = [
-                    datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                    for x in range(fileNumDays)
-                ]
-            else:
-                daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-            for day in daylist:
+            for day in [
+                startDay + timedelta(days=x)
+                for x in range(min(len(items), numDays) if fromFile else numDays)
+            ]:
                 daystr = day.strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
                 # update response only for real requests if not first day which was already queried
@@ -164,15 +162,15 @@ async def energy_daily(  # noqa: C901
                 else startDay + timedelta(days=numDays - 1),
                 devType="home_usage",
             )
-        fileNumDays = 0
-        fileStartDay = None
-        for item in resp.get("power", []):
-            daystr = item.get("time", None)
+        items = resp.get("power") or []
+        # for file usage ensure that last item is used if today is included
+        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        for idx, item in enumerate(items[start : start + numDays]):
+            if fromfile:
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+            else:
+                daystr = item.get("time")
             if daystr:
-                if fromFile:
-                    if fileStartDay is None:
-                        fileStartDay = daystr
-                    fileNumDays += 1
                 entry = table.get(daystr, {"date": daystr})
                 entry.update(
                     {
@@ -183,14 +181,10 @@ async def energy_daily(  # noqa: C901
                 table.update({daystr: entry})
         # Home usage has Grid import and smart plug related totals for given interval. If requested, make daily queries for given interval
         if justify_daytotals and table:
-            if fromFile:
-                daylist = [
-                    datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                    for x in range(fileNumDays)
-                ]
-            else:
-                daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-            for day in daylist:
+            for day in [
+                startDay + timedelta(days=x)
+                for x in range(min(len(items), numDays) if fromFile else numDays)
+            ]:
                 daystr = day.strftime("%Y-%m-%d")
                 entry = table.get(daystr, {"date": daystr})
                 # update response only for real requests if not first day which was already queried
@@ -275,15 +269,15 @@ async def energy_daily(  # noqa: C901
                 endDay=startDay + timedelta(days=numDays - 1),
                 devType="grid",
             )
-        fileNumDays = 0
-        fileStartDay = None
-        for item in resp.get("power", []):
-            daystr = item.get("time", None)
+        items = resp.get("power") or []
+        # for file usage ensure that last item is used if today is included
+        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        for idx, item in enumerate(items[start : start + numDays]):
+            if fromfile:
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+            else:
+                daystr = item.get("time")
             if daystr:
-                if fromFile:
-                    if fileStartDay is None:
-                        fileStartDay = daystr
-                    fileNumDays += 1
                 entry = table.get(daystr, {"date": daystr})
                 entry.update(
                     {
@@ -293,8 +287,14 @@ async def energy_daily(  # noqa: C901
                     }
                 )
                 table.update({daystr: entry})
-        for item in resp.get("charge_trend", []):
-            daystr = item.get("time", None)
+        items = resp.get("charge_trend") or []
+        # for file usage ensure that last item is used if today is included
+        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        for idx, item in enumerate(items[start : start + numDays]):
+            if fromfile:
+                daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+            else:
+                daystr = item.get("time")
             if daystr:
                 entry = table.get(daystr, {"date": daystr})
                 entry.update(
@@ -335,15 +335,15 @@ async def energy_daily(  # noqa: C901
                         endDay=startDay + timedelta(days=numDays - 1),
                         devType=f"solar_production_{ch.replace('_', '')}",
                     )
-                fileNumDays = 0
-                fileStartDay = None
-                for item in resp.get("power", []):
-                    daystr = item.get("time", None)
+                items = resp.get("power") or []
+                # for file usage ensure that last item is used if today is included
+                start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+                for idx, item in enumerate(items[start : start + numDays]):
+                    if fromfile:
+                        daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+                    else:
+                        daystr = item.get("time")
                     if daystr:
-                        if fromFile:
-                            if fileStartDay is None:
-                                fileStartDay = daystr
-                            fileNumDays += 1
                         entry = table.get(daystr, {"date": daystr})
                         entry.update(
                             {
@@ -383,15 +383,15 @@ async def energy_daily(  # noqa: C901
             else startDay + timedelta(days=numDays - 1),
             devType="solar_production",
         )
-    fileNumDays = 0
-    fileStartDay = None
-    for item in resp.get("power", []):
-        daystr = item.get("time", None)
+    items = resp.get("power") or []
+    # for file usage ensure that last item is used if today is included
+    start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+    for idx, item in enumerate(items[start : start + numDays]):
+        if fromfile:
+            daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
+        else:
+            daystr = item.get("time")
         if daystr:
-            if fromFile:
-                if fileStartDay is None:
-                    fileStartDay = daystr
-                fileNumDays += 1
             entry = table.get(daystr, {"date": daystr})
             entry.update(
                 {"date": daystr, "solar_production": item.get("value") or None}
@@ -399,14 +399,10 @@ async def energy_daily(  # noqa: C901
             table.update({daystr: entry})
     # Solarbank charge and percentages are only received as total value for given interval. If requested, make daily queries for given interval
     if justify_daytotals and table:
-        if fromFile:
-            daylist = [
-                datetime.strptime(fileStartDay, "%Y-%m-%d") + timedelta(days=x)
-                for x in range(fileNumDays)
-            ]
-        else:
-            daylist = [startDay + timedelta(days=x) for x in range(numDays)]
-        for day in daylist:
+        for day in [
+            startDay + timedelta(days=x)
+            for x in range(min(len(items), numDays) if fromFile else numDays)
+        ]:
             daystr = day.strftime("%Y-%m-%d")
             entry = table.get(daystr, {"date": daystr})
             # update response only for real requests if not first day which was already queried
@@ -563,17 +559,12 @@ async def refresh_pv_forecast(
     if smartmode and (
         lastpoll.date() != now.date() or lastpoll.hour != now.hour or not trend
     ):
-        self._logger.debug(
-            "Getting api %s solar forecast",
-            self.apisession.nickname,
-        )
+        self._logger.debug("Getting api %s solar forecast", self.apisession.nickname)
         # new trend query will provide only up to 24 hours in advance, first entry is next full hour with forecast of current hour
         # queries provide also 00:00 at end of day, which is duplicate of first slot next day
         # total forecast is summary of all 24 future hours, not split per queried day
         trend_unit = ""
-        for day in range(
-            0 if not trend or now.hour < 23 else 1, 2 if now.hour > 0 else 1
-        ):
+        for day in range(2 if now.hour > 0 else 1):
             checkdate = now + timedelta(days=day)
             if fromFile:
                 # use the same file twice for testing
@@ -598,6 +589,13 @@ async def refresh_pv_forecast(
             if day == 0:
                 # refresh todays production data
                 produced_today = data.get("solar_total") or ""
+                # init hourly data with 0
+                produced = [
+                    {
+                        "timestamp": f"{checkdate.strftime("%Y-%m-%d")} 00:00",
+                        "power": f"{0:.{decimals}f}",
+                    }
+                ]
                 # extract and accumulate hourly production values for today
                 unit = data.get("power_unit") or ""
                 unit = str(unit).lower()
@@ -735,8 +733,13 @@ async def refresh_pv_forecast(
             or [{}]
         )[0]:
             # do inplace update with normalized unit conversion
+            value = float(slot["power"]) + (
+                (float(solar_prod) - float(produced_today))
+                if energy_today.get("date") == now.strftime("%Y-%m-%d")
+                else float(produced_today)
+            )
             slot["power"] = (
-                f"{float(slot['power']) + (float(solar_prod) - float(produced_today)) * (1 if 'k' in unit.lower() else 1000):.{decimals}f}"
+                f"{value * (1 if 'k' in unit.lower() else 1000):.{decimals}f}"
             )
         # add new production slot while within trend range if smart mode disabled temporarily without new hourly queries
         elif produced and (
@@ -755,7 +758,7 @@ async def refresh_pv_forecast(
                 slot
                 for slot in produced
                 if slot.get("timestamp")
-                > now.replace(hour=0, minute=1).strftime("%Y-%m-%d %H:%M")
+                >= now.replace(hour=0, minute=0).strftime("%Y-%m-%d %H:%M")
             ]
         # update last production value for next refresh
         produced_today = solar_prod
