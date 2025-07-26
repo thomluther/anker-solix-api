@@ -172,7 +172,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 .replace("w", "")
                             }
                         )
-                    elif key in ["intgr_device", "pv_name", "pv_power"]:
+                    elif key in ["intgr_device", "feature_switch", "pv_name", "pv_power"]:
                         # keys to be updated independent of value
                         device[key] = value
                     elif (
