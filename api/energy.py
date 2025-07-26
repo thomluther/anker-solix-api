@@ -4,8 +4,6 @@ from datetime import datetime, time, timedelta
 from pathlib import Path
 from statistics import mean
 
-from numpy import fromfile
-
 from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
@@ -78,7 +76,7 @@ async def energy_daily(  # noqa: C901
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
-            if fromfile:
+            if fromFile:
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
             else:
                 daystr = item.get("time")
@@ -174,7 +172,7 @@ async def energy_daily(  # noqa: C901
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
-            if fromfile:
+            if fromFile:
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
             else:
                 daystr = item.get("time")
@@ -285,7 +283,7 @@ async def energy_daily(  # noqa: C901
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
-            if fromfile:
+            if fromFile:
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
             else:
                 daystr = item.get("time")
@@ -307,7 +305,7 @@ async def energy_daily(  # noqa: C901
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
-            if fromfile:
+            if fromFile:
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
             else:
                 daystr = item.get("time")
@@ -359,7 +357,7 @@ async def energy_daily(  # noqa: C901
                     else 0
                 )
                 for idx, item in enumerate(items[start : start + numDays]):
-                    if fromfile:
+                    if fromFile:
                         daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
                     else:
                         daystr = item.get("time")
@@ -409,7 +407,7 @@ async def energy_daily(  # noqa: C901
         len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
     )
     for idx, item in enumerate(items[start : start + numDays]):
-        if fromfile:
+        if fromFile:
             daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
         else:
             daystr = item.get("time")
