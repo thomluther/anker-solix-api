@@ -72,7 +72,11 @@ async def energy_daily(  # noqa: C901
             )
         items = resp.get("power") or []
         # for file usage ensure that last item is used if today is included
-        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        start = (
+            len(items) - 1
+            if fromFile and datetime.now().date() == startDay.date()
+            else 0
+        )
         for idx, item in enumerate(items[start : start + numDays]):
             if fromfile:
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
@@ -164,7 +168,11 @@ async def energy_daily(  # noqa: C901
             )
         items = resp.get("power") or []
         # for file usage ensure that last item is used if today is included
-        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        start = (
+            len(items) - 1
+            if fromFile and datetime.now().date() == startDay.date()
+            else 0
+        )
         for idx, item in enumerate(items[start : start + numDays]):
             if fromfile:
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
@@ -271,7 +279,11 @@ async def energy_daily(  # noqa: C901
             )
         items = resp.get("power") or []
         # for file usage ensure that last item is used if today is included
-        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        start = (
+            len(items) - 1
+            if fromFile and datetime.now().date() == startDay.date()
+            else 0
+        )
         for idx, item in enumerate(items[start : start + numDays]):
             if fromfile:
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
@@ -289,7 +301,11 @@ async def energy_daily(  # noqa: C901
                 table.update({daystr: entry})
         items = resp.get("charge_trend") or []
         # for file usage ensure that last item is used if today is included
-        start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+        start = (
+            len(items) - 1
+            if fromFile and datetime.now().date() == startDay.date()
+            else 0
+        )
         for idx, item in enumerate(items[start : start + numDays]):
             if fromfile:
                 daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
@@ -337,7 +353,11 @@ async def energy_daily(  # noqa: C901
                     )
                 items = resp.get("power") or []
                 # for file usage ensure that last item is used if today is included
-                start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+                start = (
+                    len(items) - 1
+                    if fromFile and datetime.now().date() == startDay.date()
+                    else 0
+                )
                 for idx, item in enumerate(items[start : start + numDays]):
                     if fromfile:
                         daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
@@ -385,7 +405,9 @@ async def energy_daily(  # noqa: C901
         )
     items = resp.get("power") or []
     # for file usage ensure that last item is used if today is included
-    start = len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+    start = (
+        len(items) - 1 if fromFile and datetime.now().date() == startDay.date() else 0
+    )
     for idx, item in enumerate(items[start : start + numDays]):
         if fromfile:
             daystr = (startDay + timedelta(days=idx)).strftime("%Y-%m-%d")
@@ -592,7 +614,7 @@ async def refresh_pv_forecast(
                 # init hourly data with 0
                 produced = [
                     {
-                        "timestamp": f"{checkdate.strftime("%Y-%m-%d")} 00:00",
+                        "timestamp": f"{checkdate.strftime('%Y-%m-%d')} 00:00",
                         "power": f"{0:.{decimals}f}",
                     }
                 ]
@@ -733,13 +755,13 @@ async def refresh_pv_forecast(
             or [{}]
         )[0]:
             # do inplace update with normalized unit conversion
-            value = float(slot["power"]) + (
+            value = (
                 (float(solar_prod) - float(produced_today))
                 if energy_today.get("date") == now.strftime("%Y-%m-%d")
                 else float(produced_today)
             )
             slot["power"] = (
-                f"{value * (1 if 'k' in unit.lower() else 1000):.{decimals}f}"
+                f"{float(slot['power']) + value * (1 if 'k' in unit.lower() else 1000):.{decimals}f}"
             )
         # add new production slot while within trend range if smart mode disabled temporarily without new hourly queries
         elif produced and (
