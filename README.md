@@ -71,6 +71,7 @@ import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 # _LOGGER.setLevel(logging.DEBUG)    # enable for detailed Api output
+CONSOLE: logging.Logger = common.CONSOLE
 
 
 def _out(jsondata):
