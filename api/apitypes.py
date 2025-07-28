@@ -509,6 +509,7 @@ class SolixDeviceType(Enum):
     HES = "hes"
     SOLARBANK_PPS = "solarbank_pps"
     CHARGER = "charger"
+    EV_CHARGER = "ev_charger"
 
 
 class SolixParmType(Enum):
@@ -709,14 +710,15 @@ class SolixSiteType:
     t_3 = SolixDeviceType.HES.value  # Main A5103, Note: This is not listed in actual site rules, but X1 export showing type 3 instead of 9 as site rules say
     t_4 = SolixDeviceType.POWERPANEL.value  # Main A17B1
     t_5 = SolixDeviceType.SOLARBANK.value  # Main A17C1 SB2 Pro, can also add SB1
-    t_6 = SolixDeviceType.HES.value  # Main A5341
-    t_7 = SolixDeviceType.HES.value  # Main A5101
-    t_8 = SolixDeviceType.HES.value  # Main A5102
-    t_9 = SolixDeviceType.HES.value  # Main A5103
+    t_6 = SolixDeviceType.HES.value  # Main A5341 HES Backup Controller
+    t_7 = SolixDeviceType.HES.value  # Main A5101 HES
+    t_8 = SolixDeviceType.HES.value  # Main A5102 HES
+    t_9 = SolixDeviceType.HES.value  # Main A5103 HES
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
     t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
     t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782 SOLIX F3000 Portable Power Station (Solarbank PPS) with Smart Meter support for US market
+    t_14 = SolixDeviceType.EV_CHARGER.value  # Main A5191 Smart EV Charger
 
 
 @dataclass(frozen=True)
@@ -745,6 +747,7 @@ class SolixDeviceCategory:
     # Smart Meter
     A17X7: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter
     A17X7US: str = SolixDeviceType.SMARTMETER.value  # SOLIX Smart Meter for US
+    AE1R0: str = SolixDeviceType.SMARTMETER.value  # SOLIX P1 Meter
     SHEM3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Smart Meter
     SHEMP3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Pro Smart Meter
     # Smart Plug
@@ -807,6 +810,8 @@ class SolixDeviceCategory:
     # Charging Stations
     A2345: str = SolixDeviceType.CHARGER.value  # Anker 250W Prime Charger
     A91B2: str = SolixDeviceType.CHARGER.value  # Anker 240W Charging Station
+    # EV Charger
+    A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
 
 
 @dataclass(frozen=True)

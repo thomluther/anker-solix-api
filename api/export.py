@@ -38,7 +38,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.1.0.0"
+VERSION: str = "3.1.1.0"
 
 
 class AnkerSolixApiExport:
@@ -1363,9 +1363,9 @@ class AnkerSolixApiExport:
         Reuse same randomization if value was already randomized
         """
 
-        val = str(val)
-        if not self.randomized:
+        if not self.randomized or not val:
             return val
+        val = str(val)
         randomstr = self._randomdata.get(val, "")
         # generate new random string
         if not randomstr and val and key not in ["device_name"]:
@@ -1373,7 +1373,7 @@ class AnkerSolixApiExport:
                 randomstr = "".join(
                     random.choices(string.ascii_uppercase + string.digits, k=len(val))
                 )
-            elif "bt_ble_" in key:
+            elif "bt_ble_" in key or "_mac" in key:
                 # Handle values with and without ':'
                 temp = val.replace(":", "")
                 randomstr = self._randomdata.get(
@@ -1390,7 +1390,7 @@ class AnkerSolixApiExport:
                         a + b
                         for a, b in zip(randomstr[::2], randomstr[1::2], strict=False)
                     )
-            elif "_id" in key:
+            elif "_id" in key or "_password" in key:
                 for part in val.split("-"):
                     if randomstr:
                         randomstr = "-".join(
@@ -1458,6 +1458,9 @@ class AnkerSolixApiExport:
                     "device_name",
                     "token",
                     "email",
+                    "user_id",
+                    "_password",
+                    "_mac"
                 ]
             ) or k in ["sn"]:
                 data[k] = self._randomize(v, k)

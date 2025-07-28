@@ -172,7 +172,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 .replace("w", "")
                             }
                         )
-                    elif key in ["intgr_device", "feature_switch", "pv_name", "pv_power"]:
+                    elif key in [
+                        "intgr_device",
+                        "feature_switch",
+                        "pv_name",
+                        "pv_power",
+                        "group_info",
+                    ]:
                         # keys to be updated independent of value
                         device[key] = value
                     elif (
@@ -209,8 +215,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # keys with string values that should only be updated if value returned
                             "wifi_name",
                             "bt_ble_mac",
+                            "wifi_mac",
                             "energy_today",
                             "energy_last_period",
+                            "time_zone",
                         ]
                         and value
                     ):
@@ -509,8 +517,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 )
                         # get actual presets from current slot
                         # Consider time zone shifts
-                        tz_offset = (self.sites.get(device.get("site_id") or "") or {}).get("energy_offset_tz") or 0
-                        now = (datetime.now() + timedelta(seconds=tz_offset))
+                        tz_offset = (
+                            self.sites.get(device.get("site_id") or "") or {}
+                        ).get("energy_offset_tz") or 0
+                        now = datetime.now() + timedelta(seconds=tz_offset)
                         now_time = now.time().replace(microsecond=0)
                         sys_power = None
                         dev_power = None
@@ -585,8 +595,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 device.update(
                                     {
                                         "preset_usage_mode": SolarbankUsageMode.backup
-                                        if switch
-                                        and start < now.timestamp() < end
+                                        if switch and start < now.timestamp() < end
                                         else mode_type,
                                         "preset_manual_backup_start": start,
                                         "preset_manual_backup_end": end,
@@ -994,7 +1003,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 super().customizeCacheId(id=id, key=key, value=value)
 
     def solarbank_usage_mode_options(
-        self, deviceSn: str | None = None, siteId: str | None = None, ignoreAdmin: bool = False
+        self,
+        deviceSn: str | None = None,
+        siteId: str | None = None,
+        ignoreAdmin: bool = False,
     ) -> set:
         """Get the valid solarbank usage mode options based on Api cache data."""
         options: set = set()
@@ -1038,9 +1050,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if "grid_to_battery_power" in device:
                 options.add(SolarbankUsageMode.backup.name)
                 # Add use time if plan is defined
-                if smartmeter and (ignoreAdmin or (device.get("schedule") or {}).get(
-                    SolarbankRatePlan.use_time
-                )):
+                if smartmeter and (
+                    ignoreAdmin
+                    or (device.get("schedule") or {}).get(SolarbankRatePlan.use_time)
+                ):
                     options.add(SolarbankUsageMode.use_time.name)
             # Add options introduced with SB3
             if (device.get("generation") or 0) >= 3 and smartmeter:
