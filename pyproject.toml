@@ -1,13 +1,15 @@
 [project]
 name = "Anker-Solix-Api"
-version = "2.7.0"
+version = "3.2.0"
 description = "Python library for Anker Solix Power devices (Solarbank, Inverter etc)"
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
+dynamic = [ "dependencies" ]
 
 [project.urls]
 "Homepage" = "https://github.com/thomluther/anker-solix-api"
@@ -25,3 +27,12 @@ disable = [
     "invalid-name",
     "protected-access",
 ]
+
+[tool.poetry.dependencies]
+cryptography = "^45.0.5"
+aiohttp = "^3.12.14"
+aiofiles = "^24.1.0"
+
+[tool.poetry]
+package-mode = false
+requires-poetry = ">=2.1"
