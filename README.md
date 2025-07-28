@@ -26,20 +26,46 @@ The library is currently supported on
 
 # Required libraries
 
-This project uses `pipenv` for Python dependency management
+The dependencies of this project are `cryptography`, `aiohttp`, `aiofiles`.  
+You can either install them manually (e.g. via a package manager) or use [`poetry`](https://github.com/python-poetry/poetry).
 
-```bash
-pip install pipenv
-pipenv sync -d
-pipenv run python [...]
+### Poetry
+
+**Step 1:** Install `poetry` following the [official documentation](https://python-poetry.org/docs/#installation) or via your favorite package manager,
+for example:
+
+```
+sudo pacman -S python-poetry
 ```
 
-If you get path errors during `pipenv synd -d`, delete your local `Pipenv.lock` file and re-run the lock and sync process.
-```bash
-rm Pipfile.lock
-pipenv lock
-pipenv sync -d
+**Step 2:** Install dependencies with `poetry`. In the root of this repository run:
+
 ```
+poetry install
+```
+
+**Step 3:** Run programs in this repository with:
+
+```
+poetry run python [...].py
+```
+
+### Manually
+
+To install the dependencies manually consult your favorite package manager, for example:
+
+```
+sudo pacman -S python-cryptography python-aiohttp python-aiofiles
+```
+
+You should then be able to run programs with:
+
+```
+python [...].py
+```
+
+> [!IMPORTANT]
+> The manual method can not check your python version so please make sure that yours is [supported](#python-versions).
 
 # Anker Account Information
 
@@ -180,7 +206,7 @@ Device type | Description
 ## test_api.py
 
 ```
-> pipenv run ./test_api.py
+poetry run python ./test_api.py
 ```
 
 Example exec module that can be used to explore and test AnkerSolixApi methods or direct endpoint requests with parameters. You can modify this module as required. Optionally you can create your own test file called `client.py` starting with the usage example above. This file is not indexed and added to gitignore, so your local changes are not tracked for git updates/commits.
@@ -196,7 +222,7 @@ _CREDENTIALS = {
 ## export_system.py
 
 ```
-> pipenv run ./export_system.py
+poetry run python ./export_system.py
 ```
 
 Example exec module to use the Anker Api for export of defined system data and device details.
@@ -211,7 +237,7 @@ Optionally the AnkerSolixApi class can use the json files for debugging and test
 ## monitor.py
 
 ```
-> pipenv run ./monitor.py
+poetry run python ./monitor.py
 ```
 
 Example exec module to use the Anker Api for continuously querying and displaying important Anker power device parameters.
@@ -229,7 +255,7 @@ When using monitoring from local json file folder, the values will not change. B
 ## energy_csv.py
 
 ```
-> pipenv run ./energy_csv.py
+poetry run python ./energy_csv.py
 ```
 
 Example exec module to use the Anker Api for export of daily Energy Data. This method will prompt for the Anker account details if not pre-set in the header.
