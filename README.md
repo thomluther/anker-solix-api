@@ -26,46 +26,54 @@ The library is currently supported on
 
 # Required libraries
 
-The dependencies of this project are `cryptography`, `aiohttp`, `aiofiles`.  
+The dependencies of this project are `cryptography`, `aiohttp`, `aiofiles`.
 You can either install them manually (e.g. via a package manager) or use [`poetry`](https://github.com/python-poetry/poetry).
 
-### Poetry
+## Poetry
 
 **Step 1:** Install `poetry` following the [official documentation](https://python-poetry.org/docs/#installation) or via your favorite package manager,
 for example:
-
+```shell
+sudo pip install poetry
 ```
+or
+```shell
 sudo pacman -S python-poetry
 ```
 
 **Step 2:** Install dependencies with `poetry`. In the root of this repository run:
 
-```
+```shell
 poetry install
 ```
 
 **Step 3:** Run programs in this repository with:
 
-```
+```shell
 poetry run python [...].py
 ```
 
-### Manually
+## Manually
 
 To install the dependencies manually consult your favorite package manager, for example:
 
+```shell
+sudo pip install cryptography aiohttp aiofiles
 ```
+or
+```shell
 sudo pacman -S python-cryptography python-aiohttp python-aiofiles
 ```
 
 You should then be able to run programs with:
 
-```
+```shell
 python [...].py
 ```
 
 > [!IMPORTANT]
 > The manual method can not check your python version so please make sure that yours is [supported](#python-versions).
+
 
 # Anker Account Information
 
@@ -142,16 +150,16 @@ if __name__ == "__main__":
 # Data polling
 
 The AnkerSolixApi class starts an AnkerSolixApiSession to handle the Api connection for the provided Anker user account.
-The AnkerSolixApi class provides also methods that utilize the `power_service` endpoints and it provides 4 main methods to query data and cache them into internal dictionaries:
+The AnkerSolixApi class provides also methods that utilize the `power_service` endpoints and it provides 4 main methods to query data and cache them into internal dictionaries (the Api cache):
 
-- `AnkerSolixApi.update_sites()` to query overview data for all accessible sites and store data in dictionaries `AnkerSolixApi.sites` and `AnkerSolixApi.devices` for quick access.
+- `AnkerSolixApi.update_sites()` to query overview data for all accessible sites and store data in dictionaries `AnkerSolixApi.sites`, `AnkerSolixApi.devices` and `AnkerSolixApi.account` for quick access.
 
-  This method could be run in regular intervals (60sec or more) to fetch new data of the systems. Note that the system devices update the cloud data only once per minute, therefore less than 60 second intervals do not provide much benefit
+  This method could be run in regular intervals (60 sec or more) to fetch new data of the systems. Note that the main system device updates the data in the cloud max. once every minute or even every 5 minutes. Therefore, less than 60 second intervals do not provide much benefit.
 
-- `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query or for stand alone devices and store data in dictionary `AnkerSolixApi.devices`
+- `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query or for stand alone devices and store data in dictionary `AnkerSolixApi.devices`.
 
   This method should be run less frequently since this will mostly fetch various device configuration settings and needs multiple queries.
-  It currently is developed for Solarbank and Inverter devices only. Further device types such as Power Panels or Home Energy Systems have a corresponding method in their api class and will be used and merged accordingly. This method should be used first before the any of the 2 following methods is used, since it may create virtual sites for stand alone devices that track also energy statistics in the cloud, but are not reported by the update_sites() method.
+  It currently is developed for Solarbank and Inverter devices only. Further device types such as Power Panels or Home Energy Systems (X1) have a corresponding method in their api class, which will be used and merged accordingly. This method should be used first, before any of the 2 following methods is used, since it may create virtual sites for stand alone devices that track also energy statistics in the cloud, but are not reported by the update_sites() method.
 
 - `AnkerSolixApi.update_site_details()` to query further settings for the defined site (power system) and store data in dictionary `AnkerSolixApi.sites` for quick access.
 
@@ -159,16 +167,16 @@ The AnkerSolixApi class provides also methods that utilize the `power_service` e
 
 - `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices from each site and store data in dictionary `AnkerSolixApi.sites` for quick access.
 
-  This method should be run less frequently since this will fetch 4-6 queries per site depending on found device types. With version 2.0.0, solarbank, inverter and smart meter devices are supported. However it was noticed, that the energy statistics endpoint (probably each endpoint) is limited to 25-30 queries per minute. As of Feb 2025, the endpoint limit was further reduced to 10-12 requests per endpoint per minute for certain endpoints.
+  This method should be run less frequently since this will fetch 4-6 queries per site depending on found device types. With version 2.0.0, solarbank, inverter and smart meter devices are supported. However it was noticed, that the energy statistics endpoint (probably each endpoint) is limited to 25-30 queries per minute. As of Feb 2025, the endpoint limit for energy statistics was further reduced to 10-12 requests per minute.
 
 The code of these 4 main methods has been separated into the [`poller.py`](api/poller.py) module. To reduce the size of the ever growing AnkerSolixApi class in the [`api.py`](api/api.py) module, a common base class AnkerSolixBaseApi was introduced with common attributes and methods that may be used by different Api client types. The AnkerSolixApi class enhances the base class for methods required to support balcony power systems. Due to the size of the required methods, they have been separated into various python modules and are simply imported into the main AnkerSolixApi class in the api module. The known Anker Cloud Api endpoints are all documented in the [`apitypes.py`](api/apitypes.py) module. However, parameter usage for many of them is unknown and still need to be explored for useful information.
-If additional `charging_energy_service` endpoints (for Power Panels / Power Stations ?) and/or `charging_hes_svc` endpoints (for Home Energy Systems like X1 ?) will be tested and documented by the community in future, a new AnkerSolixApi alike class based on AnkerSolixBaseApi class should be created for each endpoint type or power system category. Since Anker accounts may utilize different power system types in parallel, they should share the same instance of the created AnkerSolixApiSession for the user account. If any AnkerSolixApiSession instance was already created for the user account, the AnkerSolixApi class can be instanced with the AnkerSolixApiSession instance instead of the Anker Account credentials.
+If additional `charging_energy_service` endpoints (for Power Panels) and/or `charging_hes_svc` endpoints (for Home Energy Systems like X1) will be tested and documented by the community in future, a new AnkerSolixApi alike class based on AnkerSolixBaseApi class should be created for each endpoint type or power system category. Since Anker accounts may utilize different power system types in parallel, they should share the same instance of the created AnkerSolixApiSession for the user account. If any AnkerSolixApiSession instance was already created for the user account, the AnkerSolixApi class can be instanced with the AnkerSolixApiSession instance instead of the Anker Account credentials.
 
 Check out the given example code and [`test_api.py`](./test_api.py) or other python executable tools that may help to leverage and explore the Api for your Anker power system.
 The subfolder [`examples`](./examples) contains actual or older example exports with json files using anonymized responses of the [`export_system.py`](./export_system.py) module giving you an idea of how various Api responses look like. Those json files can also be used to develop/debug the Api for system constellations not available to the developer.
 
 > [!IMPORTANT]
-> The cloud api response structure may change over time without notice because additional fields have been added to support new functionalities. Hopefully existing fields will not be modified to ensure backward compatibility.
+> The cloud api response structure may change over time without notice because additional fields will be added to support new devices or functionalities. Hopefully existing fields will not be modified to ensure backward compatibility.
 
 
 # Api cache hierarchy generated by data poller methods
@@ -205,7 +213,7 @@ Device type | Description
 
 ## test_api.py
 
-```
+```shell
 poetry run python ./test_api.py
 ```
 
@@ -221,7 +229,7 @@ _CREDENTIALS = {
 
 ## export_system.py
 
-```
+```shell
 poetry run python ./export_system.py
 ```
 
@@ -232,11 +240,11 @@ You can review the response files afterwards. They can be used as examples for d
 Optionally the AnkerSolixApi class can use the json files for debugging and testing on various system outputs.
 
 > [!NOTE]
-> You should preferably run the export_system.py with the owner account of the power system. Otherwise only limited information can be exported by shared accounts due to access permissions.
+> You should preferably run the `export_system.py` with the owner account of the power system. Otherwise only limited information can be exported by shared accounts due to access permissions.
 
 ## monitor.py
 
-```
+```shell
 poetry run python ./monitor.py
 ```
 
@@ -254,7 +262,7 @@ When using monitoring from local json file folder, the values will not change. B
 
 ## energy_csv.py
 
-```
+```shell
 poetry run python ./energy_csv.py
 ```
 

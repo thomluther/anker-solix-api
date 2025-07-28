@@ -9,6 +9,7 @@
 .coverage
 .vscode
 coverage.xml
+poetry.lock
 
 # files potentially containing personal credentials or data
 **/authcache
