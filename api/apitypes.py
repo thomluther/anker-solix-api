@@ -785,7 +785,7 @@ class SolixDeviceCategory:
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX F3000  Portable Power Station with SM support (US Market)
+    )  # SOLIX F3000 Portable Power Station with SM support (US Market)
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
     # Home Power Panels
