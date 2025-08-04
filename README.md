@@ -77,13 +77,15 @@ python [...].py
 
 # Anker Account Information
 
-Because of the way the Anker Solix Cloud Api works, one account with email/password cannot be used for the Anker mobile app and this Api in parallel.
-The Anker Solix Cloud allows only one request token per account at any time. Each new authentication request by a client will create a new token and drop a previous token.
-Therefore usage of this Api may kick out your account login in the mobile app. However, starting with Anker mobile app release 2.0, you can share your defined system(s) with 'family members'. Therefore it is recommended to create a second Anker account with a different email address and share your defined system(s) with the second account.
+Because of the way the Anker Solix Cloud Api was working, one account with email/password could not be used for the Anker mobile app and this Api in parallel.
+The Anker Solix Cloud allowed only one login token per account at any time. Each new login request by a client will create a new token and the previous token on the server was dropped. For that reason, it was not possible to use this Api client and your mobile app with the same account in parallel. Starting with Anker mobile app release 2.0, you could share your owned system(s) with 'family members'. Since then it was possible to create a second Anker account with a different email address and share your owned system(s) with one or more secondary accounts as member.
 
-> [!IMPORTANT]
+> [!NOTE]
 > A shared account is only a member of the shared system, and as such currently has no permissions to access or query device details of the shared system.
 Therefore an Api homepage query will neither display any data for a shared account. However, a shared account can receive Api scene/site details of shared systems (app system = Api site), which is equivalent to what is displayed in the mobile app on the home screen for the selected system.
+
+> [!IMPORTANT]
+> Starting end of July 2025 and with version 3.10 of the Anker mobile app, one account can now be used across multiple devices in parallel. That means active login tokens are no longer deleted upon login of another client and parallel account usage becomes possible. Actually there is **NO NEED ANYMORE** to create a second account and share the system with it, since the main account can now be used in parallel across multiple devices and clients.
 
 
 # Usage

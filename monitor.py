@@ -356,8 +356,19 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Accessory':<{col1}}: {fitting.get('device_name', ''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
                         )
+                    wt = dev.get("wireless_type") or ""
+                    net = (
+                        ((dev.get("relate_type") or [])[int(wt) : int(wt) + 1] or [""])[
+                            0
+                        ]
+                        if str(wt).isdigit()
+                        else ""
+                    )
                     CONSOLE.info(
-                        f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name', ''):<{col2}}"
+                        f"{'Wireless Type':<{col1}}: {(dev.get('wireless_type') or '') + (' (' + (net.capitalize() or 'Unknown') + ')') if wt else '':<{col2}} {'Bluetooth MAC':<{col3}}: {dev.get('bt_ble_mac') or ''}"
+                    )
+                    CONSOLE.info(
+                        f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name', ''):<{col2}} {'Wifi MAC':<{col3}}: {dev.get('wifi_mac') or ''}"
                     )
                     online = dev.get("wifi_online")
                     CONSOLE.info(
@@ -414,13 +425,13 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             name1 = names.get("pv1_name") or ""
                             name2 = names.get("pv2_name") or ""
                             CONSOLE.info(
-                                f"{'Solar Ch_1':<{col1}}: {dev.get('solar_power_1', '---'):>4} {unit+(' ('+name1+')' if name1 else ''):<{col2 - 5}} {'Solar Ch_2':<{col3}}: {dev.get('solar_power_2', '---'):>4} {unit+str(' ('+name2+')' if name2 else '')}"
+                                f"{'Solar Ch_1':<{col1}}: {dev.get('solar_power_1', '---'):>4} {unit + (' (' + name1 + ')' if name1 else ''):<{col2 - 5}} {'Solar Ch_2':<{col3}}: {dev.get('solar_power_2', '---'):>4} {unit + str(' (' + name2 + ')' if name2 else '')}"
                             )
                             if "solar_power_3" in dev:
                                 name1 = names.get("pv3_name") or ""
                                 name2 = names.get("pv4_name") or ""
                                 CONSOLE.info(
-                                    f"{'Solar Ch_3':<{col1}}: {dev.get('solar_power_3', '---'):>4} {unit+(' ('+name1+')' if name1 else ''):<{col2 - 5}} {'Solar Ch_4':<{col3}}: {dev.get('solar_power_4', '---'):>4} {unit+(' ('+name2+')' if name2 else '')}"
+                                    f"{'Solar Ch_3':<{col1}}: {dev.get('solar_power_3', '---'):>4} {unit + (' (' + name1 + ')' if name1 else ''):<{col2 - 5}} {'Solar Ch_4':<{col3}}: {dev.get('solar_power_4', '---'):>4} {unit + (' (' + name2 + ')' if name2 else '')}"
                                 )
                         if "pei_heating_power" in dev:
                             CONSOLE.info(
@@ -429,7 +440,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if "grid_to_battery_power" in dev:
                             name2 = names.get("micro_inverter_name") or ""
                             CONSOLE.info(
-                                f"{'Grid to Battery':<{col1}}: {dev.get('grid_to_battery_power', '---'):>4} {unit:<{col2 - 5}} {'Inverter Power':<{col3}}: {dev.get('micro_inverter_power', '---'):>4} {unit+(' ('+name2+')' if name2 else '')}"
+                                f"{'Grid to Battery':<{col1}}: {dev.get('grid_to_battery_power', '---'):>4} {unit:<{col2 - 5}} {'Inverter Power':<{col3}}: {dev.get('micro_inverter_power', '---'):>4} {unit + (' (' + name2 + ')' if name2 else '')}"
                             )
                         if "micro_inverter_power_limit" in dev:
                             CONSOLE.info(
@@ -563,6 +574,38 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.warning(
                             "No Solarbank, Inverter, Smart Meter, Smart Plug, Power Panel or HES device, further device details will be skipped"
                         )
+                # print optional user vehicles
+                if vehicles := myapi.account.get("vehicles") or {}:
+                    CONSOLE.info("=" * 80)
+                    CONSOLE.info(
+                        f"Electric vehicle details for user '{myapi.account.get('nickname') or 'Unknown'}':"
+                    )
+                    keys = set(vehicles.keys())
+                    for vehicleId, vehicle in vehicles.items():
+                        CONSOLE.info(
+                            f"{'EV Name':<{col1}}: {vehicle.get('vehicle_name', 'Unknown')}  (Vehicle ID: {vehicleId})"
+                        )
+                        CONSOLE.info(
+                            f"{'EV Brand':<{col1}}: {vehicle.get('brand', 'Unknown'):<{col2}} {'EV model':<{col3}}: {vehicle.get('model', 'Unknown')}"
+                        )
+                        value1 = vehicle.get('energy_consumption_per_100km')
+                        value1 = f"{float(value1):.1f}" if str(value1).replace(".","",1).isdigit() else "--.-"
+                        CONSOLE.info(
+                            f"{'Consumption':<{col1}}: {value1:>4} {'kWh / 100 km':<{col2-5}} {'EV Year':<{col3}}: {vehicle.get('productive_year', '----')!s}"
+                        )
+                        value1 = vehicle.get('battery_capacity')
+                        value1 = f"{float(value1):.1f}" if str(value1).replace(".","",1).isdigit() else "--.-"
+                        value2 = vehicle.get('ac_max_charging_power')
+                        value2 = f"{float(value2):.1f}" if str(value2).replace(".","",1).isdigit() else "--.-"
+                        CONSOLE.info(
+                            f"{'Capacity':<{col1}}: {value1:>4} {'kWh':<{col2-5}} {'Charge Limit':<{col3}}: {value2:>4} kW"
+                        )
+                        CONSOLE.info(
+                            f"{'Is Charging':<{col1}}: {('YES' if vehicle.get('is_smart_charging') else 'NO'):<{col2}} {'Is Default EV':<{col3}}: {('YES' if vehicle.get('is_default_vehicle') else 'NO')}"
+                        )
+                        keys.discard(vehicleId)
+                        if keys:
+                            CONSOLE.info("-" * 80)
                 # print optional energy details
                 if energy_stats:
                     for site_id, site in [
