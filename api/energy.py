@@ -293,7 +293,7 @@ async def energy_daily(  # noqa: C901
                     {
                         "date": daystr,
                         # grid export is negative, convert to re-use as solar_to_grid value
-                        "solar_to_grid": item.get("value", "").replace("-", "") or None,
+                        "solar_to_grid": item.get("value", "").replace("-", "",1) or None,
                     }
                 )
                 table.update({daystr: entry})

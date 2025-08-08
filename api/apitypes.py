@@ -594,6 +594,7 @@ class SolixDeviceType(Enum):
     SOLARBANK_PPS = "solarbank_pps"
     CHARGER = "charger"
     EV_CHARGER = "ev_charger"
+    VEHICLE = "vehicle"
 
 
 class SolixParmType(Enum):
@@ -1182,32 +1183,71 @@ class SolixVehicle:
     vehicle: InitVar[dict | str | None] = None
 
     def __post_init__(self, vehicle) -> None:
-        """Init the dataclass from an optional vehicle representation or dictionary."""
+        """Post init the dataclass from an optional vehicle representation or dictionary."""
         if isinstance(vehicle, dict):
             self.update(attributes=vehicle)
         elif isinstance(vehicle, str) and (keys := vehicle.split("/")):
-            self.brand = s if (s := (keys[0:1] or [None])[0]) != "-" else ""
-            self.model = s if (s := (keys[1:2] or [None])[0]) != "-" else ""
-            self.productive_year = (
-                int(s) if str(s := (keys[2:3] or [None])[0]).isdigit() else 0
+            self.update(
+                attributes={
+                    "brand:": s if (s := (keys[0:1] or [None])[0]) != "-" else "",
+                    "model": s if (s := (keys[1:2] or [None])[0]) != "-" else "",
+                    "productive_year": (keys[2:3] or [None])[0],
+                    "id": (keys[3:4] or [None])[0],
+                }
             )
-            self.id = int(s) if str(s := (keys[3:4] or [None])[0]).isdigit() else None
+        else:
+            # General type conversion for parameters as required
+            self.brand = str(self.brand) if self.brand else ""
+            self.model = str(self.model) if self.model else ""
+            self.productive_year = (
+                int(self.productive_year) if str(self.productive_year).isdigit() else 0
+            )
+            self.id = int(self.id) if str(self.id).isdigit() else None
+            self.battery_capacity = (
+                float(self.battery_capacity)
+                if str(self.battery_capacity).replace(".", "", 1).isdigit()
+                else 0
+            )
+            self.ac_max_charging_power = (
+                float(self.ac_max_charging_power)
+                if str(self.ac_max_charging_power).replace(".", "", 1).isdigit()
+                else 0
+            )
+            self.energy_consumption_per_100km = (
+                float(self.energy_consumption_per_100km)
+                if str(self.energy_consumption_per_100km).replace(".", "", 1).isdigit()
+                else 0
+            )
 
     def __str__(self) -> str:
         """Print the class fields."""
-        return f"{self.brand or '-'}/{self.model or '-'}/{self.productive_year or '-'}"
+        return f"{(self.brand or '-')!s}/{(self.model or '-')!s}/{(self.productive_year or '-')!s}"
+
+    def idAttributes(self) -> str:
+        """Print the model ID with key attribute fields."""
+        return f"{(self.id or '-')!s}/{(self.battery_capacity or '-')!s} kWh/{(self.ac_max_charging_power or '-')!s} kW"
 
     def update(self, attributes: dict) -> None:
         """Update attributes based on provided dictionary fields."""
         if isinstance(attributes, dict):
-            self.brand = attributes.get("brand") or attributes.get("brand_name") or self.brand
-            self.model = attributes.get("model") or attributes.get("model_name") or self.model
+            self.brand = (
+                str(brand)
+                if (brand := attributes.get("brand") or attributes.get("brand_name"))
+                else self.brand
+            )
+            self.model = (
+                str(model)
+                if (model := attributes.get("model") or attributes.get("model_name"))
+                else self.model
+            )
             self.productive_year = (
                 int(year)
                 if str(year := attributes.get("productive_year")).isdigit()
                 else self.productive_year
             )
-            self.id = int(vid) if str(vid := attributes.get("id")).isdigit() else self.id
+            self.id = (
+                int(vid) if str(vid := attributes.get("id")).isdigit() else self.id
+            )
             self.battery_capacity = (
                 float(capacity)
                 if str(capacity := attributes.get("battery_capacity"))
@@ -1217,14 +1257,20 @@ class SolixVehicle:
             )
             self.ac_max_charging_power = (
                 float(limit)
-                if str(limit := attributes.get("ac_max_charging_power") or attributes.get("ac_max_power"))
+                if str(
+                    limit := attributes.get("ac_max_charging_power")
+                    or attributes.get("ac_max_power")
+                )
                 .replace(".", "", 1)
                 .isdigit()
                 else self.ac_max_charging_power
             )
             self.energy_consumption_per_100km = (
                 float(consumption)
-                if str(consumption := attributes.get("energy_consumption_per_100km") or attributes.get("hundred_fuel_consumption"))
+                if str(
+                    consumption := attributes.get("energy_consumption_per_100km")
+                    or attributes.get("hundred_fuel_consumption")
+                )
                 .replace(".", "", 1)
                 .isdigit()
                 else self.energy_consumption_per_100km

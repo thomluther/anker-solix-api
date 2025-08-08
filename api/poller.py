@@ -771,6 +771,8 @@ async def poll_device_details(
                 api.apisession.nickname,
             )
             await api.get_brand_list(fromFile=fromFile)
+            # mark registration of vehicles to load required options to cache once
+            api.account["vehicles_registered"] = []
         # Fetch vehicle details for account
         api._logger.debug(
             "Getting api %s vehicle details for user",

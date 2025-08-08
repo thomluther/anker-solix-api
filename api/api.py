@@ -84,6 +84,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         get_vehicle_list,
         get_vehicle_options,
         manage_vehicle,
+        update_vehicle_options,
     )
 
     def __init__(
