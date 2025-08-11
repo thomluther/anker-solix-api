@@ -80,6 +80,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         get_brand_models,
         get_model_year_attributes,
         get_model_years,
+        get_vehicle_attributes,
         get_vehicle_details,
         get_vehicle_list,
         get_vehicle_options,

@@ -1176,7 +1176,7 @@ class SolixVehicle:
     brand: str = ""
     model: str = ""
     productive_year: int = 0
-    id: int | None = None
+    model_id: int | None = None
     battery_capacity: float = 0
     ac_max_charging_power: float = 0
     energy_consumption_per_100km: float = 0
@@ -1192,7 +1192,7 @@ class SolixVehicle:
                     "brand:": s if (s := (keys[0:1] or [None])[0]) != "-" else "",
                     "model": s if (s := (keys[1:2] or [None])[0]) != "-" else "",
                     "productive_year": (keys[2:3] or [None])[0],
-                    "id": (keys[3:4] or [None])[0],
+                    "model_id": (keys[3:4] or [None])[0],
                 }
             )
         else:
@@ -1202,7 +1202,7 @@ class SolixVehicle:
             self.productive_year = (
                 int(self.productive_year) if str(self.productive_year).isdigit() else 0
             )
-            self.id = int(self.id) if str(self.id).isdigit() else None
+            self.model_id = int(self.model_id) if str(self.model_id).isdigit() else None
             self.battery_capacity = (
                 float(self.battery_capacity)
                 if str(self.battery_capacity).replace(".", "", 1).isdigit()
@@ -1225,7 +1225,7 @@ class SolixVehicle:
 
     def idAttributes(self) -> str:
         """Print the model ID with key attribute fields."""
-        return f"{(self.id or '-')!s}/{(self.battery_capacity or '-')!s} kWh/{(self.ac_max_charging_power or '-')!s} kW"
+        return f"{('-' if self.model_id is None else self.model_id)!s}/{(self.battery_capacity or '-')!s} kWh/{(self.ac_max_charging_power or '-')!s} kW"
 
     def update(self, attributes: dict) -> None:
         """Update attributes based on provided dictionary fields."""
@@ -1245,8 +1245,12 @@ class SolixVehicle:
                 if str(year := attributes.get("productive_year")).isdigit()
                 else self.productive_year
             )
-            self.id = (
-                int(vid) if str(vid := attributes.get("id")).isdigit() else self.id
+            self.model_id = (
+                int(mid)
+                if str(
+                    mid := attributes.get("id") or attributes.get("model_id")
+                ).isdigit()
+                else self.model_id
             )
             self.battery_capacity = (
                 float(capacity)
