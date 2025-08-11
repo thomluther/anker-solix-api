@@ -725,7 +725,7 @@ async def poll_site_details(
     return api.sites
 
 
-async def poll_device_details(
+async def poll_device_details(  # noqa: C901
     api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the latest updates for additional device info updated less frequently.
