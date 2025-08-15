@@ -436,7 +436,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 )
                         if "pei_heating_power" in dev:
                             CONSOLE.info(
-                                f"{'Other Input':<{col1}}: {dev.get('other_input_power', '---'):>4} {unit:<{col2 - 5}} {'Heating Power':<{col3}}: {dev.get('pei_heating_power', '---'):>4} {unit}"
+                                f"{'AC Input Power':<{col1}}: {dev.get('other_input_power', '---'):>4} {unit:<{col2 - 5}} {'Heating Power':<{col3}}: {dev.get('pei_heating_power', '---'):>4} {unit}"
                             )
                         if "grid_to_battery_power" in dev:
                             name2 = names.get("micro_inverter_name") or ""
@@ -447,9 +447,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Inverter Limit':<{col1}}: {dev.get('micro_inverter_power_limit', '---'):>4} {unit:<{col2 - 5}} {'Low Limit':<{col3}}: {dev.get('micro_inverter_low_power_limit', '---'):>4} {unit}"
                             )
-
                         CONSOLE.info(
-                            f"{'Battery Charge':<{col1}}: {dev.get('bat_charge_power', '---'):>4} {unit:<{col2 - 5}}"
+                            f"{'Battery Charge':<{col1}}: {dev.get('bat_charge_power', '---'):>4} {unit:<{col2 - 5}} {'Battery Dischrg':<{col3}}: {dev.get('bat_discharge_power', '---'):>4} {unit}"
                         )
                         preset = dev.get("set_output_power") or "---"
                         site_preset = dev.get("set_system_output_power") or "---"

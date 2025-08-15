@@ -543,14 +543,14 @@ class AnkerSolixApiExport:
                 or {}
             ).get("brand_list") or []
             for vehicle in vehicles or [SolixVehicle()]:
-                brand = vehicle.brand or str(random.choice(brands or [""]))
+                brand = vehicle.brand if vehicle.brand in brands else str(random.choice(brands or [""]))
                 response = await self.query(
                     endpoint=API_ENDPOINTS["get_vehicle_brand_models"],
                     filename=f"{API_FILEPREFIXES['get_vehicle_brand_models']}_{brand.replace(' ', '_')}.json",
                     payload={"brand_name": brand},
                 )
                 if items := ((response or {}).get("data") or {}).get("model_list"):
-                    model = vehicle.model or str(random.choice(items))
+                    model = vehicle.model if vehicle.model in items else str(random.choice(items))
                     response = await self.query(
                         endpoint=API_ENDPOINTS["get_vehicle_model_years"],
                         filename=f"{API_FILEPREFIXES['get_vehicle_model_years']}_{brand.replace(' ', '_')}_{model.replace(' ', '_')}.json",
@@ -559,7 +559,7 @@ class AnkerSolixApiExport:
                     if items := ((response or {}).get("data") or {}).get(
                         "year_list"
                     ):
-                        year = vehicle.productive_year or random.choice(items)
+                        year = vehicle.productive_year if vehicle.productive_year in items else random.choice(items)
                         await self.query(
                             endpoint=API_ENDPOINTS["get_vehicle_year_attributes"],
                             filename=f"{API_FILEPREFIXES['get_vehicle_year_attributes']}_{brand.replace(' ', '_')}_{model.replace(' ', '_')}_{year!s}.json",
@@ -1034,6 +1034,39 @@ class AnkerSolixApiExport:
                             "end": datetime.today().strftime("%Y-%m-%d"),
                             "version": "1",
                         },
+                        replace=[(sn, "<deviceSn>")],
+                    )
+
+                # export data for Charger devices
+                if device.get("type") == api.SolixDeviceType.CHARGER.value:
+                    model = device.get("device_pn") or ""
+                    self._logger.info(
+                        "Exporting Power Charger specific data for device %s SN %s...",
+                        device.get("name", ""),
+                        self._randomize(sn, "_sn"),
+                    )
+                    await self.query(
+                        endpoint=API_ENDPOINTS["charger_get_screensavers"],
+                        filename=f"{API_FILEPREFIXES['charger_get_screensavers']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"device_sn": sn, "product_code": model},
+                        replace=[(sn, "<deviceSn>")],
+                    )
+                    await self.query(
+                        endpoint=API_ENDPOINTS["charger_get_charging_modes"],
+                        filename=f"{API_FILEPREFIXES['charger_get_charging_modes']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"device_sn": sn},
+                        replace=[(sn, "<deviceSn>")],
+                    )
+                    await self.query(
+                        endpoint=API_ENDPOINTS["charger_get_triggers"],
+                        filename=f"{API_FILEPREFIXES['charger_get_triggers']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"device_sn": sn},
+                        replace=[(sn, "<deviceSn>")],
+                    )
+                    await self.query(
+                        endpoint=API_ENDPOINTS["charger_get_device_setting"],
+                        filename=f"{API_FILEPREFIXES['charger_get_device_setting']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"device_sn": sn},
                         replace=[(sn, "<deviceSn>")],
                     )
 

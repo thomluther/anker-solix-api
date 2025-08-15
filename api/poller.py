@@ -261,15 +261,15 @@ async def poll_sites(  # noqa: C901
                 sb_total_solar = sb_info.get("total_photovoltaic_power", "")
                 sb_total_battery_discharge = sb_info.get("battery_discharge_power", "")
                 sb_total_soc = sb_info.get("total_battery_power", "")
+                sb_grid_charge = sb_info.get("grid_to_battery_power", "")
                 sb_total_charge_calc = 0
                 sb_total_casc_out_calc = 0
                 sb_charges: dict = {}
                 sb_list = sb_info.get("solarbank_list") or []
+                sb_types = {sb.get("device_pn") for sb in sb_list}
+                multisystem = len(sb_list) > 1 and "A17C0" not in sb_types
                 # Mark if SB system contains cascaded solarbanks for proper totals calculation
-                if (
-                    cascaded_system := len({sb.get("device_pn") for sb in sb_list}) > 1
-                    or None
-                ):
+                if cascaded_system := len(sb_types) > 1 and "A17C0" in sb_types:
                     sb_total_output_calc = 0
                     sb_total_solar_calc = 0
                     sb_total_battery_discharge_calc = 0
@@ -309,7 +309,7 @@ async def poll_sites(  # noqa: C901
                                 "current_home_load": total_preset,
                             }
                         )
-                    # Mark SB1 cascaded of other SB types in system
+                    # Mark SB1 cascaded if other SB types in system
                     cascaded = (
                         sb_count != len(sb_list)
                         and solarbank.get("device_pn") in ["A17C0"]
@@ -332,14 +332,20 @@ async def poll_sites(  # noqa: C901
                         # power_charge = int(solarbank.get("charging_power", "")) # This value seems to reflect the output or discharge power, which is correct for status 2, but may be wrong for other states
                         # charge and discharge power will be combined into charging_power field to eliminate cloud field inconsistency and use negative values for discharge power
                         # The cloud introduced new solarbank field bat_charge_power which seems to reflect the positive charging power. It will be used if larger than calculated power
+                        # The cloud later introduced new solarbank field bat_discharge_power, which seems to reflect the positive discharging power. However, this does not always match up with
+                        # output and PV power of the device. It is assumed to be a calculated value especially for multisystems, to mask the time lag between data of individual solarbanks and to
+                        # match the total system values broken down to devices. Like the bat_charge_power, it seems to be the value presented in the app home screen per solarbank.
                         batt_charge = int(solarbank.get("bat_charge_power") or 0)
+                        batt_discharge = int(solarbank.get("bat_discharge_power") or 0)
                         if (charge_calc := power_in - power_out) >= 0:
                             # No discharging, use the bat charge value if available in response
                             charge_calc = max(charge_calc, batt_charge)
-                        solarbank["charging_power"] = str(
-                            charge_calc
-                        )  # allow negative values
-                        # calculate correct totals
+                        elif batt_discharge > 0:
+                            # use new field preferably if discharge value available
+                            charge_calc = -1 * batt_discharge
+                        # allow negative values for field being used as battery power
+                        solarbank["charging_power"] = str(charge_calc)
+                        # calculate correct totals, only used for cascaded SB1 systems
                         sb_total_charge_calc += charge_calc
                         if cascaded_system:
                             # accumulate all PV per device, substract cascaded output total at the end
@@ -356,35 +362,47 @@ async def poll_sites(  # noqa: C901
                             else:
                                 # Solarbank is last device
                                 sb_total_output_calc += power_out
-
+                        elif multisystem:
+                            # set device grid charge to battery
+                            sb_grid_charge = batt_charge
                     mysite["solarbank_info"]["solarbank_list"][index] = solarbank
                     new_sites.update({myid: mysite})
                     # add count of same solarbanks to device details and other metrics that might be device related
+                    # those will be filtered in update method depending on model
+                    # NOTE: Common solarbank info cannot longer be mapped to device for multisystems. Prefer device data for mapping if available
+                    # Prioritize device PV channel data if available for multisystem support
+                    pv_power = solarbank.get("pv_power") or {}
                     if sn := api._update_dev(
                         solarbank.copy()
                         | {
                             "data_valid": data_valid,
                             "solarbank_count": sb_count,
+                            # Pass active usage mode
+                            "scene_mode": mysite.get('scene_mode'),
                             # mark SB1 cascaded if other type in system
                             "cascaded": cascaded,
-                            "solar_power_1": sb_info.get("solar_power_1"),
-                            "solar_power_2": sb_info.get("solar_power_2"),
-                            "solar_power_3": sb_info.get("solar_power_3"),
-                            "solar_power_4": sb_info.get("solar_power_4"),
+                            "solar_power_1": pv_power.get("pv1")
+                            or sb_info.get("solar_power_1"),
+                            "solar_power_2": pv_power.get("pv2")
+                            or sb_info.get("solar_power_2"),
+                            "solar_power_3": pv_power.get("pv3")
+                            or sb_info.get("solar_power_3"),
+                            "solar_power_4": pv_power.get("pv4")
+                            or sb_info.get("solar_power_4"),
                             "ac_power": sb_info.get("ac_power"),
                             "to_home_load": sb_info.get("to_home_load"),
                             "other_input_power": sb_info.get("other_input_power"),
-                            "micro_inverter_power": sb_info.get("micro_inverter_power"),
+                            "micro_inverter_power": pv_power.get("micro_inverter")
+                            or sb_info.get("micro_inverter_power"),
                             "micro_inverter_power_limit": sb_info.get(
                                 "micro_inverter_power_limit"
                             ),
                             "micro_inverter_low_power_limit": sb_info.get(
                                 "micro_inverter_low_power_limit"
                             ),
-                            "grid_to_battery_power": sb_info.get(
-                                "grid_to_battery_power"
-                            ),
-                            "pei_heating_power": sb_info.get("pei_heating_power"),
+                            "grid_to_battery_power": str(sb_grid_charge),
+                            "pei_heating_power": solarbank.get("heating_power")
+                            or sb_info.get("pei_heating_power"),
                             # only passed to device for proper SB2 charge status update
                             "home_load_power": mysite.get("home_load_power"),
                         },
@@ -429,7 +447,10 @@ async def poll_sites(  # noqa: C901
                         mysite["solarbank_info"]["battery_discharge_power"] = str(
                             sb_total_battery_discharge_calc
                         )
+                elif multisystem:
+                    pass
                 # otherwise adjust calculated SB charge to match total if only one SB type
+                # skip the charge adjustment for multisystems
                 elif str(sb_total_charge).isdigit():
                     sb_total_charge = int(sb_total_charge)
                     if sb_total_charge_calc < 0:
@@ -445,7 +466,7 @@ async def poll_sites(  # noqa: C901
                         api.devices[sn]["charging_power"] = str(
                             0
                             if sb_total_charge_calc == 0
-                            else int(sb_total_charge / sb_total_charge_calc * charge)
+                            else round(sb_total_charge / sb_total_charge_calc * charge)
                         )
                         # Update also the charge status description which may change after charging power correction
                         charge_status = api.devices[sn].get("charging_status")
@@ -545,7 +566,9 @@ async def poll_sites(  # noqa: C901
                     ):
                         # merge powerpanel device details in place if available from powerpanel api
                         if api.powerpanelApi:
-                            api.devices[sn] = api.devices[sn] | (api.powerpanelApi.devices.get(sn) or {})
+                            api.devices[sn] = api.devices[sn] | (
+                                api.powerpanelApi.devices.get(sn) or {}
+                            )
                         api._site_devices.add(sn)
                 # Extract actual dynamic price if supported and not excluded
                 if {ApiCategories.site_price} - exclude:
@@ -778,8 +801,12 @@ async def poll_device_details(  # noqa: C901
             "Getting api %s vehicle details for user",
             api.apisession.nickname,
         )
-        for vehicle in (await api.get_vehicle_list(fromFile=fromFile)).get("vehicle_list") or []:
-            await api.get_vehicle_details(vehicleId=vehicle.get("vehicle_id"), fromFile=fromFile)
+        for vehicle in (await api.get_vehicle_list(fromFile=fromFile)).get(
+            "vehicle_list"
+        ) or []:
+            await api.get_vehicle_details(
+                vehicleId=vehicle.get("vehicle_id"), fromFile=fromFile
+            )
 
     # Get Power Panel device specific updates
     if api.powerpanelApi:

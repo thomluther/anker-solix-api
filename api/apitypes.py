@@ -174,6 +174,11 @@ API_ENDPOINTS = {
     "vehicle_delete": "power_service/v1/app/vehicle/delete_vehicle",
     "vehicle_set_charging": "power_service/v1/app/vehicle/set_charging_vehicle",  #  needs EV_Charger device, {"vehicle_id": vehicleId, "device_sn": deviceSn, "transaction_id": 1}
     "vehicle_set_default": "power_service/v1/app/vehicle/set_default",  # set vehicle id as default, {"vehicle_id": vehicleId}
+    "charger_get_charging_modes": "mini_power/v1/app/charging/get_charging_mode_list", # {"device_sn": deviceSn}
+    "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list", # {"device_sn": deviceSn}
+    "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data", # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"}
+    "charger_get_device_setting": "mini_power/v1/app/setting/get_device_setting", # {"device_sn": deviceSn}
+    "charger_get_screensavers": "mini_power/v1/app/style/get_clock_screensavers",  # works for {"device_sn": deviceSn, "product_code": "A2345"} => Prime charger
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -402,19 +407,14 @@ related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
     'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/disaster_detail',
 
-related to Prime charger models: 12 + 0 used => 12 total
-    'mini_power/v1/app/charging/get_charging_mode_list',
+related to Prime charger models: 7 + 5 used => 12 total
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
     'mini_power/v1/app/charging/delete_charging_mode',
     'mini_power/v1/app/setting/set_charging_mode_status',
-    'mini_power/v1/app/egg/get_easter_egg_trigger_list',
     'mini_power/v1/app/egg/add_easter_egg_trigger_record',
-    'mini_power/v1/app/egg/report_easter_egg_trigger_status',
-    'mini_power/v1/app/setting/get_device_setting',
-    'mini_power/v1/app/power/get_day_power_data',
+    'mini_power/v1/app/egg/report_easter_egg_trigger_status', # {"device_sn": deviceSn, "report_time": 1734969388, "egg_type": 1}
     'mini_power/v1/app/setting/set_compatibility_status',
-    'mini_power/v1/app/style/get_clock_screensavers',  # works for {'product_code': 'A2345'} => Prime charger
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -496,6 +496,12 @@ API_FILEPREFIXES = {
     "get_device_pv_total_statistics": "device_pv_total_statistics",
     "get_device_pv_statistics": "device_pv_statistics",
     "get_device_pv_price": "device_pv_price",
+    # power charger endpoint file prefixes
+    "charger_get_charging_modes": "charger_charging_modes",
+    "charger_get_triggers": "charger_triggers",
+    "charger_get_statistics": "charger_statistics",
+    "charger_get_device_setting": "charger_device_setting",
+    "charger_get_screensavers": "charger_screensavers",
     # charging_energy_service endpoint file prefixes
     "charging_get_error_info": "charging_error_info",
     "charging_get_system_running_info": "charging_system_running_info",
@@ -934,7 +940,7 @@ class SolarbankDeviceMetrics:
         "micro_inverter_power_limit",
         "micro_inverter_low_power_limit",
         "grid_to_battery_power",
-        "other_input_power",
+        "other_input_power",  # This is AC input for charging typically
     }
     # SOLIX Solarbank 2 E1600 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
@@ -964,7 +970,7 @@ class SolarbankDeviceMetrics:
         # "micro_inverter_power_limit",  # external inverter input not supported by SB3
         # "micro_inverter_low_power_limit",  # external inverter input not supported by SB3
         "grid_to_battery_power",
-        "other_input_power",
+        "other_input_power",  # This is AC input for charging typically
     }
     # Inverter Output Settings
     INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {
@@ -1065,6 +1071,7 @@ class SolarbankStatus(StrEnum):
     discharge = "2"  # only seen if no solar available
     charge = "3"  # normal charge for battery
     charge_bypass = "31"  # pseudo state, the solarbank does not distinguish this
+    charge_ac = "32"  # pseudo state, the solarbank does not distinguish this
     charge_priority = "37"  # pseudo state, the solarbank does not distinguish this, when no output power exists while preset is ignored
     wakeup = "4"  # Not clear what happens during this state, but observed short intervals during night, probably hourly? resync with the cloud
     cold_wakeup = "116"  # At cold temperatures, 116 was observed instead of 4. Not sure why this state is different at low temps?
