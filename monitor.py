@@ -25,6 +25,7 @@ from api import api, errors  # pylint: disable=no-name-in-module
 from api.apitypes import (  # pylint: disable=no-name-in-module
     SolarbankAiemsStatus,
     SolarbankUsageMode,
+    SolixDeviceType,
     SolixPriceProvider,
     SolixPriceTypes,
     SolixVehicle,
@@ -200,8 +201,19 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         deferred = False
                     next_refr = datetime.now().astimezone() + timedelta(seconds=REFRESH)
                 if next_dev_refr < 0:
-                    CONSOLE.info("Running device and site details refresh...")
-                    await myapi.update_device_details(fromFile=use_file)
+                    CONSOLE.info(
+                        "Running device and site details refresh%s...",
+                        ", excluding " + str({SolixDeviceType.VEHICLE.value})
+                        if site_selected
+                        else "",
+                    )
+                    # skip Vehicle data if dedicated site selected
+                    await myapi.update_device_details(
+                        fromFile=use_file,
+                        exclude={SolixDeviceType.VEHICLE.value}
+                        if site_selected
+                        else None,
+                    )
                     await myapi.update_site_details(fromFile=use_file)
                     # run also energy refresh if requested
                     if energy_stats:
@@ -590,10 +602,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{'EV Brand':<{col1}}: {ev.brand or 'Unknown':<{col2}} {'EV model':<{col3}}: {ev.model or 'Unknown'}"
                         )
                         CONSOLE.info(
-                            f"{'Consumption':<{col1}}: {(round(ev.energy_consumption_per_100km,1) if ev.energy_consumption_per_100km else '--.-')!s:>4} {'kWh / 100 km':<{col2-5}} {'EV Year':<{col3}}: {(ev.productive_year or '----')!s}"
+                            f"{'Consumption':<{col1}}: {(round(ev.energy_consumption_per_100km, 1) if ev.energy_consumption_per_100km else '--.-')!s:>4} {'kWh / 100 km':<{col2 - 5}} {'EV Year':<{col3}}: {(ev.productive_year or '----')!s}"
                         )
                         CONSOLE.info(
-                            f"{'Charge Limit':<{col1}}: {(round(ev.ac_max_charging_power,1) if ev.ac_max_charging_power else '--.-')!s:>4} {'kWh':<{col2-5}} {'Capacity':<{col3}}: {(round(ev.battery_capacity,1) if ev.battery_capacity else '--.-')!s:>4} kW"
+                            f"{'Charge Limit':<{col1}}: {(round(ev.ac_max_charging_power, 1) if ev.ac_max_charging_power else '--.-')!s:>4} {'kWh':<{col2 - 5}} {'Capacity':<{col3}}: {(round(ev.battery_capacity, 1) if ev.battery_capacity else '--.-')!s:>4} kW"
                         )
                         CONSOLE.info(
                             f"{'Is Charging':<{col1}}: {('YES' if vehicle.get('is_smart_charging') else 'NO'):<{col2}} {'Is Default EV':<{col3}}: {('YES' if vehicle.get('is_default_vehicle') else 'NO')}"
