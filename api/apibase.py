@@ -87,7 +87,12 @@ class AnkerSolixBaseApi:
 
     def getCaches(self) -> dict:
         """Return a merged dictionary with api cache dictionaries."""
-        return self.sites | self.devices | {self.apisession.email: self.account} | (self.account.get("vehicles") or {})
+        return (
+            self.sites
+            | self.devices
+            | {self.apisession.email: self.account}
+            | (self.account.get("vehicles") or {})
+        )
 
     def clearCaches(self) -> None:
         """Clear the api cache dictionaries."""
@@ -529,10 +534,13 @@ class AnkerSolixBaseApi:
         data = {"site_id": siteId}
         if fromFile:
             resp = await self.apisession.loadFromFile(
-                Path(self.testDir()) / f"{API_FILEPREFIXES['site_detail']}_{siteId}.json"
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['site_detail']}_{siteId}.json"
             )
         else:
-            resp = await self.apisession.request("post", API_ENDPOINTS["site_detail"], json=data)
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["site_detail"], json=data
+            )
         return resp.get("data") or {}
 
     async def get_scene_info(self, siteId: str, fromFile: bool = False) -> dict:

@@ -273,7 +273,9 @@ async def poll_sites(  # noqa: C901
                     and float(sb_home_load) == 0
                     and str(sb_total_output).replace(".", "", 1).isdigit()
                 ):
-                    sb_info["to_home_load"] = f"{max(float(sb_home_load), float(sb_total_output)):.0f}"
+                    sb_info["to_home_load"] = (
+                        f"{max(float(sb_home_load), float(sb_total_output)):.0f}"
+                    )
                 sb_list = sb_info.get("solarbank_list") or []
                 sb_types = {sb.get("device_pn") for sb in sb_list}
                 multisystem = len(sb_list) > 1 and "A17C0" not in sb_types

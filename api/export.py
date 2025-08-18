@@ -543,23 +543,33 @@ class AnkerSolixApiExport:
                 or {}
             ).get("brand_list") or []
             for vehicle in vehicles or [SolixVehicle()]:
-                brand = vehicle.brand if vehicle.brand in brands else str(random.choice(brands or [""]))
+                brand = (
+                    vehicle.brand
+                    if vehicle.brand in brands
+                    else str(random.choice(brands or [""]))
+                )
                 response = await self.query(
                     endpoint=API_ENDPOINTS["get_vehicle_brand_models"],
                     filename=f"{API_FILEPREFIXES['get_vehicle_brand_models']}_{brand.replace(' ', '_')}.json",
                     payload={"brand_name": brand},
                 )
                 if items := ((response or {}).get("data") or {}).get("model_list"):
-                    model = vehicle.model if vehicle.model in items else str(random.choice(items))
+                    model = (
+                        vehicle.model
+                        if vehicle.model in items
+                        else str(random.choice(items))
+                    )
                     response = await self.query(
                         endpoint=API_ENDPOINTS["get_vehicle_model_years"],
                         filename=f"{API_FILEPREFIXES['get_vehicle_model_years']}_{brand.replace(' ', '_')}_{model.replace(' ', '_')}.json",
                         payload={"brand_name": brand, "model_name": model},
                     )
-                    if items := ((response or {}).get("data") or {}).get(
-                        "year_list"
-                    ):
-                        year = vehicle.productive_year if vehicle.productive_year in items else random.choice(items)
+                    if items := ((response or {}).get("data") or {}).get("year_list"):
+                        year = (
+                            vehicle.productive_year
+                            if vehicle.productive_year in items
+                            else random.choice(items)
+                        )
                         await self.query(
                             endpoint=API_ENDPOINTS["get_vehicle_year_attributes"],
                             filename=f"{API_FILEPREFIXES['get_vehicle_year_attributes']}_{brand.replace(' ', '_')}_{model.replace(' ', '_')}_{year!s}.json",

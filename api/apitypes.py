@@ -174,10 +174,10 @@ API_ENDPOINTS = {
     "vehicle_delete": "power_service/v1/app/vehicle/delete_vehicle",
     "vehicle_set_charging": "power_service/v1/app/vehicle/set_charging_vehicle",  #  needs EV_Charger device, {"vehicle_id": vehicleId, "device_sn": deviceSn, "transaction_id": 1}
     "vehicle_set_default": "power_service/v1/app/vehicle/set_default",  # set vehicle id as default, {"vehicle_id": vehicleId}
-    "charger_get_charging_modes": "mini_power/v1/app/charging/get_charging_mode_list", # {"device_sn": deviceSn}
-    "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list", # {"device_sn": deviceSn}
-    "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data", # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"}
-    "charger_get_device_setting": "mini_power/v1/app/setting/get_device_setting", # {"device_sn": deviceSn}
+    "charger_get_charging_modes": "mini_power/v1/app/charging/get_charging_mode_list",  # {"device_sn": deviceSn}
+    "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list",  # {"device_sn": deviceSn}
+    "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data",  # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"}
+    "charger_get_device_setting": "mini_power/v1/app/setting/get_device_setting",  # {"device_sn": deviceSn}
     "charger_get_screensavers": "mini_power/v1/app/style/get_clock_screensavers",  # works for {"device_sn": deviceSn, "product_code": "A2345"} => Prime charger
 }
 

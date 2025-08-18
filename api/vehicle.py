@@ -307,7 +307,8 @@ async def update_vehicle_options(
                     brand=vehicle.brand, model=vehicle.model, fromFile=fromFile
                 )
             if vehicle.productive_year and str(vehicle.productive_year) in (
-                years := models.get(vehicle.model) or {}):
+                years := models.get(vehicle.model) or {}
+            ):
                 # get year attribute options if not cached already
                 if "cached" not in (years.get(str(vehicle.productive_year)) or {}):
                     await self.get_model_year_attributes(
