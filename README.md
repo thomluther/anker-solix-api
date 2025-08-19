@@ -41,6 +41,9 @@ or
 sudo pacman -S python-poetry
 ```
 
+> [!IMPORTANT]
+> [Poetry 2.0.0](https://github.com/python-poetry/poetry/releases/tag/2.0.0) or later is required for full support of the pyproject.toml file, see issue #208.
+
 **Step 2:** Install dependencies with `poetry`. In the root of this repository run:
 
 ```shell
