@@ -62,7 +62,6 @@ def country() -> str:
 
 def print_schedule(schedule: dict) -> None:
     """Print the schedule ranges as table."""
-
     t2 = 2
     t3 = 3
     t5 = 5
@@ -100,40 +99,89 @@ def print_schedule(schedule: dict) -> None:
                     f"{datetime.datetime.fromtimestamp(slot.get('start_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}} {datetime.datetime.fromtimestamp(slot.get('end_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}}"
                 )
         if rate_plan := plan.get(SolarbankRatePlan.use_time) or []:
-            tariffs = ["High","Medium","Low","Valley"]
+            tariffs = ["High", "Medium", "Low", "Valley"]
             for sea in rate_plan:
                 unit = sea.get("unit") or "-"
-                m_start = datetime.date.today().replace(month=(sea.get('sea') or {}).get('start_month') or 1)
-                m_end = datetime.date.today().replace(month=(sea.get('sea') or {}).get('end_month') or 1)
+                m_start = datetime.date.today().replace(
+                    month=(sea.get("sea") or {}).get("start_month") or 1
+                )
+                m_end = datetime.date.today().replace(
+                    month=(sea.get("sea") or {}).get("end_month") or 1
+                )
                 is_same = sea.get("is_same")
                 weekday = sea.get("weekday") or []
                 weekend = sea.get("weekend") or []
-                today = datetime.datetime.now().astimezone().replace(hour=0,minute=0,second=0,microsecond=0)
+                today = (
+                    datetime.datetime.now()
+                    .astimezone()
+                    .replace(hour=0, minute=0, second=0, microsecond=0)
+                )
                 CONSOLE.info(
-                    f"Season: {m_start.strftime("%b")} - {m_end.strftime("%b")},           Weekends: {'SAME' if is_same else 'DIFF'}             <== use_time"
+                    f"Season: {m_start.strftime('%b')} - {m_end.strftime('%b')},           Weekends: {'SAME' if is_same else 'DIFF'}             <== use_time"
                 )
                 CONSOLE.info(
                     f"{'Start':<{t5}} {'End':<{t5}} {'Type':<{t6}} {'Price':<{t6}}    {'Start':<{t5}} {'End':<{t5}} {'Type':<{t6}} {'Price':<{t6}}"
                 )
-                for idx in range(max(len(weekday),len(weekend))):
+                for idx in range(max(len(weekday), len(weekend))):
                     if len(weekday) > idx:
-                        tariff = weekday[idx].get('type')
-                        price = next(iter([item.get("price") for item in (sea.get("weekday_price") or []) if item.get("type") == tariff]),0)
-                        tariff = tariffs[tariff-1] if isinstance(tariff,int) and 0 < tariff <= len(tariffs) else '------'
-                        start = today+datetime.timedelta(hours=weekday[idx].get('start_time') or 0)
-                        end = weekday[idx].get('end_time') or 24
-                        end = today+(datetime.timedelta(hours=end) if end < 24 else datetime.timedelta(days=1))
-                        row = f"{start.strftime("%H:%M"):<{t5}} {end.strftime("%H:%M"):<{t5}} {tariff:<{t6}} {float(price):<.02f} {unit:<{t2}}"
+                        tariff = weekday[idx].get("type")
+                        price = next(
+                            iter(
+                                [
+                                    item.get("price")
+                                    for item in (sea.get("weekday_price") or [])
+                                    if item.get("type") == tariff
+                                ]
+                            ),
+                            0,
+                        )
+                        tariff = (
+                            tariffs[tariff - 1]
+                            if isinstance(tariff, int) and 0 < tariff <= len(tariffs)
+                            else "------"
+                        )
+                        start = today + datetime.timedelta(
+                            hours=weekday[idx].get("start_time") or 0
+                        )
+                        end = weekday[idx].get("end_time") or 24
+                        end = today + (
+                            datetime.timedelta(hours=end)
+                            if end < 24
+                            else datetime.timedelta(days=1)
+                        )
+                        row = f"{start.strftime('%H:%M'):<{t5}} {end.strftime('%H:%M'):<{t5}} {tariff:<{t6}} {float(price):<.02f} {unit:<{t2}}"
                     else:
-                        row = " "*26
+                        row = " " * 26
                     if len(weekend) > idx:
-                        tariff = weekend[idx].get('type')
-                        price = next(iter([item.get("price") for item in (sea.get("weekend_price") or []) if item.get("type") == tariff]),0)
-                        tariff = tariffs[tariff-1] if isinstance(tariff,int) and 0 < tariff <= len(tariffs) else '------'
-                        start = today+datetime.timedelta(hours=weekend[idx].get('start_time') or 0)
-                        end = weekend[idx].get('end_time') or 24
-                        end = today+(datetime.timedelta(hours=end) if end < 24 else datetime.timedelta(days=1))
-                        row = row + f"   {start.strftime("%H:%M"):<{t5}} {end.strftime("%H:%M"):<{t5}} {tariff:<{t6}} {float(price):<.02f} {unit:<{t2}}"
+                        tariff = weekend[idx].get("type")
+                        price = next(
+                            iter(
+                                [
+                                    item.get("price")
+                                    for item in (sea.get("weekend_price") or [])
+                                    if item.get("type") == tariff
+                                ]
+                            ),
+                            0,
+                        )
+                        tariff = (
+                            tariffs[tariff - 1]
+                            if isinstance(tariff, int) and 0 < tariff <= len(tariffs)
+                            else "------"
+                        )
+                        start = today + datetime.timedelta(
+                            hours=weekend[idx].get("start_time") or 0
+                        )
+                        end = weekend[idx].get("end_time") or 24
+                        end = today + (
+                            datetime.timedelta(hours=end)
+                            if end < 24
+                            else datetime.timedelta(days=1)
+                        )
+                        row = (
+                            row
+                            + f"   {start.strftime('%H:%M'):<{t5}} {end.strftime('%H:%M'):<{t5}} {tariff:<{t6}} {float(price):<.02f} {unit:<{t2}}"
+                        )
                     CONSOLE.info(row)
 
     else:
@@ -157,3 +205,25 @@ def print_schedule(schedule: dict) -> None:
             CONSOLE.info(
                 f"{slot.get('id', '')!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t5}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t6}} {str(load.get('power', '')) + ' W':>{t6}} {str(slot.get('charge_priority', '')) + ' %':>{t10}} {('---' if discharge is None else 'YES' if discharge else 'NO'):>{t9}} {sb1 + ' W':>{t6}} {sb2 + ' W':>{t6}} {slot.get('power_setting_mode', '-')!s:^{t5}} {load.get('name', '')!s}"
             )
+
+
+def print_products(products: dict) -> None:
+    """Print the products as table."""
+    col1 = 6
+    col2 = 40
+    CONSOLE.info(f"{'Model':<{col1}} {'Name':<{col2}} Platform")
+    CONSOLE.info(f"{'-' * 100}")
+    models = list(products.keys())
+    models.sort()
+    counts = {}
+    for model, product in [(model, products.get(model)) for model in models]:
+        # for model, product in products.items():
+        platform = product.get("platform") or ""
+        CONSOLE.info(f"{model:<{col1}} {product.get('name') or '':<{col2}} {platform}")
+        counts["Models"] = (counts.get("Models") or 0) + 1
+        counts[platform] = (counts.get(platform) or 0) + 1
+    CONSOLE.info(f"{'-' * 100}")
+    m = counts.pop("Models")
+    CONSOLE.info(f"Summary: {(m or 0)!s} Models")
+    for key, value in counts.items():
+        CONSOLE.info(f"{value!s:>2} {key}")

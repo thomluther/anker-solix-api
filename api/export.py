@@ -39,7 +39,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.2.0.0"
+VERSION: str = "3.2.0.1"
 
 
 class AnkerSolixApiExport:
@@ -910,8 +910,8 @@ class AnkerSolixApiExport:
                         "device_sn": sn,
                         "attributes": [
                             "rssi",
+                            "pv_power_limit",
                             "temperature",
-                            "priority",  # Smart plug attribute?
                             "auto_switch",  # Smart plug attribute?
                             "running_time",  # Smart plug attribute?
                             "wifi_signal",

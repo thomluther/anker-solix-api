@@ -283,16 +283,29 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     f"{'Cloud-Updated':<{col1}}: {update_time:<{col2}} {'Valid Data':<{col3}}: {'YES' if site.get('data_valid') else 'NO'} (Requeries: {site.get('requeries')})"
                                 )
                                 CONSOLE.info(
-                                    f"{'SOC Total':<{col1}}: {soc:<{col2}} {'Dischrg Pwr Tot':<{col3}}: {sb.get('battery_discharge_power', '---'):>4} {unit}"
+                                    f"{'SOC Total':<{col1}}: {soc:<{col2}} {'Dischrg Pwr Tot':<{col3}}: {sb.get('battery_discharge_power', '----'):>4} {unit}"
                                 )
                                 CONSOLE.info(
-                                    f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power', '---'):>4} {unit:<{col2 - 5}} {'Battery Pwr Tot':<{col3}}: {str(sb.get('total_charging_power')).split('.', maxsplit=1)[0]:>4} W"
+                                    f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power', '----'):>4} {unit:<{col2 - 5}} {'Battery Pwr Tot':<{col3}}: {str(sb.get('total_charging_power')).split('.', maxsplit=1)[0]:>4} W"
                                 )
                                 CONSOLE.info(
-                                    f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '---')).split('.', maxsplit=1)[0]:>4} {unit:<{col2 - 5}} {'Home Load Tot':<{col3}}: {sb.get('to_home_load') or '----':>4} W"
+                                    f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '----')).split('.', maxsplit=1)[0]:>4} {unit:<{col2 - 5}} {'Home Load Tot':<{col3}}: {sb.get('to_home_load') or '----':>4} W"
                                 )
+                                if "third_party_pv" in site:
+                                    CONSOLE.info(
+                                        f"{'3rd Party Solar':<{col1}}: {site.get('third_party_pv', '----')!s:>4} {unit:<{col2 - 5}} {'0W Switch':<{col3}}: {site.get('switch_0w', '--')!s}"
+                                    )
+                                # System power limits
+                                details = site.get("site_details") or {}
+                                if "legal_power_limit" in details:
+                                    CONSOLE.info(
+                                        f"{'Legal Pwr Limit':<{col1}}: {details.get('legal_power_limit', '----'):>4} {unit:<{col2 - 5}} {'All Pwr Limit':<{col3}}: {details.get('all_power_limit', '----'):>4} W"
+                                    )
+                                    CONSOLE.info(
+                                        f"{'Parallel Type':<{col1}}: {(details.get('parallel_type') or '---------')!s:<{col2}} {'AC Input Limit':<{col3}}: {str(details.get('ac_input_power_unit', '----')).replace('W',''):>4} W"
+                                    )
                                 features = site.get("feature_switch") or {}
-                                if mode := site.get("scene_mode"):
+                                if mode := site.get("scene_mode") or site.get("user_scene_mode"):
                                     mode_name = next(
                                         iter(
                                             [
@@ -404,7 +417,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} {' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
                         )
 
-                    if devtype == api.SolixDeviceType.SOLARBANK.value:
+                    if devtype == SolixDeviceType.SOLARBANK.value:
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                         )
@@ -428,6 +441,18 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if dev.get("generation", 0) > 1:
                             CONSOLE.info(
                                 f"{'Exp. Batteries':<{col1}}: {dev.get('sub_package_num', '-'):>4} {'Pcs':<{col2 - 5}} {'AC Socket':<{col3}}: {dev.get('ac_power', '---'):>4} {unit}"
+                            )
+                        # Solarbank power limits
+                        if "power_limit" in dev:
+                            CONSOLE.info(
+                                f"{'Power Limit':<{col1}}: {dev.get('power_limit', '----'):>4} {unit:<{col2 - 5}} {'AC Input Limit':<{col3}}: {dev.get('ac_input_limit', '----'):>4} W"
+                            )
+                            CONSOLE.info(
+                                f"{'Pwr Limit Opt':<{col1}}: {(dev.get('power_limit_option') or '------')!s:<{col2}} {'Limit Opt Real':<{col3}}: {(dev.get('power_limit_option_real') or '------')!s}"
+                            )
+                        if "pv_power_limit" in dev:
+                            CONSOLE.info(
+                                f"{'Solar Limit':<{col1}}: {dev.get('pv_power_limit', '----'):>4} {unit:<{col2 - 5}}"
                             )
                         CONSOLE.info(
                             f"{'Solar Power':<{col1}}: {dev.get('input_power', '---'):>4} {unit:<{col2 - 5}} {'Output Power':<{col3}}: {dev.get('output_power', '---'):>4} {unit}"
@@ -492,7 +517,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if admin:
                             # print schedule
                             common.print_schedule(dev.get("schedule") or {})
-                    elif devtype == api.SolixDeviceType.INVERTER.value:
+                    elif devtype == SolixDeviceType.INVERTER.value:
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                         )
@@ -500,7 +525,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'AC Power':<{col1}}: {dev.get('generate_power', '----'):>4} {unit:<{col2 - 5}} {'Inverter Limit':<{col3}}: {dev.get('preset_inverter_limit', '---'):>4} {unit}"
                         )
-                    elif devtype == api.SolixDeviceType.SMARTMETER.value:
+                    elif devtype == SolixDeviceType.SMARTMETER.value:
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                         )
@@ -511,7 +536,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Grid Import':<{col1}}: {dev.get('grid_to_home_power', '----'):>4} {unit:<{col2 - 5}} {'Grid Export':<{col3}}: {dev.get('photovoltaic_to_grid_power', '----'):>4} {unit}"
                         )
-                    elif devtype == api.SolixDeviceType.SMARTPLUG.value:
+                    elif devtype == SolixDeviceType.SMARTPLUG.value:
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                         )
@@ -532,8 +557,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Energy Today':<{col1}}: {dev.get('energy_today') or '-.--':>4} {'kWh':<{col2 - 5}} {'Last Period':<{col3}}: {dev.get('energy_last_period') or '-.--':>4} kWh"
                             )
                     elif devtype in [
-                        api.SolixDeviceType.POWERPANEL.value,
-                        api.SolixDeviceType.HES.value,
+                        SolixDeviceType.POWERPANEL.value,
+                        SolixDeviceType.HES.value,
                     ]:
                         if hes := dev.get("hes_data") or {}:
                             CONSOLE.info(
@@ -576,6 +601,19 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info(
                                 f"{'Grid Import ⌀':<{col1}}: {avg.get('grid_import_avg') or '-.--':>5} {unit:<{col2 - 6}} {'Grid Export ⌀':<{col3}}: {avg.get('grid_export_avg') or '-.--':>5} {unit}"
                             )
+                    elif devtype in [SolixDeviceType.EV_CHARGER.value]:
+                        CONSOLE.info(
+                            f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
+                        )
+                        CONSOLE.info(
+                            f"{'OCPP Status':<{col1}}: {str(dev.get('ocpp_status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('ocpp_connect_status', '-')!s}"
+                        )
+                        CONSOLE.info(
+                            f"{'Device Error':<{col1}}: {'YES' if dev.get('err_code') else ' NO':<{col2}} {'Error Code':<{col3}}: {dev.get('err_code', '---')!s}"
+                        )
+                        CONSOLE.info(
+                            f"{'Group':<{col1}}: {(dev.get('group_info') or '-------')!s:<{col2}} {'Access Group':<{col3}}: {integrated.get('access_group')!s}"
+                        )
 
                     else:
                         if "battery_capacity" in dev:

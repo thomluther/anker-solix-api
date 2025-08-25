@@ -362,7 +362,7 @@ async def poll_sites(  # noqa: C901
                         if (charge_calc := power_in - power_out) > 0:
                             # No discharging, use the bat charge value if available in response
                             charge_calc = max(charge_calc, batt_charge)
-                        elif batt_discharge >= 0:
+                        elif batt_discharge > 0:
                             # use new field preferably if discharge value available
                             charge_calc = -1 * batt_discharge
                         # allow negative values for the field being used as battery power
@@ -728,6 +728,13 @@ async def poll_site_details(
                         api.apisession.nickname,
                     )
                     await api.get_site_price(siteId=site_id, fromFile=fromFile)
+                # Fetch power limits for solarbank systems
+                if {SolixDeviceType.SOLARBANK.value} - exclude:
+                    api._logger.debug(
+                        "Getting api %s power limits for site",
+                        api.apisession.nickname,
+                    )
+                    await api.get_power_limit(siteId=site_id, fromFile=fromFile)
             # Fetch CO2 Ranking if not excluded
             if not ({ApiCategories.solarbank_energy} & exclude):
                 api._logger.debug(
@@ -997,6 +1004,14 @@ async def poll_device_details(  # noqa: C901
                         paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
                         deviceSn=sn,
                         fromFile=fromFile,
+                    )
+                    # Fetch power solarbank specific attributes
+                    api._logger.debug(
+                        "Getting api %s device specific attributes",
+                        api.apisession.nickname,
+                    )
+                    await api.get_device_attributes(
+                        deviceSn=sn, attributes=["pv_power_limit"], fromFile=fromFile
                     )
 
         # Merge additional powerpanel data
