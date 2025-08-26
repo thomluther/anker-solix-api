@@ -318,7 +318,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     )
                                     feat1 = features.get("heating")
                                     CONSOLE.info(
-                                        f"{'Active Mode':<{col1}}: {str(mode_name).capitalize() + ' (' + str(mode) + ')' if mode_name else '---------':<{col2}} {'Heating':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF'}"
+                                        f"{'Active Mode':<{col1}}: {str(mode_name).capitalize() + ' (' + str(mode) + ')' if mode_name else '---------':<{col2}} {'Heating':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4}"
                                     )
                                 if "offgrid_with_micro_inverter_alert" in features:
                                     feat1 = features.get(
@@ -471,18 +471,18 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Solar Ch_3':<{col1}}: {dev.get('solar_power_3', '---'):>4} {unit + (' (' + name1 + ')' if name1 else ''):<{col2 - 5}} {'Solar Ch_4':<{col3}}: {dev.get('solar_power_4', '---'):>4} {unit + (' (' + name2 + ')' if name2 else '')}"
                                 )
-                        if "pei_heating_power" in dev:
+                        if "micro_inverter_power" in dev:
+                            name1 = names.get("micro_inverter_name") or ""
                             CONSOLE.info(
-                                f"{'AC Input Power':<{col1}}: {dev.get('other_input_power', '---'):>4} {unit:<{col2 - 5}} {'Heating Power':<{col3}}: {dev.get('pei_heating_power', '---'):>4} {unit}"
-                            )
-                        if "grid_to_battery_power" in dev:
-                            name2 = names.get("micro_inverter_name") or ""
-                            CONSOLE.info(
-                                f"{'Grid to Battery':<{col1}}: {dev.get('grid_to_battery_power', '---'):>4} {unit:<{col2 - 5}} {'Inverter Power':<{col3}}: {dev.get('micro_inverter_power', '---'):>4} {unit + (' (' + name2 + ')' if name2 else '')}"
+                                f"{'Inverter Power':<{col1}}: {dev.get('micro_inverter_power', '---'):>4} {unit + (' (' + name1 + ')' if name1 else ''):<{col2 - 5}} {'Heating Power':<{col3}}: {dev.get('pei_heating_power', '---'):>4} {unit}"
                             )
                         if "micro_inverter_power_limit" in dev:
                             CONSOLE.info(
                                 f"{'Inverter Limit':<{col1}}: {dev.get('micro_inverter_power_limit', '---'):>4} {unit:<{col2 - 5}} {'Low Limit':<{col3}}: {dev.get('micro_inverter_low_power_limit', '---'):>4} {unit}"
+                            )
+                        if "grid_to_battery_power" in dev:
+                            CONSOLE.info(
+                                f"{'Grid to Battery':<{col1}}: {dev.get('grid_to_battery_power', '---'):>4} {unit:<{col2 - 5}} {'AC Input Power':<{col3}}: {dev.get('other_input_power', '---'):>4} {unit}"
                             )
                         CONSOLE.info(
                             f"{'Battery Charge':<{col1}}: {dev.get('bat_charge_power', '---'):>4} {unit:<{col2 - 5}} {'Battery Dischrg':<{col3}}: {dev.get('bat_discharge_power', '---'):>4} {unit}"

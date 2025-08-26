@@ -389,8 +389,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         )
                         demand = devData.get("home_load_power") or 0
                         ac_input = (
-                            devData.get("other_input_power")
-                            or device.get("other_input_power")
+                            devData.get("grid_to_battery_power")
+                            or device.get("grid_to_battery_power")
                             or 0
                         )
                         soc = (

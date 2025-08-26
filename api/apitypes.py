@@ -921,11 +921,6 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        # Following Only used correctly by AC model!
-        # "micro_inverter_power",
-        # "micro_inverter_power_limit",
-        # "micro_inverter_low_power_limit",
-        # "other_input_power",
     }
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -949,11 +944,6 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "to_home_load",
         "pei_heating_power",
-        # Following Only used correctly by AC model!
-        # "micro_inverter_power",
-        # "micro_inverter_power_limit",
-        # "micro_inverter_low_power_limit",
-        # "other_input_power",
     }
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {
