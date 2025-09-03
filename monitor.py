@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 """Example exec module to use the Anker API for continuously querying and displaying important parameters of Anker Solix sites and devices.
 
-This module will prompt for the Anker account details if not pre-set in the header.  Upon successful authentication,
+This module will prompt for the Anker account details if not pre-set in the header. Upon successful authentication,
 you will see the solarbank parameters displayed and refreshed at regular interval.
 
 Note: When the system owning account is used, more details for the systems and devices can be queried and displayed.
-
-Attention: During execution of this module, the used account cannot be used in
-the Anker App since it will be kicked out on each refresh.
 """
 
 import asyncio
@@ -21,7 +18,7 @@ import sys
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api, errors  # pylint: disable=no-name-in-module
+from api import api  # pylint: disable=no-name-in-module
 from api.apitypes import (  # pylint: disable=no-name-in-module
     SolarbankAiemsStatus,
     SolarbankUsageMode,
@@ -30,6 +27,7 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
     SolixPriceTypes,
     SolixVehicle,
 )
+from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -293,7 +291,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 )
                                 if "third_party_pv" in site:
                                     CONSOLE.info(
-                                        f"{'3rd Party Solar':<{col1}}: {site.get('third_party_pv', '----')!s:>4} {unit:<{col2 - 5}} {'0W Switch':<{col3}}: {site.get('switch_0w', '--')!s}"
+                                        f"{'Ext PV Surplus':<{col1}}: {site.get('third_party_pv', '----')!s:>4} {unit:<{col2 - 5}} {'0W Switch':<{col3}}: {site.get('switch_0w', '--')!s}"
                                     )
                                 # System power limits
                                 details = site.get("site_details") or {}
@@ -302,10 +300,12 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                         f"{'Legal Pwr Limit':<{col1}}: {details.get('legal_power_limit', '----'):>4} {unit:<{col2 - 5}} {'All Pwr Limit':<{col3}}: {details.get('all_power_limit', '----'):>4} W"
                                     )
                                     CONSOLE.info(
-                                        f"{'Parallel Type':<{col1}}: {(details.get('parallel_type') or '---------')!s:<{col2}} {'AC Input Limit':<{col3}}: {str(details.get('ac_input_power_unit', '----')).replace('W',''):>4} W"
+                                        f"{'Parallel Type':<{col1}}: {(details.get('parallel_type') or '---------')!s:<{col2}} {'AC Input Limit':<{col3}}: {str(details.get('ac_input_power_unit', '----')).replace('W', ''):>4} W"
                                     )
                                 features = site.get("feature_switch") or {}
-                                if mode := site.get("scene_mode") or site.get("user_scene_mode"):
+                                if mode := site.get("scene_mode") or site.get(
+                                    "user_scene_mode"
+                                ):
                                     mode_name = next(
                                         iter(
                                             [
@@ -431,7 +431,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             )
                         soc = f"{dev.get('battery_soc', '---'):>4} %"
                         CONSOLE.info(
-                            f"{'State Of Charge':<{col1}}: {soc:<{col2}} {'Min SOC':<{col3}}: {dev.get('power_cutoff', '--')!s:>4} %"
+                            f"{'State Of Charge':<{col1}}: {soc:<{col2}} {'Min SOC':<{col3}}: {(dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} %"
                         )
                         energy = f"{dev.get('battery_energy', '----'):>4} Wh"
                         CONSOLE.info(
@@ -860,6 +860,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 CONSOLE.info(
                                     f"{'Charged Grid':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Charged Grid':<{col3}}: {yesterday.get('grid_to_battery') or '-.--':>6} {unit}"
                                 )
+                            if value := today.get("3rd_party_pv_to_bat"):
+                                CONSOLE.info(
+                                    f"{'Charged Ext PV':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Charged Ext PV':<{col3}}: {yesterday.get('3rd_party_pv_to_bat') or '-.--':>6} {unit}"
+                                )
                             if value := today.get("battery_discharge"):
                                 CONSOLE.info(
                                     f"{'Discharged':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Discharged':<{col3}}: {yesterday.get('battery_discharge') or '-.--':>6} {unit}"
@@ -887,6 +891,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             if value := today.get("solar_to_grid"):
                                 CONSOLE.info(
                                     f"{'Grid Export':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Grid Export':<{col3}}: {yesterday.get('solar_to_grid') or '-.--':>6} {unit}"
+                                )
+                            if value := today.get("3rd_party_pv_to_grid"):
+                                CONSOLE.info(
+                                    f"{'Ext PV Export':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} {'Ext PV Export':<{col3}}: {yesterday.get('3rd_party_pv_to_grid') or '-.--':>6} {unit}"
                                 )
                             if value := today.get("ac_socket"):
                                 CONSOLE.info(
@@ -1060,12 +1068,17 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 break
                         await asyncio.sleep(1)
                     await asyncio.sleep(1)
-            return False
 
-    except (ClientError, errors.AnkerSolixError) as err:
-        CONSOLE.error("%s: %s", type(err), err)
-        CONSOLE.info("Api Requests: %s", myapi.request_count)
-        CONSOLE.info(myapi.request_count.get_details(last_hour=True))
+    except (
+        asyncio.CancelledError,
+        KeyboardInterrupt,
+        ClientError,
+        AnkerSolixError,
+    ) as err:
+        if isinstance(err, ClientError | AnkerSolixError):
+            CONSOLE.error("%s: %s", type(err), err)
+            CONSOLE.info("Api Requests: %s", myapi.request_count)
+            CONSOLE.info(myapi.request_count.get_details(last_hour=True))
         return False
 
 

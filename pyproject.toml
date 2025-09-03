@@ -1,6 +1,6 @@
 [project]
 name = "Anker-Solix-Api"
-version = "3.2.0"
+version = "3.3.0"
 description = "Python library for Anker Solix Power devices (Solarbank, Inverter etc)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -32,7 +32,7 @@ disable = [
 aiohttp = ">=3.10.11"
 aiofiles = ">=23.2.0"
 cryptography = ">=3.4.8"
-
+paho-mqtt = ">=2.1.0"
 
 [tool.poetry]
 package-mode = false

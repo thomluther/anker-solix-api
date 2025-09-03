@@ -72,7 +72,7 @@ def print_schedule(schedule: dict) -> None:
     if usage_mode := plan.get("mode_type") or 0:
         # SB2 schedule
         CONSOLE.info(
-            f"{'Usage Mode':<{t2}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize() + ' (' + str(usage_mode) + ')':<{t5 + t5 + t6}} {'Def. Preset':<{t5}}: {plan.get('default_home_load', '----'):>4} W"
+            f"{'Usage Mode':<{t2}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize() + ' (' + str(usage_mode) + ')':<{t5 + t5 + t6}} {'Def. Preset':<{t5}}: {plan.get('default_home_load', '----'):>4} W   (Range: {plan.get('min_load', '?')} - {plan.get('max_load', '???')} W)"
         )
         week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         for rate_plan_name in [SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs]:
@@ -103,9 +103,11 @@ def print_schedule(schedule: dict) -> None:
             for sea in rate_plan:
                 unit = sea.get("unit") or "-"
                 m_start = datetime.date.today().replace(
+                    day=1,
                     month=(sea.get("sea") or {}).get("start_month") or 1
                 )
                 m_end = datetime.date.today().replace(
+                    day=1,
                     month=(sea.get("sea") or {}).get("end_month") or 1
                 )
                 is_same = sea.get("is_same")

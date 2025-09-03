@@ -21,8 +21,10 @@ import logging
 from pathlib import Path
 
 from aiohttp import ClientSession
+from aiohttp.client_exceptions import ClientError
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
 from api.apitypes import SolixDeviceType  # pylint: disable=no-name-in-module
+from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -226,8 +228,16 @@ async def main() -> bool:
             CONSOLE.info(f"\nApi Requests: {myapi.request_count}")
             return True
 
-    except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
-        CONSOLE.error("%s: %s", type(err), err)
+    except (
+        asyncio.CancelledError,
+        KeyboardInterrupt,
+        ClientError,
+        AnkerSolixError,
+    ) as err:
+        if isinstance(err, ClientError | AnkerSolixError):
+            CONSOLE.error("%s: %s", type(err), err)
+            CONSOLE.info("Api Requests: %s", myapi.request_count)
+            CONSOLE.info(myapi.request_count.get_details(last_hour=True))
         return False
 
 

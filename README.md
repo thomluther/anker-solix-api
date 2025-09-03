@@ -61,11 +61,11 @@ poetry run python [...].py
 To install the dependencies manually consult your favorite package manager, for example:
 
 ```shell
-sudo pip install cryptography aiohttp aiofiles
+sudo pip install cryptography aiohttp aiofiles paho-mqtt
 ```
 or
 ```shell
-sudo pacman -S python-cryptography python-aiohttp python-aiofiles
+sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt
 ```
 
 You should then be able to run programs with:

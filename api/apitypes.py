@@ -3,6 +3,7 @@
 from dataclasses import InitVar, asdict, dataclass
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
+import struct
 from typing import Any, ClassVar
 
 # API servers per region. Country assignment not clear, defaulting to EU server
@@ -100,6 +101,7 @@ API_COUNTRIES = {
 
 """Following are the Anker Power/Solix Cloud API power_service endpoints known so far. Some are common, others are mainly for balcony power systems"""
 API_ENDPOINTS = {
+    # Power endpoints */v1/site/*
     "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as presented on App Home Page (mostly empty for shared accounts)
     "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
     "site_detail": "power_service/v1/site/get_site_detail",  # Information for given site_id, can also be used by shared accounts
@@ -109,9 +111,15 @@ API_ENDPOINTS = {
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
     "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16]
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
+    "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
+    "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)
     "wifi_list": "power_service/v1/site/get_wifi_info_list",  # List of available networks for provided site id
     "get_site_price": "power_service/v1/site/get_site_price",  # List defined power price and CO2 for given site, works only for site owner account
     "update_site_price": "power_service/v1/site/update_site_price",  # Update power price and CO2 for given site, works only for site owner account
+    "get_forecast_schedule": "power_service/v1/site/get_schedule",  # get remaining energy and negative price slots, works as member, {"site_id": siteId}
+    "get_co2_ranking": "power_service/v1/site/co2_ranking",  # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
+    "get_site_power_limit": "power_service/v1/site/get_power_limit",  # needs owner, lists power limits for system
+    # Power endpoints */v1/app/*
     "get_auto_upgrade": "power_service/v1/app/get_auto_upgrade",  # List of Auto-Upgrade configuration and enabled devices, only works for site owner account
     "set_auto_upgrade": "power_service/v1/app/set_auto_upgrade",  # Set/Enable Auto-Upgrade configuration, works only for site owner account
     "bind_devices": "power_service/v1/app/get_relate_and_bind_devices",  # List with details of locally connected/bound devices, includes firmware version, works only for owner account
@@ -124,14 +132,8 @@ API_ENDPOINTS = {
     "set_cutoff": "power_service/v1/app/compatible/set_power_cutoff",  # Set Min SOC for device, only works for owner accounts
     "compatible_process": "power_service/v1/app/compatible/get_compatible_process",  # contains solar_info plus OTA processing codes, works only with owner account
     "get_device_fittings": "power_service/v1/app/get_relate_device_fittings",  # Device fittings for given site id and device sn. Shows Accessories like Solarbank 0W Switch info
-    "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
-    "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)
     "get_upgrade_record": "power_service/v1/app/get_upgrade_record",  # get list of firmware update history
     "check_upgrade_record": "power_service/v1/app/check_upgrade_record",  # show an upgrade record for the device, types 1-3 show different info, only works for owner account
-    "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
-    "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
-    "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
-    "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
     "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank and/or smart meter? {"device_sn":sn,"attributes":["rssi","pv_power_limit"]}
     "set_device_attributes": "power_service/v1/app/device/set_device_attrs",  # attr name may be different than for get, {"device_sn":sn,"attributes":{"pv_power_limit":800,"ac_power_limit":1200,"power_limit":800}}
     "get_config": "power_service/v1/app/get_config",  # shows empty config list, also for shared account
@@ -140,30 +142,12 @@ API_ENDPOINTS = {
     "get_third_platforms": "power_service/v1/app/third/platform/list",  # list supported third party device models
     "get_token_by_userid": "power_service/v1/app/get_token_by_userid",  # get token for authenticated user. Is that the token to be used to query shelly status?
     "get_shelly_status": "power_service/v1/app/get_user_op_shelly_status",  # get op_list with correct token
-    "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
-    "get_forecast_schedule": "power_service/v1/site/get_schedule",  # get remaining energy and negative price slots, works as member, {"site_id": siteId}
-    "get_co2_ranking": "power_service/v1/site/co2_ranking",  # get CO2 ranking for SB2/3 site_id, works as member, {"site_id": siteId}
-    "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
-    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
-    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
     "get_device_income": "power_service/v1/app/device/get_device_income",  # {"device_sn": deviceSn, "start_time": "00:00"})) # Get income data for device, works for member
-    "get_ai_ems_status": "power_service/v1/ai_ems/get_status",  # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
-    "get_ai_ems_profit": "power_service/v1/ai_ems/profit",  # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
-    "get_site_power_limit": "power_service/v1/site/get_power_limit",  # needs owner, lists power limits for system
-    "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
-    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
-    "get_shared_device": "app/devicerelation/get_shared_device",  # works as member, list device sharing details, {"device_sn": deviceSn}, sharing works only for EV charger or any device?
-    "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
-    "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics",  # post method the get total statistics (generated power, saved money, saved CO2) of a device
-    "get_device_pv_statistics": "charging_pv_svc/statisticsPv",  # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
-    "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice",  # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
-    "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice",  # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
-    "set_device_pv_power": "charging_pv_svc/set_aps_power",  # post method to set stand alone inverter limit
-    "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
-    "get_device_rfid_cards": "power_service/v1/rfid/get_device_cards",  # needs owner. get rfid cards (for EV charger?), {"device_sn": deviceSn}
     "get_device_group": "power_service/v1/app/group/get_group_devices",  # works as member, shows whether device is grouped with sub devices, {"device_sn": deviceSn}
     "get_device_charge_order_stats": "power_service/v1/app/order/get_charge_order_stats",  # works as member, date_type[week month year all], show EV_charger stats, {"device_sn":deviceSn,"date_type":"all","start_date":"","end_date":""}))
     "get_device_charge_order_stats_list": "power_service/v1/app/order/get_charge_order_stats_list",  # works as member, date_type[week month year all], order_Status unknown, {"device_sn":deviceSn,"order_status":1,"date_type":"all","start_date":"","end_date":"","page":0,"page_size":10}
+    "get_ocpp_endpoint_list": "power_service/v1/app/get_ocpp_endpoint_list",  # lists ocpp endpoints used by Anker, including source number per endpoint
+    "get_device_ocpp_info": "power_service/v1/app/get_ocpp_info",  # works as member also for empty device SN, {"device_sn": deviceSn}, list device endpoint source number, default 0 if nothing found explicetly? (Useful only for EV charger devices)
     "get_vehicle_brands": "power_service/v1/app/get_brand_list",  # get vehicle brand list
     "get_vehicle_brand_models": "power_service/v1/app/get_models",  # get model list for given brand, {"brand_name": "BMW"}
     "get_vehicle_model_years": "power_service/v1/app/get_model_years",  # get prodictive year list for given model, {"brand_name": "BMW", "model_name": "iX3"}
@@ -175,6 +159,34 @@ API_ENDPOINTS = {
     "vehicle_delete": "power_service/v1/app/vehicle/delete_vehicle",
     "vehicle_set_charging": "power_service/v1/app/vehicle/set_charging_vehicle",  #  needs EV_Charger device, {"vehicle_id": vehicleId, "device_sn": deviceSn, "transaction_id": 1}
     "vehicle_set_default": "power_service/v1/app/vehicle/set_default",  # set vehicle id as default, {"vehicle_id": vehicleId}
+    # Power endpoints */v1/device/*
+    "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
+    "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
+    # Power endpoints */v1/dynamic_price/*
+    "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
+    "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
+    "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
+    # Power endpoints */v1/*
+    "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
+    "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)
+    "get_product_categories": "power_service/v1/product_categories",  # GET method to list all supported products with details and web picture links
+    "get_product_accessories": "power_service/v1/product_accessories",  # GET method to list all supported products accessories with details and web picture links
+    # Power endpoints */v1/ai_ems/*
+    "get_ai_ems_status": "power_service/v1/ai_ems/get_status",  # Get status of AI learning mode and remaining seconds, works as member, {"site_id": siteId}))
+    "get_ai_ems_profit": "power_service/v1/ai_ems/profit",  # Type is unclear, may work as member,  {"site_id": siteId, "start_time": "00:00", "end_time": "24:00", "type": "grid"}))
+    # App endpoints
+    "get_ota_batch": "app/ota/batch/check_update",  # get OTA information and latest version for device SN list, works also for shared accounts, but data only received for owner accounts
+    "get_mqtt_info": "app/devicemanage/get_user_mqtt_info",  # post method to list mqtt server and certificates for a site, not explored or used
+    "get_shared_device": "app/devicerelation/get_shared_device",  # works as member, list device sharing details, {"device_sn": deviceSn}, sharing works only for EV charger or any device?
+    # Endpoints for standalone Anker inverter devices
+    "get_device_pv_status": "charging_pv_svc/getPvStatus",  # post method get the current activity status and power generation of one or multiple devices
+    "get_device_pv_total_statistics": "charging_pv_svc/getPvTotalStatistics",  # post method the get total statistics (generated power, saved money, saved CO2) of a device
+    "get_device_pv_statistics": "charging_pv_svc/statisticsPv",  # post method to get detailed statistics on a daily, weekly, monthly or yearly basis
+    "get_device_pv_price": "charging_pv_svc/selectUserTieredElecPrice",  # post method to get defined price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_price": "charging_pv_svc/updateUserTieredElecPrice",  # post method to set price tiers for stand alone inverter (only first tier is applied for full day)
+    "set_device_pv_power": "charging_pv_svc/set_aps_power",  # post method to set stand alone inverter limit
+    "get_device_rfid_cards": "power_service/v1/rfid/get_device_cards",  # needs owner. get rfid cards (for EV charger?), {"device_sn": deviceSn}
+    # Endpoints for standalone Anker power charger devices
     "charger_get_charging_modes": "mini_power/v1/app/charging/get_charging_mode_list",  # {"device_sn": deviceSn}
     "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list",  # {"device_sn": deviceSn}
     "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data",  # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"}
@@ -219,7 +231,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_evcharger_station_info": "charging_hes_svc/get_evcharger_station_info",  # works as member, {"evChargerSn": deviceSn, "featuretype": 1}, featuretype [1,2]
 }
 
-""" Other endpoints neither implemented nor explored: 59 + 66 used => 125
+""" Other endpoints neither implemented nor explored: 63 + 68 used => 131
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
     'power_service/v1/read_message', # payload format unknown
@@ -263,7 +275,9 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/order/get_charging_order_sec_detail',  # may need real EV_Charger? {"order_id": "1","start_time": "<timestamp>"}
     'power_service/v1/app/order/get_charging_order_sec_preview',  # may need real EV_Charger? {"order_id": "1"}
     'power_service/v1/app/order/export_charge_order',
+    'power_service/v1/app/after_sale/get_popup',  # works as site member, {"site_id": siteId}, get active pop ups with code
     'power_service/v1/app/after_sale/check_popup',
+    'power_service/v1/app/after_sale/check_sn',  # checks whether any account device SN is eligable for replacement of battery (recall programs?)
     'power_service/v1/app/after_sale/mark_sn',
     'power_service/v1/app/share_site/anonymous_join_site',
     'power_service/v1/app/share_site/delete_site_member',
@@ -271,8 +285,8 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/share_site/delete_inviting_member',
     'power_service/v1/app/share_site/get_invited_list',
     'power_service/v1/app/share_site/join_site',
-    'power_service/v1/app/user/get_user_param', # works as member, {"params": []} parameters are unknown
-    "power_service/v1/app/user/set_user_param",
+    2*'power_service/v1/app/user/get_user_param', # works as member, {"params": []} parameters are unknown
+    2*"power_service/v1/app/user/set_user_param",
     'power_service/v1/app/whitelist/feature/check', # Unclear what this is used for, requires check_list with objects for unknown feature_code e.g. {"check_list": [{"feature_code": "smartmeter", "product_code": "A17C5"}]}
     'power_service/v1/app/get_phonecode_list',
     'power_service/v1/app/get_annual_report',  # new report starting Jan 2025?
@@ -346,7 +360,7 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_common_svc/location/set",  # Set default and identifier location
     "charging_common_svc/location/support",
 
-Home Energy System related (X1): 43 + 17 used => 60 total
+Home Energy System related (X1): 44 + 17 used => 61 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -387,7 +401,7 @@ Home Energy System related (X1): 43 + 17 used => 60 total
     "charging_hes_svc/remove_user_fault_info",
     "charging_hes_svc/restart_peak_session",
     "charging_hes_svc/start",
-    "charging_hes_svc/set_station_evchargers",
+    2*"charging_hes_svc/set_station_evchargers",
     "charging_hes_svc/set_evcharger_station_feature",
     "charging_hes_svc/sync_back_up_history",
 
@@ -482,6 +496,8 @@ API_FILEPREFIXES = {
     "get_device_group": "device_group",
     "get_device_charge_order_stats": "charge_order_stats",
     "get_device_charge_order_stats_list": "charge_order_stats_list",
+    "get_ocpp_endpoint_list": "ocpp_endpoint_list",
+    "get_device_ocpp_info": "ocpp_info",
     "get_vehicle_brands": "vehicle_brands",
     "get_vehicle_brand_models": "vehicle_brand_models",
     "get_vehicle_model_years": "vehicle_model_years",
@@ -611,8 +627,7 @@ class SolixParmType(Enum):
     SOLARBANK_SCHEDULE_ENFORCED = "9"  # No longer supported by cloud as of July 2025
     SOLARBANK_TARIFF_SCHEDULE = "12"
     SOLARBANK_AUTHORIZATIONS = "13"
-    # TODO: Add description for type 16 once known
-    # SOLARBANK_MULTIUSE = "16"
+    SOLARBANK_POWERDOCK = "16"
 
 
 class SolarbankPowerMode(IntEnum):
@@ -970,6 +985,9 @@ class SolarbankDeviceMetrics:
         "A17C3": ["350", "600", "800", "1000"],
         "A17C5": ["350", "600", "800", "1200"],
     }
+    MPPT_INPUT_OPTIONS: ClassVar[dict[str, Any]] = {
+        "A17C5": ["2000", "3600"],
+    }
 
 
 @dataclass(frozen=True)
@@ -981,6 +999,7 @@ class SolixDefaults:
     PRESET_MAX: int = 800
     PRESET_DEF: int = 100
     PRESET_NOSCHEDULE: int = 200
+    PRESET_MAX_MULTISYSTEM: int = 3600
     # Export Switch preset for Solarbank schedule timeslot settings
     ALLOW_EXPORT: bool = True
     # Preset power mode for Solarbank schedule timeslot settings
@@ -1285,3 +1304,405 @@ class SolixVehicle:
             for key in [key for key in keys if not d[key] or key in ["id"]]:
                 d.pop(key, None)
         return d
+
+
+class Color(StrEnum):
+    """Define ASCII colors"""
+
+    BLACK = "\033[30m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    CYAN = "\033[36m"
+    MAG = "\033[35m"
+    WHITE = "\033[37m"
+    OFF = "\033[0m"
+
+
+class DeviceHexDataTypes(Enum):
+    """Enumeration for Anker Solix HEX data value types."""
+
+    str = bytes.fromhex("00")  # x bytes,  string
+    ui = bytes.fromhex("01")  # 1 byte, unsigned int
+    sile = bytes.fromhex("02")  # 2 bytes, signed/unsigned int? LE/BE
+    var = bytes.fromhex(
+        "03"
+    )  # 4 bytes, various, could be 4 * int, 2 * signed int LE or float LE?
+    bin = bytes.fromhex("04")  # multiple bytes, mostly 00 or 01, setting pattern?
+    sfle = bytes.fromhex("05")  # 4 bytes, signed float LE
+    unk = bytes.fromhex("FF")  # unkonwn
+
+
+@dataclass(order=True, kw_only=True)
+class DeviceHexDataHeader:
+    """Dataclass to structure Solix device hex data headers as received from MQTT or BT transmissions.
+
+        Message header structure 9-10 Bytes:
+        FF 09    | fixed message prefix for Anker Solix message
+        XX XX    | message length (including prefix), little endian format
+        XX XX XX | pattern that seem identical across all messages (`03 01 0f`)
+        XX XX    | pattern for type of message, e.g. `84 05` on telemetry packets and `04 09` for others, depends on device model, to be figured out
+        XX       | seems to optional increment for certain messages, fix for others or not used
+    "ff09 3b00 03010f 0407a10132a21100415a5636593630443330323030373036a3110031756e64312d486f6d65536572766572a4020140a502010128"
+    """
+
+    prefix: bytes = b""
+    msglength: int = 0
+    pattern: bytes = b""
+    msgtype: bytes = b""
+    increment: bytes = b""
+    hexbytes: InitVar[bytes | str | None] = None
+
+    def __post_init__(self, hexbytes) -> None:
+        """Init the dataclass from an optional hexbytes."""
+        if isinstance(hexbytes, str):
+            hexbytes = bytes.fromhex(hexbytes)
+        if isinstance(hexbytes, bytes):
+            if len(hexbytes) >= 9:
+                self.prefix = hexbytes[0:2]
+                self.msglength = int.from_bytes(hexbytes[2:4], byteorder="little")
+                self.pattern = hexbytes[4:7]
+                self.msgtype = hexbytes[7:9]
+            if len(hexbytes) >= 10 and hexbytes[9:10] != bytes.fromhex("a1"):
+                self.increment = hexbytes[9:10]
+            else:
+                self.increment = b""
+
+    def __len__(self) -> int:
+        """Return length for used fields."""
+        return (
+            len(self.prefix)
+            + len(self.pattern)
+            + len(self.msgtype)
+            + len(self.increment)
+            + 2 * (self.msglength > 0)
+        )
+
+    def __str__(self) -> str:
+        """Print the class fields."""
+        return f"prefix:{self.prefix.hex(':')}, msglength:{self.msglength!s}, pattern:{self.pattern.hex(':')}, msgtype:{self.msgtype.hex(':')}, increment:{self.increment.hex()}"
+
+    def decode(self) -> str:
+        """Print the header fields representation in human readable format."""
+        if len(self) > 0:
+            s = f"{self.prefix.hex(' '):<8}: 2 Byte Anker Solix message marker (supposed 'ff 09')"
+            s += f"\n{int.to_bytes(self.msglength, length=2, byteorder='little').hex(' '):<8}: 2 Byte total message length ({self.msglength}) in Bytes (Little Endian format)"
+            s += f"\n{self.pattern.hex(' '):<8}: 3 Byte fixed message pattern (supposed `03 01 0f`)"
+            s += f"\n{(Color.GREEN + self.msgtype.hex(' ') + '   ' + Color.OFF)!s:<8}: 2 Byte message type pattern (varies per device model and message type)"
+            s += f"\n{self.increment.hex(' '):<8}: 1 Byte optional message increment ({int.from_bytes(self.increment):>3})"
+        else:
+            s = ""
+        return s
+
+    def asdict(self) -> dict:
+        """Return a dictionary representation of the class fields."""
+        return asdict(self)
+
+
+@dataclass(order=True, kw_only=True)
+class DeviceHexDataField:
+    """Dataclass to structure Solix device hex data field as received from MQTT or BT transmissions.
+
+    Common data field structure:
+    XX     | data field type/name (A1, A2, A3 ...). Meaning can be different per device model
+    XX     | data length (bytes following until end of field)
+    XX ... | data, where first byte in the data (if the data length is above 2) seems to indicate what value type the data is
+    """
+
+    f_name: bytes = b""
+    f_length: int = 0
+    f_type: bytes = b""
+    f_value: bytes = b""
+    hexbytes: InitVar[bytes | str | None] = None
+
+    def __post_init__(self, hexbytes) -> None:
+        """Init the dataclass from an optional hexbytes."""
+        if isinstance(hexbytes, str):
+            hexbytes = bytes.fromhex(hexbytes)
+        if isinstance(hexbytes, bytes) and len(hexbytes) >= 2:
+            self.f_name = hexbytes[0:1]
+            self.f_length = int.from_bytes(hexbytes[1:2])
+            if 0 < self.f_length <= len(hexbytes) - 2:
+                if self.f_length > 1:
+                    # field with format
+                    self.f_type = hexbytes[2:3]
+                    self.f_value = hexbytes[3 : 2 + self.f_length]
+                else:
+                    # field with single value byte
+                    self.f_type = b""
+                    self.f_value = hexbytes[2:3]
+            else:
+                self.f_type = b""
+                self.f_value = b""
+
+    def __len__(self) -> int:
+        """Return length of field data."""
+        return self.f_length
+
+    def __str__(self) -> str:
+        """Print the class fields."""
+        return f"f_name:{self.f_name.hex()}, f_length:{self.f_length!s}, f_type:{self.f_type.hex()}, f_value:{' '.join(self.f_value.hex(':'))}"
+
+    def asdict(self) -> dict:
+        """Return a dictionary representation of the class fields."""
+        return asdict(self)
+
+    def decode(self) -> str:
+        """Print the data field representation in human readable format."""
+        if self.f_name:
+            typ = (
+                DeviceHexDataTypes(self.f_type).name
+                if self.f_type in DeviceHexDataTypes
+                else DeviceHexDataTypes.unk.name
+            )
+            if typ not in [DeviceHexDataTypes.str.name, DeviceHexDataTypes.bin.name]:
+                # unsigned int little endian
+                uile = (
+                    ";".join(
+                        [
+                            str(
+                                int.from_bytes(
+                                    self.f_value[0:2], byteorder="little", signed=True
+                                )
+                            ),
+                            str(
+                                int.from_bytes(
+                                    self.f_value[2:4], byteorder="little", signed=True
+                                )
+                            ),
+                        ]
+                    )
+                    if typ == DeviceHexDataTypes.var.name
+                    else int.from_bytes(self.f_value, byteorder="little")
+                )
+                # unsigned int big endian => Does not seem to be used
+                # uibe = int.from_bytes(self.f_value, byteorder="big")
+                # signed int little endian
+                sile = str(
+                    int.from_bytes(self.f_value, byteorder="little", signed=True)
+                )
+                # signed int big endian => Does not seem to be used
+                # sibe = int.from_bytes(self.f_value, byteorder="big", signed=True)
+                # convert to float via struct
+                # '<f' little-endian 32-bit float (4 Bytes, single)
+                fle = (
+                    f"{struct.unpack('<f', self.f_value)[0]:>5.2f}"
+                    if len(self.f_value) == 4
+                    else ""
+                )
+                # '>f' → big-endian 32-bit float  (4 Bytes, single) => Does not seem to be used
+                # fbe = f"{struct.unpack('>f', self.f_value)[0]:>5.2f}" if len(self.f_value) == 4 else  ""
+                # '<d' → little-endian 64-bit float (8 Bytes, double)
+                dle = (
+                    f"{struct.unpack('<d', self.f_value)[0]:>5.2f}"
+                    if len(self.f_value) == 8
+                    else ";".join(
+                        [
+                            str(int.from_bytes(self.f_value[i : i + 1]))
+                            for i in range(len(self.f_value))
+                        ]
+                    )
+                    if 2 <= len(self.f_value) <= 4
+                    else ""
+                )
+                # '>d' → big-endian 64-bit float (8 Bytes, double) => Does not seem to be used
+                # dbe = f"{struct.unpack('>d', self.f_value)[0]:>5.2f}" if len(self.f_value) == 8 else  ""
+            else:
+                uile = str(self.f_value)
+                # uibe = ""
+                sile = ""
+                # sibe = ""
+                fle = ""
+                # fbe = ""
+                dle = ""
+                # dbe = ""
+            s = f"{Color.RED + self.f_name.hex() + Color.OFF:<3} {int.to_bytes(self.f_length).hex():<3} {self.f_type.hex() or '--':<3}  {self.f_value.hex(':')}"
+            s += f"\n{'└->':<3} {self.f_length!s:>3} {typ!s:<4} {uile:>12} {sile:>12} {fle:>12} {dle:>12}"
+        else:
+            s = ""
+        return s
+
+
+@dataclass(order=True, kw_only=True)
+class DeviceHexData:
+    """Dataclass to structure Solix device hex data as received from MQTT or BT transmissions.
+
+    Messages structure:
+    FF 09    | fixed message prefix for Anker Solix message
+    XX XX    | message length (including prefix)
+    XX XX XX | pattern that seem identical across all messages (`03 01 0f`)
+    XX XX    | pattern for type of message, e.g. `84 05` on telemetry packets and `04 09` for others, to be figured out
+    XX       | seems to increment certain messages, fix for others
+    Starting from 11th Byte there is message data with 1 or more fields, where each field can be of variable length.
+    Common data field structure:
+    XX     | data field type/name (A1, A2, A3 ...). Meaning can be different per device model
+    XX     | data length (bytes following until end of field)
+    XX ... | data, where first byte in the data (if the data length is above 2) seems to indicate what value type the data is
+
+    """
+
+    hexbytes: bytes
+    model: str = ""
+    length: int = 0
+    msg_header: ClassVar[DeviceHexDataHeader] = DeviceHexDataHeader()
+    msg_fields: ClassVar[dict[str, DeviceHexDataField]] = {}
+
+    def __post_init__(self) -> None:
+        """Post init the dataclass to decode the bytes into fields."""
+        idx = 10
+        if isinstance(self.hexbytes, str):
+            self.hexbytes = bytes.fromhex(self.hexbytes.replace(":", ""))
+        if self.hexbytes:
+            self.length = len(self.hexbytes)
+            self.msg_header = DeviceHexDataHeader(hexbytes=self.hexbytes[0:idx])
+            self.msg_fields = {}
+            idx = len(self.msg_header)
+            while 9 <= idx < self.length - 1:
+                f = DeviceHexDataField(hexbytes=self.hexbytes[idx:])
+                if f.f_name:
+                    self.msg_fields[f.f_name.hex()] = f
+                idx += int(f.f_length) + 2
+
+    def __len__(self) -> int:
+        """Return length of hex data."""
+        return self.length
+
+    def __str__(self) -> str:
+        """Print the hex bytes with separator."""
+        return self.hexbytes.hex(":")
+
+    def decode(self) -> str:
+        """Print the field representation in human readable format."""
+        if self.length > 0:
+            msgtype = self.msg_header.msgtype.hex()
+            pn = (
+                f" {str(getattr(SolixDeviceCategory, self.model, 'Unknown Device')).capitalize()} / {Color.CYAN + self.model + Color.OFF} / {Color.GREEN + msgtype + Color.OFF} /"
+                if self.model
+                else ""
+            )
+            s = f"{pn + ' Header ':-^80}\n{self.msg_header.decode()}\n{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
+            if self.msg_fields:
+                s += f"\n{'Fld':<3} {'Len':<3} {'Typ':<4} {'uIntLe/var':^12} {'sIntLe':^12} {'floatLe':^12} {'dblLe/4int':^12}"
+                fieldmap = (
+                    (SOLIXMQTTMAP.get(self.model).get(msgtype) or {})
+                    if self.model in SOLIXMQTTMAP
+                    else {}
+                )
+                for f in self.msg_fields.values():
+                    name = (fieldmap.get(f.f_name.hex()) or {}).get("name") or ""
+                    s += f"\n{f.decode()}{Color.CYAN + ' --> ' + name + Color.OFF if name else ''}"
+                s += f"\n{80 * '-'}"
+        else:
+            s = ""
+        return s
+
+    def asdict(self) -> dict:
+        """Return a dictionary representation of the class fields."""
+        return asdict(self)
+
+
+# Define mapping for MQTT messages field conversions depending on Anker Solix model
+# Nested structure for model.messagetype.fieldname.attributes
+SOLIXMQTTMAP = {
+    "A17C5": {
+        "0405": {
+            "topic": "param_info",
+            "a2": {
+                "name": "device_sn",
+            },
+            "a7": {"name": "fw_solarbank", "values": 4},
+            "a8": {"name": "fw_smartmeter", "values": 4},
+            "a9": {"name": "fw_expansion", "values": 4},
+            "d4": {
+                "name": "temperature",
+            },
+            "bd": {
+                "name": "max_load",
+            },
+            "be": {
+                "name": "max_load_legal",
+            },
+            "d5": {
+                "name": "pv_limit",
+            },
+            "d6": {
+                "name": "ac_input_limit",
+            },
+        },
+        "0408": {
+            "topic": "state_info",
+            "a2": {
+                "name": "device_sn",
+            },
+            "cc": {
+                "name": "temperature",
+            },
+        },
+    },
+    "A17C0": {
+        "0405": {
+            "topic": "param_info",
+            "a2": {
+                "name": "device_sn",
+            },
+            "a3": {
+                "name": "battery_soc",
+            },
+            "a6": {"name": "fw_solarbank", "values": 1},
+            "ac": {
+                "name": "output_power",
+            },
+            "aa": {
+                "name": "temperature",
+            },
+            "b4": {
+                "name": "power_cutoff",
+            },
+            "b7": {
+                "name": "inverter_brand",
+            },
+            "b8": {
+                "name": "inverter_model",
+            },
+            "b9": {
+                "name": "min_load?",
+            },
+        },
+        "0408": {
+            "topic": "state_info",
+            "a2": {
+                "name": "device_sn",
+            },
+            "b0": {
+                "name": "battery_soc",
+            },
+            "b6": {
+                "name": "temperature",
+            },
+        },
+    },
+    "A17X7": {
+        "0405": {
+            "topic": "param_info",
+            "a2": {
+                "name": "device_sn",
+            },
+            "a6": {"name": "fw_device", "values": 4},
+            "a8": {
+                "name": "export_power",
+            },
+            "a9": {
+                "name": "import_power",
+            },
+            "aa": {
+                "name": "export_energy",
+                "factor": 0.01,
+            },
+            "ab": {
+                "name": "import_energy",
+                "factor": 0.01,
+            },
+        },
+    },
+}

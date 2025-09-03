@@ -39,7 +39,7 @@ from .apitypes import (
 )
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.2.0.1"
+VERSION: str = "3.3.0.0"
 
 
 class AnkerSolixApiExport:
@@ -579,6 +579,12 @@ class AnkerSolixApiExport:
                                 "productive_year": year,
                             },
                         )
+            # get OCCP endpoint list
+            self._logger.info("Exporting OCPP endpoints...")
+            await self.query(
+                endpoint=API_ENDPOINTS["get_ocpp_endpoint_list"],
+                filename=f"{API_FILEPREFIXES['get_ocpp_endpoint_list']}.json",
+            )
 
             # loop through all found sites
             for siteId in self.api_power.sites:
@@ -988,6 +994,13 @@ class AnkerSolixApiExport:
                             },
                             replace=[(sn, "<deviceSn>")],
                         )
+                    self._logger.info("Exporting EV charger OCPP info...")
+                    await self.query(
+                        endpoint=API_ENDPOINTS["get_device_ocpp_info"],
+                        filename=f"{API_FILEPREFIXES['get_device_ocpp_info']}_{self._randomize(sn, '_sn')}.json",
+                        payload={"device_sn": sn},
+                        replace=[(sn, "<deviceSn>")],
+                    )
 
                 # export device pv status and statistics for inverters
                 if device.get("type") == api.SolixDeviceType.INVERTER.value:

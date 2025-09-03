@@ -199,6 +199,9 @@ async def get_device_parm(
     Example data for provided site_id with param_type 13 for SB3 system:
     {"param_data":"{\"step\":5,\"ai_ems\":null,\"max_load\":1200,\"min_load\":null,\"data_auth\":true,\"mode_type\":null,
         \"blend_plan\":null,\"custom_rate_plan\":null,\"default_home_load\":null}"}
+    Example data for provided site_id with param_type 16 for SB3 Multisystem:
+    {"param_data":"{\"AE100\":\"7X297LBE75Z0BU4LE\",
+        \"id_img\":\"https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/06/24/iot-admin/6eBAql2OBqMlGG1W/20250624-201743.png\"}"}
     """
     if not isinstance(testSchedule, dict):
         testSchedule = None

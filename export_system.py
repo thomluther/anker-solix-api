@@ -23,7 +23,8 @@ import logging
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api, apitypes, errors, export  # pylint: disable=no-name-in-module
+from api import api, apitypes, export  # pylint: disable=no-name-in-module
+from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -50,6 +51,7 @@ ch.setFormatter(
     )
 )
 SESSION.addHandler(ch)
+
 
 async def main() -> bool:
     """Run main function to export config after querying some options from user."""
@@ -138,8 +140,14 @@ async def main() -> bool:
                 )
             return result
 
-    except (ClientError, errors.AnkerSolixError) as err:
-        CONSOLE.error("%s: %s", type(err), err)
+    except (
+        asyncio.CancelledError,
+        KeyboardInterrupt,
+        ClientError,
+        AnkerSolixError,
+    ) as err:
+        if isinstance(err, ClientError | AnkerSolixError):
+            CONSOLE.error("%s: %s", type(err), err)
         return False
 
 

@@ -796,6 +796,20 @@ class AnkerSolixClientSession:
             return False
         return True
 
+    async def get_mqtt_info(self) -> dict:
+        r"""Get the Anker MQTT server info with account certificates from session.
+
+        Example data:
+        {"user_id": "1541fc0a3db5a23e3c4ee27c6ed0616444e1ab8c","app_name": "anker_power","thing_name": "1541fc0a3db5a23e3c4ee27c6ed0616444e1ab8c-anker_power",
+        "certificate_id": "36167916173028037311485710012973829433","certificate_pem": "-----BEGIN CERTIFICATE-----\n<base64Cert>\n-----END CERTIFICATE-----\n",
+        "private_key": "-----BEGIN RSA PRIVATE KEY-----\n<base64Key>\n-----END RSA PRIVATE KEY-----\n","public_key": "",
+        "endpoint_addr": "aiot-mqtt-eu.anker.com","aws_root_ca1_pem": "-----BEGIN CERTIFICATE-----\n<base64Cert>\n-----END CERTIFICATE-----",
+        "origin": "","pkcs12": "<base64pkcs12Data>"}
+        """
+        return (await self.request("post", API_ENDPOINTS["get_mqtt_info"])).get(
+            "data"
+        ) or {}
+
 
 class AnkerEncryptionHandler:
     """Anker Solix encryption handler class.

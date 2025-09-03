@@ -26,8 +26,6 @@ from .apitypes import (
 )
 from .session import AnkerSolixClientSession
 
-_LOGGER: logging.Logger = logging.getLogger(__name__)
-
 
 class AnkerSolixBaseApi:
     """Define the API base class to handle Anker server communication via AnkerSolixClientSession.
