@@ -1,6 +1,6 @@
 """Anker Solix MQTT class to handle an MQTT server client connection session for an account."""
 
-from base64 import b64decode
+from base64 import b64decode, b64encode
 from collections.abc import Callable
 import contextlib
 from datetime import datetime
@@ -15,6 +15,12 @@ import aiofiles
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
+from .apitypes import (
+    DeviceHexData,
+    DeviceHexDataField,
+    DeviceHexDataHeader,
+    DeviceHexDataTypes,
+)
 from .session import AnkerSolixClientSession
 
 MessageCallback = Callable[[Any, Any], None]
@@ -77,9 +83,7 @@ class AnkerSolixMqttSession:
         )
         # extract message payload
         payload = json.loads(message.get("payload") or "")
-        model = (
-            payload.get("pn") if isinstance(payload, dict) else None
-        )
+        model = payload.get("pn") if isinstance(payload, dict) else None
         # Decrypt base64-encoded encrypted data field from expected dictionary in message payload
         data = (
             b64decode(payload.get("data") or "") if isinstance(payload, dict) else None
@@ -187,6 +191,94 @@ class AnkerSolixMqttSession:
             topic = f"{'cmd' if publish else 'dt'}/{self.mqtt_info.get('app_name')}/{pn}/{sn}/"
         return topic
 
+    def get_command_data(
+        self, command: str = "update_trigger", parameters: dict | None = None
+    ) -> str | None:
+        r"""Compose the hex data for MQTT publish payload to Anker Solix devices.
+
+        -------------------- Publish Header for update trigger -------------------------
+        ff 09   : 2 Byte Anker Solix message marker (supposed 'ff 09')
+        1f 00   : 2 Byte total message length (31) in Bytes (Little Endian format)
+        03 00 0f: 3 Byte fixed message pattern (supposed `03 00 0f` for sending message)
+        00 57   : 2 Byte message type pattern (varies per device model and message type)
+        -- Fields --|- Value (Hex/Decode Options)---------------------------------------
+        Fld Len Typ    uIntLe/var     sIntLe
+        a1  01  --  22
+        └->   1 unk           34             -> fix
+        a2  02  01  01
+        └->   2 ui             1             -> Toggle updates on/off
+        a3  05  03  2c:01:00:00
+        └->   5 var                      300 -> Update timeout in sec
+        fe  05  03  c8:d7:b6:68
+        └->   5 var               1756813256 -> Unix Timestamp
+        --------------------------------------------------------------------------------
+        """
+
+        hexdata = None
+        if not isinstance(parameters, dict):
+            parameters = {}
+        if command == "update_trigger":
+            hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0057"))
+            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
+            hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
+            hexdata.update_field(
+                DeviceHexDataField(
+                    f_name=bytes.fromhex("a3"),
+                    f_type=DeviceHexDataTypes.var.value,
+                    f_value=int(parameters.get("timeout") or 60).to_bytes(
+                        length=4, byteorder="little"
+                    ),
+                )
+            )
+            hexdata.add_timestamp_field()
+        if hexdata:
+            self._logger.info("Generated hexdata for device mqtt command '%s':\n%s", command, hexdata.hex(":"))
+            return hexdata.hex()
+        return None
+
+    def publish(
+        self,
+        deviceDict: dict,
+        hexbytes: bytearray | bytes | str,
+        cmd: int = 17,
+        sessId: str = "1234-5678",
+    ) -> tuple[str, mqtt.MQTTMessageInfo]:
+        """Get the MQTT topic prefix for provided device data."""
+        # convert parameter as required
+        if isinstance(hexbytes, str):
+            hexbytes = bytes.fromhex(hexbytes.replace(":", ""))
+        message = {
+            "head": {
+                "version": "1.0.0.1",
+                "client_id": f"android-{self.mqtt_info.get('app_name')}-{self.mqtt_info.get('user_id')}-{self.mqtt_info.get('certificate_id')}",
+                "sess_id": sessId,  # eg "5681-3252", can this be fix, or can it be obtained from client connection?
+                "msg_seq": 1,
+                "seed": 1,
+                "timestamp": int(datetime.now().timestamp()),
+                "cmd_status": 2,
+                "cmd": cmd,
+                "sign_code": 1,
+                "device_pn": (
+                    deviceDict.get("device_pn") or deviceDict.get("product_code") or ""
+                ),
+                "device_sn": (sn := deviceDict.get("device_sn") or ""),
+            },
+            "payload": json.dumps(
+                {
+                    "account_id": self.mqtt_info.get("user_id"),
+                    "device_sn": sn,
+                    # "data": "/wkfAAMADwBXoQEiogIBAaMFAywBAAD+BQPI17ZoIQ==",
+                    "data": b64encode(hexbytes).decode("utf-8"),
+                },
+                separators=(",", ":"),
+            ),
+        }
+        # generate message string and topic
+        message = json.dumps(message, separators=(",", ":"))
+        topic = f"{self.get_topic_prefix(deviceDict=deviceDict, publish=True)}req"
+        # publish the message and return message and response
+        return (message, self.client.publish(topic=topic, payload=message))
+
     def subscribe(self, topic: str) -> tuple[mqtt.MQTTErrorCode, int | None] | None:
         """Add topic to subscription set and subscribe if just added and client is already connected."""
         if topic and topic not in self.subscriptions:
@@ -213,7 +305,8 @@ class AnkerSolixMqttSession:
         """Connect MQTT client, it will optionally being created if none configured yet."""
         if not self.client and not await self.create_client():
             return None
-        #self.client.connect_async(host=self.host, port=self.port, keepalive=keepalive)
+        # TODO: async connection functionality still to be figured out
+        # self.client.connect_async(host=self.host, port=self.port, keepalive=keepalive)
         self.client.connect(host=self.host, port=self.port, keepalive=keepalive)
         return self.client
 

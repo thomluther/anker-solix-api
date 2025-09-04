@@ -19,9 +19,10 @@ from typing import Any
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-import keyboard
+
+# import keyboard # requires root on unix/linux
 from api import api  # pylint: disable=no-name-in-module
-from api.apitypes import DeviceHexData  # pylint: disable=no-name-in-module
+from api.apitypes import DeviceHexData, Color  # pylint: disable=no-name-in-module
 from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
 from api.mqtt import AnkerSolixMqttSession  # pylint: disable=no-name-in-module
 import common
@@ -117,7 +118,7 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
                     )
                     prefix = f"{model}_mqtt_dump"
                     response = input(f"Filename prefix for export ({prefix}): ")
-                    filename = f"{response or prefix}_{datetime.now().strftime('%Y_%M_%d__%H_%M_%S')}.txt"
+                    filename = f"{response or prefix}_{datetime.now().strftime('%Y-%m-%d__%H_%M_%S')}.txt"
                     # Ensure dump folder exists
                     dumpfolder = (Path(__file__).parent / "mqttdumps").resolve()
                     if not (
@@ -137,6 +138,8 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
                         )
                     )
                     qh.setLevel(logging.INFO)
+                    # Replace color escape sequences for file logging
+                    qh.addFilter(ReplaceFilter())
                     # create file handler for async file logging from the queue
                     loop = asyncio.get_running_loop()
                     fh = await loop.run_in_executor(
@@ -186,6 +189,13 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
                 try:
                     start = datetime.now()
                     minute = 0
+                    message, response = mqtt_session.publish(
+                        deviceDict=device_selected,
+                        hexbytes=mqtt_session.get_command_data(
+                            command="update_trigger", parameters={"timeout": 120}
+                        ),
+                    )
+                    CONSOLE.info(f"Published message: {response!s}\n{message!s}")
                     while True:
                         # print progress with minute marker while listening
                         print(".", end="", flush=True)  # noqa: T201
@@ -196,10 +206,12 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
                             minute = m
                             print(f"{m}", end="", flush=True)  # noqa: T201
                         # Check if a key was pressed
-                        # event = keyboard.read_event()
+                        # event = keyboard.read_event() # requires root on unix
                         # if event.event_type == keyboard.KEY_DOWN:
-                        #    keyboard.
-
+                        #     if event.name == 'u':
+                        #         CONSOLE.info(
+                        #             f"'u' pressed to request updates for topic {prefix}"
+                        #         )
                         # publish mqtt message to trigger update?
                         # topic to send the update command for mqtt data from device
                         # payload is actually unknown
@@ -257,6 +269,24 @@ def print_message(topic: str, message: Any, data: bytes, model: str) -> None:
         CONSOLE.info(f"{timestamp}Device hex data:\n{data.hex(':')}")
         # structure hex data
         CONSOLE.info(DeviceHexData(model=model or "", hexbytes=data).decode())
+
+
+class ReplaceFilter(logging.Filter):
+    """Class for custom replacements in a logger handler."""
+
+    def __init__(self, replacements: dict[str, str] | None = None) -> None:
+        """Init the class."""
+        super().__init__()
+        # replace Color escape sequences for logging per default
+        if not replacements:
+            replacements = {c.value: "" for c in Color}
+        self.replacements = replacements
+
+    def filter(self, record):
+        """Filter doing the replacements."""
+        for old, new in self.replacements.items():
+            record.msg = record.msg.replace(old, new)
+        return True
 
 
 # run async main

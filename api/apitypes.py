@@ -1,6 +1,6 @@
 """Default definitions required for the Anker Power/Solix Cloud API."""
 
-from dataclasses import InitVar, asdict, dataclass
+from dataclasses import InitVar, asdict, dataclass, field
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
 import struct
@@ -1307,7 +1307,7 @@ class SolixVehicle:
 
 
 class Color(StrEnum):
-    """Define ASCII colors"""
+    """Define ASCII colors."""
 
     BLACK = "\033[30m"
     RED = "\033[31m"
@@ -1325,11 +1325,11 @@ class DeviceHexDataTypes(Enum):
 
     str = bytes.fromhex("00")  # x bytes,  string
     ui = bytes.fromhex("01")  # 1 byte, unsigned int
-    sile = bytes.fromhex("02")  # 2 bytes, signed/unsigned int? LE/BE
+    sile = bytes.fromhex("02")  # 2 bytes, signed int LE
     var = bytes.fromhex(
         "03"
     )  # 4 bytes, various, could be 4 * int, 2 * signed int LE or float LE?
-    bin = bytes.fromhex("04")  # multiple bytes, mostly 00 or 01, setting pattern?
+    bin = bytes.fromhex("04")  # multiple bytes, mostly 00 or 01, setting pattern
     sfle = bytes.fromhex("05")  # 4 bytes, signed float LE
     unk = bytes.fromhex("FF")  # unkonwn
 
@@ -1339,38 +1339,53 @@ class DeviceHexDataHeader:
     """Dataclass to structure Solix device hex data headers as received from MQTT or BT transmissions.
 
         Message header structure 9-10 Bytes:
-        FF 09    | fixed message prefix for Anker Solix message
-        XX XX    | message length (including prefix), little endian format
-        XX XX XX | pattern that seem identical across all messages (`03 01 0f`)
-        XX XX    | pattern for type of message, e.g. `84 05` on telemetry packets and `04 09` for others, depends on device model, to be figured out
-        XX       | seems to optional increment for certain messages, fix for others or not used
-    "ff09 3b00 03010f 0407a10132a21100415a5636593630443330323030373036a3110031756e64312d486f6d65536572766572a4020140a502010128"
+        FF 09    | 2 Bytes fixed message prefix for Anker Solix message
+        XX XX    | 2 Bytes message length (including prefix), little endian format
+        XX XX XX | 3 Bytes pattern that seem identical across all messages (supposed `03 00/01 0f` for send/receive)
+        XX XX    | 2 Bytes pattern for type of message, e.g. `84 05` on telemetry packets and `04 09` for others, depends on device model, to be figured out
+        XX       | 1 optional Byte, seems increment for certain messages, fix for others or not used
+    "ff09 3b00 03010f 0407 a10132a21100415a5636593630443330323030373036a3110031756e64312d486f6d65536572766572a4020140a502010128"
     """
 
-    prefix: bytes = b""
+    prefix: bytearray = b""
     msglength: int = 0
-    pattern: bytes = b""
-    msgtype: bytes = b""
-    increment: bytes = b""
-    hexbytes: InitVar[bytes | str | None] = None
+    pattern: bytearray = b""
+    msgtype: bytearray = b""
+    increment: bytearray = b""
+    hexbytes: InitVar[bytearray | bytes | str | None] = None
+    cmd_msg: InitVar[bytearray | bytes | str | None] = None
 
-    def __post_init__(self, hexbytes) -> None:
-        """Init the dataclass from an optional hexbytes."""
+    def __post_init__(self, hexbytes, cmd_msg) -> None:
+        """Init the dataclass from optional hexbytes or for new cmf_msg."""
+        self.msglength = 0
         if isinstance(hexbytes, str):
-            hexbytes = bytes.fromhex(hexbytes)
-        if isinstance(hexbytes, bytes):
+            hexbytes = bytearray(bytes.fromhex(hexbytes))
+        elif isinstance(hexbytes, bytes):
+            hexbytes = bytearray(hexbytes)
+        if isinstance(cmd_msg, str):
+            cmd_msg = bytearray(bytes.fromhex(cmd_msg))
+        elif isinstance(cmd_msg, bytes):
+            cmd_msg = bytearray(cmd_msg)
+        if isinstance(hexbytes, bytearray):
             if len(hexbytes) >= 9:
                 self.prefix = hexbytes[0:2]
                 self.msglength = int.from_bytes(hexbytes[2:4], byteorder="little")
                 self.pattern = hexbytes[4:7]
                 self.msgtype = hexbytes[7:9]
-            if len(hexbytes) >= 10 and hexbytes[9:10] != bytes.fromhex("a1"):
+            if len(hexbytes) >= 10 and hexbytes[9:10] != bytearray.fromhex("a1"):
                 self.increment = hexbytes[9:10]
             else:
                 self.increment = b""
+        elif isinstance(cmd_msg, bytearray):
+            # Initialize for publish command with given message pattern
+            self.prefix = bytearray(bytes.fromhex("ff09"))
+            self.pattern = bytearray(bytes.fromhex("03000f"))
+            self.msgtype = cmd_msg[0:2]
+            self.increment = cmd_msg[2:3]
+            self.msglength = len(self) + 2
 
     def __len__(self) -> int:
-        """Return length for used fields."""
+        """Return Bytes used for header."""
         return (
             len(self.prefix)
             + len(self.pattern)
@@ -1381,14 +1396,27 @@ class DeviceHexDataHeader:
 
     def __str__(self) -> str:
         """Print the class fields."""
-        return f"prefix:{self.prefix.hex(':')}, msglength:{self.msglength!s}, pattern:{self.pattern.hex(':')}, msgtype:{self.msgtype.hex(':')}, increment:{self.increment.hex()}"
+        return f"prefix:{self.prefix.hex()}, msglength:{self.msglength!s}, pattern:{self.pattern.hex()}, msgtype:{self.msgtype.hex()}, increment:{self.increment.hex()}"
+
+    def hex(self, sep: str = "") -> str:
+        """Get the header as hex string."""
+        b = (
+            self.prefix
+            + self.msglength.to_bytes(2, byteorder="little")
+            + self.pattern
+            + self.msgtype
+            + self.increment
+        )
+        if sep:
+            return f"{b.hex(sep=sep)}"
+        return f"{b.hex()}"
 
     def decode(self) -> str:
         """Print the header fields representation in human readable format."""
         if len(self) > 0:
             s = f"{self.prefix.hex(' '):<8}: 2 Byte Anker Solix message marker (supposed 'ff 09')"
             s += f"\n{int.to_bytes(self.msglength, length=2, byteorder='little').hex(' '):<8}: 2 Byte total message length ({self.msglength}) in Bytes (Little Endian format)"
-            s += f"\n{self.pattern.hex(' '):<8}: 3 Byte fixed message pattern (supposed `03 01 0f`)"
+            s += f"\n{self.pattern.hex(' '):<8}: 3 Byte fixed message pattern (supposed `03 00/01 0f` for send/receive)"
             s += f"\n{(Color.GREEN + self.msgtype.hex(' ') + '   ' + Color.OFF)!s:<8}: 2 Byte message type pattern (varies per device model and message type)"
             s += f"\n{self.increment.hex(' '):<8}: 1 Byte optional message increment ({int.from_bytes(self.increment):>3})"
         else:
@@ -1414,13 +1442,15 @@ class DeviceHexDataField:
     f_length: int = 0
     f_type: bytes = b""
     f_value: bytes = b""
-    hexbytes: InitVar[bytes | str | None] = None
+    hexbytes: InitVar[bytearray | bytes | str | None] = None
 
     def __post_init__(self, hexbytes) -> None:
         """Init the dataclass from an optional hexbytes."""
         if isinstance(hexbytes, str):
-            hexbytes = bytes.fromhex(hexbytes)
-        if isinstance(hexbytes, bytes) and len(hexbytes) >= 2:
+            hexbytes = bytearray(bytes.fromhex(hexbytes))
+        elif isinstance(hexbytes, bytes):
+            hexbytes = bytearray(hexbytes)
+        if isinstance(hexbytes, bytearray) and len(hexbytes) >= 2:
             self.f_name = hexbytes[0:1]
             self.f_length = int.from_bytes(hexbytes[1:2])
             if 0 < self.f_length <= len(hexbytes) - 2:
@@ -1435,14 +1465,29 @@ class DeviceHexDataField:
             else:
                 self.f_type = b""
                 self.f_value = b""
+        else:
+            # ensure to update data length if initialized without hexbytes
+            self.f_length = len(self.f_type) + len(self.f_value)
 
     def __len__(self) -> int:
-        """Return length of field data."""
-        return self.f_length
+        """Return Bytes used for field."""
+        return (
+            len(self.f_name)
+            + len(self.f_type)
+            + len(self.f_value)
+            + 1 * (self.f_length > 0)
+        )
 
     def __str__(self) -> str:
         """Print the class fields."""
-        return f"f_name:{self.f_name.hex()}, f_length:{self.f_length!s}, f_type:{self.f_type.hex()}, f_value:{' '.join(self.f_value.hex(':'))}"
+        return f"f_name:{self.f_name.hex()}, f_length:{self.f_length!s}, f_type:{self.f_type.hex()}, f_value:{self.f_value.hex(':')}"
+
+    def hex(self, sep: str = "") -> str:
+        """Get the field as hex string."""
+        b = self.f_name + self.f_length.to_bytes() + self.f_type + self.f_value
+        if sep:
+            return f"{b.hex(sep=sep)}"
+        return f"{b.hex()}"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -1456,6 +1501,19 @@ class DeviceHexDataField:
                 if self.f_type in DeviceHexDataTypes
                 else DeviceHexDataTypes.unk.name
             )
+            tcol = (
+                [
+                    Color.BLUE,
+                    Color.GREEN,
+                    Color.CYAN,
+                    Color.YELLOW,
+                    Color.RED,
+                    Color.MAG,
+                ][ti]
+                if 0 <= (ti := int.from_bytes(self.f_type)) <= 5
+                else Color.RED
+            )
+
             if typ not in [DeviceHexDataTypes.str.name, DeviceHexDataTypes.bin.name]:
                 # unsigned int little endian
                 uile = (
@@ -1509,7 +1567,7 @@ class DeviceHexDataField:
                 # '>d' → big-endian 64-bit float (8 Bytes, double) => Does not seem to be used
                 # dbe = f"{struct.unpack('>d', self.f_value)[0]:>5.2f}" if len(self.f_value) == 8 else  ""
             else:
-                uile = str(self.f_value)
+                uile = str(bytes(self.f_value))
                 # uibe = ""
                 sile = ""
                 # sibe = ""
@@ -1517,8 +1575,8 @@ class DeviceHexDataField:
                 # fbe = ""
                 dle = ""
                 # dbe = ""
-            s = f"{Color.RED + self.f_name.hex() + Color.OFF:<3} {int.to_bytes(self.f_length).hex():<3} {self.f_type.hex() or '--':<3}  {self.f_value.hex(':')}"
-            s += f"\n{'└->':<3} {self.f_length!s:>3} {typ!s:<4} {uile:>12} {sile:>12} {fle:>12} {dle:>12}"
+            s = f"{Color.RED + self.f_name.hex() + Color.OFF + ' '!s:<4} {int.to_bytes(self.f_length).hex():<3} {tcol + (self.f_type.hex() or '--') + Color.OFF!s:<4}  {self.f_value.hex(':')}"
+            s += f"\n{'└->':<3} {self.f_length!s:>3} {tcol + typ + Color.OFF!s:<5} {uile:>12} {sile:>12} {fle:>12} {dle:>12}"
         else:
             s = ""
         return s
@@ -1542,17 +1600,19 @@ class DeviceHexData:
 
     """
 
-    hexbytes: bytes
+    hexbytes: bytearray = field(default_factory=bytearray)
     model: str = ""
     length: int = 0
-    msg_header: ClassVar[DeviceHexDataHeader] = DeviceHexDataHeader()
-    msg_fields: ClassVar[dict[str, DeviceHexDataField]] = {}
+    msg_header: DeviceHexDataHeader = field(default_factory=DeviceHexDataHeader)
+    msg_fields: dict[str, DeviceHexDataField] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Post init the dataclass to decode the bytes into fields."""
         idx = 10
         if isinstance(self.hexbytes, str):
-            self.hexbytes = bytes.fromhex(self.hexbytes.replace(":", ""))
+            self.hexbytes = bytearray(bytes.fromhex(self.hexbytes.replace(":", "")))
+        elif isinstance(self.hexbytes, bytes):
+            self.hexbytes = bytearray(self.hexbytes)
         if self.hexbytes:
             self.length = len(self.hexbytes)
             self.msg_header = DeviceHexDataHeader(hexbytes=self.hexbytes[0:idx])
@@ -1563,14 +1623,38 @@ class DeviceHexData:
                 if f.f_name:
                     self.msg_fields[f.f_name.hex()] = f
                 idx += int(f.f_length) + 2
+        else:
+            # update length and hexbytes if not initialized via hexbytes
+            self._update_hexbytes()
 
     def __len__(self) -> int:
-        """Return length of hex data."""
+        """Return Byte count of hex data."""
         return self.length
 
     def __str__(self) -> str:
-        """Print the hex bytes with separator."""
-        return self.hexbytes.hex(":")
+        """Print the fields and hex bytes with separator."""
+        return f"model:{self.model}, header:{{{self.msg_header!s}}}, hexbytes:{self.hexbytes.hex()}"
+
+    def _update_hexbytes(self) -> None:
+        # init length and hexbytes
+        self.length = len(self.msg_header)
+        self.hexbytes = b""
+        for f in (self.msg_fields or {}).values():
+            self.length += len(f)
+            self.hexbytes += bytes.fromhex(f.hex())
+        if self.length:
+            # update message length in header
+            self.msg_header.msglength = self.length
+        # generate hexbytes
+        self.hexbytes = bytearray(
+            bytes.fromhex(self.msg_header.hex()) + self.hexbytes
+        )
+
+    def hex(self, sep: str = "") -> str:
+        """Print the hex bytes with optional separator."""
+        if sep:
+            return self.hexbytes.hex(sep=sep)
+        return self.hexbytes.hex()
 
     def decode(self) -> str:
         """Print the field representation in human readable format."""
@@ -1583,15 +1667,19 @@ class DeviceHexData:
             )
             s = f"{pn + ' Header ':-^80}\n{self.msg_header.decode()}\n{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
             if self.msg_fields:
-                s += f"\n{'Fld':<3} {'Len':<3} {'Typ':<4} {'uIntLe/var':^12} {'sIntLe':^12} {'floatLe':^12} {'dblLe/4int':^12}"
+                s += f"\n{'Fld':<3} {'Len':<3} {'Typ':<5} {'uIntLe/var':^12} {'sIntLe':^12} {'floatLe':^12} {'dblLe/4int':^12}"
                 fieldmap = (
                     (SOLIXMQTTMAP.get(self.model).get(msgtype) or {})
                     if self.model in SOLIXMQTTMAP
                     else {}
                 )
                 for f in self.msg_fields.values():
-                    name = (fieldmap.get(f.f_name.hex()) or {}).get("name") or ""
-                    s += f"\n{f.decode()}{Color.CYAN + ' --> ' + name + Color.OFF if name else ''}"
+                    name = (
+                        (fld := fieldmap.get(f.f_name.hex()) or {}).get("name")
+                        or (fld.get("bytes") or {})
+                        or ""
+                    )
+                    s += f"\n{f.decode().rstrip()}{Color.CYAN + ' --> ' + str(name) + Color.OFF if name else ''}"
                 s += f"\n{80 * '-'}"
         else:
             s = ""
@@ -1601,108 +1689,133 @@ class DeviceHexData:
         """Return a dictionary representation of the class fields."""
         return asdict(self)
 
+    def update_field(self, datafield: DeviceHexDataField) -> None:
+        """Add or update the given field if header exists and ensure correct sequence of all fields."""
+        if (
+            self.msg_header
+            and isinstance(datafield, DeviceHexDataField)
+            and datafield.f_name
+        ):
+            self.msg_fields = self.msg_fields or {}
+            self.msg_fields.update({datafield.f_name.hex(): datafield})
+            # sort fields
+            fieldlist = list(self.msg_fields.keys())
+            fieldlist.sort()
+            new_fields = {name: self.msg_fields[name] for name in fieldlist}
+            self.msg_fields = new_fields
+            # update length and hexbytes
+            self._update_hexbytes()
+
+    def add_timestamp_field(self, fieldname: str | bytes = "fe") -> None:
+        """Add or update a timestamp field as maybe required to publish command data."""
+        if isinstance(fieldname, str):
+            fieldname = bytes.fromhex(fieldname)
+        datafield = DeviceHexDataField(
+            f_name=fieldname, f_type=DeviceHexDataTypes.var.value, f_value=int(datetime.now().timestamp()).to_bytes(4, byteorder="little")
+        )
+        self.update_field(datafield=datafield)
+
+    def pop_field(
+        self, datafield: str | bytes | DeviceHexDataField
+    ) -> DeviceHexDataField | None:
+        """Remove the given field name and return it, or return None if not found."""
+        if isinstance(datafield, bytes):
+            datafield = datafield.hex()
+        elif isinstance(datafield, DeviceHexDataField):
+            datafield = datafield.f_name.hex()
+        else:
+            datafield = str(datafield)
+        df = (self.msg_fields or {}).pop(datafield, None)
+        # update length and hexbytes
+        self._update_hexbytes()
+        return df
+
 
 # Define mapping for MQTT messages field conversions depending on Anker Solix model
 # Nested structure for model.messagetype.fieldname.attributes
+# field format 0x03 may use 1-4 individual values or all bytes for a signed int typically,
+# specified values count reflects how many bytes to consider individually, 0 considers all for single int value (default)
+# field format 0x04 is a bitmask pattern, byte number [0..len-1] reflects position, mask reflects the bit relevant for the value/toggle
+# factor can be used optionally to indicate a required conversion of the standard field value,
+# e.g. field value -123456 with factor -0.01 must be converted to get real value of 1234.56
 SOLIXMQTTMAP = {
     "A17C5": {
         "0405": {
             "topic": "param_info",
-            "a2": {
-                "name": "device_sn",
-            },
-            "a7": {"name": "fw_solarbank", "values": 4},
-            "a8": {"name": "fw_smartmeter", "values": 4},
-            "a9": {"name": "fw_expansion", "values": 4},
-            "d4": {
-                "name": "temperature",
-            },
-            "bd": {
-                "name": "max_load",
-            },
-            "be": {
-                "name": "max_load_legal",
-            },
-            "d5": {
-                "name": "pv_limit",
-            },
-            "d6": {
-                "name": "ac_input_limit",
-            },
+            "a2": {"name": "device_sn"},
+            "a7": {"name": "sw_version", "values": 4},
+            "a8": {"name": "sw_controller", "values": 4},
+            "a9": {"name": "sw_expansion", "values": 4},
+            "d4": {"name": "temperature"},
+            "bd": {"name": "max_load"},
+            "be": {"name": "max_load_legal"},
+            "d5": {"name": "pv_limit"},
+            "d6": {"name": "ac_input_limit"},
         },
         "0408": {
             "topic": "state_info",
-            "a2": {
-                "name": "device_sn",
-            },
-            "cc": {
-                "name": "temperature",
-            },
+            "a2": {"name": "device_sn"},
+            "cc": {"name": "temperature"},
         },
     },
     "A17C0": {
         "0405": {
             "topic": "param_info",
-            "a2": {
-                "name": "device_sn",
+            "a2": {"name": "device_sn"},
+            "a3": {"name": "battery_soc"},
+            "a6": {"name": "sw_version", "values": 1},
+            "a7": {"name": "sw_controller", "values": 1},
+            "a8": {"name": "sw_esp?", "values": 1},
+            "aa": {"name": "temperature"},
+            "ab": {"name": "photovoltaic_power"},
+            "ac": {"name": "output_power"},
+            "ad": {"name": "charging_status"},
+            "ae": {
+                "bytes": {
+                    "12": [{"name": "allow_export_switch", "mask": 0x64}],
+                    "15": [{"name": "priority_discharge_switch", "mask": 0x01}],
+                }
             },
-            "a3": {
-                "name": "battery_soc",
-            },
-            "a6": {"name": "fw_solarbank", "values": 1},
-            "ac": {
-                "name": "output_power",
-            },
-            "aa": {
-                "name": "temperature",
-            },
-            "b4": {
-                "name": "power_cutoff",
-            },
-            "b7": {
-                "name": "inverter_brand",
-            },
-            "b8": {
-                "name": "inverter_model",
-            },
-            "b9": {
-                "name": "min_load?",
-            },
+            "b0": {"name": "charging_power", "values": 1},
+            "b4": {"name": "output_cutoff_data"},
+            "b5": {"name": "lowpower_input_data"},
+            "b6": {"name": "input_cutoff_data"},
+            "b7": {"name": "inverter_brand"},
+            "b8": {"name": "inverter_model"},
+            "b9": {"name": "min_load?"},
+        },
+        "0407": {
+            "topic": "state_info",
+            "a2": {"name": "device_sn"},
+            "a3": {"name": "wifi_name"},
+            "a4": {"name": "wifi_signal"},
+            "a5": {"name": "wifi_type"},
         },
         "0408": {
             "topic": "state_info",
-            "a2": {
-                "name": "device_sn",
-            },
-            "b0": {
-                "name": "battery_soc",
-            },
-            "b6": {
-                "name": "temperature",
-            },
+            "a2": {"name": "device_sn"},
+            "a8": {"name": "charging_status"},
+            "a9": {"name": "output_preset"},
+            "aa": {"name": "photovoltaic_power"},
+            "ab": {"name": "charging_power"},
+            "ac": {"name": "output_power"},
+            "ad": {"name": "?"},
+            "ae": {"name": "?"},
+            "b0": {"name": "battery_soc"},
+            "b6": {"name": "temperature"},
         },
     },
     "A17X7": {
         "0405": {
             "topic": "param_info",
-            "a2": {
-                "name": "device_sn",
-            },
-            "a6": {"name": "fw_device", "values": 4},
-            "a8": {
-                "name": "export_power",
-            },
-            "a9": {
-                "name": "import_power",
-            },
-            "aa": {
-                "name": "export_energy",
-                "factor": 0.01,
-            },
-            "ab": {
-                "name": "import_energy",
-                "factor": 0.01,
-            },
+            "a2": {"name": "device_sn"},
+            "a6": {"name": "sw_version", "values": 4},
+            "a7": {"name": "sw_controller", "values": 4},
+            "a8": {"name": "grid_to_home_power?"},
+            "a9": {"name": "?"},
+            "aa": {"name": "grid_to_home_energy", "factor": 0.01},
+            "ab": {"name": "photovoltaic_to_grid_energy", "factor": 0.01},
+            "ad": {"name": "photovoltaic_to_grid_power"},
         },
     },
 }
