@@ -1,9 +1,14 @@
 """A collection of helper functions for pyscripts."""
 
+import asyncio
 import datetime
 import getpass
 import logging
 import os
+import select
+import sys
+import termios
+import tty
 
 from api.apitypes import (  # pylint: disable=no-name-in-module
     SolarbankRatePlan,
@@ -28,6 +33,13 @@ _CREDENTIALS = {
     "COUNTRY": os.getenv("ANKERCOUNTRY"),
 }
 
+class InlineStreamHandler(logging.StreamHandler):
+    """Stream Handler that removes the newline."""
+    def emit(self, record):
+        """Log without newline."""
+        msg = self.format(record)
+        self.stream.write(msg)  # No newline
+        self.flush()
 
 def user() -> str:
     """Get anker account user."""
@@ -103,12 +115,10 @@ def print_schedule(schedule: dict) -> None:
             for sea in rate_plan:
                 unit = sea.get("unit") or "-"
                 m_start = datetime.date.today().replace(
-                    day=1,
-                    month=(sea.get("sea") or {}).get("start_month") or 1
+                    day=1, month=(sea.get("sea") or {}).get("start_month") or 1
                 )
                 m_end = datetime.date.today().replace(
-                    day=1,
-                    month=(sea.get("sea") or {}).get("end_month") or 1
+                    day=1, month=(sea.get("sea") or {}).get("end_month") or 1
                 )
                 is_same = sea.get("is_same")
                 weekday = sea.get("weekday") or []
@@ -208,7 +218,6 @@ def print_schedule(schedule: dict) -> None:
                 f"{slot.get('id', '')!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t5}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t6}} {str(load.get('power', '')) + ' W':>{t6}} {str(slot.get('charge_priority', '')) + ' %':>{t10}} {('---' if discharge is None else 'YES' if discharge else 'NO'):>{t9}} {sb1 + ' W':>{t6}} {sb2 + ' W':>{t6}} {slot.get('power_setting_mode', '-')!s:^{t5}} {load.get('name', '')!s}"
             )
 
-
 def print_products(products: dict) -> None:
     """Print the products as table."""
     col1 = 6
@@ -229,3 +238,43 @@ def print_products(products: dict) -> None:
     CONSOLE.info(f"Summary: {(m or 0)!s} Models")
     for key, value in counts.items():
         CONSOLE.info(f"{value!s:>2} {key}")
+
+def clearscreen():
+    """Clear the terminal screen."""
+    if sys.stdin is sys.__stdin__:  # check if not in IDLE shell
+        if os.name == "nt":
+            os.system("cls")
+        else:
+            os.system("clear")
+        # CONSOLE.info("\033[H\033[2J", end="")  # ESC characters to clear terminal screen, system independent?
+
+def getkey() -> str | None:
+    """Blocking function to read a single keypress."""
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        # Enable C-Break mode for terminal
+        tty.setcbreak(fd,when=1)
+        # check if input ready, 2-seconds timeout
+        ready, _, _ = select.select([fd], [], [], 2)
+        if ready:
+            b = os.read(fd, 3).decode()
+            if len(b) == 3:
+                k = ord(b[2])
+            else:
+                k = ord(b)
+            key_mapping = {
+                127: "backspace",
+                10: "return",
+                32: "space",
+                9: "tab",
+                27: "esc",
+                65: "up",
+                66: "down",
+                67: "right",
+                68: "left",
+            }
+            return key_mapping.get(k, chr(k))
+    finally:
+        # This will always be run before returning
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)

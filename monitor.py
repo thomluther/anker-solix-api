@@ -12,7 +12,6 @@ import contextlib
 from datetime import datetime, timedelta
 import json
 import logging
-import os
 from pathlib import Path
 import sys
 
@@ -41,16 +40,6 @@ INTERACTIVE = True  # Interactive allows to select examples and exports as input
 SHOWAPICALLS = (
     False  # Enable to show Api calls and cache details for additional debugging
 )
-
-
-def clearscreen():
-    """Clear the terminal screen."""
-    if sys.stdin is sys.__stdin__:  # check if not in IDLE shell
-        if os.name == "nt":
-            os.system("cls")
-        else:
-            os.system("clear")
-        # CONSOLE.info("\033[H\033[2J", end="")  # ESC characters to clear terminal screen, system independent?
 
 
 def get_subfolders(folder: str | Path) -> list:
@@ -151,7 +140,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             startup: bool = True
             deferred: bool = False
             while True:
-                clearscreen()
+                common.clearscreen()
                 now = datetime.now().astimezone()
                 if next_refr <= now:
                     # Ask whether monitor should be limited to selected site ID

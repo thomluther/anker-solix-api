@@ -6,7 +6,7 @@ you will see the devices of the user account and you can select a device you wan
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import partial
 import json
 import logging
@@ -19,12 +19,11 @@ from typing import Any
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-
-# import keyboard # requires root on unix/linux
 from api import api  # pylint: disable=no-name-in-module
-from api.apitypes import DeviceHexData, Color  # pylint: disable=no-name-in-module
+from api.apitypes import Color  # pylint: disable=no-name-in-module
 from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
 from api.mqtt import AnkerSolixMqttSession  # pylint: disable=no-name-in-module
+from api.mqtttypes import DeviceHexData  # pylint: disable=no-name-in-module
 import common
 from paho.mqtt.client import Client
 
@@ -33,10 +32,22 @@ CONSOLE: logging.Logger = common.CONSOLE
 # enable debug mode for the console handler
 # CONSOLE.handlers[0].setLevel(logging.DEBUG)
 
+# create INLINE logger
+INLINE: logging.Logger = logging.getLogger("Inline_logger")
+# Set parent to lowest level to allow messages passed to all handlers using their own level
+INLINE.setLevel(logging.DEBUG)
+# create console handler and set level to info and formatting without newline
+handler = common.InlineStreamHandler()
+handler.setLevel(logging.INFO)
+# No newline in format
+handler.setFormatter(logging.Formatter("%(message)s"))
+INLINE.addHandler(handler)
 
-async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-    None
-):
+VALUES: dict = {}
+FOUNDTOPICS: set = set()
+
+
+async def main() -> None:  # noqa: C901
     """Run Main routine to start the monitor in a loop."""
     mqtt_session: AnkerSolixMqttSession | None = None
     listener = None
@@ -101,9 +112,7 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
                     )
                     if not selection:
                         return False
-                    elif selection.isdigit() and 1 <= int(selection) <= len(
-                        device_names
-                    ):
+                    if selection.isdigit() and 1 <= int(selection) <= len(device_names):
                         device_selected = devices[int(selection) - 1]
 
                 # ask whether dumping messages to file
@@ -157,13 +166,20 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
                         "\nMQTT message dumping to file: %s",
                         Path.resolve(Path(dumpfolder / filename)),
                     )
-                CONSOLE.info(
-                    "\nStarting MQTT server connection for %s...",
-                    device_selected.get("device_sn"),
+
+                # Start the MQTT session for the selected device
+                device_sn = device_selected.get("device_sn")
+                device_pn = (
+                    device_selected.get("device_pn")
+                    or device_selected.get("product_code")
+                    or ""
                 )
+                CONSOLE.info(
+                    f"\nStarting MQTT server connection for device {device_sn} (model {device_pn})..."
+                )
+                # Initialize the session
                 mqtt_session = AnkerSolixMqttSession(apisession=myapi.apisession)
-                # register our message callback function for mqtt session
-                mqtt_session.message_callback(func=print_message)
+                # Connect the MQTT client
                 client: Client = await mqtt_session.connect_client_async()
                 if not client.is_connected:
                     CONSOLE.error(
@@ -175,52 +191,124 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
                     f"Connected successfully to MQTT server {mqtt_session.host}:{mqtt_session.port}"
                 )
                 if listener:
-                    # add queue handler to CONSOLE
+                    # add queue handler to CONSOLE for output logging to file
                     CONSOLE.addHandler(qh)
                     # start the listener
                     listener.start()
-                # subscribe root Topic
+                # subscribe root Topic of selected device
+                topics = set()
                 if prefix := mqtt_session.get_topic_prefix(deviceDict=device_selected):
-                    mqtt_session.subscribe(f"{prefix}#")
-                # Start the loop to process network traffic and callbacks
-                client.loop_start()
-                # cmdprefix = mqtt_session.get_topic_prefix(deviceDict=device_selected, publish=True)
-                # cmdpayload = json.dumps({})
+                    topics.add(f"{prefix}#")
+                # Flag to control the key reader loop
+                # stop_event = asyncio.Event()
+
+                # Signal handler to set the stop flag
+                # def handle_sigint():
+                #     """Handle interrupt signals."""
+                #     stop_event.set()
+
+                # print the menu before starting
+                print_menu()
                 try:
-                    start = datetime.now()
-                    minute = 0
-                    message, response = mqtt_session.publish(
-                        deviceDict=device_selected,
-                        hexbytes=mqtt_session.get_command_data(
-                            command="update_trigger", parameters={"timeout": 120}
-                        ),
+                    activetopic = None
+                    realtime = True
+                    rt_devices = {device_sn}
+                    loop = asyncio.get_running_loop()
+                    # loop.add_signal_handler(signal.SIGINT, handle_sigint)
+                    # loop.add_signal_handler(signal.SIGTERM, handle_sigint)
+                    # Start the background poller with subscriptions and update trigger
+                    poller_task = asyncio.create_task(
+                        mqtt_session.message_poller(
+                            topics=topics,
+                            trigger_devices=rt_devices,
+                            msg_callback=print_message,
+                            timeout=60,
+                        )
                     )
-                    CONSOLE.info(f"Published message: {response!s}\n{message!s}")
+                    # Start the wait progress printer in background
+                    progress_task = asyncio.create_task(print_wait_progress())
                     while True:
-                        # print progress with minute marker while listening
-                        print(".", end="", flush=True)  # noqa: T201
-                        await asyncio.sleep(10)
-                        if (
-                            m := int((datetime.now() - start).total_seconds() / 60)
-                        ) != minute:
-                            minute = m
-                            print(f"{m}", end="", flush=True)  # noqa: T201
                         # Check if a key was pressed
-                        # event = keyboard.read_event() # requires root on unix
-                        # if event.event_type == keyboard.KEY_DOWN:
-                        #     if event.name == 'u':
-                        #         CONSOLE.info(
-                        #             f"'u' pressed to request updates for topic {prefix}"
-                        #         )
-                        # publish mqtt message to trigger update?
-                        # topic to send the update command for mqtt data from device
-                        # payload is actually unknown
-                        # response = client.publish(topic=f"{cmdprefix}req", payload=cmdpayload)
-                        # CONSOLE.info(
-                        #     f"Published topic {cmdprefix}req, payload {cmdpayload!s}:\n{response!s}"
-                        # )
-                except (KeyboardInterrupt, asyncio.CancelledError):
-                    CONSOLE.info("\nDisconnecting from MQTT server...")
+                        if k := await loop.run_in_executor(None, common.getkey):
+                            k = k.lower()
+                            if k == "m":
+                                print_menu()
+                            elif k == "u":
+                                CONSOLE.info(f"{Color.RED}Unsubscribing all topics...{Color.OFF}")
+                                topics.clear()
+                                activetopic = None
+                                if mqtt_session.message_callback() == print_values:
+                                    # clear last message from screen and show active subscription
+                                    await asyncio.sleep(6)
+                                    print_values(
+                                        session=mqtt_session,
+                                        topic="",
+                                        message=None,
+                                        data=None,
+                                        model=device_pn,
+                                    )
+                            elif k == "s":
+                                CONSOLE.info(f"{Color.GREEN}Subscribing root topic...{Color.OFF}")
+                                topics.clear()
+                                activetopic = None
+                                topics.add(f"{prefix}#")
+                            elif k == "t":
+                                if tl := list(FOUNDTOPICS):
+                                    index = (
+                                        tl.index(activetopic)
+                                        if activetopic in tl
+                                        else -1
+                                    )
+                                    activetopic = tl[
+                                        index + 1 if index + 1 < len(tl) else 0
+                                    ]
+                                    CONSOLE.info(
+                                        f"{Color.YELLOW}Toggling subscription to topic {activetopic}...{Color.OFF}"
+                                    )
+                                    topics.clear()
+                                    topics.add(f"{activetopic}")
+                                else:
+                                    CONSOLE.info(f"{Color.RED}No topics received yet for toggling!{Color.OFF}")
+                            elif k == "r":
+                                if realtime:
+                                    CONSOLE.info(
+                                        f"{Color.RED}Disabling real time data trigger, messages will reduce after max. 60 seconds...{Color.OFF}"
+                                    )
+                                    realtime = False
+                                    rt_devices.discard(device_sn)
+                                else:
+                                    CONSOLE.info(
+                                        f"{Color.GREEN}Enabling real time data trigger, message frequency should increase shortly...{Color.OFF}"
+                                    )
+                                    realtime = True
+                                    rt_devices.add(device_sn)
+                            elif k == "v":
+                                if mqtt_session.message_callback() == print_message:
+                                    CONSOLE.info(
+                                        f"{Color.YELLOW}Switching to Values view for next message...{Color.OFF}"
+                                    )
+                                    mqtt_session.message_callback(func=print_values)
+                                else:
+                                    CONSOLE.info(
+                                        f"{Color.YELLOW}Switching to Messages view for next message...{Color.OFF}"
+                                    )
+                                    mqtt_session.message_callback(func=print_message)
+                            elif k == "esc":
+                                break
+                            await asyncio.sleep(0.5)
+                finally:
+                    # Cancel the started tasks
+                    poller_task.cancel()
+                    progress_task.cancel()
+                    # Wait for the tasks to finish cancellation
+                    try:
+                        await poller_task
+                    except asyncio.CancelledError:
+                        CONSOLE.info("MQTT client poller task cancelled.")
+                    try:
+                        await progress_task
+                    except asyncio.CancelledError:
+                        CONSOLE.info("Progress printer was cancelled.")
                     client.loop_stop()
                     mqtt_session.cleanup()
                     # ensure the queue listener is closed
@@ -232,7 +320,6 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
                             "\nMQTT dump file completed: %s",
                             Path.resolve(Path(dumpfolder / filename)),
                         )
-                    return False
             return True
 
     except (
@@ -241,8 +328,14 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
         ClientError,
         AnkerSolixError,
     ) as err:
+        if isinstance(err, ClientError | AnkerSolixError):
+            CONSOLE.error("%s: %s", type(err), err)
+            CONSOLE.info("Api Requests: %s", myapi.request_count)
+            CONSOLE.info(myapi.request_count.get_details(last_hour=True))
+        return False
+    finally:
         if mqtt_session:
-            CONSOLE.info("\nDisconnecting from MQTT server...")
+            CONSOLE.info("Disconnecting from MQTT server...")
             client.loop_stop()
             mqtt_session.cleanup()
             # ensure the queue listener is closed
@@ -250,25 +343,118 @@ async def main() -> (  # pylint: disable=too-many-locals,too-many-branches,too-m
                 listener.stop()
                 # remove queue file handler again before zipping folder
                 CONSOLE.removeHandler(qh)
-        if isinstance(err, ClientError | AnkerSolixError):
-            CONSOLE.error("%s: %s", type(err), err)
-            CONSOLE.info("Api Requests: %s", myapi.request_count)
-            CONSOLE.info(myapi.request_count.get_details(last_hour=True))
-        return False
 
 
-def print_message(topic: str, message: Any, data: bytes, model: str) -> None:
+def print_menu() -> None:
+    """Print the key menu."""
+    CONSOLE.info("\n%s\nMQTT Monitor key menu:\n%s", 100 * "-", 100 * "-")
+    CONSOLE.info(f"[{Color.YELLOW}M{Color.OFF}]enu to show this keylist")
+    CONSOLE.info(f"[{Color.YELLOW}U{Color.OFF}]nsubscribe all topics. This will stop receiving MQTT messages")
+    CONSOLE.info(f"[{Color.YELLOW}S{Color.OFF}]ubscribe root topic. This will subscribe root only")
+    CONSOLE.info(
+        f"[{Color.YELLOW}T{Color.OFF}]oggle subscribed topic. If only one topic identified from root topic, toggling is not possible"
+    )
+    CONSOLE.info(f"[{Color.YELLOW}R{Color.OFF}]eal time data trigger toggle ON (Default) or OFF")
+    CONSOLE.info(f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding")
+    CONSOLE.info(f"[{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop MQTT monitor")
+    input(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n")
+
+
+async def print_wait_progress() -> None:
+    """Print dots and minute markers as progress for message monitoring."""
+    # print progress with minute marker while listening
+    start = datetime.now()
+    minute = 0
+    INLINE.info("Listening...")
+    while True:
+        await asyncio.sleep(5)
+        INLINE.info(".")
+        if (m := int((datetime.now() - start).total_seconds() / 60)) != minute:
+            minute = m
+            INLINE.info(f"{m}")
+
+
+def print_message(
+    session: AnkerSolixMqttSession, topic: str, message: Any, data: bytes, model: str
+) -> None:
     """Print and decode the received messages."""
+    global VALUES, FOUNDTOPICS  # noqa: PLW0602
+    if topic:
+        FOUNDTOPICS.add(topic)
     timestamp = ""
     if isinstance(message, dict):
         timestamp = datetime.fromtimestamp(
             (message.get("head") or {}).get("timestamp") or 0
         ).strftime("%Y-%M-%d %H:%M:%S ")
     CONSOLE.info(f"\nReceived message on topic: {topic}\n{message}")
-    if data:
+    if isinstance(data, bytes):
         CONSOLE.info(f"{timestamp}Device hex data:\n{data.hex(':')}")
         # structure hex data
-        CONSOLE.info(DeviceHexData(model=model or "", hexbytes=data).decode())
+        hd = DeviceHexData(model=model or "", hexbytes=data)
+        CONSOLE.info(hd.decode())
+        # extract values to dict
+        VALUES.update(hd.values())
+    elif data:
+        # no encoded data in message, dump object whatever it is
+        CONSOLE.info(f"{timestamp}Device data:\n{json.dumps(data, indent=2)}")
+
+
+def print_values(
+    session: AnkerSolixMqttSession, topic: str, message: Any, data: bytes, model: str
+) -> None:
+    """Print the accumulated and refreshed values including last message timestamp."""
+    global VALUES, FOUNDTOPICS  # noqa: PLW0602
+    if topic:
+        FOUNDTOPICS.add(topic)
+    timestamp = ""
+    col1 = 25
+    col2 = 25
+    col3 = 25
+    if isinstance(message, dict):
+        timestamp = datetime.fromtimestamp(
+            (message.get("head") or {}).get("timestamp") or 0
+        ).strftime("%Y-%M-%d %H:%M:%S")
+    common.clearscreen()
+    hd = DeviceHexData(model=model or "", hexbytes=data)
+    CONSOLE.info(
+        f"Realtime Trigger: {Color.GREEN + ' ON' if len(session.triggered_devices) else Color.RED + 'OFF'}{Color.OFF}, "
+        f"Active topic: {Color.GREEN}{str(session.subscriptions or '')[1:-1]}{Color.OFF}"
+    )
+    CONSOLE.info(f"MQTT Statistics : {session.mqtt_stats!s}")
+    if message:
+        CONSOLE.info(
+            f"{timestamp}: Received message '{Color.YELLOW + hd.msg_header.msgtype.hex(':') + Color.OFF}' on topic: {Color.YELLOW + topic + Color.OFF}"
+        )
+    if data:
+        VALUES.update(hd.values())
+    if VALUES:
+        CONSOLE.info(f"{100 * '-'}")
+        fields = []
+        for key, value in VALUES.items():
+            # convert timestamps to readable date and time for printout
+            if "timestamp" in key and isinstance(value, int):
+                value = datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
+            fields.append((key, value))
+            if len(fields) >= 2:
+                # print row
+                CONSOLE.info(
+                    f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}} {fields[1][0]:<{col3}}: {fields[1][1]!s}"
+                )
+                fields.clear()
+        if fields:
+            CONSOLE.info(f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}")
+    CONSOLE.info(f"{100 * '-'}\nReceived Topics:")
+    for t in FOUNDTOPICS:
+        CONSOLE.info(f"{t}")
+    CONSOLE.info(f"{100 * '-'}\nReceived Messages:")
+    CONSOLE.info(f"{json.dumps(session.mqtt_stats.dev_messages)}")
+    if message:
+        CONSOLE.info(f"{100 * '-'}\n{message}")
+        if isinstance(data, bytes):
+            CONSOLE.info(f"Device hex data:\n{data.hex(':')}")
+        elif data:
+            # no encoded data in message, dump object whatever it is
+            CONSOLE.info(f"Device data:\n{json.dumps(data, indent=2)}")
 
 
 class ReplaceFilter(logging.Filter):
