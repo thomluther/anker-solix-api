@@ -245,6 +245,8 @@ from api import mqtttypes
       CONSOLE.info(data.decode())
 ```
 
+The most convenient way to monitor and decode your device MQTT data however is the [mqtt_monitor.py](#mqtt_monitorpy) tool.
+
 
 # AnkerSolixApi Tools
 
