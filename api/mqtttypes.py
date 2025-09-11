@@ -5,8 +5,6 @@ from datetime import datetime
 import struct
 from typing import Any
 
-import paho.mqtt.client as mqtt
-
 from .apitypes import Color, SolixDeviceCategory
 from .mqttmap import SOLIXMQTTMAP, DeviceHexDataTypes
 

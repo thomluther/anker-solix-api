@@ -1,10 +1,4 @@
-"""Base Class for interacting with the Anker Power / Solix API.
-
-Required Python modules:
-pip install cryptography
-pip install aiohttp
-pip install aiofiles
-"""
+"""Base Class for interacting with the Anker Power / Solix API."""
 
 from __future__ import annotations
 

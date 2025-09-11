@@ -2,7 +2,9 @@
 """Example exec module to use the Anker API for connecting to the MQTT server and displaying subscribed topics.
 
 This module will prompt for the Anker account details if not pre-set in the header. Upon successful authentication,
-you will see the devices of the user account and you can select a device you want to monitor.
+you will see the devices of the user account and you can select a device you want to monitor. Optionally you
+can dump the output to a file. The tool will display a usage menu before monitoring starts. While monitoring,
+it reacts on key press for the menu options. The menu can be displayed again with 'm'.
 """
 
 import asyncio
@@ -234,7 +236,9 @@ async def main() -> None:  # noqa: C901
                             if k == "m":
                                 print_menu()
                             elif k == "u":
-                                CONSOLE.info(f"{Color.RED}Unsubscribing all topics...{Color.OFF}")
+                                CONSOLE.info(
+                                    f"{Color.RED}Unsubscribing all topics...{Color.OFF}"
+                                )
                                 topics.clear()
                                 activetopic = None
                                 if mqtt_session.message_callback() == print_values:
@@ -248,7 +252,9 @@ async def main() -> None:  # noqa: C901
                                         model=device_pn,
                                     )
                             elif k == "s":
-                                CONSOLE.info(f"{Color.GREEN}Subscribing root topic...{Color.OFF}")
+                                CONSOLE.info(
+                                    f"{Color.GREEN}Subscribing root topic...{Color.OFF}"
+                                )
                                 topics.clear()
                                 activetopic = None
                                 topics.add(f"{prefix}#")
@@ -268,7 +274,9 @@ async def main() -> None:  # noqa: C901
                                     topics.clear()
                                     topics.add(f"{activetopic}")
                                 else:
-                                    CONSOLE.info(f"{Color.RED}No topics received yet for toggling!{Color.OFF}")
+                                    CONSOLE.info(
+                                        f"{Color.RED}No topics received yet for toggling!{Color.OFF}"
+                                    )
                             elif k == "r":
                                 if realtime:
                                     CONSOLE.info(
@@ -348,15 +356,25 @@ async def main() -> None:  # noqa: C901
 def print_menu() -> None:
     """Print the key menu."""
     CONSOLE.info("\n%s\nMQTT Monitor key menu:\n%s", 100 * "-", 100 * "-")
-    CONSOLE.info(f"[{Color.YELLOW}M{Color.OFF}]enu to show this keylist")
-    CONSOLE.info(f"[{Color.YELLOW}U{Color.OFF}]nsubscribe all topics. This will stop receiving MQTT messages")
-    CONSOLE.info(f"[{Color.YELLOW}S{Color.OFF}]ubscribe root topic. This will subscribe root only")
+    CONSOLE.info(f"[{Color.YELLOW}M{Color.OFF}]enu to show this key list")
+    CONSOLE.info(
+        f"[{Color.YELLOW}U{Color.OFF}]nsubscribe all topics. This will stop receiving MQTT messages"
+    )
+    CONSOLE.info(
+        f"[{Color.YELLOW}S{Color.OFF}]ubscribe root topic. This will subscribe root only"
+    )
     CONSOLE.info(
         f"[{Color.YELLOW}T{Color.OFF}]oggle subscribed topic. If only one topic identified from root topic, toggling is not possible"
     )
-    CONSOLE.info(f"[{Color.YELLOW}R{Color.OFF}]eal time data trigger toggle ON (Default) or OFF")
-    CONSOLE.info(f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding")
-    CONSOLE.info(f"[{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop MQTT monitor")
+    CONSOLE.info(
+        f"[{Color.YELLOW}R{Color.OFF}]eal time data trigger toggle ON (Default) or OFF"
+    )
+    CONSOLE.info(
+        f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding"
+    )
+    CONSOLE.info(
+        f"[{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop MQTT monitor"
+    )
     input(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n")
 
 
@@ -420,7 +438,7 @@ def print_values(
         f"Realtime Trigger: {Color.GREEN + ' ON' if len(session.triggered_devices) else Color.RED + 'OFF'}{Color.OFF}, "
         f"Active topic: {Color.GREEN}{str(session.subscriptions or '')[1:-1]}{Color.OFF}"
     )
-    CONSOLE.info(f"MQTT Statistics : {session.mqtt_stats!s}")
+    CONSOLE.info(f"{session.mqtt_stats!s}")
     if message:
         CONSOLE.info(
             f"{timestamp}: Received message '{Color.YELLOW + hd.msg_header.msgtype.hex(':') + Color.OFF}' on topic: {Color.YELLOW + topic + Color.OFF}"

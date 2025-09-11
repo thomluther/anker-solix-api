@@ -74,6 +74,7 @@ SOLIXMQTTMAP = {
             "b7": {"name": "inverter_brand"},
             "b8": {"name": "inverter_model"},
             "b9": {"name": "min_load?"},
+            "fe": {"name": "msg_timestamp"},
         },
         "0407": {
             "topic": "state_info",

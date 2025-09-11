@@ -217,6 +217,35 @@ Device type | Description
 > While some api responses may show standalone devices that you can manage with your Anker account, the cloud api does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values but only for the time they are prompted in the App. Therefore there may not be any endpoints that provide usage data or settings of such stand alone devices. If your device is tracking energy statistics, it it likely using the power api that seems to be the unique Anker service to record energy data over time.
 
 
+# MQTT client
+
+This is a rather new implementation in the library. It provides data classes to structure the byte data as received in MQTT or Bluetooth messages. The modules also contains a data mapping for the byte fields as known so far. This mapping description must be enhanced for each device model, constellation and message type that is provided, to allow MQTT data extraction and usage.
+
+> [!IMPORTANT]
+> At this point there is NO integration of MQTT data to the Api cache since the propriatary byte data must be described first for various devices.
+This is where YOU can contribute as device owner, see discussion [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222).
+
+Following is a code snipped how you can utilize the library for easy byte data structuring and see decoding options of your received byte data packages from MQTT or BT clients. You can use this in the client example above.
+
+```python
+# required additional imports
+from base64 import b64decode
+from api import mqtttypes
+
+      # hex byte data as received from MQTT or BT
+      hexstr = "ff093b0003010f0407a10132xxxxxxxxxxxxxxxxxxxxxxxxxxxa502010128"
+      # optional b64 encoded data as received
+      b64str = "/wkOAAMBDwhXAKEBMjg="
+      hexstr = b64decode(b64str).hex()
+      # structure hex bytes in data class, specify your device model to get defined decoding descriptions for fields
+      data = mqtttypes.DeviceHexData(model="A17C5",hexbytes=hexstr)
+      # print data structure
+      CONSOLE.info(str(data))
+      # print bytes with decode options and defined field name description
+      CONSOLE.info(data.decode())
+```
+
+
 # AnkerSolixApi Tools
 
 ## test_api.py
@@ -265,6 +294,22 @@ When using monitoring from local json file folder, the values will not change. B
 > [!TIP]
 > If the system owning account is used, more details for the owning sites and devices can be queried and displayed.
 
+## mqtt_monitor.py
+
+```shell
+poetry run python ./mqtt_monitor.py
+```
+
+Example exec module to use the Anker Api to establish a client connection to the MQTT cloud server and subscribe to MQTT topics for receiving
+device messages. This module will prompt for the Anker account details if not pre-set in the header. Upon successful authentication,
+you will see the owned devices of the user account and you can select a device you want to monitor. Optionally you
+can dump the output to a file. The tool will display a usage menu before monitoring starts. While monitoring,
+it reacts on key press for the menu options. The menu can be displayed again with 'm'.
+The tool also utilizes the built in real time data trigger, which can trigger frequent data updates of your owned devices.
+
+> [!TIP]
+> For byte value decoding and possible field descriptions, you should monitor your app in parallel. See discussion [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222) for MQTT details and general data decoding instructions.
+
 ## energy_csv.py
 
 ```shell
@@ -311,6 +356,7 @@ Pull requests are the best way to propose changes to the codebase.
 
 - [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
 - [solix2mqtt](https://github.com/tomquist/solix2mqtt)
+- [SolixBLE](https://github.com/flip-dots/SolixBLE)
 
 # Showing Your Appreciation
 

@@ -42,7 +42,11 @@ async def energy_daily(  # noqa: C901
     elif (startDay + timedelta(days=numDays)) > future:
         numDays = (future - startDay).days + 1
     numDays = min(366, max(1, numDays))
-    other_pv = bool(((self.sites.get(siteId) or {}).get("feature_switch") or {}).get("show_third_party_pv_panel"))
+    other_pv = bool(
+        ((self.sites.get(siteId) or {}).get("feature_switch") or {}).get(
+            "show_third_party_pv_panel"
+        )
+    )
 
     # first get solarbank export
     if SolixDeviceType.SOLARBANK.value in devTypes:
@@ -123,8 +127,9 @@ async def energy_daily(  # noqa: C901
                         "ac_socket": resp.get("ac_out_put_total") or None,
                         "battery_to_home": resp.get("battery_to_home_total") or None,
                         "grid_to_battery": resp.get("grid_to_battery_total") or None,
-                        "3rd_party_pv_to_bat": resp.get("third_party_pv_to_bat")
-                        or None if other_pv else None,
+                        "3rd_party_pv_to_bat": resp.get("third_party_pv_to_bat") or None
+                        if other_pv
+                        else None,
                     }
                 )
                 table.update({daystr: entry})
@@ -260,8 +265,7 @@ async def energy_daily(  # noqa: C901
     # Add grid stats from smart reader only if solarbank not requested, otherwise grid data available in solarbank and solar responses
     # 3rd party export to grid only available in grid stats, query only required if 3rd party PV supported by site
     if SolixDeviceType.SMARTMETER.value in devTypes and (
-        SolixDeviceType.SOLARBANK.value not in devTypes
-        or other_pv
+        SolixDeviceType.SOLARBANK.value not in devTypes or other_pv
     ):
         if fromFile:
             resp = (
@@ -366,7 +370,9 @@ async def energy_daily(  # noqa: C901
                     {
                         "date": daystr,
                         "3rd_party_pv_to_grid": resp.get("third_party_pv_to_grid")
-                        or None if other_pv else None,
+                        or None
+                        if other_pv
+                        else None,
                     }
                 )
                 table.update({daystr: entry})

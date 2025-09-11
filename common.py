@@ -1,6 +1,5 @@
 """A collection of helper functions for pyscripts."""
 
-import asyncio
 import datetime
 import getpass
 import logging

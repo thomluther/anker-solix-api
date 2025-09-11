@@ -308,7 +308,7 @@ class AnkerSolixMqttSession:
                 {
                     "account_id": self.mqtt_info.get("user_id"),
                     "device_sn": sn,
-                    # "data": "/wkfAAMADwBXoQEiogIBAaMFAywBAAD+BQPI17ZoIQ==",
+                    # data field in payload must be b64 encoded
                     "data": b64encode(hexbytes).decode("utf-8"),
                 },
                 separators=(",", ":"),
@@ -375,9 +375,8 @@ class AnkerSolixMqttSession:
         """Connect MQTT client, it will optionally being created if none configured yet."""
         if not self.client and not await self.create_client():
             return None
-        # TODO: async connection functionality still to be figured out
-        # self.client.connect_async(host=self.host, port=self.port, keepalive=keepalive)
-        self.client.connect(host=self.host, port=self.port, keepalive=keepalive)
+        # Use Non blocking connect with loop_start
+        self.client.connect_async(host=self.host, port=self.port, keepalive=keepalive)
         return self.client
 
     async def create_client(self) -> mqtt.Client | None:
