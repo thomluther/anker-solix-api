@@ -34,16 +34,8 @@ CONSOLE: logging.Logger = common.CONSOLE
 # enable debug mode for the console handler
 # CONSOLE.handlers[0].setLevel(logging.DEBUG)
 
-# create INLINE logger
-INLINE: logging.Logger = logging.getLogger("Inline_logger")
-# Set parent to lowest level to allow messages passed to all handlers using their own level
-INLINE.setLevel(logging.DEBUG)
-# create console handler and set level to info and formatting without newline
-handler = common.InlineStreamHandler()
-handler.setLevel(logging.INFO)
-# No newline in format
-handler.setFormatter(logging.Formatter("%(message)s"))
-INLINE.addHandler(handler)
+# use INLINE logger from common module
+INLINE: logging.Logger = common.INLINE
 
 VALUES: dict = {}
 FOUNDTOPICS: set = set()
@@ -160,6 +152,7 @@ async def main() -> None:  # noqa: C901
                             filename=Path(
                                 dumpfolder / filename,
                             ),
+                            encoding="utf-8",
                         ),
                     )
                     # create a listener for messages on the queue and log them to the file handler
@@ -201,23 +194,12 @@ async def main() -> None:  # noqa: C901
                 topics = set()
                 if prefix := mqtt_session.get_topic_prefix(deviceDict=device_selected):
                     topics.add(f"{prefix}#")
-                # Flag to control the key reader loop
-                # stop_event = asyncio.Event()
-
-                # Signal handler to set the stop flag
-                # def handle_sigint():
-                #     """Handle interrupt signals."""
-                #     stop_event.set()
-
                 # print the menu before starting
                 print_menu()
                 try:
                     activetopic = None
                     realtime = True
                     rt_devices = {device_sn}
-                    loop = asyncio.get_running_loop()
-                    # loop.add_signal_handler(signal.SIGINT, handle_sigint)
-                    # loop.add_signal_handler(signal.SIGTERM, handle_sigint)
                     # Start the background poller with subscriptions and update trigger
                     poller_task = asyncio.create_task(
                         mqtt_session.message_poller(
@@ -229,6 +211,8 @@ async def main() -> None:  # noqa: C901
                     )
                     # Start the wait progress printer in background
                     progress_task = asyncio.create_task(print_wait_progress())
+                    # get running loop to run blocking code
+                    loop = asyncio.get_running_loop()
                     while True:
                         # Check if a key was pressed
                         if k := await loop.run_in_executor(None, common.getkey):
@@ -301,7 +285,10 @@ async def main() -> None:  # noqa: C901
                                         f"{Color.YELLOW}Switching to Messages view for next message...{Color.OFF}"
                                     )
                                     mqtt_session.message_callback(func=print_message)
-                            elif k == "esc":
+                            elif k in ["esc", "q"]:
+                                CONSOLE.info(
+                                    f"{Color.RED}Stopping monitor...{Color.OFF}"
+                                )
                                 break
                             await asyncio.sleep(0.5)
                 finally:
@@ -373,7 +360,7 @@ def print_menu() -> None:
         f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding"
     )
     CONSOLE.info(
-        f"[{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop MQTT monitor"
+        f"[{Color.RED}Q{Color.OFF}]uit, [{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop MQTT monitor"
     )
     input(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n")
 

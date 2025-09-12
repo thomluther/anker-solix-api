@@ -6,24 +6,53 @@ import logging
 import os
 import select
 import sys
-import termios
-import tty
 
 from api.apitypes import (  # pylint: disable=no-name-in-module
     SolarbankRatePlan,
     SolarbankUsageMode,
 )
 
-# create logger
+# platform dependent imports for key press handling
+if sys.platform.startswith("win"):
+    import msvcrt
+elif sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
+    # darwin = macOS
+    import termios
+    import tty
+else:
+    raise NotImplementedError(f"Unsupported platform: {sys.platform}")
+
+
+class InlineStreamHandler(logging.StreamHandler):
+    """Stream Handler that removes the newline."""
+
+    def emit(self, record):
+        """Log without newline."""
+        msg = self.format(record)
+        self.stream.write(msg)  # No newline
+        self.flush()
+
+
+# create CONSOLE logger for screen output
 CONSOLE: logging.Logger = logging.getLogger(__name__)
 # Set parent to lowest level to allow messages passed to all handlers using their own level
 CONSOLE.setLevel(logging.DEBUG)
-
 # create console handler and set level to info
 ch = logging.StreamHandler()
 # This can be changed to DEBUG if more messages should be printed to console
 ch.setLevel(logging.INFO)
 CONSOLE.addHandler(ch)
+
+# create INLINE logger for screen output without newline
+INLINE: logging.Logger = logging.getLogger("Inline_logger")
+# Set parent to lowest level to allow messages passed to all handlers using their own level
+INLINE.setLevel(logging.DEBUG)
+# create console handler and set level to info and formatting without newline
+handler = InlineStreamHandler()
+handler.setLevel(logging.INFO)
+# No newline in format
+handler.setFormatter(logging.Formatter("%(message)s"))
+INLINE.addHandler(handler)
 
 # Optional default Anker Account credentials to be used
 _CREDENTIALS = {
@@ -32,13 +61,6 @@ _CREDENTIALS = {
     "COUNTRY": os.getenv("ANKERCOUNTRY"),
 }
 
-class InlineStreamHandler(logging.StreamHandler):
-    """Stream Handler that removes the newline."""
-    def emit(self, record):
-        """Log without newline."""
-        msg = self.format(record)
-        self.stream.write(msg)  # No newline
-        self.flush()
 
 def user() -> str:
     """Get anker account user."""
@@ -217,6 +239,7 @@ def print_schedule(schedule: dict) -> None:
                 f"{slot.get('id', '')!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t5}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t6}} {str(load.get('power', '')) + ' W':>{t6}} {str(slot.get('charge_priority', '')) + ' %':>{t10}} {('---' if discharge is None else 'YES' if discharge else 'NO'):>{t9}} {sb1 + ' W':>{t6}} {sb2 + ' W':>{t6}} {slot.get('power_setting_mode', '-')!s:^{t5}} {load.get('name', '')!s}"
             )
 
+
 def print_products(products: dict) -> None:
     """Print the products as table."""
     col1 = 6
@@ -238,6 +261,7 @@ def print_products(products: dict) -> None:
     for key, value in counts.items():
         CONSOLE.info(f"{value!s:>2} {key}")
 
+
 def clearscreen():
     """Clear the terminal screen."""
     if sys.stdin is sys.__stdin__:  # check if not in IDLE shell
@@ -247,33 +271,63 @@ def clearscreen():
             os.system("clear")
         # CONSOLE.info("\033[H\033[2J", end="")  # ESC characters to clear terminal screen, system independent?
 
+
+KEY_MAPPING = {
+    127: "backspace",
+    10: "return",
+    32: "space",
+    9: "tab",
+    27: "esc",
+    65: "up",
+    66: "down",
+    67: "right",
+    68: "left",
+}
+
+
 def getkey() -> str | None:
     """Blocking function to read a single keypress."""
     fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
     try:
-        # Enable C-Break mode for terminal
-        tty.setcbreak(fd,when=1)
-        # check if input ready, 2-seconds timeout
-        ready, _, _ = select.select([fd], [], [], 2)
-        if ready:
-            b = os.read(fd, 3).decode()
-            if len(b) == 3:
-                k = ord(b[2])
-            else:
-                k = ord(b)
-            key_mapping = {
-                127: "backspace",
-                10: "return",
-                32: "space",
-                9: "tab",
-                27: "esc",
-                65: "up",
-                66: "down",
-                67: "right",
-                68: "left",
-            }
-            return key_mapping.get(k, chr(k))
+        if sys.platform.startswith("win"):
+            if msvcrt.kbhit():
+                k = msvcrt.getch()
+                # Handle special keys (arrows, function keys)
+                if k in [b"\x00", b"\xe0"]:
+                    # special key mapping for windows, read next byte
+                    k = msvcrt.getch()
+                    match k:
+                        case b"H":
+                            k = 65
+                        case b"P":
+                            k = 66
+                        case b"M":
+                            k = 67
+                        case b"K":
+                            k = 68
+                        case _:
+                            k = ord(k)
+                elif k in [b"\r", b"\n"]:
+                    k = 10
+                elif k == b"\x08":
+                    k = 127
+                else:
+                    k = ord(k)
+                return KEY_MAPPING.get(k, chr(k))
+        else:
+            old_settings = termios.tcgetattr(fd)
+            # Enable C-Break mode for terminal
+            tty.setcbreak(fd, when=1)
+            # check if input ready, 2-seconds timeout
+            ready, _, _ = select.select([fd], [], [], 2)
+            if ready:
+                b = os.read(fd, 3).decode()
+                if len(b) == 3:
+                    k = ord(b[2])
+                else:
+                    k = ord(b)
+                return KEY_MAPPING.get(k, chr(k))
     finally:
         # This will always be run before returning
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        if not sys.platform.startswith("win"):
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)

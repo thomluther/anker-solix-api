@@ -85,8 +85,8 @@ SOLIXMQTTMAP = {
         "0408": {
             "topic": "state_info",
             "a2": {"name": "device_sn"},
-            "a3": {"name": "timestamp_1?"},
-            "a4": {"name": "timestamp_2?"},
+            "a3": {"name": "local_timestamp"},
+            "a4": {"name": "utc_timestamp"},
             "a8": {"name": "charging_status"},
             "a9": {"name": "output_preset"},
             "aa": {"name": "photovoltaic_power"},
