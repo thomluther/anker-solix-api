@@ -194,12 +194,13 @@ async def main() -> None:  # noqa: C901
                 topics = set()
                 if prefix := mqtt_session.get_topic_prefix(deviceDict=device_selected):
                     topics.add(f"{prefix}#")
-                # print the menu before starting
-                print_menu()
                 try:
                     activetopic = None
-                    realtime = True
-                    rt_devices = {device_sn}
+                    realtime = False
+                    rt_devices = set()
+                    # print the menu before starting
+                    print_menu()
+                    CONSOLE.info(f"Starting MQTT message listener, real time data trigger is: {Color.GREEN+'ON' if realtime else Color.RED+'OFF'}{Color.OFF}")
                     # Start the background poller with subscriptions and update trigger
                     poller_task = asyncio.create_task(
                         mqtt_session.message_poller(
