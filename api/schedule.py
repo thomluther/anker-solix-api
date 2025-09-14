@@ -202,6 +202,8 @@ async def get_device_parm(
     Example data for provided site_id with param_type 16 for SB3 Multisystem:
     {"param_data":"{\"AE100\":\"7X297LBE75Z0BU4LE\",
         \"id_img\":\"https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/06/24/iot-admin/6eBAql2OBqMlGG1W/20250624-201743.png\"}"}
+    Example data for provided site_id with param_type 18:
+    {"param_data": {"soc_list": [{"id": 1,"is_selected": 1,"soc": 10},{"id": 2,"is_selected": 0,"soc": 5}],"switch_0w": 0,"enable_0w": 0}}
     """
     if not isinstance(testSchedule, dict):
         testSchedule = None
@@ -243,14 +245,25 @@ async def get_device_parm(
         # For testing purpose only, use test schedule to update dependent fields in device cache
         schedule = testSchedule
         data = {}
-    dev_serials = []
+    # update schedule for other devices that share it
+    dev_serials = set()
+    # add all Solarbaank 1 devices found in schedule
     for slot in schedule.get("ranges") or []:
         for dev in slot.get("device_power_loads") or []:
-            if (sn := dev.get("device_sn")) and sn not in dev_serials:
-                dev_serials.append(sn)
-    # add the given serial to list if not existing yet
-    if deviceSn and deviceSn not in dev_serials:
-        dev_serials.append(deviceSn)
+            if sn := dev.get("device_sn"):
+                dev_serials.add(sn)
+    if deviceSn:
+        # add the given serial to list if not existing yet
+        dev_serials.add(deviceSn)
+        # get all solarbank 2+ in same system if device is also generation 2+
+        sb = self.devices.get(deviceSn) or {}
+        if (sb.get("generation") or 0) >= 2:
+            for sn in [
+                sn
+                for sn, sb in self.devices.items()
+                if sb.get("site_id") == siteId and (sb.get("generation") or 0) >= 2
+            ]:
+                dev_serials.add(sn)
     for sn in dev_serials:
         self._update_dev(
             {
@@ -275,7 +288,8 @@ async def set_device_parm(
     r"""Set device parameters (e.g. solarbank schedule).
 
     command: Must be 17 for SB1, SB2 and SB3 solarbank schedules. Maybe new models require other command value?
-    paramType: was always string "4" for SB1, SB2 needs "6" and a different structure. SB3 may need 12 or 13 depending on settings
+    paramType: was always string "4" for SB1, SB2 needs "6" and a different structure. SB3 may use 13 for data authorization setting
+               Multisystems use "18" for station settings
     Example paramData for type "4":
     {"param_data": '{"ranges":['
         '{"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},'
@@ -290,7 +304,14 @@ async def set_device_parm(
         {\"index\":1,\"week\":[1,2,3,4,5],\"ranges\":[
             {\"start_time\":\"00:00\",\"end_time\":\"08:00\",\"power\":90},{\"start_time\":\"08:00\",\"end_time\":\"22:00\",\"power\":120},{\"start_time\":\"22:00\",\"end_time\":\"24:00\",\"power\":90}]}],
     \"blend_plan\":null,\"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"}
+
+    Example data for provided site_id with param_type "18" for SB3+:
+    {"param_data":"{\"soc_list":[
+        {\"id\":1,\"is_selected\":1,\"soc\":10},
+        {\"id\":2,\"is_selected\":0,\"soc\":5}],
+    \"switch_0w\":1,\"enable_0w\":0}"}
     """
+
     data = {
         "site_id": siteId,
         "param_type": paramType,

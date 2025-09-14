@@ -513,7 +513,13 @@ async def poll_sites(  # noqa: C901
                             ):
                                 factor = min(
                                     1,
-                                    (int(api.devices[sn].get("grid_to_battery_power") or 0) / sb_total_battery_charge_calc)
+                                    (
+                                        int(
+                                            api.devices[sn].get("grid_to_battery_power")
+                                            or 0
+                                        )
+                                        / sb_total_battery_charge_calc
+                                    )
                                     if sb_total_battery_charge_calc > 0
                                     else 1,
                                 )
@@ -905,6 +911,7 @@ async def poll_device_details(  # noqa: C901
             api.hesApi.devices[sn] = merged_dev
     # Fetch other relevant device information that requires site id and/or SN
     site_wifi: dict[str, list[dict | None]] = {}
+    queried_sites: set[str] = set()
     for sn, device in api.devices.items():
         site_id: str = device.get("site_id") or ""
         dev_Type: str = device.get("type") or ""
@@ -1001,13 +1008,14 @@ async def poll_device_details(  # noqa: C901
                     # It appears that get_device_load always provides the active schedule, which may be a minimalistic format when
                     # SB2 is using Manual mode and sync its settings to SB1
                     # get_device_parm with param for SB1 schedule seems to return always the full SB1 schedule, even if not active
-                    api._logger.debug(
-                        "Getting api %s schedule details for device",
-                        api.apisession.nickname,
-                    )
-                    await api.get_device_load(
-                        siteId=site_id, deviceSn=sn, fromFile=fromFile
-                    )
+                    if site_id not in queried_sites:
+                        api._logger.debug(
+                            "Getting api %s schedule details for device",
+                            api.apisession.nickname,
+                        )
+                        await api.get_device_load(
+                            siteId=site_id, deviceSn=sn, fromFile=fromFile
+                        )
                     # Fetch device fittings for device types supporting it
                     if {ApiCategories.solarbank_fittings} - exclude:
                         api._logger.debug(
@@ -1020,16 +1028,17 @@ async def poll_device_details(  # noqa: C901
                 else:
                     # Fetch schedule for Solarbank 2
                     # Note: get_device_load always seems to return SB1 schedule format, which does not contain useful values for the SB2
-                    api._logger.debug(
-                        "Getting api %s schedule details for device",
-                        api.apisession.nickname,
-                    )
-                    await api.get_device_parm(
-                        siteId=site_id,
-                        paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
-                        deviceSn=sn,
-                        fromFile=fromFile,
-                    )
+                    if site_id not in queried_sites:
+                        api._logger.debug(
+                            "Getting api %s schedule details for device",
+                            api.apisession.nickname,
+                        )
+                        await api.get_device_parm(
+                            siteId=site_id,
+                            paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+                            deviceSn=sn,
+                            fromFile=fromFile,
+                        )
                     # Fetch power solarbank specific attributes
                     api._logger.debug(
                         "Getting api %s device specific attributes",
@@ -1038,6 +1047,8 @@ async def poll_device_details(  # noqa: C901
                     await api.get_device_attributes(
                         deviceSn=sn, attributes=["pv_power_limit"], fromFile=fromFile
                     )
+            # add queried site ID to skip same queries for other parallel devices in site
+            queried_sites.add(site_id)
 
         # Merge additional powerpanel data
         if api.powerpanelApi:

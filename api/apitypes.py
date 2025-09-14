@@ -605,6 +605,7 @@ class SolixDeviceType(Enum):
     SYSTEM = "system"
     VIRTUAL = "virtual"
     SOLARBANK = "solarbank"
+    POWER_HUB = "power_hub"
     INVERTER = "inverter"
     SMARTMETER = "smartmeter"
     SMARTPLUG = "smartplug"
@@ -626,7 +627,9 @@ class SolixParmType(Enum):
     SOLARBANK_SCHEDULE_ENFORCED = "9"  # No longer supported by cloud as of July 2025
     SOLARBANK_TARIFF_SCHEDULE = "12"
     SOLARBANK_AUTHORIZATIONS = "13"
-    SOLARBANK_POWERDOCK = "16"
+    SOLARBANK_POWERDOCK = "16" # get power dock SN
+    SOLARBANK_RESERVE = "18" # SOC reserve and 0W switch, works for SB3+
+    #SOLARBANK_EV_CHARGER = "20" # to be verified
 
 
 class SolarbankPowerMode(IntEnum):
@@ -765,6 +768,7 @@ class SolixDeviceNames:
     SHEM3: str = "Shelly 3EM"
     SHEMP3: str = "Shelly Pro 3EM"
     SHPPS: str = "Shelly Plus Plug S"
+    AE100: str = "Power Dock AE100"
 
 
 @dataclass(frozen=True)
@@ -846,6 +850,8 @@ class SolixDeviceCategory:
     A17C5: str = (
         SolixDeviceType.SOLARBANK.value + "_3"
     )  # SOLIX Solarbank 3 E2700 Pro, generation 3
+    # Station
+    AE100: str = SolixDeviceType.POWER_HUB.value  # SOLIX Power Dock
     # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
@@ -1088,6 +1094,14 @@ class SolarbankStatus(StrEnum):
     standby = "7"
     unknown = "unknown"
     # TODO(SB3): Is there a new mode for AC charging? Can it be distinguished from existing values?
+
+
+class SolarbankParallelTypes(StrEnum):
+    """Enumeration for Anker Solix Solarbank parallel types."""
+
+    single = "single"
+    cascaded = "cascaded"  # For SB1 only if SB1 is attached to SB2 in single system
+    ae100 = "ae100"  # Solarbank power dock in use
 
 
 class SmartmeterStatus(StrEnum):

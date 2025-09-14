@@ -146,29 +146,27 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             dev_type = str(
                                 getattr(SolixDeviceCategory, str(value))
                             ).split("_")
-                            if "type" not in device:
-                                device["type"] = dev_type[0]
                             # update generation if specified in device type definitions
-                            if len(dev_type) > 1:
-                                device["generation"] = int(dev_type[1])
+                            if len(dev_type) > 1 and str(dev_type[-1:][0]).isdigit():
+                                device["generation"] = int(dev_type[-1:][0])
+                                device["type"] = "_".join(dev_type[:-1])
+                            else:
+                                device["type"] = "_".join(dev_type)
                     elif key in ["device_name"] and value:
                         device["name"] = str(value)
                     elif key in ["alias_name"] and value:
                         device["alias"] = str(value)
                         # preset default device name if only alias provided, fallback to alias if product name not listed
-                        if (pn := device.get("device_pn") or None) and (
+                        if (pn := device.get("device_pn") or devData.get("device_pn") or None) and (
                             not device.get("name") or devData.get("device_name")
                         ):
-                            device.update(
-                                {
-                                    "name": devData.get("device_name")
-                                    or (
-                                        (self.account.get("products") or {}).get(pn)
-                                        or {}
-                                    ).get("name")
-                                    or getattr(SolixDeviceNames, pn, "")
-                                    or str(value)
-                                }
+                            device["name"] = (
+                                devData.get("device_name")
+                                or (
+                                    (self.account.get("products") or {}).get(pn) or {}
+                                ).get("name")
+                                or getattr(SolixDeviceNames, pn, "")
+                                or str(value)
                             )
                     elif key in ["device_sw_version"] and value:
                         device["sw_version"] = str(value)
@@ -191,7 +189,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "power_limit_option_real",
                     ]:
                         # keys to be updated independent of value
-                        device[key] = value
+                        if key in ["power_limit_option"]:
+                            # mark power limit option as Auto if empty like in app
+                            # TODO(Multisystem): Update limit option once various options supported
+                            device[key] = value or "Auto"
+                        else:
+                            device[key] = value
                     elif (
                         key
                         in [
@@ -204,6 +207,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "auto_upgrade",
                             "is_ota_update",
                             "cascaded",
+                            "is_passive",
                         ]
                         and value is not None
                     ):
@@ -221,6 +225,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "ota_version",
                         "bat_charge_power",
                         "bat_discharge_power",
+                        "all_ac_input_limit",
+                        "all_power_limit",
                     ] or (
                         key
                         in [
@@ -1477,11 +1483,27 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """Get the power limit for the site.
 
         Example data:
-        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","power_unit": "kwh","legal_power_limit": 800,"device_info": [
-            {"device_pn": "A17C5","device_sn": "9JVB42LJK8J0P5RY","device_name": "Solarbank 3",
-            "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
-            "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0,"ac_input_limit": 1200}],
-        "current_power": 0,"all_power_limit": 0,"ae100_info": null,"parallel_type": "Single","ac_input_power_unit": "1200W"}
+        Single system:
+            {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","power_unit": "kwh","legal_power_limit": 800,"device_info": [
+                {"device_pn": "A17C5","device_sn": "9JVB42LJK8J0P5RY","device_name": "Solarbank 3",
+                "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+                "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0,"ac_input_limit": 1200}],
+            "current_power": 0,"all_power_limit": 0,"ae100_info": null,"parallel_type": "Single","ac_input_power_unit": "1200W"}
+        Multi System:
+            {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","power_unit": "kwh","legal_power_limit": 3600,"device_info": [
+                {"device_pn": "A17C5","device_sn": "9JVB42LJK8J0P5RY","device_name": "Solarbank 3 E2700 Pro",
+                "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+                "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0,"ac_input_limit": 1200},
+                {"device_pn": "A17C5","device_sn": "9JVB42LJK8J0P5R1","device_name": "Solarbank 3 E2700 Pro","device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+                "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0,"ac_input_limit": 1200},
+                {"device_pn": "A17C5","device_sn": "9JVB42LJK8J0P5R2","device_name": "Solarbank 3 E2700 Pro",
+                "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/04/15/iot-admin/6SO8wjMetOwT8PaH/picl_A17C5_normal.png",
+                "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0,"ac_input_limit": 0}],
+            "current_power": 0,"all_power_limit": 0,"ae100_info": {
+                "device_pn": "AE100","device_sn": "9JVB42LJK8J0P5RX","device_name": "AE100",
+                "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/06/24/iot-admin/6eBAql2OBqMlGG1W/20250624-201743.png",
+                "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0,"ac_input_limit": 0},
+            "parallel_type": "AE100","ac_input_power_unit": "2400W"}
         """
         siteId = str(siteId) or ""
         data = {"site_id": siteId}
@@ -1501,19 +1523,36 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_site_power_limit"], json=data
             )
-        # update site details in sites dict
+        # update site details in sites dict, this info is also usefull without power dock
         if data := resp.get("data") or {}:
             self._update_site(
                 siteId,
                 {
                     "legal_power_limit": data.get("legal_power_limit") or 0,
-                    "all_power_limit": data.get("all_power_limit") or 0,
                     "parallel_type": data.get("parallel_type") or "",
-                    "ac_input_power_unit": data.get("ac_input_power_unit") or "",
-                    "ae100_info": data.get("ae100_info") or None,
                 },
             )
-        # update device details in device dict
+        # create new station device with info for power dock if multi system config
+        # Name can be completed by model definition
+        if station := data.get("ae100_info"):
+            station.pop("device_name", None)
+            # drop same name device limits as those field may be used to control individual device settings
+            self._update_dev(
+                {
+                    "alias_name": "Power Dock",
+                    "is_passive": True,
+                    "current_power": data.get("current_power"),
+                    "all_power_limit": station.pop("power_limit", None)
+                    or data.get("all_power_limit")
+                    or 0,
+                    "all_ac_input_limit": station.pop("ac_input_limit", None)
+                    or str(data.get("ac_input_power_unit") or "").replace("W", ""),
+                }
+                | station,
+                siteId=siteId,
+                isAdmin=True,
+            )
+        # update device details for solarbanks in device dict
         for device in data.get("device_info") or []:
             if sn := device.get("device_sn"):
                 self._update_dev(

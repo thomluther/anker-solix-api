@@ -38,7 +38,7 @@ REFRESH = 0  # default No refresh interval
 DETAILSREFRESH = 10  # Multiplier for device details refresh
 INTERACTIVE = True  # Interactive allows to select examples and exports as input for tests and debug
 SHOWAPICALLS = (
-    False  # Enable to show Api calls and cache details for additional debugging
+    True  # Enable to show Api calls and cache details for additional debugging
 )
 
 
@@ -282,14 +282,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     CONSOLE.info(
                                         f"{'Ext PV Surplus':<{col1}}: {site.get('third_party_pv', '----')!s:>4} {unit:<{col2 - 5}} {'0W Switch':<{col3}}: {site.get('switch_0w', '--')!s}"
                                     )
-                                # System power limits
+                                # System config and power limit
                                 details = site.get("site_details") or {}
                                 if "legal_power_limit" in details:
                                     CONSOLE.info(
-                                        f"{'Legal Pwr Limit':<{col1}}: {details.get('legal_power_limit', '----'):>4} {unit:<{col2 - 5}} {'All Pwr Limit':<{col3}}: {details.get('all_power_limit', '----'):>4} W"
-                                    )
-                                    CONSOLE.info(
-                                        f"{'Parallel Type':<{col1}}: {(details.get('parallel_type') or '---------')!s:<{col2}} {'AC Input Limit':<{col3}}: {str(details.get('ac_input_power_unit', '----')).replace('W', ''):>4} W"
+                                        f"{'Legal Pwr Limit':<{col1}}: {details.get('legal_power_limit', '----'):>4} {unit:<{col2 - 5}} {'Parallel Type':<{col3}}: {(details.get('parallel_type') or '---------')!s}"
                                     )
                                 features = site.get("feature_switch") or {}
                                 if mode := site.get("scene_mode") or site.get(
@@ -371,42 +368,55 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'Accessory':<{col1}}: {fitting.get('device_name', ''):<{col2}} {'Serialnumber':<{col3}}: {fsn}"
                         )
-                    wt = dev.get("wireless_type") or ""
-                    net = (
-                        ((dev.get("relate_type") or [])[int(wt) : int(wt) + 1] or [""])[
-                            0
-                        ]
-                        if str(wt).isdigit()
-                        else ""
-                    )
-                    CONSOLE.info(
-                        f"{'Wireless Type':<{col1}}: {(dev.get('wireless_type') or '') + (' (' + (net.capitalize() or 'Unknown') + ')') if wt else '':<{col2}} {'Bluetooth MAC':<{col3}}: {dev.get('bt_ble_mac') or ''}"
-                    )
-                    CONSOLE.info(
-                        f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name', ''):<{col2}} {'Wifi MAC':<{col3}}: {dev.get('wifi_mac') or ''}"
-                    )
-                    online = dev.get("wifi_online")
-                    CONSOLE.info(
-                        f"{'Wifi State':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} {'Signal':<{col3}}: {dev.get('wifi_signal') or '---':>4} % ({dev.get('rssi') or '---'} dBm)"
-                    )
-                    if support := dev.get("is_support_wired"):
-                        online = dev.get("wired_connected")
-                        CONSOLE.info(
-                            f"{'Wired state':<{col1}}: {('Unknown' if online is None else 'Connected' if online else 'Disconnected'):<{col2}} {'Support Wired':<{col3}}: {('Unknown' if support is None else 'YES' if support else 'NO')}"
+                    if not dev.get("is_passive"):
+                        wt = dev.get("wireless_type") or ""
+                        net = (
+                            (
+                                (dev.get("relate_type") or [])[int(wt) : int(wt) + 1]
+                                or [""]
+                            )[0]
+                            if str(wt).isdigit()
+                            else ""
                         )
-                    upgrade = dev.get("auto_upgrade")
-                    ota = dev.get("is_ota_update")
-                    CONSOLE.info(
-                        f"{'SW Version':<{col1}}: {dev.get('sw_version', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'} (OTA {dev.get('ota_version') or 'Unknown'})"
-                    )
-                    for item in dev.get("ota_children") or []:
-                        ota = item.get("need_update")
-                        forced = item.get("force_upgrade")
                         CONSOLE.info(
-                            f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} {' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
+                            f"{'Wireless Type':<{col1}}: {(dev.get('wireless_type') or '') + (' (' + (net.capitalize() or 'Unknown') + ')') if wt else '':<{col2}} {'Bluetooth MAC':<{col3}}: {dev.get('bt_ble_mac') or ''}"
+                        )
+                        CONSOLE.info(
+                            f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name', ''):<{col2}} {'Wifi MAC':<{col3}}: {dev.get('wifi_mac') or ''}"
+                        )
+                        online = dev.get("wifi_online")
+                        CONSOLE.info(
+                            f"{'Wifi State':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} {'Signal':<{col3}}: {dev.get('wifi_signal') or '---':>4} % ({dev.get('rssi') or '---'} dBm)"
+                        )
+                        if support := dev.get("is_support_wired"):
+                            online = dev.get("wired_connected")
+                            CONSOLE.info(
+                                f"{'Wired state':<{col1}}: {('Unknown' if online is None else 'Connected' if online else 'Disconnected'):<{col2}} {'Support Wired':<{col3}}: {('Unknown' if support is None else 'YES' if support else 'NO')}"
+                            )
+                        upgrade = dev.get("auto_upgrade")
+                        ota = dev.get("is_ota_update")
+                        CONSOLE.info(
+                            f"{'SW Version':<{col1}}: {dev.get('sw_version', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} {'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'} (OTA {dev.get('ota_version') or 'Unknown'})"
+                        )
+                        for item in dev.get("ota_children") or []:
+                            ota = item.get("need_update")
+                            forced = item.get("force_upgrade")
+                            CONSOLE.info(
+                                f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} {' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
+                            )
+
+                    if devtype == SolixDeviceType.POWER_HUB.value:
+                        unit = dev.get("power_unit", "W")
+                        # print station details
+                        CONSOLE.info(
+                            f"{'Actual power':<{col1}}: {dev.get('current_power', '----'):>4} {unit:<{col2 - 5}} {'All AC In Limit':<{col3}}: {dev.get('all_ac_input_limit', '----'):>4} W"
+                        )
+                        CONSOLE.info(
+                            f"{'All Pwr Limit':<{col1}}: {dev.get('all_power_limit', '----'):>4} {unit:<{col2 - 5}} {'Pwr Limit Opt':<{col3}}: {dev.get('power_limit_option') or '----'!s}"
                         )
 
-                    if devtype == SolixDeviceType.SOLARBANK.value:
+                    elif devtype == SolixDeviceType.SOLARBANK.value:
+                        unit = dev.get("power_unit", "W")
                         CONSOLE.info(
                             f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} {'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                         )
@@ -914,18 +924,18 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             logging.INFO if SHOWAPICALLS else logging.DEBUG,
                             myapi.request_count.get_details(last_hour=True),
                         )
-                        CONSOLE.log(
-                            logging.INFO if SHOWAPICALLS else logging.DEBUG,
-                            json.dumps(myapi.sites, indent=2),
-                        )
-                        CONSOLE.log(
-                            logging.INFO if SHOWAPICALLS else logging.DEBUG,
-                            json.dumps(myapi.devices, indent=2),
-                        )
+                        CONSOLE.debug(json.dumps(myapi.sites, indent=2))
+                        CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                         myapi.request_count.recycle(last_time=datetime.now())
                         resp = input(
-                            "[S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file, [C]ustomize or [Q]uit: "
+                            "[D]ebug cache, [S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file, [C]ustomize or [Q]uit: "
                         )
+                        if resp.upper() in ["D", "DEBUG"]:
+                            # print the whole cache
+                            CONSOLE.info(
+                                "Api cache:\n%s",
+                                json.dumps(myapi.getCaches(), indent=2),
+                            )
                         if resp.upper() in ["S", "SITE"]:
                             # set device details refresh to future to reload only site info
                             next_dev_refr += 1
