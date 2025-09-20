@@ -1026,8 +1026,8 @@ async def poll_device_details(  # noqa: C901
                             siteId=site_id, deviceSn=sn, fromFile=fromFile
                         )
                 else:
-                    # Fetch Solarbank 2+ device parameters once per site
                     # Note: get_device_load always seems to return SB1 schedule format, which does not contain useful values for the SB2+
+                    # Fetch Solarbank 2+ device parameters once per site
                     if site_id not in queried_sites:
                         # Fetch SB2+ schedule once and add to each SB2+ device in site
                         api._logger.debug(
@@ -1051,13 +1051,13 @@ async def poll_device_details(  # noqa: C901
                             deviceSn=sn,
                             fromFile=fromFile,
                         )
-                    # Fetch solarbank power specific attributes
+                    # Fetch solarbank power specific attributes for each device
                     api._logger.debug(
                         "Getting api %s device specific attributes",
                         api.apisession.nickname,
                     )
                     await api.get_device_attributes(
-                        deviceSn=sn, attributes=["pv_power_limit"], fromFile=fromFile
+                        deviceSn=sn, attributes=["pv_power_limit", "switch_0w"], fromFile=fromFile
                     )
             # add queried site ID to skip same queries for other parallel devices in site
             queried_sites.add(site_id)

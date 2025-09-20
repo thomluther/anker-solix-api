@@ -947,6 +947,7 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
+        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
     }
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -962,6 +963,7 @@ class SolarbankDeviceMetrics:
         "micro_inverter_low_power_limit",
         "grid_to_battery_power",
         "other_input_power",  # This is AC input for charging typically
+        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
     }
     # SOLIX Solarbank 2 E1600 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
@@ -970,6 +972,7 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "to_home_load",
         "pei_heating_power",
+        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
     }
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {

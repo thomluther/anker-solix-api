@@ -316,13 +316,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "power_limit",
                             "pv_power_limit",
                             "ac_input_limit",
+                            "switch_0w",
                         ]
                         and str(value).isdigit()
                     ):
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
-                            device[key] = int(value)
+                            if key in ["switch_0w"]:
+                                device["allow_grid_export"] = not bool(value)
+                            else:
+                                device[key] = int(value)
                     elif key in ["sub_package_num"] and str(value).isdigit():
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
@@ -1700,6 +1704,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         ac_input: float | str | None = None,
         ac_output: float | str | None = None,
         pv_input: float | str | None = None,
+        grid_export: bool | int | None = None,
         toFile: bool = False,
     ) -> bool | dict:
         """Set the provided power limits for the site and device."""
@@ -1720,6 +1725,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if str(pv_input).replace("-", "", 1).replace(".", "", 1).isdigit()
             else None
         )
+        grid_export = bool(grid_export) if grid_export is not None else None
         # Prepare payload from parameters for proper device attributes
         if ac_input is not None:
             data["ac_power_limit"] = ac_input
@@ -1727,11 +1733,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             data["power_limit"] = ac_output
         if pv_input is not None:
             data["pv_power_limit"] = pv_input
+        if grid_export is not None:
+            data["switch_0w"] = 0 if grid_export else 1
         # update device attributes
         if not isinstance(
             await self.set_device_attributes(
                 deviceSn=deviceSn,
                 attributes=data,
+                query_attributes=None if grid_export is None else ["switch_0w"],
                 toFile=toFile,
             ),
             dict,
