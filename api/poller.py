@@ -1003,7 +1003,7 @@ async def poll_device_details(  # noqa: C901
                             api.apisession.nickname,
                         )
                         await api.get_solar_info(solarbankSn=sn, fromFile=fromFile)
-                    # Fetch schedule for Solarbank 1
+                    # Fetch schedule for Solarbank 1 once per site
                     # Note: There may be different schedules for SB1 devices when used in combined system with SB2
                     # It appears that get_device_load always provides the active schedule, which may be a minimalistic format when
                     # SB2 is using Manual mode and sync its settings to SB1
@@ -1026,9 +1026,10 @@ async def poll_device_details(  # noqa: C901
                             siteId=site_id, deviceSn=sn, fromFile=fromFile
                         )
                 else:
-                    # Fetch schedule for Solarbank 2
-                    # Note: get_device_load always seems to return SB1 schedule format, which does not contain useful values for the SB2
+                    # Fetch Solarbank 2+ device parameters once per site
+                    # Note: get_device_load always seems to return SB1 schedule format, which does not contain useful values for the SB2+
                     if site_id not in queried_sites:
+                        # Fetch SB2+ schedule once and add to each SB2+ device in site
                         api._logger.debug(
                             "Getting api %s schedule details for device",
                             api.apisession.nickname,
@@ -1039,7 +1040,18 @@ async def poll_device_details(  # noqa: C901
                             deviceSn=sn,
                             fromFile=fromFile,
                         )
-                    # Fetch power solarbank specific attributes
+                        # Fetch SB2+ station details and add to site details
+                        api._logger.debug(
+                            "Getting api %s station details for device",
+                            api.apisession.nickname,
+                        )
+                        await api.get_device_parm(
+                            siteId=site_id,
+                            paramType=SolixParmType.SOLARBANK_STATION.value,
+                            deviceSn=sn,
+                            fromFile=fromFile,
+                        )
+                    # Fetch solarbank power specific attributes
                     api._logger.debug(
                         "Getting api %s device specific attributes",
                         api.apisession.nickname,

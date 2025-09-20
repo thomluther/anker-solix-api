@@ -133,7 +133,7 @@ API_ENDPOINTS = {
     "get_device_fittings": "power_service/v1/app/get_relate_device_fittings",  # Device fittings for given site id and device sn. Shows Accessories like Solarbank 0W Switch info
     "get_upgrade_record": "power_service/v1/app/get_upgrade_record",  # get list of firmware update history
     "check_upgrade_record": "power_service/v1/app/check_upgrade_record",  # show an upgrade record for the device, types 1-3 show different info, only works for owner account
-    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank and/or smart meter? {"device_sn":sn,"attributes":["rssi","pv_power_limit"]}
+    "get_device_attributes": "power_service/v1/app/device/get_device_attrs",  # for solarbank and/or smart meter? {"device_sn":sn,"attributes":["rssi","pv_power_limit","legal_power_limit","power_limit_option","power_limit_option_real","switch_0w"]}
     "set_device_attributes": "power_service/v1/app/device/set_device_attrs",  # attr name may be different than for get, {"device_sn":sn,"attributes":{"pv_power_limit":800,"ac_power_limit":1200,"power_limit":800}}
     "get_config": "power_service/v1/app/get_config",  # shows empty config list, also for shared account
     "get_installation": "power_service/v1/app/compatible/get_installation",  # shows install_mode and solar_sn, also for shared account
@@ -605,7 +605,7 @@ class SolixDeviceType(Enum):
     SYSTEM = "system"
     VIRTUAL = "virtual"
     SOLARBANK = "solarbank"
-    POWER_HUB = "power_hub"
+    COMBINER_BOX = "combiner_box"
     INVERTER = "inverter"
     SMARTMETER = "smartmeter"
     SMARTPLUG = "smartplug"
@@ -627,9 +627,9 @@ class SolixParmType(Enum):
     SOLARBANK_SCHEDULE_ENFORCED = "9"  # No longer supported by cloud as of July 2025
     SOLARBANK_TARIFF_SCHEDULE = "12"
     SOLARBANK_AUTHORIZATIONS = "13"
-    SOLARBANK_POWERDOCK = "16" # get power dock SN
-    SOLARBANK_RESERVE = "18" # SOC reserve and 0W switch, works for SB3+
-    #SOLARBANK_EV_CHARGER = "20" # to be verified
+    SOLARBANK_POWERDOCK = "16"  # get power dock SN
+    SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock
+    # SOLARBANK_EV_CHARGER = "20" # to be verified
 
 
 class SolarbankPowerMode(IntEnum):
@@ -825,9 +825,15 @@ class SolixSiteType:
     t_9 = SolixDeviceType.HES.value  # Main A5103 HES
     t_10 = SolixDeviceType.SOLARBANK.value  # Main A17C3 SB2 Plus, can also add SB1
     t_11 = SolixDeviceType.SOLARBANK.value  # Main A17C2 SB2 AC
-    t_12 = SolixDeviceType.SOLARBANK.value  # Main A17C5 SB3 Pro
+    t_12 = (
+        SolixDeviceType.SOLARBANK.value
+    )  # Main A17C5 SB3 Pro, including power dock option for SB3 multisystems
     t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782 SOLIX F3000 Portable Power Station (Solarbank PPS) with Smart Meter support for US market
     t_14 = SolixDeviceType.EV_CHARGER.value  # Main A5191 Smart EV Charger
+    # t_15 = ???  # Main A17E1 & A17X7US Smart Meter for US market
+    # t_16 = ???  # Main A1903 & 4 each A110A, A110B, A110G, A1341
+    # t_17 = ??? # Only AX170
+    t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, SHEM3, SHEMP3, A17X8, SHPPS, A5191
 
 
 @dataclass(frozen=True)
@@ -851,7 +857,7 @@ class SolixDeviceCategory:
         SolixDeviceType.SOLARBANK.value + "_3"
     )  # SOLIX Solarbank 3 E2700 Pro, generation 3
     # Station
-    AE100: str = SolixDeviceType.POWER_HUB.value  # SOLIX Power Dock
+    AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock
     # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
@@ -981,6 +987,9 @@ class SolarbankDeviceMetrics:
         # "micro_inverter_low_power_limit",  # external inverter input not supported by SB3
         "grid_to_battery_power",
         "other_input_power",  # This is AC input for charging typically
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
     }
     # Inverter Output Settings
     INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {

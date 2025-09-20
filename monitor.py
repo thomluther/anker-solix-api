@@ -38,7 +38,7 @@ REFRESH = 0  # default No refresh interval
 DETAILSREFRESH = 10  # Multiplier for device details refresh
 INTERACTIVE = True  # Interactive allows to select examples and exports as input for tests and debug
 SHOWAPICALLS = (
-    True  # Enable to show Api calls and cache details for additional debugging
+    False  # Enable to show Api calls and cache details for additional debugging
 )
 
 
@@ -280,7 +280,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 )
                                 if "third_party_pv" in site:
                                     CONSOLE.info(
-                                        f"{'Ext PV Surplus':<{col1}}: {site.get('third_party_pv', '----')!s:>4} {unit:<{col2 - 5}} {'0W Switch':<{col3}}: {site.get('switch_0w', '--')!s}"
+                                        f"{'Ext PV Surplus':<{col1}}: {site.get('third_party_pv', '----')!s:>4} {unit:<{col2 - 5}} {'Switch 0W':<{col3}}: {'ON' if site.get('switch_0w') else 'OFF'}"
                                     )
                                 # System config and power limit
                                 details = site.get("site_details") or {}
@@ -304,7 +304,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     )
                                     feat1 = features.get("heating")
                                     CONSOLE.info(
-                                        f"{'Active Mode':<{col1}}: {str(mode_name).capitalize() + ' (' + str(mode) + ')' if mode_name else '---------':<{col2}} {'Heating':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4}"
+                                        f"{'Active Mode':<{col1}}: {str(mode_name).capitalize() + ' (' + str(mode) + ')' if mode_name else '---------':<{col2}} {'Heating':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF'}"
                                     )
                                 if "offgrid_with_micro_inverter_alert" in features:
                                     feat1 = features.get(
@@ -405,7 +405,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} {' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
                             )
 
-                    if devtype == SolixDeviceType.POWER_HUB.value:
+                    if devtype == SolixDeviceType.COMBINER_BOX.value:
                         unit = dev.get("power_unit", "W")
                         # print station details
                         CONSOLE.info(
@@ -413,6 +413,10 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         )
                         CONSOLE.info(
                             f"{'All Pwr Limit':<{col1}}: {dev.get('all_power_limit', '----'):>4} {unit:<{col2 - 5}} {'Pwr Limit Opt':<{col3}}: {dev.get('power_limit_option') or '----'!s}"
+                        )
+                        feat1 = dev.get('allow_grid_export')
+                        CONSOLE.info(
+                            f"{'Min SOC':<{col1}}: {(dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} {'%':<{col2 - 5}} {'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4}"
                         )
 
                     elif devtype == SolixDeviceType.SOLARBANK.value:
@@ -450,8 +454,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Pwr Limit Opt':<{col1}}: {(dev.get('power_limit_option') or '------')!s:<{col2}} {'Limit Opt Real':<{col3}}: {(dev.get('power_limit_option_real') or '------')!s}"
                             )
                         if "pv_power_limit" in dev:
+                            feat1 = dev.get('allow_grid_export')
                             CONSOLE.info(
-                                f"{'Solar Limit':<{col1}}: {dev.get('pv_power_limit', '----'):>4} {unit:<{col2 - 5}}"
+                                f"{'Solar Limit':<{col1}}: {dev.get('pv_power_limit', '----'):>4} {unit:<{col2 - 5}} {'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4}"
                             )
                         CONSOLE.info(
                             f"{'Solar Power':<{col1}}: {dev.get('input_power', '---'):>4} {unit:<{col2 - 5}} {'Output Power':<{col3}}: {dev.get('output_power', '---'):>4} {unit}"

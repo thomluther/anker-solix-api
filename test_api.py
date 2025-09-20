@@ -266,6 +266,8 @@ async def main() -> None:
             _out(myapi.sites)
             CONSOLE.info("Device Overview:")
             _out(myapi.devices)
+            CONSOLE.info("Anker Solix Product Overview:")
+            common.print_products(await myapi.get_products)
 
             if TESTAPIMETHODS:
                 await test_api_methods(myapi)
@@ -278,5 +280,7 @@ async def main() -> None:
 if __name__ == "__main__":
     try:
         asyncio.run(main())
+    except KeyboardInterrupt:
+        CONSOLE.warning("\nAborted!")
     except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(err), err)

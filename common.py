@@ -256,7 +256,7 @@ def print_products(products: dict) -> None:
         counts["Models"] = (counts.get("Models") or 0) + 1
         counts[platform] = (counts.get(platform) or 0) + 1
     CONSOLE.info(f"{'-' * 100}")
-    m = counts.pop("Models")
+    m = counts.pop("Models", None)
     CONSOLE.info(f"Summary: {(m or 0)!s} Models")
     for key, value in counts.items():
         CONSOLE.info(f"{value!s:>2} {key}")
