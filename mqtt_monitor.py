@@ -200,7 +200,9 @@ async def main() -> None:  # noqa: C901
                     rt_devices = set()
                     # print the menu before starting
                     print_menu()
-                    CONSOLE.info(f"Starting MQTT message listener, real time data trigger is: {Color.GREEN+'ON' if realtime else Color.RED+'OFF'}{Color.OFF}")
+                    CONSOLE.info(
+                        f"Starting MQTT message listener, real time data trigger is: {Color.GREEN + 'ON' if realtime else Color.RED + 'OFF'}{Color.OFF}"
+                    )
                     # Start the background poller with subscriptions and update trigger
                     poller_task = asyncio.create_task(
                         mqtt_session.message_poller(
@@ -355,7 +357,7 @@ def print_menu() -> None:
         f"[{Color.YELLOW}T{Color.OFF}]oggle subscribed topic. If only one topic identified from root topic, toggling is not possible"
     )
     CONSOLE.info(
-        f"[{Color.YELLOW}R{Color.OFF}]eal time data trigger toggle ON (Default) or OFF"
+        f"[{Color.YELLOW}R{Color.OFF}]eal time data trigger toggle OFF (Default) or ON"
     )
     CONSOLE.info(
         f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding"
