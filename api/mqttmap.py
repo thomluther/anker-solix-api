@@ -132,7 +132,7 @@ SOLIXMQTTMAP = {
             "c6": {"name": "PV1"},
             "c7": {"name": "PV2"},
             "c8": {"name": "PV3"},
-            "c9": {"name": "PV4"},            
+            "c9": {"name": "PV4"},
             "d5": {"name": "pv_limit"},
             "d6": {"name": "ac_input_limit"},
             "fe": {"name": "msg_timestamp"},
