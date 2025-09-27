@@ -25,7 +25,7 @@ from .mqtttypes import (
 )
 from .session import AnkerSolixClientSession
 
-MessageCallback = Callable[[Any, Any], None]
+MessageCallback = Callable[[Any, str, Any, bytes, str, str, bool], None]
 
 
 class AnkerSolixMqttSession:
@@ -43,13 +43,20 @@ class AnkerSolixMqttSession:
         self._auth_cache_dir.mkdir(parents=True, exist_ok=True)
         self.apisession: AnkerSolixClientSession = apisession
         self.client: mqtt.Client | None = None
-        self.mqtt_info: dict = {}
+        self.mqtt_stats: MqttDataStats | None = None
         self.host: str | None = None
         self.port: int = 8883
+        # reset class variables for saving mqtt relevant data
+        # Variable to save mqtt info from connected Api client
+        self.mqtt_info: dict = {}
+        # Variable to save all active subscriptions
         self.subscriptions: set = set()
+        # Variable to same the devices that should be triggered for realtime data
         self.triggered_devices: set | None = None
+        # Cache variable to save all extracted mqtt values per device
+        self.mqtt_data: dict = {}
+        # Variable to exchange MID for connections
         self.mids: dict = {}
-        self.mqtt_stats: MqttDataStats | None = None
 
     def on_connect(
         self,
@@ -62,29 +69,37 @@ class AnkerSolixMqttSession:
         """Define callback when the client receives a CONNACK response from the server."""
         if reason_code.is_failure:
             self._logger.error(
-                "MQTT client failed to connect to Anker Solix MQTT server: %s(%s)",
+                "Api %s MQTT session client failed to connect to Anker Solix MQTT server: %s(%s)",
+                self.apisession.nickname,
                 reason_code,
                 reason_code.value,
             )
         else:
             self._logger.debug(
-                "MQTT client connected successfully to Anker Solix MQTT server"
+                "Api %s MQTT session client connected successfully to Anker Solix MQTT server",
+                self.apisession.nickname,
             )
             # ReInitialize statistics
             self.mqtt_stats = MqttDataStats()
             # we should always subscribe from on_connect callback to be sure
             # our subscribe is persisted across reconnection.
             for topic in self.subscriptions:
-                rc, mid = self.client.subscribe(topic)
+                _, mid = self.client.subscribe(topic)
                 # check if mid was recorded with subscription error
                 if reason_code := self.mids.pop(str(mid), None):
                     # subscription failed although connected, remove topic from subscriptions
                     self.subscriptions.discard(topic)
                     self._logger.info(
-                        "MQTT session removed topic from subscriptions: %s", topic
+                        "Api %s MQTT session client removed topic from subscriptions: %s",
+                        self.apisession.nickname,
+                        topic,
                     )
                 else:
-                    self._logger.info("MQTT client subscribing to topic: %s", topic)
+                    self._logger.info(
+                        "Api %s MQTT session client subscribing to topic: %s",
+                        self.apisession.nickname,
+                        topic,
+                    )
 
     def on_message(
         self, client: mqtt.Client, userdata: mqtt.Any, msg: mqtt.MQTTMessage
@@ -95,33 +110,63 @@ class AnkerSolixMqttSession:
         # default MQTT payload decode is UTF-8
         message = json.loads(msg.payload.decode())
         # Extract timestamp field from expected dictionary in message
-        timestamp = (
+        timestamp = datetime.fromtimestamp(
             (message.get("head") or {}).get("timestamp")
             if isinstance(message, dict)
             else 0
-        )
+        ).strftime("%Y-%M-%d %H:%M:%S ")
         # extract message payload
         payload = json.loads(message.get("payload") or "")
         # Third party models not included in payload
         if not (model := payload.get("pn") if isinstance(payload, dict) else None):
             # extract model from received topic
             model = (str(msg.topic).split("/")[2:3] or [None])[0]
+        if not (device_sn := payload.get("sn") if isinstance(payload, dict) else None):
+            # extract sn from received topic
+            device_sn = (str(msg.topic).split("/")[3:4] or [None])[0]
         data = (payload.get("data") or "") if isinstance(payload, dict) else None
         # Decrypt base64-encoded encrypted data field from expected dictionary in message payload
         data = b64decode(data) if isinstance(data, str) else data
         self._logger.debug(
-            "%sReceived message: %s on topic: %s",
-            datetime.fromtimestamp(timestamp).strftime("%Y-%M-%d %H:%M:%S ")
-            if timestamp
-            else "",
+            "Api %s MQTT session client received message dated %s: %s on topic: %s",
+            self.apisession.nickname,
+            timestamp,
             message,
             msg.topic,
         )
+        valueupdate = False
         # Update data stats
         if isinstance(data, bytes):
             self.mqtt_stats.add_data(device_data=DeviceHexData(hexbytes=data))
-        if self._message_callback:
-            self._message_callback(self, msg.topic, message, data, model)
+            if device_sn and model:
+                # structure hex data
+                hd = DeviceHexData(model=model, hexbytes=data)
+                # extract described values save them in common mqtt data cache
+                if values := hd.values():
+                    # get existing mqtt data for device
+                    device = self.mqtt_data.get(device_sn) or {}
+                    topics = set(device.get("topics") or [])
+                    topics.add(msg.topic)
+                    self.mqtt_data[device_sn] = (
+                        device
+                        | values
+                        | {"last_message": timestamp, "topics": list(topics)}
+                    )
+                    valueupdate = True
+        elif data:
+            # no encoded data in message, print object whatever it is
+            self._logger.info(
+                "Api %s MQTT session client received message from device %s (%s) with non-byte data:\n%s",
+                self.apisession.nickname,
+                device_sn,
+                model,
+                str(data),
+            )
+        # call message callback if defined
+        if callable(self._message_callback):
+            self._message_callback(
+                self, msg.topic, message, data, model, device_sn, valueupdate
+            )
 
     def on_disconnect(
         self,
@@ -133,7 +178,8 @@ class AnkerSolixMqttSession:
     ):
         """Define callback when the client disconnects from the server."""
         self._logger.debug(
-            "MQTT client disconnected from Anker Solix MQTT server: %s(%s)",
+            "Api %s MQTT session client disconnected from Anker Solix MQTT server: %s(%s)",
+            self.apisession.nickname,
             reason_code,
             reason_code.value,
         )
@@ -152,13 +198,15 @@ class AnkerSolixMqttSession:
             # save the message ID as reference for subscription failures
             self.mids[str(mid)] = reason_code_list[0]
             self._logger.error(
-                "MQTT client received failure while subscribing topic: %s(%s)",
+                "Api %s MQTT session client received failure while subscribing topic: %s(%s)",
+                self.apisession.nickname,
                 reason_code_list[0],
                 reason_code_list[0].value,
             )
         else:
             self._logger.debug(
-                "MQTT client subscribed to topic with following QoS: %s",
+                "Api %s MQTT session client subscribed to topic with following QoS: %s",
+                self.apisession.nickname,
                 reason_code_list[0].value,
             )
 
@@ -173,12 +221,16 @@ class AnkerSolixMqttSession:
         """Define callback when the client unsubscribes from a topic."""
         # The reason_code_list is only present in MQTTv5,in MQTTv3 it will always be empty
         if not reason_code_list or not reason_code_list[0].is_failure:
-            self._logger.debug("MQTT client unsubscribed from topic")
+            self._logger.debug(
+                "Api %s MQTT session client unsubscribed from topic",
+                self.apisession.nickname,
+            )
         else:
             # save the message ID as reference for unsubscription failures
             self.mids[str(mid)] = reason_code_list[0]
             self._logger.error(
-                "MQTT client received failure while unsubscribing topic: %s(%s)",
+                "Api %s MQTT session client received failure while unsubscribing topic: %s(%s)",
+                self.apisession.nickname,
                 reason_code_list[0],
                 reason_code_list[0].value,
             )
@@ -196,19 +248,23 @@ class AnkerSolixMqttSession:
             # save the message ID as reference for publish failures
             self.mids[str(mid)] = reason_code
             self._logger.error(
-                "MQTT client received failure while publishing topic: %s(%s)",
+                "Api %s MQTT session client received failure while publishing topic: %s(%s)",
+                self.apisession.nickname,
                 reason_code,
                 reason_code.value,
             )
         else:
             self._logger.debug(
-                "MQTT client published topic with following QoS: %s",
+                "Api %s MQTT session client published topic with following QoS: %s",
+                self.apisession.nickname,
                 reason_code.value,
             )
 
-    def message_callback(self, func: MessageCallback | None = None) -> MessageCallback:
+    def message_callback(
+        self, func: MessageCallback | None = None
+    ) -> MessageCallback | None:
         """Get or set the message callback for this session."""
-        if func:
+        if callable(func):
             self._message_callback = func
         return self._message_callback
 
@@ -270,7 +326,8 @@ class AnkerSolixMqttSession:
             hexdata.add_timestamp_field()
         if hexdata:
             self._logger.debug(
-                "Generated hexdata for device mqtt command '%s':\n%s",
+                "Api %s MQTT session generated hexdata for device mqtt command '%s':\n%s",
+                self.apisession.nickname,
                 command,
                 hexdata.hex(":"),
             )
@@ -328,22 +385,30 @@ class AnkerSolixMqttSession:
         if topic and topic not in self.subscriptions:
             # Try to subscribe topic first if client already connected
             if self.client and self.client.is_connected():
-                rc, mid = self.client.subscribe(topic)
+                _, mid = self.client.subscribe(topic)
                 # check if mid was recorded with subscription error
                 if reason_code := self.mids.pop(str(mid), None):
                     # subscription failed although connected
                     self._logger.error(
-                        "MQTT client failed to subscribe to topic: %s", topic
+                        "Api %s MQTT session client failed to subscribe to topic: %s",
+                        self.apisession.nickname,
+                        topic,
                     )
                 else:
-                    self._logger.info("MQTT client subscribed to topic: %s", topic)
+                    self._logger.info(
+                        "Api %s MQTT session client subscribed to topic: %s",
+                        self.apisession.nickname,
+                        topic,
+                    )
                     # Add topic to subscription set to ensure it will be subscribed again on reconnects
                     self.subscriptions.add(topic)
                 return reason_code
             # Add topic to subscription set to ensure it will be subscribed on (re)connects
             self.subscriptions.add(topic)
-            self._logger.info(
-                "MQTT session added new topic to subscriptions: %s", topic
+            self._logger.debug(
+                "Api %s MQTT session added new topic to subscriptions: %s",
+                self.apisession.nickname,
+                topic,
             )
         return None
 
@@ -352,22 +417,30 @@ class AnkerSolixMqttSession:
         if topic and topic in self.subscriptions:
             # Try to unsubscribe topic if client already connected
             if self.client and self.client.is_connected():
-                rc, mid = self.client.unsubscribe(topic)
+                _, mid = self.client.unsubscribe(topic)
                 # check if mid was recorded with unsubscription error
                 if reason_code := self.mids.pop(str(mid), None):
                     # Unsubscription failed although connected
                     self._logger.error(
-                        "MQTT client failed to unsubscribe from topic: %s", topic
+                        "Api %s MQTT session client failed to unsubscribe from topic: %s",
+                        self.apisession.nickname,
+                        topic,
                     )
                 else:
-                    self._logger.info("MQTT client unsubscribed from topic: %s", topic)
+                    self._logger.info(
+                        "Api %s MQTT session client unsubscribed from topic: %s",
+                        self.apisession.nickname,
+                        topic,
+                    )
                 # Always remove topic from subscription set
                 self.subscriptions.discard(topic)
                 return reason_code
             # Remove topic from subscription set to ensure it will not be subscribed again on reconnects
             self.subscriptions.discard(topic)
-            self._logger.info(
-                "MQTT session removed topic from subscriptions: %s", topic
+            self._logger.debug(
+                "Api %s MQTT session removed topic from subscriptions: %s",
+                self.apisession.nickname,
+                topic,
             )
         return None
 
@@ -424,7 +497,11 @@ class AnkerSolixMqttSession:
                 # Cache login response in file for reuse
                 async with aiofiles.open(filename, "w", encoding="utf-8") as certfile:
                     await certfile.write(self.mqtt_info.get(certname))
-                    self._logger.debug("Certificate dumped to file: %s", filename)
+                    self._logger.debug(
+                        "Api %s MQTT session certificate dumped to file: %s",
+                        self.apisession.nickname,
+                        filename,
+                    )
                     self._temp_cert_files.append(filename)
             # Configure SSL/TLS using temporary files
             if len(self._temp_cert_files) == 3:
@@ -446,10 +523,48 @@ class AnkerSolixMqttSession:
             raise
         return self.client
 
+    def _extract_mqtt_data(
+        self,
+        session,
+        topic: str,
+        message: Any,
+        data: bytes,
+        model: str,
+    ) -> None:
+        """Extract device data from mqtt messages and add it to the mqtt data cache."""
+        timestamp = ""
+        if isinstance(message, dict):
+            timestamp = datetime.fromtimestamp(
+                (message.get("head") or {}).get("timestamp") or 0
+            ).strftime("%Y-%M-%d %H:%M:%S ")
+        device_sn = (str(topic).split("/")[1:2] or [""])[0]
+        if isinstance(data, bytes) and device_sn and model:
+            # structure hex data
+            hd = DeviceHexData(model=model, hexbytes=data)
+            # extract described values save them in common mqtt data cache
+            if values := hd.values():
+                device = self.mqtt_data.get(device_sn) or {}
+                topics = set(device.get("topics") or []).add(topic)
+                self.mqtt_data[device_sn] = (
+                    device
+                    | values
+                    | {"last_message": timestamp, "topics": list(topics)}
+                )
+        elif data:
+            # no encoded data in message, dump object whatever it is
+            self._logger.info(
+                "Api %s received MQTT message from device %s (%s) with non-byte data: %s",
+                self.apisession.nickname,
+                device_sn,
+                model,
+                str(data),
+            )
+
     def cleanup(self):
         """Clean up client connections and delete certificate files."""
         if self.client and self.client.is_connected:
             self.client.disconnect()
+            self.client.loop_stop()
         self.client = None
         self.subscriptions = set()
         for filename in self._temp_cert_files:
@@ -457,7 +572,11 @@ class AnkerSolixMqttSession:
             if Path(filename).is_file():
                 with contextlib.suppress(Exception):
                     Path(filename).unlink()
-                    self._logger.debug("MQTT session deleted cert file: %s", filename)
+                    self._logger.debug(
+                        "Api %s MQTT session deleted cert file: %s",
+                        self.apisession.nickname,
+                        filename,
+                    )
         self._temp_cert_files = []
 
     async def message_poller(
@@ -482,14 +601,16 @@ class AnkerSolixMqttSession:
             client = await self.connect_client_async()
             if not client.is_connected:
                 self._logger.error(
-                    "Connection failed to Anker Solix MQTT server %s:%s",
+                    "Api %s MQTT session failed connection to Anker Solix MQTT server %s:%s",
+                    self.apisession.nickname,
                     self.host,
                     self.port,
                 )
                 self.cleanup()
                 return False
             self._logger.debug(
-                "Connected successfully to Anker Solix MQTT server %s:%s",
+                "Api %s MQTT session connected successfully to Anker Solix MQTT server %s:%s",
+                self.apisession.nickname,
                 self.host,
                 self.port,
             )
@@ -543,8 +664,11 @@ class AnkerSolixMqttSession:
                                     parameters={"timeout": timeout},
                                 ),
                             )
-                            self._logger.info(
-                                "Published message: %s\n%s", response, message
+                            self._logger.debug(
+                                "Api %s MQTT session published message: %s\n%s",
+                                self.apisession.nickname,
+                                response,
+                                message,
                             )
                     triggered_devices = trigger_devices.copy()
                     # restart timeout interval
@@ -553,6 +677,8 @@ class AnkerSolixMqttSession:
                 await asyncio.sleep(5)
 
         except asyncio.CancelledError:
-            self._logger.info("Anker Solix MQTT client was cancelled.")
-            client.loop_stop()
+            self._logger.info(
+                "Api %s MQTT session message poller was cancelled",
+                self.apisession.nickname,
+            )
             self.cleanup()

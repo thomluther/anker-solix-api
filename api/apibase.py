@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime, timedelta
 import logging
 from pathlib import Path
@@ -18,7 +19,10 @@ from .apitypes import (
     SolixPriceProvider,
     SolixPriceTypes,
 )
+from .mqtt import AnkerSolixMqttSession
 from .session import AnkerSolixClientSession
+
+MqttUpdateCallback = Callable[[Any, Any], None]
 
 
 class AnkerSolixBaseApi:
@@ -52,7 +56,9 @@ class AnkerSolixBaseApi:
                 logger=logger,
             )
         self._logger: logging.Logger = self.apisession.logger()
-
+        self.mqttsession: AnkerSolixMqttSession | None = None
+        # callback for device MQTT data update
+        self._mqtt_update_callback: MqttUpdateCallback | None = None
         # track active devices bound to any site
         self._site_devices: set = set()
         # reset class variables for saving the most recent account, site and device data (Api cache)
@@ -76,6 +82,14 @@ class AnkerSolixBaseApi:
                 "Set api %s log level to: %s", self.apisession.nickname, level
             )
         return self._logger.getEffectiveLevel()
+
+    def mqtt_update_callback(
+        self, func: MqttUpdateCallback | None = None
+    ) -> MqttUpdateCallback | None:
+        """Get or set the MqttUpdateCallback for this session."""
+        if callable(func):
+            self._mqtt_update_callback = func
+        return self._mqtt_update_callback
 
     def getCaches(self) -> dict:
         """Return a merged dictionary with api cache dictionaries."""
@@ -200,6 +214,44 @@ class AnkerSolixBaseApi:
             rem_sites = [site for site in self.sites if site not in activeSites]
             for site in rem_sites:
                 self.sites.pop(site, None)
+
+    async def startMqttSession(self) -> AnkerSolixMqttSession | None:
+        """Start the MQTT session and connect to server."""
+        # Initialize the session
+        self.mqttsession = AnkerSolixMqttSession(apisession=self.apisession)
+        # Connect the MQTT client
+        await self.mqttsession.connect_client_async()
+        if not self.mqttsession.client.is_connected:
+            self._logger.error(
+                "Api %s failed connecting to MQTT server %s:%s",
+                self.apisession.nickname,
+                self.mqttsession.host,
+                self.mqttsession.port,
+            )
+            self.mqttsession.cleanup()
+            self.mqttsession = None
+            return self.mqttsession
+        self._logger.debug(
+            "Api %s connected successfully to MQTT server %s:%s",
+            self.apisession.nickname,
+            self.mqttsession.host,
+            self.mqttsession.port,
+        )
+        # register message callback to extract device MQTT data
+        self.mqttsession.message_callback(func=self.mqtt_received)
+        return self.mqttsession
+
+    async def stopMqttSession(self) -> None:
+        """Stop and cleanup the MQTT session."""
+        if self.mqttsession:
+            self._logger.debug(
+                "Api %s stopping MQTT session to server %s:%s",
+                self.apisession.nickname,
+                self.mqttsession.host,
+                self.mqttsession.port,
+            )
+            self.mqttsession.cleanup()
+            self.mqttsession = None
 
     def _update_account(
         self,
@@ -327,6 +379,102 @@ class AnkerSolixBaseApi:
 
             self.devices.update({str(sn): device})
         return sn
+
+    def mqtt_received(
+        self,
+        session: AnkerSolixMqttSession,
+        topic: str,
+        message: Any,
+        data: bytes,
+        model: str,
+        deviceSn: str,
+        valueupdate: bool,
+        *args,
+        **kwargs,
+    ) -> None:
+        """Define callback for MQTT session to update device MQTT data in cache and trigger MQTT update callback for device if registered."""
+        if valueupdate and deviceSn:
+            new_values = self.update_device_mqtt(deviceSn=deviceSn)
+            # call mqtt update callback if registered
+            if callable(self._mqtt_update_callback):
+                self._mqtt_update_callback(deviceSn, new_values)
+
+    def update_device_mqtt(
+        self,
+        deviceSn: str | None = None,
+    ) -> bool:
+        """Update the mqtt data cache of the given device or all devices and return whether update was done.
+
+        This will consolidate various device related mqtt key values under a common set of device keys.
+        """
+        updated = False
+        if self.mqttsession:
+            for sn, device in [
+                (sn, device)
+                for sn, device in self.devices.items()
+                if not deviceSn or sn == deviceSn
+            ]:
+                # get old MQTT data of device
+                device_mqtt = device.get("mqtt_data") or {}
+                oldtime = device_mqtt.get("last_update") or ""
+                # check if newer MQTT data is available from last message timestamp
+                # use copy of MQTT dict for device because it may be modified upon received messages
+                if (
+                    mqtt := (self.mqttsession.mqtt_data.get(sn) or {}).copy()
+                ) and oldtime < (mqtt.get("last_message") or ""):
+                    # cycle through all items and extract what is needed for the device type
+                    for key, value in mqtt.items():
+                        # Implement device MQTT merge code with key filtering, conversion, consolidation, calculation or dependency updates
+                        found_key = True
+                        if (
+                            key
+                            in [
+                                # keys with value being saved as string
+                                "device_sn",
+                                "battery_soc",
+                                "sw_version",
+                                "sw_controller",
+                                "temperature",
+                                "photovoltaic_power",
+                                "output_power",
+                                "inverter_brand",
+                                "inverter_model",
+                                "min_load",
+                                "pv_yield",
+                                "charged_energy",
+                                "output_energy",
+                                "discharged_energy",
+                                "bypass_energy",
+                            ]
+                            and value is not None
+                        ):
+                            device_mqtt.update({key: str(value)})
+                        elif (
+                            key
+                            in [
+                                # keys with value being saved unchanged
+                                "topics",
+                                "charging_status",
+                                "allow_export_switch",
+                                "priority_discharge_switch",
+                                "msg_timestamp",
+                            ]
+                            and value is not None
+                        ):
+                            device_mqtt[key] = value
+                        elif key in ["output_cutoff_data"]:
+                            device_mqtt["power_cutoff"] = str(value)
+                        elif key in ["last_message"]:
+                            device_mqtt["last_update"] = str(value)
+                        else:
+                            found_key = False
+                    updated = updated or found_key
+                    device["mqtt_data"] = device_mqtt
+            # update MQTT statistic in account cache
+            self._update_account(
+                {"mqtt_statistic": self.mqttsession.mqtt_stats.asdict()}
+            )
+        return updated
 
     async def update_sites(
         self,

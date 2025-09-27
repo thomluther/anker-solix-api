@@ -17,7 +17,7 @@ import sys
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api  # pylint: disable=no-name-in-module
+from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
 from api.apitypes import (  # pylint: disable=no-name-in-module
     SolarbankAiemsStatus,
     SolarbankUsageMode,
@@ -91,7 +91,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             user = "" if use_file else common.user()
             if not use_file:
                 CONSOLE.info("Trying Api authentication for user %s...", user)
-            myapi = api.AnkerSolixApi(
+            myapi = AnkerSolixApi(
                 user,
                 "" if use_file else common.password(),
                 "" if use_file else common.country(),
@@ -414,7 +414,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.info(
                             f"{'All Pwr Limit':<{col1}}: {dev.get('all_power_limit', '----'):>4} {unit:<{col2 - 5}} {'Pwr Limit Opt':<{col3}}: {dev.get('power_limit_option') or '----'!s}"
                         )
-                        feat1 = dev.get('allow_grid_export')
+                        feat1 = dev.get("allow_grid_export")
                         CONSOLE.info(
                             f"{'Min SOC':<{col1}}: {(dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} {'%':<{col2 - 5}} {'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4}"
                         )
@@ -454,7 +454,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 f"{'Pwr Limit Opt':<{col1}}: {(dev.get('power_limit_option') or '------')!s:<{col2}} {'Limit Opt Real':<{col3}}: {(dev.get('power_limit_option_real') or '------')!s}"
                             )
                         if "pv_power_limit" in dev:
-                            feat1 = dev.get('allow_grid_export')
+                            feat1 = dev.get("allow_grid_export")
                             CONSOLE.info(
                                 f"{'Solar Limit':<{col1}}: {dev.get('pv_power_limit', '----'):>4} {unit:<{col2 - 5}} {'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4}"
                             )

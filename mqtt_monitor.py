@@ -21,13 +21,12 @@ from typing import Any
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api  # pylint: disable=no-name-in-module
+from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
 from api.apitypes import Color  # pylint: disable=no-name-in-module
 from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
 from api.mqtt import AnkerSolixMqttSession  # pylint: disable=no-name-in-module
 from api.mqtttypes import DeviceHexData  # pylint: disable=no-name-in-module
 import common
-from paho.mqtt.client import Client
 
 # use Console logger from common module
 CONSOLE: logging.Logger = common.CONSOLE
@@ -37,7 +36,6 @@ CONSOLE: logging.Logger = common.CONSOLE
 # use INLINE logger from common module
 INLINE: logging.Logger = common.INLINE
 
-VALUES: dict = {}
 FOUNDTOPICS: set = set()
 
 
@@ -50,7 +48,7 @@ async def main() -> None:  # noqa: C901
         async with ClientSession() as websession:
             user = common.user()
             CONSOLE.info("Trying Api authentication for user %s...", user)
-            myapi = api.AnkerSolixApi(
+            myapi = AnkerSolixApi(
                 user,
                 common.password(),
                 common.country(),
@@ -173,14 +171,7 @@ async def main() -> None:  # noqa: C901
                     f"\nStarting MQTT server connection for device {device_sn} (model {device_pn})..."
                 )
                 # Initialize the session
-                mqtt_session = AnkerSolixMqttSession(apisession=myapi.apisession)
-                # Connect the MQTT client
-                client: Client = await mqtt_session.connect_client_async()
-                if not client.is_connected:
-                    CONSOLE.error(
-                        f"Connection failed to MQTT server {mqtt_session.host}:{mqtt_session.port}"
-                    )
-                    mqtt_session.cleanup()
+                if not (mqtt_session := await myapi.startMqttSession()):
                     return False
                 CONSOLE.info(
                     f"Connected successfully to MQTT server {mqtt_session.host}:{mqtt_session.port}"
@@ -307,8 +298,8 @@ async def main() -> None:  # noqa: C901
                         await progress_task
                     except asyncio.CancelledError:
                         CONSOLE.info("Progress printer was cancelled.")
-                    client.loop_stop()
-                    mqtt_session.cleanup()
+                    if myapi.mqttsession:
+                        myapi.mqttsession.cleanup()
                     # ensure the queue listener is closed
                     if listener:
                         listener.stop()
@@ -334,8 +325,8 @@ async def main() -> None:  # noqa: C901
     finally:
         if mqtt_session:
             CONSOLE.info("Disconnecting from MQTT server...")
-            client.loop_stop()
-            mqtt_session.cleanup()
+            if myapi.mqttsession:
+                myapi.mqttsession.cleanup()
             # ensure the queue listener is closed
             if listener:
                 listener.stop()
@@ -383,10 +374,16 @@ async def print_wait_progress() -> None:
 
 
 def print_message(
-    session: AnkerSolixMqttSession, topic: str, message: Any, data: bytes, model: str
+    session: AnkerSolixMqttSession,
+    topic: str,
+    message: Any,
+    data: bytes,
+    model: str,
+    *args,
+    **kwargs,
 ) -> None:
     """Print and decode the received messages."""
-    global VALUES, FOUNDTOPICS  # noqa: PLW0602
+    global FOUNDTOPICS  # noqa: PLW0602
     if topic:
         FOUNDTOPICS.add(topic)
     timestamp = ""
@@ -400,18 +397,22 @@ def print_message(
         # structure hex data
         hd = DeviceHexData(model=model or "", hexbytes=data)
         CONSOLE.info(hd.decode())
-        # extract values to dict
-        VALUES.update(hd.values())
     elif data:
         # no encoded data in message, dump object whatever it is
         CONSOLE.info(f"{timestamp}Device data:\n{json.dumps(data, indent=2)}")
 
 
 def print_values(
-    session: AnkerSolixMqttSession, topic: str, message: Any, data: bytes, model: str
+    session: AnkerSolixMqttSession,
+    topic: str,
+    message: Any,
+    data: bytes,
+    model: str,
+    *args,
+    **kwargs,
 ) -> None:
     """Print the accumulated and refreshed values including last message timestamp."""
-    global VALUES, FOUNDTOPICS  # noqa: PLW0602
+    global FOUNDTOPICS  # noqa: PLW0602
     if topic:
         FOUNDTOPICS.add(topic)
     timestamp = ""
@@ -433,16 +434,15 @@ def print_values(
         CONSOLE.info(
             f"{timestamp}: Received message '{Color.YELLOW + hd.msg_header.msgtype.hex(':') + Color.OFF}' on topic: {Color.YELLOW + topic + Color.OFF}"
         )
-    if data:
-        VALUES.update(hd.values())
-    if VALUES:
-        CONSOLE.info(f"{100 * '-'}")
+    for sn, device in session.mqtt_data.items():
+        CONSOLE.info(f"{' ' + sn + ' (' + model + ') ':-^100}")
         fields = []
-        for key, value in VALUES.items():
-            # convert timestamps to readable date and time for printout
+        for key, value in device.items():
+            # convert timestamps to readable data and time for printout
             if "timestamp" in key and isinstance(value, int):
                 value = datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
-            fields.append((key, value))
+            if key != "topics":
+                fields.append((key, value))
             if len(fields) >= 2:
                 # print row
                 CONSOLE.info(

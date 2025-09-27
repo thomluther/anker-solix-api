@@ -48,9 +48,36 @@ class DeviceHexDataTypes(Enum):
 # the field name should be the same, so they can be merged once extracting the values from the messages into a consolidated dictionary for the device.
 
 SOLIXMQTTMAP = {
+    # Solarbank C1000(X) + B1000 Extension
+    "A1761": {
+        "0405": {
+            "topic": "param_info",
+            "a5": {"name": "ac_power_in?"},
+            "a6": {"name": "ac_power_out?"},
+            "a7": {"name": "usbc_1_power?"},
+            "a8": {"name": "usbc_2_power?"},
+            "a9": {"name": "usba_1_power?"},
+            "aa": {"name": "usba_2_power?"},
+            "ae": {"name": "dc_power_in?"},
+            "c1": {"name": "battery_soc?"},
+            "c2": {"name": "exp_1_battery_soc?"},
+            "b0": {"name": "ac_power_out_total?"},
+            "b3": {"name": "sw_version?", "values": 1},
+            "b9": {"name": "sw_exp_1?", "values": 1},
+            "ba": {"name": "sw_controller?", "values": 1},
+            "bd": {"name": "temperature?"},
+            "be": {"name": "exp_1_temperature?"},
+            "d0": {"name": "device_sn"},
+            "d1": {"name": "ac_power_out_limit"},
+            "d2": {"name": "device_sleeptime"},
+            "fd": {"name": "exp_1_type"},
+            "fe": {"name": "msg_timestamp"},
+        },
+    },
     # Solarbank 1 E1600
     "A17C0": {
         "0405": {
+            # Interval: ~3-5 seconds, but only with realtime trigger?
             "topic": "param_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "battery_soc"},
@@ -63,11 +90,14 @@ SOLIXMQTTMAP = {
             "ad": {"name": "charging_status"},
             "ae": {
                 "bytes": {
-                    "12": [{"name": "allow_export_switch", "mask": 0x64}],
+                    "12": [{"name": "allow_export_switch?", "mask": 0x64}],
                     "15": [{"name": "priority_discharge_switch", "mask": 0x01}],
                 }
             },
             "b0": {"name": "charging_power"},
+            "b1": {"name": "pv_yield", "factor": 0.0001},
+            "b2": {"name": "charged_energy", "factor": 0.0001},
+            "b3": {"name": "output_energy", "factor": 0.0001},
             "b4": {"name": "output_cutoff_data"},
             "b5": {"name": "lowpower_input_data"},
             "b6": {"name": "input_cutoff_data"},
@@ -77,30 +107,43 @@ SOLIXMQTTMAP = {
             "fe": {"name": "msg_timestamp"},
         },
         "0407": {
+            # Interval: ~10-60 seconds or upon change?
             "topic": "state_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "wifi_name"},
             "a4": {"name": "wifi_signal"},
         },
         "0408": {
+            # Interval: ~60 seconds
             "topic": "state_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "local_timestamp"},
             "a4": {"name": "utc_timestamp"},
+            "a5": {"name": "unknown_408_1?"},
+            "a6": {"name": "unknown_408_2?"},
             "a8": {"name": "charging_status"},
             "a9": {"name": "output_preset"},
             "aa": {"name": "photovoltaic_power"},
             "ab": {"name": "charging_power"},
             "ac": {"name": "output_power"},
-            "ad": {"name": "?"},
-            "ae": {"name": "?"},
+            "ad": {"name": "unknown_408_3?"},
+            "af": {"name": "unknown_408_4?"},
             "b0": {"name": "battery_soc"},
+            "b1": {"name": "pv_yield", "factor": 0.0001},
+            "b2": {"name": "charged_energy", "factor": 0.0001},
+            "b3": {"name": "output_energy", "factor": 0.0001},
+            "b4": {"name": "discharged_energy", "factor": 0.0001},
+            "b5": {"name": "bypass_energy", "factor": 0.0001},
             "b6": {"name": "temperature"},
+            "b7": {"name": "unknown_408_5?"},
+            "b8": {"name": "unknown_408_6?"},
+            "b9": {"name": "unknown_408_7"},
         },
     },
     # Solarbank 3 Pro E2700
     "A17C5": {
         "0405": {
+            # Interval: ~?? seconds
             "topic": "param_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "battery_soc"},
@@ -129,21 +172,23 @@ SOLIXMQTTMAP = {
             "c2": {"name": "photovoltaic_power?"},
             "c4": {"name": "grid_power_signed"},
             "c5": {"name": "home_demand"},
-            "c6": {"name": "PV1"},
-            "c7": {"name": "PV2"},
-            "c8": {"name": "PV3"},
-            "c9": {"name": "PV4"},
+            "c6": {"name": "pv_1_name?"},
+            "c7": {"name": "pv_2_name?"},
+            "c8": {"name": "pv_3_name?"},
+            "c9": {"name": "pv_4_name?"},
             "d5": {"name": "pv_limit"},
             "d6": {"name": "ac_input_limit"},
             "fe": {"name": "msg_timestamp"},
         },
         "0407": {
+            # Interval: ~?? seconds
             "topic": "state_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "wifi_name"},
             "a4": {"name": "wifi_signal"},
         },
         "0408": {
+            # Interval: ~?? seconds
             "topic": "state_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "timestamp_3?"},
@@ -151,14 +196,15 @@ SOLIXMQTTMAP = {
             "aa": {"name": "home_load_preset"},
             "cc": {"name": "temperature"},
         },
-        # Expansion data
         "040a": {
+            # Expansion data
+            # Interval: ~?? seconds
             "topic": "param_info",
             "a3": {"name": "controller_soc_or_exp_avg?"},
             "a4": {
                 "bytes": {
                     "0": {
-                        "name": "expansion_1_controller_SN?",
+                        "name": "exp_1_controller_sn?",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -167,23 +213,23 @@ SOLIXMQTTMAP = {
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "18": {
-                        "name": "expansion_1_position",
+                        "name": "exp_1_position",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "19": {
-                        "name": "expansion_1_temperature",
+                        "name": "exp_1_temperature",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "21": {
-                        "name": "expansion_1_soc",
+                        "name": "exp_1_soc",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "22": {
-                        "name": "expansion_1_soc_limit?",
+                        "name": "exp_1_soc_limit?",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "27": {
-                        "name": "expansion_1_SN",
+                        "name": "exp_1_sn",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -196,7 +242,7 @@ SOLIXMQTTMAP = {
             "a5": {
                 "bytes": {
                     "0": {
-                        "name": "expansion_2_controller_SN?",
+                        "name": "exp_2_controller_sn?",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -205,23 +251,23 @@ SOLIXMQTTMAP = {
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "18": {
-                        "name": "expansion_2_position",
+                        "name": "exp_2_position",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "19": {
-                        "name": "expansion_2_temperature",
+                        "name": "exp_2_temperature",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "21": {
-                        "name": "expansion_2_soc",
+                        "name": "exp_2_soc",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "22": {
-                        "name": "expansion_2_soc_limit",
+                        "name": "exp_2_soc_limit",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "27": {
-                        "name": "expansion_2_SN",
+                        "name": "exp_2_sn",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -234,7 +280,7 @@ SOLIXMQTTMAP = {
             "a6": {
                 "bytes": {
                     "0": {
-                        "name": "expansion_3_controller_SN?",
+                        "name": "exp_3_controller_sn?",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -243,23 +289,23 @@ SOLIXMQTTMAP = {
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "18": {
-                        "name": "expansion_3_position",
+                        "name": "exp_3_position",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "19": {
-                        "name": "expansion_3_temperature",
+                        "name": "exp_3_temperature",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "21": {
-                        "name": "expansion_3_soc",
+                        "name": "exp_3_soc",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "22": {
-                        "name": "expansion_3_soc_limit",
+                        "name": "exp_3_soc_limit",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "27": {
-                        "name": "expansion_3_SN",
+                        "name": "exp_3_sn",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -272,7 +318,7 @@ SOLIXMQTTMAP = {
             "a7": {
                 "bytes": {
                     "0": {
-                        "name": "expansion_4_controller_SN?",
+                        "name": "exp_4_controller_sn?",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -281,23 +327,23 @@ SOLIXMQTTMAP = {
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "18": {
-                        "name": "expansion_4_position",
+                        "name": "exp_4_position",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "19": {
-                        "name": "expansion_4_temperature",
+                        "name": "exp_4_temperature",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "21": {
-                        "name": "expansion_4_soc",
+                        "name": "exp_4_soc",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "22": {
-                        "name": "expansion_4_soc_limit",
+                        "name": "exp_4_soc_limit",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "27": {
-                        "name": "expansion_4_SN",
+                        "name": "exp_4_sn",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -310,7 +356,7 @@ SOLIXMQTTMAP = {
             "a8": {
                 "bytes": {
                     "0": {
-                        "name": "expansion_5_controller_SN?",
+                        "name": "exp_5_controller_sn?",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -319,23 +365,23 @@ SOLIXMQTTMAP = {
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "18": {
-                        "name": "expansion_5_position",
+                        "name": "exp_5_position",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "19": {
-                        "name": "expansion_5_temperature",
+                        "name": "exp_5_temperature",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "21": {
-                        "name": "expansion_5_soc",
+                        "name": "exp_5_soc",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "22": {
-                        "name": "expansion_5_soc_limit",
+                        "name": "exp_5_soc_limit",
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "27": {
-                        "name": "expansion_5_SN",
+                        "name": "exp_5_sn",
                         "length": 17,
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -349,6 +395,7 @@ SOLIXMQTTMAP = {
         },
         "0420": {
             # appears to be multisystem message
+            # Interval: ~?? seconds
             "topic": "state_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "timestamp_5?"},
@@ -360,7 +407,7 @@ SOLIXMQTTMAP = {
             "b3": {
                 "bytes": {
                     "0": {
-                        "name": "parallel_1_SN",
+                        "name": "parallel_1_sn",
                         "length": 0,  # First byte is byte count for type
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -369,7 +416,7 @@ SOLIXMQTTMAP = {
             "b4": {
                 "bytes": {
                     "0": {
-                        "name": "parallel_2_SN",
+                        "name": "parallel_2_sn",
                         "length": 0,  # First byte is byte count for type
                         "type": DeviceHexDataTypes.str.value,
                     },
@@ -381,6 +428,7 @@ SOLIXMQTTMAP = {
     },
     "A17X7": {
         "0405": {
+            # Interval: ~?? seconds
             "topic": "param_info",
             "a2": {"name": "device_sn"},
             "a6": {"name": "sw_version", "values": 4},
@@ -394,6 +442,7 @@ SOLIXMQTTMAP = {
     },
     "SHEMP3": {
         "0405": {
+            # Interval: ~?? seconds
             "topic": "param_info",
             "a2": {"name": "device_sn"},
             "a8": {"name": "grid_to_home_power", "factor": 0.01},
