@@ -111,7 +111,7 @@ class DeviceHexDataField:
     Common data field structure:
     XX     | 1 Byte data field name (A1, A2, A3 ...), naming can be different per device model and message type
     XX     | 1 Byte data length (bytes following until end of field)
-    XX ... | 1-xx Bytes data, where first Byte in data indicates the value type of the data (if data length is > 2)
+    XX ... | 1-xx Bytes data, where first Byte in data typically indicates the value type of the data (if data length is > 2)
     """
 
     f_name: bytearray = field(default_factory=bytearray)
@@ -130,14 +130,14 @@ class DeviceHexDataField:
             self.f_name = hexbytes[0:1]
             self.f_length = int.from_bytes(hexbytes[1:2])
             if 0 < self.f_length <= len(hexbytes) - 2:
-                if self.f_length > 1:
+                if self.f_length > 1 and bytes(hexbytes[2:3]) < b"10":
                     # field with value type
                     self.f_type = hexbytes[2:3]
                     self.f_value = hexbytes[3 : 2 + self.f_length]
                 else:
                     # field with single byte value
                     self.f_type = bytearray()
-                    self.f_value = hexbytes[2:3]
+                    self.f_value = hexbytes[2:self.f_length]
             else:
                 self.f_type = bytearray()
                 self.f_value = bytearray()
@@ -174,7 +174,7 @@ class DeviceHexDataField:
         if self.f_name:
             typ = (
                 DeviceHexDataTypes(self.f_type).name
-                if self.f_type in DeviceHexDataTypes
+                if bytes(self.f_type) in DeviceHexDataTypes
                 else DeviceHexDataTypes.unk.name
             )
             tcol = (
@@ -195,6 +195,7 @@ class DeviceHexDataField:
                 DeviceHexDataTypes.str.name,
                 DeviceHexDataTypes.bin.name,
                 DeviceHexDataTypes.strb.name,
+                DeviceHexDataTypes.unk.name,
             ]:
                 # unsigned int little endian
                 uile = (
@@ -419,7 +420,7 @@ class DeviceHexData:
         Common data field structure:
         XX     | 1 Byte data field name (A1, A2, A3 ...), naming can be different per device model and message type
         XX     | 1 Byte data length (bytes following until end of field)
-        XX ... | 1-xx Bytes data, where first Byte in data indicates the value type of the data (if data length is > 2)
+        XX ... | 1-xx Bytes data, where first Byte in data typically indicates the value type of the data (if data length is > 2)
     e.g. ff09 3b00 03010f 0407 | a1 01 32 | a2 11 00 415a5636....
     """
 

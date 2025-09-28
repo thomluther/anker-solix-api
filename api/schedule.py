@@ -79,10 +79,15 @@ async def get_device_load(
         schedule = testSchedule
         data = {}
     dev_serials = set()
-    for slot in schedule.get("ranges") or []:
-        for dev in slot.get("device_power_loads") or []:
-            if sn := dev.get("device_sn"):
-                dev_serials.add(sn)
+    # get all solarbanks that may share same schedule with device
+    for sn in [
+        sn
+        for sn, sb in self.devices.items()
+        if sb.get("site_id") == siteId
+        and sb.get("type") == SolixDeviceType.SOLARBANK.value
+        and (sb.get("generation") or 0) <= 1
+    ]:
+        dev_serials.add(sn)
     # add the given serial to set
     if deviceSn:
         dev_serials.add(deviceSn)
@@ -582,21 +587,23 @@ async def set_home_load(  # noqa: C901
         sb_count = test_count
     # get appliance and device limits based on number of solar banks
     if (min_load := str(schedule.get("min_load"))).isdigit():
-        # min_load = int(min_load)
-        # Allow lower min setting as defined by API minimum. This however may be ignored if outside of appliance defined slot boundaries.
-        min_load = SolixDefaults.PRESET_MIN
+        # Allow lower min setting as defined by API minimum. This however may be ignored by device if outside of appliance defined boundaries.
+        min_load = int(min_load)
+        # min_load = SolixDefaults.PRESET_MIN
     else:
         min_load = SolixDefaults.PRESET_MIN
     if (max_load := str(schedule.get("max_load"))).isdigit():
         max_load = int(max_load)
     else:
-        max_load = SolixDefaults.PRESET_MAX
-    # adjust appliance max limit based on number of solar banks
-    max_load = int(max_load * sb_count)
+        max_load = int(SolixDefaults.PRESET_MAX)
+    # adjust appliance max limit based on number of solar banks and max in schedule, tolerate at least sb count * default
+    max_load = min(
+        SolixDefaults.PRESET_MAX * sb_count, max_load * sb_count
+    )
     if (min_load_dev := str(schedule.get("advanced_mode_min_load"))).isdigit():
         min_load_dev = int(min_load_dev)
     else:
-        min_load_dev = int(SolixDefaults.PRESET_MIN / 2)
+        min_load_dev = int(min_load / 2)
     # max load of device is not specified separately, use appliance default
     max_load_dev = SolixDefaults.PRESET_MAX
     # verify if and which power mode to be considered
