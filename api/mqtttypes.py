@@ -137,7 +137,7 @@ class DeviceHexDataField:
                 else:
                     # field with single byte value
                     self.f_type = bytearray()
-                    self.f_value = hexbytes[2:self.f_length]
+                    self.f_value = hexbytes[2 : 2 + self.f_length]
             else:
                 self.f_type = bytearray()
                 self.f_value = bytearray()
@@ -402,6 +402,21 @@ class DeviceHexDataField:
                                 fieldmap=bytemap,
                             )
                         )
+            case _:
+                # check if type provided in mapping and convert value accordingly
+                if (
+                    (ftype := fieldmap.get("type"))
+                    and bytes(ftype) in DeviceHexDataTypes
+                    and bytes(ftype) != DeviceHexDataTypes.unk.value
+                ):
+                    # recursive call to extract value according to defined valid type
+                    values.update(
+                        self.extract_value(
+                            hexdata=hexdata,
+                            fieldtype=ftype,
+                            fieldmap=fieldmap,
+                        )
+                    )
         return values
 
 

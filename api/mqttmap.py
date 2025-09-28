@@ -48,6 +48,20 @@ class DeviceHexDataTypes(Enum):
 # the field name should be the same, so they can be merged once extracting the values from the messages into a consolidated dictionary for the device.
 
 SOLIXMQTTMAP = {
+    # C300 DC
+    "A1728": {
+        "0830": {
+            "topic": "param_info",
+            "a1": {
+                "name": "sw_version?",
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "a2": {
+                "name": "sw_esp?",
+                "type": DeviceHexDataTypes.str.value,
+            },
+        },
+    },
     # Solarbank C1000(X) + B1000 Extension
     "A1761": {
         "0405": {
