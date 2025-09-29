@@ -33,7 +33,7 @@ async def get_device_load(
     fromFile: bool = False,
     testSchedule: dict | None = None,
 ) -> dict:
-    r"""Get device load settings. This provides only SB1 schedule structure, not useful for SB2.
+    r"""Get device load settings. This provides only SB1 schedule structure, not useful for SB2+ devices.
 
     Example data:
     {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c",
@@ -78,8 +78,7 @@ async def get_device_load(
         # For testing purpose only, use test schedule to update dependent fields in device cache
         schedule = testSchedule
         data = {}
-    dev_serials = set()
-    # get all solarbanks that may share same schedule with device
+    # get all SB1 in system that may share same schedule with device and update their schedule
     for sn in [
         sn
         for sn, sb in self.devices.items()
@@ -87,11 +86,6 @@ async def get_device_load(
         and sb.get("type") == SolixDeviceType.SOLARBANK.value
         and (sb.get("generation") or 0) <= 1
     ]:
-        dev_serials.add(sn)
-    # add the given serial to set
-    if deviceSn:
-        dev_serials.add(deviceSn)
-    for sn in dev_serials:
         self._update_dev(
             {
                 "device_sn": sn,
@@ -260,32 +254,27 @@ async def get_device_parm(
         # For testing purpose only, use test schedule to update dependent fields in device cache
         paramData = testSchedule
         data = {}
-    # update parameters for other devices that share it
-    dev_serials = set()
     # get all solarbanks that may share same schedule or are managed by a station
-    for sn in [
+    dev_serials = {
         sn
         for sn, sb in self.devices.items()
         if sb.get("site_id") == siteId
         and sb.get("type") == SolixDeviceType.SOLARBANK.value
         and (sb.get("generation") or 0) >= 2
-    ]:
-        dev_serials.add(sn)
+    }
     if paramType in [
         SolixParmType.SOLARBANK_SCHEDULE.value,
         SolixParmType.SOLARBANK_2_SCHEDULE.value,
     ]:
         if paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
-            # add all Solarbaank 1 devices found in schedule paramData, they are not managed by a station
-            dev_serials = set()
-            # schedule updates for all devices with same schedule type
-            if deviceSn:
-                # add the given serial to list if not existing yet
-                dev_serials.add(deviceSn)
-            for slot in paramData.get("ranges") or []:
-                for dev in slot.get("device_power_loads") or []:
-                    if sn := dev.get("device_sn"):
-                        dev_serials.add(sn)
+            # add only Solarbaank 1 devices found in schedule paramData, they are not managed by a station
+            dev_serials = {
+                sn
+                for sn, sb in self.devices.items()
+                if sb.get("site_id") == siteId
+                and sb.get("type") == SolixDeviceType.SOLARBANK.value
+                and (sb.get("generation") or 0) <= 1
+            }
         for sn in dev_serials:
             self._update_dev(
                 {
@@ -379,6 +368,7 @@ async def set_device_parm(
             paramData, separators=(",", ":")
         ),  # Must be string type
     }
+    sb_info = (self.sites.get(siteId) or {}).get("solarbank_info") or {}
     if toFile:
         # Write updated response to file for testing purposes
         if paramType in [SolixParmType.SOLARBANK_STATION.value]:
@@ -400,16 +390,42 @@ async def set_device_parm(
                 filedata["switch_0w"] = setting
         else:
             filedata = paramData
-        if filedata and not await self.apisession.saveToFile(
-            Path(self.testDir())
-            / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_modified_{siteId}.json",
-            data={
-                "code": 0,
-                "msg": "success!",
-                "data": {"param_data": json.dumps(filedata, separators=(",", ":"))},
-            },
-        ):
-            return False
+        if filedata:
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['get_device_parm']}_{paramType}_modified_{siteId}.json",
+                data={
+                    "code": 0,
+                    "msg": "success!",
+                    "data": {"param_data": json.dumps(filedata, separators=(",", ":"))},
+                },
+            ):
+                return False
+            # modify also the device load files for SB1 devices
+            if paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
+                for sn in [
+                    sn
+                    for sn, sb in self.devices.items()
+                    if sb.get("site_id") == siteId
+                    and sb.get("type") == SolixDeviceType.SOLARBANK.value
+                    and (sb.get("generation") or 0) <= 1
+                ]:
+                    await self.apisession.saveToFile(
+                        Path(self.testDir())
+                        / f"{API_FILEPREFIXES['get_device_load']}_modified_{sn}.json",
+                        data={
+                            "code": 0,
+                            "msg": "success!",
+                            "data": {
+                                "site_id": siteId,
+                                "home_load_data": json.dumps(
+                                    filedata, separators=(",", ":")
+                                ),
+                                "current_home_load": "",
+                                "parallel_home_load": "",
+                            },
+                        },
+                    )
     else:
         code = (
             await self.apisession.request(
@@ -434,41 +450,30 @@ async def set_device_parm(
                 await self.get_power_cutoff(deviceSn=sn)
     else:
         # distinguish which schedule to query for updates
-        if (self.devices.get(deviceSn) or {}).get("device_pn") in ["A17C0"]:
+        if paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
             # Active SB1 schedule data should be queried like on details refresh
             respdata = await self.get_device_load(
                 siteId=siteId, deviceSn=deviceSn, fromFile=toFile
             )
-            data = respdata
         else:
             # Other solarbank models
             respdata = await self.get_device_parm(
                 siteId=siteId, paramType=paramType, deviceSn=deviceSn, fromFile=toFile
             )
-            data = {}
-        # update also cascaded solarbanks schedule
-        sb_info = (self.sites.get(siteId) or {}).get("solarbank_info") or {}
-        if sb_info.get("sb_cascaded"):
-            # Update schedule also for other SB1 that are cascaded
-            for casc_sn in [
-                sb.get("device_sn")
-                for sb in (sb_info.get("solarbank_list") or [])
-                if sb.get("cascaded") and sb.get("device_sn") != deviceSn
+        # update also cascaded solarbanks schedule since it may depend from SB2 usage mode in schedule
+        if paramType == SolixParmType.SOLARBANK_2_SCHEDULE.value and sb_info.get("sb_cascaded"):
+            # For two cascaded SB1, their enforced schedule may no longer list the other SB1 anymore when SB2 is in manual mode
+            # trigger get_device_load for first SB1 that is cascaded, which will update all cascaded SB1 devices
+            if casc_sn := [
+                sn
+                for sn, sb in self.devices.items()
+                if sb.get("site_id") == siteId
+                and sb.get("type") == SolixDeviceType.SOLARBANK.value
+                and sb.get("cascaded")
             ]:
-                # For two cascaded SB1, their enforced schedule may no longer list the other SB1 anymore when SB2 is in manual mode
-                if not data:
-                    data = await self.get_device_load(
-                        siteId=siteId, deviceSn=casc_sn, fromFile=toFile
-                    )
-                if data:
-                    self._update_dev(
-                        {
-                            "device_sn": casc_sn,
-                            "schedule": data.get("home_load_data") or {},
-                            "current_home_load": data.get("current_home_load") or "",
-                            "parallel_home_load": data.get("parallel_home_load") or "",
-                        }
-                    )
+                await self.get_device_load(
+                    siteId=siteId, deviceSn=casc_sn[0], fromFile=toFile
+                )
     return respdata
 
 
@@ -597,9 +602,7 @@ async def set_home_load(  # noqa: C901
     else:
         max_load = int(SolixDefaults.PRESET_MAX)
     # adjust appliance max limit based on number of solar banks and max in schedule, tolerate at least sb count * default
-    max_load = min(
-        SolixDefaults.PRESET_MAX * sb_count, max_load * sb_count
-    )
+    max_load = min(SolixDefaults.PRESET_MAX * sb_count, max_load * sb_count)
     if (min_load_dev := str(schedule.get("advanced_mode_min_load"))).isdigit():
         min_load_dev = int(min_load_dev)
     else:
