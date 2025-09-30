@@ -51,6 +51,7 @@ SOLIXMQTTMAP = {
     # C300 DC
     "A1728": {
         "0830": {
+            # Interval: ?? seconds
             "topic": "param_info",
             "a1": {
                 "name": "sw_version?",
@@ -65,27 +66,40 @@ SOLIXMQTTMAP = {
     # Solarbank C1000(X) + B1000 Extension
     "A1761": {
         "0405": {
+            # Interval: ~1 second, but only with realtime trigger
             "topic": "param_info",
-            "a5": {"name": "ac_power_in?"},
-            "a6": {"name": "ac_power_out?"},
-            "a7": {"name": "usbc_1_power?"},
-            "a8": {"name": "usbc_2_power?"},
-            "a9": {"name": "usba_1_power?"},
-            "aa": {"name": "usba_2_power?"},
-            "ae": {"name": "dc_power_in?"},
-            "c1": {"name": "battery_soc?"},
-            "c2": {"name": "exp_1_battery_soc?"},
-            "b0": {"name": "ac_power_out_total?"},
-            "b3": {"name": "sw_version?", "values": 1},
-            "b9": {"name": "sw_exp_1?", "values": 1},
-            "ba": {"name": "sw_controller?", "values": 1},
-            "bd": {"name": "temperature?"},
-            "be": {"name": "exp_1_temperature?"},
+            "a5": {"name": "ac_power_in"},
+            "a6": {"name": "ac_power_out"},
+            "a7": {"name": "usbc_1_power"},
+            "a8": {"name": "usbc_2_power"},
+            "a9": {"name": "usba_1_power"},
+            "aa": {"name": "usba_2_power"},
+            "ae": {"name": "dc_power_in"},
+            "c1": {"name": "battery_soc"},
+            "c2": {"name": "exp_1_battery_soc"},
+            "b0": {"name": "ac_power_out_total"},
+            "b3": {"name": "sw_version", "values": 1},
+            "b9": {"name": "sw_exp_1", "values": 1},
+            "ba": {"name": "sw_controller", "values": 1},
+            "bd": {"name": "temperature"},
+            "be": {"name": "exp_1_temperature"},
             "d0": {"name": "device_sn"},
             "d1": {"name": "ac_power_out_limit"},
             "d2": {"name": "device_sleeptime"},
             "fd": {"name": "exp_1_type"},
             "fe": {"name": "msg_timestamp"},
+        },
+        "0830": {
+            # Interval: ?? seconds
+            "topic": "param_info",
+            "a1": {
+                "name": "sw_unknown_2?",
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "a2": {
+                "name": "sw_version",
+                "type": DeviceHexDataTypes.str.value,
+            },
         },
     },
     # Solarbank 1 E1600

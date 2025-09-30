@@ -62,8 +62,7 @@ class RequestCounter:
                 )
             ]
             + ["Throttled Endpoints:"]
-            + list(self.throttled)
-            or ["None"]
+            + (list(self.throttled) or ["None"])
         )
 
 

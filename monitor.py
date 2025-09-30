@@ -19,6 +19,7 @@ from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
 from api.apitypes import (  # pylint: disable=no-name-in-module
+    Color,
     SolarbankAiemsStatus,
     SolarbankUsageMode,
     SolixDeviceType,
@@ -33,6 +34,11 @@ import common
 CONSOLE: logging.Logger = common.CONSOLE
 # enable debug mode for the console handler
 # CONSOLE.handlers[0].setLevel(logging.DEBUG)
+
+# use INLINE logger from common module
+INLINE: logging.Logger = common.INLINE
+# use SAMELINE logger from common module
+SAMELINE: logging.Logger = common.SAMELINE
 
 REFRESH = 0  # default No refresh interval
 DETAILSREFRESH = 10  # Multiplier for device details refresh
@@ -51,11 +57,51 @@ def get_subfolders(folder: str | Path) -> list:
     return []
 
 
+def print_menu() -> None:
+    """Print the key menu."""
+    CONSOLE.info("\n%s\nLive Monitor key menu:\n%s", 100 * "-", 100 * "-")
+    CONSOLE.info(f"[{Color.YELLOW}M{Color.OFF}]enu to show this key list")
+    CONSOLE.info(f"[{Color.YELLOW}D{Color.OFF}]ebug actual Api cache")
+    CONSOLE.info(f"[{Color.YELLOW}A{Color.OFF}]pi call display OFF (default) or ON")
+    # CONSOLE.info(
+    #     f"[{Color.YELLOW}S{Color.OFF}]witch MQTT session OFF (default) or ON"
+    # )
+    # CONSOLE.info(
+    #     f"[{Color.YELLOW}T{Color.OFF}]rigger real time MQTT data (Timeout 1 min). Only possible if MQTT session is ON"
+    # )
+    CONSOLE.info(
+        f"[{Color.RED}Q{Color.OFF}]uit, [{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop live monitor"
+    )
+    input(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n")
+
+
+async def print_wait_progress(
+    seconds: int, next_refr: datetime, next_dev_refr: datetime
+) -> None:
+    """Print wait progress for data poller monitoring for given number of seconds."""
+    for sec in range(seconds):
+        now = datetime.now().astimezone()
+        # IDLE may be used with different stdin which does not support cursor placement, skip time progress display in that case
+        if sys.stdin is sys.__stdin__:
+            SAMELINE.info(
+                f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(next_dev_refr):>2}"
+            )
+            if next_refr < now:
+                break
+        elif sec == 0 or next_refr < now:
+            CONSOLE.info(
+                f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(next_dev_refr):>2}",
+            )
+            if next_refr < now:
+                break
+        await asyncio.sleep(1)
+
+
 async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     None
 ):
     """Run Main routine to start the monitor in a loop."""
-    global REFRESH  # pylint: disable=global-statement  # noqa: PLW0603
+    global REFRESH, SHOWAPICALLS  # pylint: disable=global-statement  # noqa: PLW0603
     CONSOLE.info("Anker Solix Monitor:")
     # get list of possible example and export folders to test the monitor against
     exampleslist: list = get_subfolders(
@@ -67,11 +113,13 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
         if exampleslist:
             exampleslist.sort()
             CONSOLE.info("\nSelect the input source for the monitor:")
-            CONSOLE.info("(0) Real time from Anker cloud")
+            CONSOLE.info(f"({Color.CYAN}0{Color.OFF}) Real time from Anker cloud")
             for idx, filename in enumerate(exampleslist, start=1):
-                CONSOLE.info("(%s) %s", idx, filename)
-            CONSOLE.info("(q) Quit")
-        selection = input(f"Input Source number (0-{len(exampleslist)}) or [q]uit: ")
+                CONSOLE.info(f"({Color.YELLOW}{idx}{Color.OFF}) {filename}")
+            CONSOLE.info(f"({Color.RED}q{Color.OFF}) Quit")
+        selection = input(
+            f"Input Source number {Color.CYAN}0{Color.YELLOW}-{len(exampleslist)}{Color.OFF}) or [{Color.RED}q{Color.OFF}]uit: "
+        )
         if (
             selection.upper() in ["Q", "QUIT"]
             or not selection.isdigit()
@@ -86,6 +134,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             testfolder = exampleslist[selection - 1]
     else:
         use_file = False
+    myapi: AnkerSolixApi | None = None
     try:
         async with ClientSession() as websession:
             user = "" if use_file else common.user()
@@ -102,14 +151,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 # set the correct test folder for Api
                 myapi.testDir(testfolder)
             elif await myapi.async_authenticate():
-                CONSOLE.info("Anker Cloud authentication: OK")
+                CONSOLE.info(f"Anker Cloud authentication: {Color.GREEN}OK{Color.OFF}")
             else:
                 # Login validation will be done during first API call
-                CONSOLE.info("Anker Cloud authentication: CACHED")
+                CONSOLE.info(f"Anker Cloud authentication: {Color.CYAN}CACHED{Color.OFF}")
 
             while not use_file:
                 resp = input(
-                    "How many seconds refresh interval should be used? (5-600, default: 30): "
+                    f"How many seconds refresh interval should be used? ({Color.YELLOW}5-600{Color.OFF}, default: {Color.CYAN}30{Color.OFF}): "
                 )
                 if not resp:
                     REFRESH = 30
@@ -121,7 +170,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             # ask for including energy details
             while True:
                 resp = input(
-                    "Do you want to include daily site energy statistics? ([Y]es / [N]o = default): "
+                    f"Do you want to include daily site energy statistics? ([{Color.YELLOW}Y{Color.OFF}]es / [{Color.CYAN}N{Color.OFF}]o = default): "
                 )
                 if not resp or resp.upper() in ["N", "NO"]:
                     break
@@ -139,6 +188,8 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
             site_selected: str = None
             startup: bool = True
             deferred: bool = False
+            # get running loop to run blocking code
+            loop = asyncio.get_running_loop()
             while True:
                 common.clearscreen()
                 now = datetime.now().astimezone()
@@ -165,9 +216,11 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if len(site_names) > 2:
                             CONSOLE.info("Select which Site to be monitored:")
                             for idx, sitename in enumerate(site_names):
-                                CONSOLE.info("(%s) %s", idx, sitename)
+                                CONSOLE.info(
+                                    f"({Color.YELLOW}{idx}{Color.OFF}) {sitename}"
+                                )
                             selection = input(
-                                f"Enter site number (0-{len(site_names) - 1}) or nothing for All: "
+                                f"Enter site number ({Color.YELLOW}0-{len(site_names) - 1}{Color.OFF}) or nothing for {Color.CYAN}All{Color.OFF}: "
                             )
                             if selection.isdigit() and 1 <= int(selection) < len(
                                 site_names
@@ -175,10 +228,14 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 site_selected = site_names[int(selection)].split(",")[0]
                         # ask which endpoint limit should be applied
                         selection = input(
-                            f"Enter Api endpoint limit for request throttling (1-50, 0 = disabled) [Default: {myapi.apisession.endpointLimit()}]: "
+                            f"Enter Api endpoint limit for request throttling ({Color.YELLOW}1-50, 0 = disabled{Color.OFF}) "
+                            f"[Default: {Color.CYAN}{myapi.apisession.endpointLimit()}{Color.OFF}]: "
                         )
                         if selection.isdigit() and 0 <= int(selection) <= 50:
                             myapi.apisession.endpointLimit(int(selection))
+                        # Show key menu before starting poller
+                        print_menu()
+
                     CONSOLE.info("Running site refresh...")
                     await myapi.update_sites(fromFile=use_file, siteId=site_selected)
                     next_dev_refr -= 1
@@ -249,7 +306,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                 else f"{(shift // 3600):0=+3.0f}:{(shift % 3600 // 60) if shift else 0:0=z2.0f}"
                             )
                             CONSOLE.info(
-                                f"{'System (' + shift + ')':<{col1}}: {(site.get('site_info') or {}).get('site_name', 'Unknown')}  (Site ID: {siteid})"
+                                f"{Color.YELLOW}{'System (' + shift + ')':<{col1}}: {(site.get('site_info') or {}).get('site_name', 'Unknown')}  (Site ID: {siteid}){Color.OFF}"
                             )
                             site_type = str(site.get("site_type", ""))
                             CONSOLE.info(
@@ -355,7 +412,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                     else:
                         CONSOLE.info("-" * 80)
                     CONSOLE.info(
-                        f"{'Device [' + dev.get('device_pn', '') + ']':<{col1}}: {(dev.get('name', 'NoName')):<{col2}} {'Alias':<{col3}}: {dev.get('alias', 'Unknown')}"
+                        f"{'Device [' + dev.get('device_pn', '') + ']':<{col1}}: {Color.MAG}{(dev.get('name', 'NoName')):<{col2}}{Color.OFF} {'Alias':<{col3}}: {Color.MAG}{dev.get('alias', 'Unknown')}{Color.OFF}"
                     )
                     CONSOLE.info(
                         f"{'Serialnumber':<{col1}}: {sn:<{col2}} {'Admin':<{col3}}: {'YES' if admin else 'NO'}"
@@ -632,12 +689,12 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                 if vehicles := myapi.account.get("vehicles") or {}:
                     CONSOLE.info("=" * 80)
                     CONSOLE.info(
-                        f"Electric vehicle details for user '{myapi.account.get('nickname') or 'Unknown'}':"
+                        f"{Color.BLUE}Electric vehicle details for user '{myapi.account.get('nickname') or 'Unknown'}':{Color.OFF}"
                     )
                     keys = set(vehicles.keys())
                     for vehicleId, vehicle in vehicles.items():
                         CONSOLE.info(
-                            f"{'EV Name':<{col1}}: {vehicle.get('vehicle_name', 'Unknown')}  (Vehicle ID: {vehicleId})"
+                            f"{'EV Name':<{col1}}: {Color.BLUE}{vehicle.get('vehicle_name', 'Unknown')}{Color.OFF}  (Vehicle ID: {vehicleId})"
                         )
                         ev = SolixVehicle(vehicle=vehicle)
                         CONSOLE.info(
@@ -666,7 +723,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         customized = site.get("customized") or {}
                         CONSOLE.info("=" * 80)
                         CONSOLE.info(
-                            f"Energy details for System {(site.get('site_info') or {}).get('site_name', 'Unknown')} (Site ID: {site_id}):"
+                            f"{Color.CYAN}Energy details for System {(site.get('site_info') or {}).get('site_name', 'Unknown')} (Site ID: {site_id}):{Color.OFF}"
                         )
                         if len(totals := site.get("statistics") or []) >= 3:
                             CONSOLE.info(
@@ -933,7 +990,9 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         CONSOLE.debug(json.dumps(myapi.devices, indent=2))
                         myapi.request_count.recycle(last_time=datetime.now())
                         resp = input(
-                            "[D]ebug cache, [S]ite refresh, [A]ll refresh, select [O]ther file, toggle [N]ext/[P]revious file, [C]ustomize or [Q]uit: "
+                            f"[{Color.YELLOW}D{Color.OFF}]ebug cache, [{Color.YELLOW}S{Color.OFF}]ite refresh, [{Color.YELLOW}A{Color.OFF}]ll refresh, "
+                            f"select [{Color.YELLOW}O{Color.OFF}]ther file, toggle [{Color.YELLOW}N{Color.OFF}]ext/[{Color.YELLOW}P{Color.OFF}]revious file, "
+                            f"[{Color.YELLOW}C{Color.OFF}]ustomize or [{Color.RED}Q{Color.OFF}]uit: "
                         )
                         if resp.upper() in ["D", "DEBUG"]:
                             # print the whole cache
@@ -967,7 +1026,7 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                             CONSOLE.info("(q) Quit")
                             while use_file:
                                 select = input(
-                                    f"Select ID (1-{len(itemlist)}) or [c]ancel: "
+                                    f"Select ID ({Color.YELLOW}1-{len(itemlist)}{Color.OFF}) or [{Color.RED}c{Color.OFF}]ancel: "
                                 )
                                 if select.upper() in ["C", "CANCEL"]:
                                     break
@@ -977,31 +1036,32 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                                     break
                             if isinstance(select, int):
                                 item = itemlist[select - 1]
-                                key = input(f"Enter key to be customized in '{item}': ")
+                                key = input(
+                                    f"Enter key to be customized in '{Color.YELLOW}{item}{Color.OFF}': "
+                                )
                                 value = json.loads(
-                                    f"{input(f"Enter '{key}' value in JSON format: ").replace("'", '"')}"
+                                    f"{input(f"Enter '{Color.YELLOW}{key}{Color.OFF}' value in JSON format: ").replace("'", '"')}"
                                 )
                                 myapi.customizeCacheId(id=item, key=key, value=value)
                                 CONSOLE.info(
-                                    "Customized part of %s:\n%s",
-                                    item,
-                                    json.dumps(
-                                        myapi.getCaches().get(item).get("customized")
-                                        or {},
-                                        indent=2,
-                                    ),
+                                    f"Customized part of {Color.YELLOW}{item}{Color.OFF}:\n"
+                                    f"{json.dumps(myapi.getCaches().get(item).get('customized') or {}, indent=2)}"
                                 )
-                                input("Hit enter to refresh all data...")
+                                input(
+                                    f"Hit [{Color.YELLOW}Enter{Color.OFF}] to refresh all data..."
+                                )
                                 next_dev_refr = 0
                             break
                         if resp.upper() in ["O", "OTHER"] and exampleslist:
                             CONSOLE.info("Select the input source for the monitor:")
                             for idx, filename in enumerate(exampleslist, start=1):
-                                CONSOLE.info("(%s) %s", idx, filename)
-                            CONSOLE.info("(q) Quit")
+                                CONSOLE.info(
+                                    f"({Color.YELLOW}{idx}{Color.OFF}) {filename}"
+                                )
+                            CONSOLE.info(f"({Color.RED}q{Color.OFF}) Quit")
                             while use_file:
                                 selection = input(
-                                    f"Enter source file number (1-{len(exampleslist)}) or [q]uit: "
+                                    f"Enter source file number ({Color.YELLOW}1-{len(exampleslist)}{Color.OFF}) or [{Color.RED}q{Color.OFF}]uit: "
                                 )
                                 if selection.upper() in ["Q", "QUIT"]:
                                     return True
@@ -1035,43 +1095,92 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
                         if resp.upper() in ["Q", "QUIT"]:
                             return True
                 else:
-                    CONSOLE.info(
-                        "Api Requests: %s",
-                        myapi.request_count,
-                    )
-                    CONSOLE.log(
-                        logging.INFO if SHOWAPICALLS else logging.DEBUG,
-                        myapi.request_count.get_details(last_hour=True),
-                    )
-                    CONSOLE.log(
-                        logging.INFO if SHOWAPICALLS else logging.DEBUG,
-                        json.dumps(myapi.sites, indent=2),
-                    )
-                    CONSOLE.log(
-                        logging.INFO if SHOWAPICALLS else logging.DEBUG,
-                        json.dumps(myapi.devices, indent=2),
-                    )
-                    for sec in range(REFRESH):
-                        now = datetime.now().astimezone()
-                        if sys.stdin is sys.__stdin__:
-                            print(  # noqa: T201
-                                f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(next_dev_refr):>2}  (CTRL-C to abort)",
-                                end="\r",
-                                flush=True,
+                    try:
+                        CONSOLE.info(
+                            "Api Requests: %s",
+                            myapi.request_count,
+                        )
+                        CONSOLE.log(
+                            logging.INFO if SHOWAPICALLS else logging.DEBUG,
+                            myapi.request_count.get_details(last_hour=True),
+                        )
+                        # start task to print wait progress
+                        wait_task = asyncio.create_task(
+                            print_wait_progress(
+                                seconds=REFRESH,
+                                next_refr=next_refr,
+                                next_dev_refr=next_dev_refr,
                             )
-                            if next_refr < now:
+                        )
+                        while True:
+                            # Check if wait interval finished
+                            if wait_task.done():
                                 break
-                        elif sec == 0 or next_refr < now:
-                            # IDLE may be used and does not support cursor placement, skip time progress display
-                            print(  # noqa: T201
-                                f"Site refresh: {int((next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(next_dev_refr):>2}  (CTRL-C to abort)",
-                                end="",
-                                flush=True,
-                            )
-                            if next_refr < now:
-                                break
-                        await asyncio.sleep(1)
-                    await asyncio.sleep(1)
+                            # Check if a key was pressed
+                            if k := await loop.run_in_executor(None, common.getkey):
+                                k = k.lower()
+                                if k == "m":
+                                    print_menu()
+                                elif k == "s":
+                                    if myapi.mqttsession:
+                                        CONSOLE.info(
+                                            f"{Color.YELLOW}\nStarting MQTT session...{Color.OFF}"
+                                        )
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nStopping MQTT session...!{Color.OFF}"
+                                        )
+                                elif k == "a":
+                                    if SHOWAPICALLS:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nDisabling Api call display...{Color.OFF}"
+                                        )
+                                        SHOWAPICALLS = False
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.YELLOW}\nEnabling Api call display...!{Color.OFF}"
+                                        )
+                                        SHOWAPICALLS = True
+                                elif k == "t":
+                                    if (
+                                        myapi.mqttsession
+                                        and myapi.mqttsession.client
+                                        and myapi.mqttsession.client.is_connected()
+                                    ):
+                                        CONSOLE.info(
+                                            f"{Color.CYAN}\nTriggering real time MQTT data for 60 seconds...{Color.OFF}"
+                                        )
+                                        # TODO: Add code for reat time trigger
+                                        # Cycle through devices and publish trigger for each applicable device
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nReal time MQTT data requires active MQTT session...{Color.OFF}"
+                                        )
+                                elif k == "d":
+                                    # print the whole cache
+                                    CONSOLE.info(
+                                        "\nApi cache:\n%s",
+                                        json.dumps(myapi.getCaches(), indent=2),
+                                    )
+                                    input(
+                                        f"Hit [{Color.CYAN}Enter{Color.OFF}] to continue...\n"
+                                    )
+                                elif k in ["esc", "q"]:
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nStopping monitor...{Color.OFF}"
+                                    )
+                                    raise asyncio.CancelledError
+                                await asyncio.sleep(0.5)
+                    finally:
+                        # Cancel the started tasks
+                        wait_task.cancel()
+                        # Wait for the tasks to finish cancellation
+                        try:
+                            await wait_task
+                        except asyncio.CancelledError:
+                            CONSOLE.info("\nData poller wait task was cancelled.")
+                        if myapi.mqttsession:
+                            myapi.mqttsession.cleanup()
 
     except (
         asyncio.CancelledError,
@@ -1080,10 +1189,16 @@ async def main() -> (  # noqa: C901 # pylint: disable=too-many-locals,too-many-b
         AnkerSolixError,
     ) as err:
         if isinstance(err, ClientError | AnkerSolixError):
-            CONSOLE.error("%s: %s", type(err), err)
-            CONSOLE.info("Api Requests: %s", myapi.request_count)
-            CONSOLE.info(myapi.request_count.get_details(last_hour=True))
+            CONSOLE.error("\n%s: %s", type(err), err)
+            if myapi:
+                CONSOLE.info("Api Requests: %s", myapi.request_count)
+                CONSOLE.info(myapi.request_count.get_details(last_hour=True))
         return False
+    finally:
+        if myapi:
+            if myapi.mqttsession:
+                CONSOLE.info("Disconnecting from MQTT server...")
+                myapi.mqttsession.cleanup()
 
 
 # run async main

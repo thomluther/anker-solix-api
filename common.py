@@ -33,6 +33,16 @@ class InlineStreamHandler(logging.StreamHandler):
         self.flush()
 
 
+class SamelineStreamHandler(logging.StreamHandler):
+    """Stream Handler that does line feed to overwrite same line."""
+
+    def emit(self, record):
+        """Log with carriage return."""
+        msg = self.format(record)
+        self.stream.write(msg + "\r")  # log with carriage return
+        self.flush()
+
+
 # create CONSOLE logger for screen output
 CONSOLE: logging.Logger = logging.getLogger(__name__)
 # Set parent to lowest level to allow messages passed to all handlers using their own level
@@ -53,6 +63,17 @@ handler.setLevel(logging.INFO)
 # No newline in format
 handler.setFormatter(logging.Formatter("%(message)s"))
 INLINE.addHandler(handler)
+
+# create SAMELINE logger for screen output within same line
+SAMELINE: logging.Logger = logging.getLogger("Sameline_logger")
+# Set parent to lowest level to allow messages passed to all handlers using their own level
+SAMELINE.setLevel(logging.DEBUG)
+# create console handler and set level to info and formatting without newline but line feed
+handler = SamelineStreamHandler()
+handler.setLevel(logging.INFO)
+# Linefeed in format
+handler.setFormatter(logging.Formatter("%(message)s"))
+SAMELINE.addHandler(handler)
 
 # Optional default Anker Account credentials to be used
 _CREDENTIALS = {
