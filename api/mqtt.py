@@ -137,22 +137,21 @@ class AnkerSolixMqttSession:
         valueupdate = False
         # Update data stats
         if isinstance(data, bytes):
-            self.mqtt_stats.add_data(device_data=DeviceHexData(hexbytes=data))
-            if device_sn and model:
-                # structure hex data
-                hd = DeviceHexData(model=model, hexbytes=data)
-                # extract described values save them in common mqtt data cache
-                if values := hd.values():
-                    # get existing mqtt data for device
-                    device = self.mqtt_data.get(device_sn) or {}
-                    topics = set(device.get("topics") or [])
-                    topics.add(msg.topic)
-                    self.mqtt_data[device_sn] = (
-                        device
-                        | values
-                        | {"last_message": timestamp, "topics": list(topics)}
-                    )
-                    valueupdate = True
+            # structure hex data
+            hd = DeviceHexData(model=model, hexbytes=data)
+            self.mqtt_stats.add_data(device_data=hd)
+            # extract described values and save them in common mqtt data cache
+            if device_sn and model and (values := hd.values()):
+                # get existing mqtt data for device
+                device = self.mqtt_data.get(device_sn) or {}
+                topics = set(device.get("topics") or [])
+                topics.add(msg.topic)
+                self.mqtt_data[device_sn] = (
+                    device
+                    | values
+                    | {"last_message": timestamp, "topics": list(topics)}
+                )
+                valueupdate = True
         elif data:
             # no encoded data in message, print object whatever it is
             self._logger.info(
@@ -341,7 +340,10 @@ class AnkerSolixMqttSession:
         cmd: int = 17,
         sessId: str = "1234-5678",
     ) -> tuple[str, mqtt.MQTTMessageInfo]:
-        """Get the MQTT topic prefix for provided device data."""
+        """Publish an MQTT message with provided bytes and device data.
+
+        Returns the published message string and MQTTMessageInfo class with the publish results.
+        """
         # convert parameter as required
         if isinstance(hexbytes, str):
             hexbytes = bytes.fromhex(hexbytes.replace(":", ""))
@@ -579,6 +581,21 @@ class AnkerSolixMqttSession:
                     )
         self._temp_cert_files = []
 
+    def realtime_trigger(
+        self,
+        deviceDict: dict,
+        timeout: int = 300,
+    ) -> mqtt.MQTTMessageInfo:
+        """Trigger MQTT real time data for Anker Solix device via MQTT message."""
+
+        return self.publish(
+            deviceDict=deviceDict,
+            hexbytes=self.get_command_data(
+                command="update_trigger",
+                parameters={"timeout": timeout},
+            ),
+        )[1]
+
     async def message_poller(
         self,
         topics: set,
@@ -639,7 +656,7 @@ class AnkerSolixMqttSession:
                                 # remove topic from shared mutable subscription tracker
                                 topics.discard(topic)
                             else:
-                                # add sucessfully subscribed device
+                                # add successfully subscribed device
                                 subscribed_devices.add((sn, pn))
                     subscribed_topics = topics.copy()
                 # check if updates must be retriggered, also upon changes in trigger devices

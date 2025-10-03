@@ -795,7 +795,6 @@ class SolixDeviceCapacity:
     A1760: int = 1024  # Anker PowerHouse 555 Portable Power Station
     A1761: int = 1056  # SOLIX C1000(X) Portable Power Station
     A1762: int = 1056  # SOLIX Portable Power Station 1000
-    # A17C1: int = 1056  # SOLIX C1000 Expansion Battery # same PN as Solarbank 2?
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station

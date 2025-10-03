@@ -34,6 +34,7 @@ from .apitypes import (
     SolixTariffTypes,
 )
 from .hesapi import AnkerSolixHesApi
+from .mqttmap import SOLIXMQTTMAP
 from .poller import (
     poll_device_details,
     poll_device_energy,
@@ -134,6 +135,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 try:
                     if key in ["product_code", "device_pn"] and value:
                         device["device_pn"] = str(value)
+                        # Flag device for supported mqtt data extraction if admin and model defined in MQTT map
+                        if device.get("is_admin") and str(value) in SOLIXMQTTMAP:
+                            device["mqtt_supported"] = True
                         # try to get capacity from category definitions
                         if hasattr(SolixDeviceCapacity, str(value)):
                             # get battery capacity from known PNs

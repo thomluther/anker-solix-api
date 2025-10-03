@@ -239,9 +239,11 @@ class AnkerSolixBaseApi:
         )
         # register message callback to extract device MQTT data
         self.mqttsession.message_callback(func=self.mqtt_received)
+        # Start the loop to process network traffic and callbacks
+        self.mqttsession.client.loop_start()
         return self.mqttsession
 
-    async def stopMqttSession(self) -> None:
+    def stopMqttSession(self) -> None:
         """Stop and cleanup the MQTT session."""
         if self.mqttsession:
             self._logger.debug(

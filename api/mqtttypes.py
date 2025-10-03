@@ -47,7 +47,10 @@ class DeviceHexDataHeader:
                 self.msglength = int.from_bytes(hexbytes[2:4], byteorder="little")
                 self.pattern = hexbytes[4:7]
                 self.msgtype = hexbytes[7:9]
-            if len(hexbytes) >= 10 and hexbytes[9:10] != bytearray.fromhex("a1"):
+            if len(hexbytes) >= 10 and hexbytes[9:10] not in [
+                bytearray.fromhex("a0"),
+                bytearray.fromhex("a1"),
+            ]:
                 self.increment = hexbytes[9:10]
             else:
                 self.increment = b""
@@ -340,6 +343,16 @@ class DeviceHexDataField:
                         else:
                             value = ".".join(str(value))
                     values[name] = value
+                # var can also be bitmask for settings, byte fields must be specified with description list for bit masks to use
+                elif fieldmap.get("bytes", {}):
+                    # extract found bytes description like DeviceHexDataTypes.bin
+                    values.update(
+                        self.extract_value(
+                            hexdata=hexdata,
+                            fieldtype=DeviceHexDataTypes.bin.value,
+                            fieldmap=fieldmap,
+                        )
+                    )
             case DeviceHexDataTypes.bin.value:
                 # bin is multiple bytes, mostly bitmap patterns for settings, but can be also String or Int bytes
                 # mapping must specify start byte string ("00"-"xx") for fields and field description is a list for bitmap patters, or dict for other types
@@ -361,10 +374,12 @@ class DeviceHexDataField:
                                 values[name] = value & mask
                     else:
                         # extract found dictionary description like DeviceHexDataTypes.strb
-                        self.extract_value(
-                            hexdata=self.f_value[pos:],
-                            fieldtype=DeviceHexDataTypes.strb.value,
-                            fieldmap={key: bitlist},
+                        values.update(
+                            self.extract_value(
+                                hexdata=self.f_value[pos:],
+                                fieldtype=DeviceHexDataTypes.strb.value,
+                                fieldmap={key: bitlist},
+                            )
                         )
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
@@ -382,7 +397,7 @@ class DeviceHexDataField:
                     pos = int(key)
                     if (length := bytemap.get("length", 1)) == 0:
                         # first byte is length of bytes following for field
-                        length = int.from_bytes(self.f_value[pos])
+                        length = int.from_bytes(self.f_value[pos : pos + 1])
                         values.update(
                             self.extract_value(
                                 hexdata=self.f_value[pos + 1 : pos + length + 1],
@@ -503,7 +518,7 @@ class DeviceHexData:
                 if self.model
                 else ""
             )
-            s = f"{pn + ' Header ':-^80}\n{self.msg_header.decode()}\n{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
+            s = f"{pn + ' Header ':-^98}\n{self.msg_header.decode()}\n{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
             if self.msg_fields:
                 s += f"\n{'Fld':<3} {'Len':<3} {'Typ':<5} {'uIntLe/var':>15} {'sIntLe':>15} {'floatLe':>15} {'dblLe/4int':>15}"
                 fieldmap = (
