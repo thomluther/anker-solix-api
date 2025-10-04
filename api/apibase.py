@@ -84,10 +84,10 @@ class AnkerSolixBaseApi:
         return self._logger.getEffectiveLevel()
 
     def mqtt_update_callback(
-        self, func: MqttUpdateCallback | None = None
+        self, func: MqttUpdateCallback | None = ""
     ) -> MqttUpdateCallback | None:
         """Get or set the MqttUpdateCallback for this session."""
-        if callable(func):
+        if callable(func) or func is None:
             self._mqtt_update_callback = func
         return self._mqtt_update_callback
 
@@ -216,12 +216,17 @@ class AnkerSolixBaseApi:
                 self.sites.pop(site, None)
 
     async def startMqttSession(self) -> AnkerSolixMqttSession | None:
-        """Start the MQTT session and connect to server."""
-        # Initialize the session
-        self.mqttsession = AnkerSolixMqttSession(apisession=self.apisession)
-        # Connect the MQTT client
-        await self.mqttsession.connect_client_async()
-        if not self.mqttsession.client.is_connected:
+        """(Re)Start the MQTT session and (Re)connect to server."""
+        # Initialize the session if required
+        if not self.mqttsession:
+            self.mqttsession = AnkerSolixMqttSession(apisession=self.apisession)
+        # (Re)Connect the MQTT client
+        if not self.mqttsession.client or not self.mqttsession.client.is_connected():
+            await self.mqttsession.connect_client_async()
+        # Start the loop to process network traffic and callbacks
+        if self.mqttsession.client:
+            self.mqttsession.client.loop_start()
+        else:
             self._logger.error(
                 "Api %s failed connecting to MQTT server %s:%s",
                 self.apisession.nickname,
@@ -237,10 +242,8 @@ class AnkerSolixBaseApi:
             self.mqttsession.host,
             self.mqttsession.port,
         )
-        # register message callback to extract device MQTT data
+        # register message callback to extract device MQTT data into device Api cache
         self.mqttsession.message_callback(func=self.mqtt_received)
-        # Start the loop to process network traffic and callbacks
-        self.mqttsession.client.loop_start()
         return self.mqttsession
 
     def stopMqttSession(self) -> None:
@@ -254,6 +257,10 @@ class AnkerSolixBaseApi:
             )
             self.mqttsession.cleanup()
             self.mqttsession = None
+            self._mqtt_update_callback = None
+            # clear mqtt data from device cache to prevent stale mqtt data
+            for dev in self.devices.values:
+                dev.pop("mqtt_data", None)
 
     def _update_account(
         self,
@@ -398,8 +405,8 @@ class AnkerSolixBaseApi:
         if valueupdate and deviceSn:
             new_values = self.update_device_mqtt(deviceSn=deviceSn)
             # call mqtt update callback if registered
-            if callable(self._mqtt_update_callback):
-                self._mqtt_update_callback(deviceSn, new_values)
+            if new_values and callable(self._mqtt_update_callback):
+                self._mqtt_update_callback(deviceSn)
 
     def update_device_mqtt(
         self,
@@ -418,6 +425,7 @@ class AnkerSolixBaseApi:
             ]:
                 # get old MQTT data of device
                 device_mqtt = device.get("mqtt_data") or {}
+                oldsize = len(device_mqtt)
                 oldtime = device_mqtt.get("last_update") or ""
                 # check if newer MQTT data is available from last message timestamp
                 # use copy of MQTT dict for device because it may be modified upon received messages
@@ -427,51 +435,153 @@ class AnkerSolixBaseApi:
                     # cycle through all items and extract what is needed for the device type
                     for key, value in mqtt.items():
                         # Implement device MQTT merge code with key filtering, conversion, consolidation, calculation or dependency updates
-                        found_key = True
+                        # skip value update marker for static fields that may be extracted from various messages
+                        value_updated = True
                         if (
                             key
                             in [
                                 # keys with value being saved as string
                                 "device_sn",
-                                "battery_soc",
+                                "exp_1_sn",
+                                "exp_2_sn",
+                                "exp_3_sn",
+                                "exp_4_sn",
+                                "exp_5_sn",
+                                "parallel_1_sn",
+                                "parallel_2_sn",
+                                "parallel_3_sn",
+                                "parallel_4_sn",
                                 "sw_version",
                                 "sw_controller",
-                                "temperature",
-                                "photovoltaic_power",
-                                "output_power",
+                                "sw_expansion",
                                 "inverter_brand",
                                 "inverter_model",
-                                "min_load",
-                                "pv_yield",
-                                "charged_energy",
-                                "output_energy",
-                                "discharged_energy",
-                                "bypass_energy",
+                                "exp_1_type",
+                                "wifi_name",
                             ]
                             and value is not None
                         ):
                             device_mqtt.update({key: str(value)})
+                            value_updated = bool(
+                                key not in ["wifi_name"] and not key.endswith("_sn")
+                            )
+                        elif (
+                            key
+                            in [
+                                # keys with value that should be saved as int string
+                                "battery_soc",
+                                "battery_soc_total",
+                                "exp_1_soc",
+                                "exp_2_soc",
+                                "exp_3_soc",
+                                "exp_4_soc",
+                                "exp_5_soc",
+                                "temperature",
+                                "exp_1_temperature",
+                                "exp_2_temperature",
+                                "exp_3_temperature",
+                                "exp_4_temperature",
+                                "exp_5_temperature",
+                                "photovoltaic_power",
+                                "pv_1_power",
+                                "pv_2_power",
+                                "pv_3_power",
+                                "pv_4_power",
+                                "battery_power_signed",
+                                "battery_power_signed_total",
+                                "charging_power",
+                                "ac_output_power_signed",
+                                "ac_output_power_signed_total",
+                                "ac_output_power_total",
+                                "grid_power_signed",
+                                "output_power",
+                                "output_power_signed_total",
+                                "ac_output_power",
+                                "heating_power",
+                                "grid_to_battery_power",
+                                "home_demand",
+                                "home_demand_total",
+                                "charge_priority_limit",
+                                "pv_limit",
+                                "ac_input_limit",
+                                "min_load",
+                                "max_load",
+                                "max_load_legal",
+                                "home_load_preset",
+                                "pv_to_grid_power",
+                                "grid_to_home_power",
+                                "wifi_signal",
+                                "usbc_1_power",
+                                "usbc_2_power",
+                                "usba_1_power",
+                                "usba_2_power",
+                                "dc_input_power",
+                            ]
+                            and str(value)
+                            .replace("-", "", 1)
+                            .replace(".", "", 1)
+                            .isdigit()
+                        ):
+                            device_mqtt[key] = f"{float(value):.0f}"
+                        elif (
+                            key
+                            in [
+                                # keys with value that should be saved as rounded as 3 decimal float string
+                                "pv_yield",
+                                "charged_energy",
+                                "discharged_energy",
+                                "output_energy",
+                                "bypass_energy",
+                                "home_consumption",
+                                "grid_import_energy",
+                                "grid_export_energy",
+                            ]
+                            and str(value)
+                            .replace("-", "", 1)
+                            .replace(".", "", 1)
+                            .isdigit()
+                        ):
+                            device_mqtt[key] = f"{float(value):.3f}"
                         elif (
                             key
                             in [
                                 # keys with value being saved unchanged
                                 "topics",
                                 "charging_status",
+                                "usage_mode",
                                 "allow_export_switch",
                                 "priority_discharge_switch",
+                                "grid_export_disabled",
+                                "light_mode",
+                                "light_off",
+                                "ac_socket_enabled",
+                                "grid_export_disabled",
+                                "temp_unit_fahrenheit",
+                                "expansion_packs",
+                                "parallel_devices",
+                                "device_timeout_minutes",
                                 "msg_timestamp",
+                                "local_timestamp",
+                                "utc_timestamp",
                             ]
                             and value is not None
                         ):
                             device_mqtt[key] = value
-                        elif key in ["output_cutoff_data"]:
+                            value_updated = bool(
+                                key not in ["topics", "expansion_packs"]
+                                and "timestamp" not in key
+                            )
+                        elif key in ["output_cutoff_data","soc_min"]:
                             device_mqtt["power_cutoff"] = str(value)
                         elif key in ["last_message"]:
                             device_mqtt["last_update"] = str(value)
+                            value_updated = False
                         else:
-                            found_key = False
-                    updated = updated or found_key
+                            value_updated = False
+                        updated = updated or value_updated
                     device["mqtt_data"] = device_mqtt
+                    # update marker should also indicate increase in extracted keys
+                    updated = updated or (oldsize != len(device_mqtt))
             # update MQTT statistic in account cache
             self._update_account(
                 {"mqtt_statistic": self.mqttsession.mqtt_stats.asdict()}

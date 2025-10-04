@@ -69,8 +69,8 @@ A17C1_0405 = {
     "aa": {"name": "temperature"},
     "ab": {"name": "photovoltaic_power", "factor": 0.1},
     "ad": {"name": "battery_soc_total"},
-    "b1": {"name": "photovoltaic_energy?", "factor": 0.0001},
-    "b2": {"name": "charge_energy?", "factor": 0.00001},
+    "b1": {"name": "pv_yield?", "factor": 0.0001},
+    "b2": {"name": "charged_energy?", "factor": 0.00001},
     "b3": {"name": "home_consumption?", "factor": 0.0001},
     "b4": {"name": "output_cutoff_data"},
     "b5": {"name": "lowpower_input_data"},
@@ -92,7 +92,7 @@ A17C1_0405 = {
     # "ac": {"name": "battery_power_signed"},
     # "ad": {"name": "output_power"},
     # "ae": {"name": "ac_output_power_signed?"},
-    # "b2": {"name": "discharge_energy?"},
+    # "b2": {"name": "discharged_energy?"},
     # "b9": {"name": "home_load_preset"},
     # "ba": {
     #     "bytes": {
@@ -138,12 +138,12 @@ A17C1_0408 = {
     "d0": {"name": "pv_3_power"},
     "d1": {"name": "pv_4_power"},
     # "ab": {"name": "photovoltaic_power"},
-    # "ac": {"name": "photovoltaic_energy?"},
+    # "ac": {"name": "pv_yield?"},
     # "b1": {"name": "unknown_power_2?"},
     # "b2": {"name": "home_consumption"},
     # "b6": {"name": "unknown_power_3?"},
-    # "b7": {"name": "charge_energy?"},
-    # "b8": {"name": "discharge_energy?"},
+    # "b7": {"name": "charged_energy?"},
+    # "b8": {"name": "discharged_energy?"},
     # "be": {"name": "grid_import_energy"},
     # "bf": {"name": "unknown_energy_5?"},
     # "d3": {"name": "unknown_power_6?"},
@@ -173,7 +173,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "18": {
-                "name": "exp_1_position",
+                "name": "exp_1_position?",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "19": {
@@ -215,7 +215,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "18": {
-                "name": "exp_2_position",
+                "name": "exp_2_position?",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "19": {
@@ -231,7 +231,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "22": {
-                "name": "exp_2_soc_limit",
+                "name": "exp_2_soc_limit?",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "27": {
@@ -257,7 +257,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "18": {
-                "name": "exp_3_position",
+                "name": "exp_3_position?",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "19": {
@@ -273,7 +273,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "22": {
-                "name": "exp_3_soc_limit",
+                "name": "exp_3_soc_limit?",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "27": {
@@ -299,7 +299,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "18": {
-                "name": "exp_4_position",
+                "name": "exp_4_position?",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "19": {
@@ -315,7 +315,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "22": {
-                "name": "exp_4_soc_limit",
+                "name": "exp_4_soc_limit?",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "27": {
@@ -341,7 +341,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "18": {
-                "name": "exp_5_position",
+                "name": "exp_5_position?",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "20": {
@@ -357,7 +357,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "22": {
-                "name": "exp_5_soc_limit",
+                "name": "exp_5_soc_limit?",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "27": {
@@ -388,9 +388,9 @@ A17C5_0405 = {
     "ac": {"name": "battery_power_signed"},
     "ad": {"name": "output_power"},
     "ae": {"name": "ac_output_power_signed"},
-    "b0": {"name": "photovoltaic_energy?"},
-    "b1": {"name": "charge_energy?"},
-    "b2": {"name": "discharge_energy?"},
+    "b0": {"name": "pv_yield?"},
+    "b1": {"name": "charged_energy?"},
+    "b2": {"name": "discharged_energy?"},
     "b3": {"name": "energy_4?"},
     "b5": {"name": "output_cutoff_controller?"},
     "b6": {"name": "output_cutoff_exp_1?"},
@@ -444,21 +444,27 @@ A17C5_0408 = {
     "a8": {"name": "charging_status?"},
     "aa": {"name": "home_load_preset"},
     "ab": {"name": "photovoltaic_power"},
-    "ac": {"name": "photovoltaic_energy?"},
-    "b1": {"name": "unknown_power_2?"},
+    "ac": {"name": "pv_yield?"},
+    "ad": {"name": "pv_1_energy?"},
+    "ae": {"name": "pv_2_energy?"},
+    "af": {"name": "pv_3_energy?"},
+    "b0": {"name": "pv_4_energy?"},
+    "b1": {"name": "home_demand?"},
     "b2": {"name": "home_consumption"},
-    "b6": {"name": "unknown_power_3?"},
-    "b7": {"name": "charge_energy?"},
-    "b8": {"name": "discharge_energy?"},
+    "b6": {"name": "battery_power?"},
+    "b7": {"name": "charged_energy?"},
+    "b8": {"name": "discharged_energy?"},
+    "bd": {"name": "grid_power_signed?"},
     "be": {"name": "grid_import_energy"},
-    "bf": {"name": "unknown_energy_5?"},
+    "bf": {"name": "grid_export_energy?"},
     "c7": {"name": "pv_1_power?"},
     "c8": {"name": "pv_2_power?"},
     "c9": {"name": "pv_3_power?"},
     "ca": {"name": "pv_4_power?"},
-    "d3": {"name": "unknown_power_6?"},
+    "d3": {"name": "ac_output_power_?"},
     "d6": {"name": "timestamp_1?"},
     "dc": {"name": "max_load"},
+    "dd": {"name": "ac_input_limit?"},
     "e0": {"name": "soc_min?"},
     "e1": {"name": "soc_max?"},
     "e2": {"name": "pv_power_3rd_party?"},
@@ -499,23 +505,23 @@ SOLIXMQTTMAP = {
         "0405": {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
-            "a5": {"name": "ac_power_in"},
-            "a6": {"name": "ac_power_out"},
+            "a5": {"name": "grid_to_battery_power"},
+            "a6": {"name": "ac_output_power"},
             "a7": {"name": "usbc_1_power"},
             "a8": {"name": "usbc_2_power"},
             "a9": {"name": "usba_1_power"},
             "aa": {"name": "usba_2_power"},
-            "ae": {"name": "dc_power_in"},
+            "ae": {"name": "dc_input_power"},
             "c1": {"name": "battery_soc"},
-            "c2": {"name": "exp_1_battery_soc"},
-            "b0": {"name": "ac_power_out_total"},
+            "c2": {"name": "exp_1_soc"},
+            "b0": {"name": "ac_output_power_total"},
             "b3": {"name": "sw_version", "values": 1},
-            "b9": {"name": "sw_exp_1", "values": 1},
+            "b9": {"name": "sw_expansion", "values": 1},
             "ba": {"name": "sw_controller", "values": 1},
             "bd": {"name": "temperature"},
             "be": {"name": "exp_1_temperature"},
             "d0": {"name": "device_sn"},
-            "d1": {"name": "ac_power_out_limit"},
+            "d1": {"name": "max_load"},
             "d2": {"name": "device_timeout_minutes"},
             "fd": {"name": "exp_1_type"},
             "fe": {"name": "msg_timestamp"},
@@ -653,11 +659,13 @@ SOLIXMQTTMAP = {
             "a3": {"name": "local_timestamp"},
             "a4": {"name": "utc_timestamp"},
             "a7": {"name": "battery_soc_total"},
-            "ab": {"name": "ac_output_power_signed?"},
+            "a8": {"name": "parallel_devices?"},
+            "a9": {"name": "expansion_packs?"},
+            "ab": {"name": "grid_power_signed?"},
             "ac": {"name": "ac_output_power_signed_total?"},
             "ae": {"name": "output_power_signed_total?"},
-            "af": {"name": "output_power_total?"},
-            "b1": {"name": "charge_power_total?"},
+            "af": {"name": "home_demand_total?"},
+            "b1": {"name": "battery_power_signed_total?"},
             "b3": {
                 "bytes": {
                     "0": {
@@ -694,10 +702,26 @@ SOLIXMQTTMAP = {
                     },
                 }
             },
+            "c1": {"name": "main_device_sn?"},
             "c2": {"name": "pv_power_total?"},
         },
         # multisystem message
-        # Interval: ~300 seconds?
+        # Interval: ~300 seconds
+        "0421": {
+            "topic": "state_info",
+            "a3": {"name": "pv_limit_parallel_4?"},
+            "a4": {"name": "pv_limit_parallel_3?"},
+            "a5": {"name": "pv_limit_parallel_2?"},
+            "a6": {"name": "pv_limit_parallel_1?"},
+            "a7": {"name": "battery_soc_total"},
+            "ac": {"name": "soc_max?"},
+            "ad": {"name": "max_load_legal?"},
+            "fc": {"name": "device_sn"},
+            "fd": {"name": "local_timestamp"},
+            "fe": {"name": "utc_timestamp"},
+        },
+        # multisystem message
+        # Interval: ~300 seconds
         "0428": {
             "topic": "state_info",
             "a2": {"name": "device_sn"},
@@ -706,7 +730,7 @@ SOLIXMQTTMAP = {
             "a5": {"name": "battery_soc_total"},
             "a6": {"name": "expansion_packs?"},
             "ac": {"name": "pv_power_total?"},
-            "b5": {"name": "charge_power_total?"},
+            "b5": {"name": "battery_power_signed_total?"},
             "bc": {"name": "battery_power_signed"},
             "d9": {
                 "bytes": {
@@ -755,10 +779,10 @@ SOLIXMQTTMAP = {
             "a2": {"name": "device_sn"},
             "a6": {"name": "sw_version", "values": 4},
             "a7": {"name": "sw_controller", "values": 4},
-            "a8": {"name": "grid_to_home_power?"},
+            "a8": {"name": "grid_to_home_power"},
             "a9": {"name": "pv_to_grid_power"},
-            "aa": {"name": "grid_to_home_energy", "factor": 0.01},
-            "ab": {"name": "pv_to_grid_energy", "factor": 0.01},
+            "aa": {"name": "grid_import_energy", "factor": 0.01},
+            "ab": {"name": "grid_export_energy", "factor": 0.01},
             "ad": {"name": "pv_to_grid_power"},
         },
     },
@@ -769,8 +793,8 @@ SOLIXMQTTMAP = {
             "a2": {"name": "device_sn"},
             "a8": {"name": "grid_to_home_power", "factor": 0.01},
             "a9": {"name": "pv_to_grid_power", "factor": 0.01},
-            "aa": {"name": "grid_to_home_energy", "factor": 0.00001},
-            "ab": {"name": "pv_to_grid_energy", "factor": 0.00001},
+            "aa": {"name": "grid_import_energy", "factor": 0.00001},
+            "ab": {"name": "grid_export_energy", "factor": 0.00001},
             "fe": {"name": "msg_timestamp"},
         },
     },

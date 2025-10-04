@@ -51,9 +51,9 @@ class AnkerSolixMqttSession:
         self.mqtt_info: dict = {}
         # Variable to save all active subscriptions
         self.subscriptions: set = set()
-        # Variable to same the devices that should be triggered for realtime data
-        self.triggered_devices: set | None = None
-        # Cache variable to save all extracted mqtt values per device
+        # Variable to save the devices that are to be triggered for realtime data
+        self.triggered_devices: set = set()
+        # Cache variable to save all received and known mqtt values per device
         self.mqtt_data: dict = {}
         # Variable to exchange MID for connections
         self.mids: dict = {}
@@ -114,7 +114,7 @@ class AnkerSolixMqttSession:
             (message.get("head") or {}).get("timestamp")
             if isinstance(message, dict)
             else 0
-        ).strftime("%Y-%M-%d %H:%M:%S ")
+        ).strftime("%Y-%M-%d %H:%M:%S")
         # extract message payload
         payload = json.loads(message.get("payload") or "")
         # Third party models not included in payload
@@ -260,10 +260,10 @@ class AnkerSolixMqttSession:
             )
 
     def message_callback(
-        self, func: MessageCallback | None = None
+        self, func: MessageCallback | None = ""
     ) -> MessageCallback | None:
         """Get or set the message callback for this session."""
-        if callable(func):
+        if callable(func) or func is None:
             self._message_callback = func
         return self._message_callback
 
@@ -538,7 +538,7 @@ class AnkerSolixMqttSession:
         if isinstance(message, dict):
             timestamp = datetime.fromtimestamp(
                 (message.get("head") or {}).get("timestamp") or 0
-            ).strftime("%Y-%M-%d %H:%M:%S ")
+            ).strftime("%Y-%M-%d %H:%M:%S")
         device_sn = (str(topic).split("/")[1:2] or [""])[0]
         if isinstance(data, bytes) and device_sn and model:
             # structure hex data
@@ -569,6 +569,7 @@ class AnkerSolixMqttSession:
             self.client.loop_stop()
         self.client = None
         self.subscriptions = set()
+        self.triggered_devices = set()
         for filename in self._temp_cert_files:
             # remove file if existing
             if Path(filename).is_file():
