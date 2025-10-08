@@ -45,11 +45,13 @@ class AnkerSolixMqttMonitor:
         self.api: AnkerSolixApi | None = None
         self.device_selected: str | None = None
         self.found_topics: set = set()
+        self.loop: asyncio.AbstractEventLoop
 
     async def main(self) -> None:  # noqa: C901
         """Run Main routine to start the monitor in a loop."""
         mqtt_session: AnkerSolixMqttSession | None = None
         listener = None
+        self.loop = asyncio.get_running_loop()
         CONSOLE.info("Anker Solix Device MQTT Monitor:")
         try:
             async with ClientSession() as websession:
@@ -79,7 +81,9 @@ class AnkerSolixMqttMonitor:
                             [
                                 str(d.get("device_sn")),
                                 str(
-                                    d.get("device_pn") or d.get("product_code") or "Model??"
+                                    d.get("device_pn")
+                                    or d.get("product_code")
+                                    or "Model??"
                                 ),
                                 str(d.get("device_name") or d.get("name")),
                                 "Alias: " + str(d.get("alias_name") or d.get("alias")),
@@ -88,7 +92,9 @@ class AnkerSolixMqttMonitor:
                                     (
                                         (
                                             (
-                                                self.api.sites.get(d.get("site_id") or "")
+                                                self.api.sites.get(
+                                                    d.get("site_id") or ""
+                                                )
                                                 or {}
                                             ).get("site_info")
                                             or {}
@@ -111,7 +117,9 @@ class AnkerSolixMqttMonitor:
                         )
                         if not selection:
                             return False
-                        if selection.isdigit() and 1 <= int(selection) <= len(device_names):
+                        if selection.isdigit() and 1 <= int(selection) <= len(
+                            device_names
+                        ):
                             device_selected = devices[int(selection) - 1]
 
                     # ask whether dumping messages to file
@@ -149,8 +157,7 @@ class AnkerSolixMqttMonitor:
                         # Replace color escape sequences for file logging
                         qh.addFilter(ReplaceFilter())
                         # create file handler for async file logging from the queue
-                        loop = asyncio.get_running_loop()
-                        fh = await loop.run_in_executor(
+                        fh = await self.loop.run_in_executor(
                             None,
                             partial(
                                 logging.FileHandler,
@@ -190,7 +197,9 @@ class AnkerSolixMqttMonitor:
                         listener.start()
                     # subscribe root Topic of selected device
                     topics = set()
-                    if prefix := mqtt_session.get_topic_prefix(deviceDict=device_selected):
+                    if prefix := mqtt_session.get_topic_prefix(
+                        deviceDict=device_selected
+                    ):
                         topics.add(f"{prefix}#")
                     try:
                         activetopic = None
@@ -202,7 +211,7 @@ class AnkerSolixMqttMonitor:
                             f"Starting MQTT message listener, real time data trigger is: {Color.GREEN + 'ON' if realtime else Color.RED + 'OFF'}{Color.OFF}"
                         )
                         # Start the background poller with subscriptions and update trigger
-                        poller_task = asyncio.create_task(
+                        poller_task = self.loop.create_task(
                             mqtt_session.message_poller(
                                 topics=topics,
                                 trigger_devices=rt_devices,
@@ -211,7 +220,9 @@ class AnkerSolixMqttMonitor:
                             )
                         )
                         # Start the wait progress printer in background
-                        progress_task = asyncio.create_task(self.print_wait_progress())
+                        progress_task = self.loop.create_task(
+                            self.print_wait_progress()
+                        )
                         # get running loop to run blocking code
                         loop = asyncio.get_running_loop()
                         while True:
@@ -226,7 +237,10 @@ class AnkerSolixMqttMonitor:
                                     )
                                     topics.clear()
                                     activetopic = None
-                                    if mqtt_session.message_callback() == self.print_values:
+                                    if (
+                                        mqtt_session.message_callback()
+                                        == self.print_values
+                                    ):
                                         # clear last message from screen and show active subscription
                                         await asyncio.sleep(6)
                                         self.print_values(
@@ -276,16 +290,23 @@ class AnkerSolixMqttMonitor:
                                         realtime = True
                                         rt_devices.add(device_sn)
                                 elif k == "v":
-                                    if mqtt_session.message_callback() == self.print_message:
+                                    if (
+                                        mqtt_session.message_callback()
+                                        == self.print_message
+                                    ):
                                         CONSOLE.info(
                                             f"{Color.YELLOW}Switching to Values view for next message...{Color.OFF}"
                                         )
-                                        mqtt_session.message_callback(func=self.print_values)
+                                        mqtt_session.message_callback(
+                                            func=self.print_values
+                                        )
                                     else:
                                         CONSOLE.info(
                                             f"{Color.YELLOW}Switching to Messages view for next message...{Color.OFF}"
                                         )
-                                        mqtt_session.message_callback(func=self.print_message)
+                                        mqtt_session.message_callback(
+                                            func=self.print_message
+                                        )
                                 elif k in ["esc", "q"]:
                                     CONSOLE.info(
                                         f"{Color.RED}Stopping monitor...{Color.OFF}"
@@ -340,7 +361,6 @@ class AnkerSolixMqttMonitor:
                     # remove queue file handler again before zipping folder
                     CONSOLE.removeHandler(qh)
 
-
     def print_menu(self) -> None:
         """Print the key menu."""
         CONSOLE.info("\n%s\nMQTT Monitor key menu:\n%s", 100 * "-", 100 * "-")
@@ -365,7 +385,6 @@ class AnkerSolixMqttMonitor:
         )
         input(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n")
 
-
     async def print_wait_progress(self) -> None:
         """Print dots and minute markers as progress for message monitoring."""
         # print progress with minute marker while listening
@@ -378,7 +397,6 @@ class AnkerSolixMqttMonitor:
             if (m := int((datetime.now() - start).total_seconds() / 60)) != minute:
                 minute = m
                 INLINE.info(f"{m}")
-
 
     def print_message(
         self,
@@ -407,7 +425,6 @@ class AnkerSolixMqttMonitor:
         elif data:
             # no encoded data in message, dump object whatever it is
             CONSOLE.info(f"{timestamp}Device data:\n{json.dumps(data, indent=2)}")
-
 
     def print_values(
         self,

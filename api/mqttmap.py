@@ -97,10 +97,10 @@ A17C1_0405 = {
     # "ba": {
     #     "bytes": {
     #         "00": [
-    #             {"name": "light_mode", "mask": 0x40},
-    #             {"name": "light_off", "mask": 0x20},
-    #             {"name": "ac_socket_enabled", "mask": 0x08},
-    #             {"name": "temp_unit_fahrenheit", "mask": 0x01},
+    #             {"name": "light_mode", "mask": 0x40}, # Normal mode (0) or Mood mode (1)
+    #             {"name": "switch_light_off", "mask": 0x20}, # Enable (0) or disable (1) LEDs
+    #             {"name": "switch_ac_socket", "mask": 0x08}, # Disable (0) or enable (1) AC socket
+    #             {"name": "temp_unit_fahrenheit", "mask": 0x01},  # Toggle °C(0) or F(1) unit, this does not change temperature value itself
     #         ],
     #     }
     # },
@@ -122,10 +122,10 @@ A17C1_0408 = {
     # "af": {
     #     "bytes": {
     #         "00": [
-    #             {"name": "light_mode", "mask": 0x40},
-    #             {"name": "light_off", "mask": 0x20},
-    #             {"name": "ac_socket_enabled", "mask": 0x08},
-    #             {"name": "temp_unit_fahrenheit", "mask": 0x01},
+    #             {"name": "light_mode", "mask": 0x40}, # Normal mode (0) or Mood mode (1)
+    #             {"name": "switch_light_off", "mask": 0x20}, # Enable (0) or disable (1) LEDs
+    #             {"name": "switch_ac_socket", "mask": 0x08},  # Disable (0) or enable (1) AC socket
+    #             {"name": "temp_unit_fahrenheit", "mask": 0x01},  # Toggle °C(0) or F(1) unit, this does not change temperature value itself
     #         ],
     #     }
     # },
@@ -400,10 +400,22 @@ A17C5_0405 = {
     "ba": {
         "bytes": {
             "00": [
-                {"name": "light_mode", "mask": 0x40},
-                {"name": "light_off", "mask": 0x20},
-                {"name": "ac_socket_enabled", "mask": 0x08},
-                {"name": "temp_unit_fahrenheit", "mask": 0x01},
+                {
+                    "name": "light_mode",
+                    "mask": 0x40,
+                },  # Normal mode (0) or Mood mode (1)
+                {
+                    "name": "switch_light_off",
+                    "mask": 0x20,
+                },  # Enable (0) or disable (1) LEDs
+                {
+                    "name": "switch_ac_socket",
+                    "mask": 0x08,
+                },  # Disable (0) or enable (1) AC socket
+                {
+                    "name": "temp_unit_fahrenheit",
+                    "mask": 0x01,
+                },  # Toggle °C (0) or F (1) unit, this does not change temperature value itself
             ],
         }
     },
@@ -491,11 +503,11 @@ SOLIXMQTTMAP = {
             # Interval: ?? seconds
             "topic": "param_info",
             "a1": {
-                "name": "sw_version?",
+                "name": "sw_version",
                 "type": DeviceHexDataTypes.str.value,
             },
             "a2": {
-                "name": "sw_esp?",
+                "name": "hw_version",
                 "type": DeviceHexDataTypes.str.value,
             },
         },
@@ -514,15 +526,43 @@ SOLIXMQTTMAP = {
             "ae": {"name": "dc_input_power"},
             "c1": {"name": "battery_soc"},
             "c2": {"name": "exp_1_soc"},
+            "c3": {"name": "battery_soh?"},
+            "c4": {"name": "exp_1_soh?"},
             "b0": {"name": "ac_output_power_total"},
             "b3": {"name": "sw_version", "values": 1},
             "b9": {"name": "sw_expansion", "values": 1},
             "ba": {"name": "sw_controller", "values": 1},
+            "bb": {"name": "switch_ac_output_power"},  # Disabled (0) or enabled (1)
             "bd": {"name": "temperature"},
             "be": {"name": "exp_1_temperature"},
             "d0": {"name": "device_sn"},
             "d1": {"name": "max_load"},
             "d2": {"name": "device_timeout_minutes"},
+            "d3": {"name": "display_timeout_seconds"},  # values: 20, 30, 60, 300, 1800
+            "d8": {
+                "name": "switch_12v_dc_output_power"
+            },  # Car 12 V output disabled (0) or enabled (1)
+            "d9": {"name": "display_mode"},  # Off (0), low (1), medium (2), high(3)
+            "dc": {
+                "name": "light_mode"
+            },  # Off (0), low (1), medium (2), high (3), blinking (4)
+            "de": {"name": "switch_display"},  # Off (0), On (1)
+            "dd": {
+                "name": "temp_unit_fahrenheit"
+            },  # Toggle °C (0) or F (1) unit, this does not change temperature value itself
+            "e5": {"name": "backup_charge"},  # Off (0), On (1)
+            "f8": {
+                "bytes": {
+                    "00": {
+                        "name": "12v_dc_output_mode",  # normal (1), smart (2)
+                        "type": DeviceHexDataTypes.ui.value,
+                    },
+                    "01": {
+                        "name": "ac_output_mode",  # normal (1), smart (2)
+                        "type": DeviceHexDataTypes.ui.value,
+                    },
+                }
+            },
             "fd": {"name": "exp_1_type"},
             "fe": {"name": "msg_timestamp"},
         },
@@ -530,7 +570,7 @@ SOLIXMQTTMAP = {
             # Interval: ?? seconds, may be triggered on App actions, but no regular interval
             "topic": "param_info",
             "a1": {
-                "name": "sw_unknown_2?",
+                "name": "hw_version",
                 "type": DeviceHexDataTypes.str.value,
             },
             "a2": {
@@ -549,7 +589,7 @@ SOLIXMQTTMAP = {
             "a4": {"name": "unknown_405_1?"},
             "a6": {"name": "sw_version", "values": 1},
             "a7": {"name": "sw_controller", "values": 1},
-            "a8": {"name": "sw_esp?", "values": 1},
+            "a8": {"name": "hw_version", "values": 1},
             "ab": {"name": "photovoltaic_power"},
             "ac": {"name": "output_power"},
             "ad": {"name": "unknown_405_2?"},
@@ -563,7 +603,7 @@ SOLIXMQTTMAP = {
                     "15": [{"name": "priority_discharge_switch", "mask": 0x01}],
                 }
             },
-            "b0": {"name": "charging_power"},
+            "b0": {"name": "charge_power"},
             "b1": {"name": "pv_yield", "factor": 0.0001},
             "b2": {"name": "charged_energy", "factor": 0.0001},
             "b3": {"name": "output_energy", "factor": 0.0001},
@@ -588,7 +628,7 @@ SOLIXMQTTMAP = {
             "a8": {"name": "charging_status"},
             "a9": {"name": "home_load_preset"},
             "aa": {"name": "photovoltaic_power"},
-            "ab": {"name": "charging_power"},
+            "ab": {"name": "charge_power"},
             "ac": {"name": "output_power"},
             "ad": {"name": "unknown_408_3?"},
             "af": {"name": "unknown_408_4?"},
@@ -599,9 +639,9 @@ SOLIXMQTTMAP = {
             "b4": {"name": "discharged_energy", "factor": 0.0001},
             "b5": {"name": "bypass_energy", "factor": 0.0001},
             "b6": {"name": "temperature"},
-            "b7": {"name": "pv_1_voltage?", "factor": 0.01},
-            "b8": {"name": "pv_2_voltage?", "factor": 0.01},
-            "b9": {"name": "battery_voltage?", "factor": 0.01},
+            "b7": {"name": "pv_1_voltage", "factor": 0.01},
+            "b8": {"name": "pv_2_voltage", "factor": 0.01},
+            "b9": {"name": "battery_voltage", "factor": 0.01},
         },
     },
     # Solarbank 2 E1600 Pro
@@ -783,7 +823,7 @@ SOLIXMQTTMAP = {
             "a9": {"name": "pv_to_grid_power"},
             "aa": {"name": "grid_import_energy", "factor": 0.01},
             "ab": {"name": "grid_export_energy", "factor": 0.01},
-            "ad": {"name": "pv_to_grid_power"},
+            #"ad": {"name": "pv_to_grid_power"},
         },
     },
     "SHEMP3": {

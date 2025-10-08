@@ -1113,6 +1113,14 @@ class SolarbankStatus(StrEnum):
     # TODO(SB3): Is there a new mode for AC charging? Can it be distinguished from existing values?
 
 
+class SolarbankLightMode(StrEnum):
+    """Enumeration for Anker Solix Solarbank light modes."""
+
+    normal = "0"
+    mood = "1"
+    unknown = "unknown"
+
+
 class SolarbankParallelTypes(StrEnum):
     """Enumeration for Anker Solix Solarbank parallel types."""
 
@@ -1156,6 +1164,22 @@ class SolixNetworkStatus(StrEnum):
     mobile = "3"  # HES systems support also 5G connections, code to be confirmed
     unknown = "unknown"
 
+class SolixPpsOutputMode(StrEnum):
+    """Enumeration for Anker Solix PPS output modes."""
+
+    normal = "1"
+    smart = "2"
+    unknown = "unknown"
+
+class SolixPpsDisplayMode(StrEnum):
+    """Enumeration for Anker Solix PPS display and light modes."""
+
+    off = "0"
+    low = "1"
+    medium = "2"
+    high = "3"
+    blinking = "4"
+    unknown = "unknown"
 
 @dataclass
 class SolarbankTimeslot:

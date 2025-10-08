@@ -259,7 +259,7 @@ class AnkerSolixBaseApi:
             self.mqttsession = None
             self._mqtt_update_callback = None
             # clear mqtt data from device cache to prevent stale mqtt data
-            for dev in self.devices.values:
+            for dev in self.devices.values():
                 dev.pop("mqtt_data", None)
 
     def _update_account(
@@ -451,6 +451,7 @@ class AnkerSolixBaseApi:
                                 "parallel_2_sn",
                                 "parallel_3_sn",
                                 "parallel_4_sn",
+                                "hw_version",
                                 "sw_version",
                                 "sw_controller",
                                 "sw_expansion",
@@ -535,6 +536,11 @@ class AnkerSolixBaseApi:
                                 "home_consumption",
                                 "grid_import_energy",
                                 "grid_export_energy",
+                                "pv_1_voltage",
+                                "pv_2_voltage",
+                                "pv_3_voltage",
+                                "pv_4_voltage",
+                                "battery_voltage",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -553,8 +559,8 @@ class AnkerSolixBaseApi:
                                 "priority_discharge_switch",
                                 "grid_export_disabled",
                                 "light_mode",
-                                "light_off",
-                                "ac_socket_enabled",
+                                "switch_light_off",
+                                "switch_ac_socket",
                                 "grid_export_disabled",
                                 "temp_unit_fahrenheit",
                                 "expansion_packs",
@@ -571,7 +577,7 @@ class AnkerSolixBaseApi:
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
                             )
-                        elif key in ["output_cutoff_data","soc_min"]:
+                        elif key in ["output_cutoff_data", "soc_min"]:
                             device_mqtt["power_cutoff"] = str(value)
                         elif key in ["last_message"]:
                             device_mqtt["last_update"] = str(value)
