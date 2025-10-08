@@ -1396,14 +1396,14 @@ class AnkerSolixApiMonitor:
                         CONSOLE.info(
                             "Running device and site details refresh%s...",
                             ", excluding " + str({SolixDeviceType.VEHICLE.value})
-                            if self.site_selected
+                            if self.site_selected or not self.showVehicles
                             else "",
                         )
-                        # skip Vehicle data if dedicated site selected
+                        # skip Vehicle data if dedicated site selected or vehicles disabled
                         await self.api.update_device_details(
                             fromFile=self.use_file,
                             exclude={SolixDeviceType.VEHICLE.value}
-                            if self.site_selected
+                            if self.site_selected or not self.showVehicles
                             else None,
                         )
                         await self.api.update_site_details(fromFile=self.use_file)

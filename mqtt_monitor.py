@@ -340,6 +340,8 @@ class AnkerSolixMqttMonitor:
                                 "\nMQTT dump file completed: %s",
                                 Path.resolve(Path(dumpfolder / filename)),
                             )
+                else:
+                    CONSOLE.info("No owned Anker Solix devices found for your account.")
                 return True
 
         except (
