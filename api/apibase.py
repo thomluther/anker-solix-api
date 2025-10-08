@@ -472,6 +472,7 @@ class AnkerSolixBaseApi:
                                 # keys with value that should be saved as int string
                                 "battery_soc",
                                 "battery_soc_total",
+                                "battery_soh",
                                 "exp_1_soc",
                                 "exp_2_soc",
                                 "exp_3_soc",

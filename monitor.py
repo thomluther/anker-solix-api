@@ -92,7 +92,7 @@ class AnkerSolixApiMonitor:
         )
         CONSOLE.info(f"[{Color.YELLOW}K{Color.OFF}]ey list to show this menu")
         CONSOLE.info(
-            f"[{Color.YELLOW}E{Color.OFF}]lectric Vehicle display toggle OFF (default) or ON"
+            f"[{Color.YELLOW}E{Color.OFF}]lectric Vehicle display toggle ON (default) or OFF"
         )
         CONSOLE.info(f"[{Color.YELLOW}D{Color.OFF}]ebug actual Api cache")
         CONSOLE.info(f"[{Color.YELLOW}C{Color.OFF}]ustomize an Api cache entry")
@@ -508,9 +508,10 @@ class AnkerSolixApiMonitor:
                     )
                 m1 = c and mqtt.get("battery_soc", "")
                 m2 = c and mqtt.get("power_cutoff", "")
+                m3 = c and mqtt.get("battery_soh", "")
                 soc = f"{m1 or dev.get('battery_soc', '---'):>4} %"
                 CONSOLE.info(
-                    f"{'State Of Charge':<{col1}}: {m1 and c}{soc:<{col2}}{co} "
+                    f"{'Battery SOC/SOH':<{col1}}: {m1 and c}{soc} /{m3 and c}{m3 if m3 else '---':>4} {'%':<{col2-13}}{co} "
                     f"{'Min SOC':<{col3}}: {m2 and c}{m2 or (dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} %{co}"
                 )
                 energy = f"{dev.get('battery_energy', '----'):>4} Wh"

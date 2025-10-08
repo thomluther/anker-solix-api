@@ -111,9 +111,11 @@ class AnkerSolixMqttMonitor:
                     while not device_selected:
                         CONSOLE.info("\nSelect which device to be monitored:")
                         for idx, devicename in enumerate(device_names, start=1):
-                            CONSOLE.info("(%s) %s", idx, devicename)
+                            CONSOLE.info(
+                                f"({Color.YELLOW}{idx}{Color.OFF}) {devicename}"
+                            )
                         selection = input(
-                            f"Enter device number ({'1-' if len(device_names) > 1 else ''}{len(device_names)}) or nothing to quit: "
+                            f"Enter device number ({Color.YELLOW}{'1-' if len(device_names) > 1 else ''}{len(device_names)}{Color.OFF}) or {Color.CYAN}nothing{Color.OFF} to quit: "
                         )
                         if not selection:
                             return False
@@ -124,7 +126,7 @@ class AnkerSolixMqttMonitor:
 
                     # ask whether dumping messages to file
                     response = input(
-                        "Do you want to dump MQTT message decoding also to file? (Y/N): "
+                        f"Do you want to dump MQTT message decoding also to file? ({Color.YELLOW}Y{Color.OFF}/{Color.CYAN}N{Color.OFF}): "
                     )
                     if response := str(response).upper() in ["Y", "YES", "TRUE", 1]:
                         model = (
@@ -133,7 +135,9 @@ class AnkerSolixMqttMonitor:
                             or ""
                         )
                         prefix = f"{model}_mqtt_dump"
-                        response = input(f"Filename prefix for export ({prefix}): ")
+                        response = input(
+                            f"Filename prefix for export ({Color.CYAN}{prefix}{Color.OFF}): "
+                        )
                         filename = f"{response or prefix}_{datetime.now().strftime('%Y-%m-%d__%H_%M_%S')}.txt"
                         # Ensure dump folder exists
                         dumpfolder = (Path(__file__).parent / "mqttdumps").resolve()
@@ -170,8 +174,7 @@ class AnkerSolixMqttMonitor:
                         # create a listener for messages on the queue and log them to the file handler
                         listener = logging.handlers.QueueListener(que, fh)
                         CONSOLE.info(
-                            "\nMQTT message dumping to file: %s",
-                            Path.resolve(Path(dumpfolder / filename)),
+                            f"\nMQTT message dumping to file: {Color.CYAN}{Path.resolve(Path(dumpfolder / filename))}{Color.OFF}"
                         )
 
                     # Start the MQTT session for the selected device
@@ -363,7 +366,9 @@ class AnkerSolixMqttMonitor:
 
     def print_menu(self) -> None:
         """Print the key menu."""
-        CONSOLE.info("\n%s\nMQTT Monitor key menu:\n%s", 100 * "-", 100 * "-")
+        CONSOLE.info(100 * "-")
+        CONSOLE.info(f"{Color.YELLOW}MQTT Monitor key menu:{Color.OFF}")
+        CONSOLE.info(100 * "-")
         CONSOLE.info(f"[{Color.YELLOW}M{Color.OFF}]enu to show this key list")
         CONSOLE.info(
             f"[{Color.YELLOW}U{Color.OFF}]nsubscribe all topics. This will stop receiving MQTT messages"
