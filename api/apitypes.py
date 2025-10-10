@@ -28,7 +28,6 @@ API_COUNTRIES = {
         "EG",
         "LY",
         "TN",
-        "IL",
         "MA",
         "JO",
         "PS",
@@ -95,6 +94,7 @@ API_COUNTRIES = {
         "AM",
         "BY",
         "AZ",
+        "IL",
     ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
