@@ -3,12 +3,14 @@
 
 import asyncio
 import logging
+
 from aiohttp import ClientSession
-from api import api
+from api import api  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 CONSOLE: logging.Logger = common.CONSOLE
+
 
 async def test_all_controls():
     """Test all C1000X control methods."""
@@ -48,13 +50,31 @@ async def test_all_controls():
         # Test all control methods (using safe settings)
         tests = [
             ("Display Control", lambda: myapi.set_c1000x_display(device_sn, True)),
-            ("Display Mode Low", lambda: myapi.set_c1000x_display_mode(device_sn, "low")),
-            ("Display Mode Medium", lambda: myapi.set_c1000x_display_mode(device_sn, "medium")),
+            (
+                "Display Mode Low",
+                lambda: myapi.set_c1000x_display_mode(device_sn, "low"),
+            ),
+            (
+                "Display Mode Medium",
+                lambda: myapi.set_c1000x_display_mode(device_sn, "medium"),
+            ),
             ("Light Mode Off", lambda: myapi.set_c1000x_light_mode(device_sn, "off")),
-            ("Temperature Celsius", lambda: myapi.set_c1000x_temp_unit(device_sn, False)),
-            ("Temperature Fahrenheit", lambda: myapi.set_c1000x_temp_unit(device_sn, True)),
-            ("DC Output Mode Normal", lambda: myapi.set_c1000x_dc_output_mode(device_sn, "normal")),
-            ("AC Output Mode Smart", lambda: myapi.set_c1000x_ac_output_mode(device_sn, "smart")),
+            (
+                "Temperature Celsius",
+                lambda: myapi.set_c1000x_temp_unit(device_sn, False),
+            ),
+            (
+                "Temperature Fahrenheit",
+                lambda: myapi.set_c1000x_temp_unit(device_sn, True),
+            ),
+            (
+                "DC Output Mode Normal",
+                lambda: myapi.set_c1000x_dc_output_mode(device_sn, "normal"),
+            ),
+            (
+                "AC Output Mode Smart",
+                lambda: myapi.set_c1000x_ac_output_mode(device_sn, "smart"),
+            ),
         ]
 
         success_count = 0
@@ -67,35 +87,36 @@ async def test_all_controls():
                     success_count += 1
                 else:
                     CONSOLE.info(f"❌ {test_name}: FAILED")
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                 CONSOLE.info(f"❌ {test_name}: ERROR - {e}")
 
             # Wait between commands
             await asyncio.sleep(1)
 
         # Test status retrieval from MQTT data
-        CONSOLE.info(f"\nTesting Status Retrieval...")
+        CONSOLE.info("\nTesting Status Retrieval...")
         status = await myapi.get_c1000x_status(device_sn)
         if status:
-            CONSOLE.info(f"✅ Status retrieval: SUCCESS")
+            CONSOLE.info("✅ Status retrieval: SUCCESS")
             CONSOLE.info(f"   Battery SOC: {status.get('battery_soc', 'N/A')}%")
             CONSOLE.info(f"   Temperature: {status.get('temperature', 'N/A')}°C")
             CONSOLE.info(f"   AC Output Power: {status.get('ac_output_power', 'N/A')}W")
             success_count += 1
         else:
-            CONSOLE.info(f"❌ Status retrieval: FAILED")
+            CONSOLE.info("❌ Status retrieval: FAILED")
 
-        CONSOLE.info(f"\n=== Test Results ===")
+        CONSOLE.info("\n=== Test Results ===")
         CONSOLE.info(f"Successful commands: {success_count}/{len(tests) + 1}")
-        CONSOLE.info(f"Success rate: {success_count/(len(tests) + 1)*100:.1f}%")
+        CONSOLE.info(f"Success rate: {success_count / (len(tests) + 1) * 100:.1f}%")
 
         if success_count > len(tests) // 2:
             CONSOLE.info("🎉 MQTT CONTROLS ARE WORKING SUCCESSFULLY!")
         else:
             CONSOLE.info("⚠️ Some issues detected, but this may be normal")
 
+
 if __name__ == "__main__":
     try:
         asyncio.run(test_all_controls(), debug=False)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.info(f"{type(err)}: {err}")

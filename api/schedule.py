@@ -6,6 +6,7 @@ from dataclasses import fields
 from datetime import UTC, datetime, time, timedelta
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .apitypes import (
     API_ENDPOINTS,
@@ -25,9 +26,12 @@ from .apitypes import (
     SolixTariffTypes,
 )
 
+if TYPE_CHECKING:
+    from .api import AnkerSolixApi  # noqa: TC004
+
 
 async def get_device_load(
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
     fromFile: bool = False,
@@ -98,7 +102,11 @@ async def get_device_load(
 
 
 async def set_device_load(
-    self, siteId: str, deviceSn: str, loadData: dict, toFile: bool = False
+    self: AnkerSolixApi,
+    siteId: str,
+    deviceSn: str,
+    loadData: dict,
+    toFile: bool = False,
 ) -> bool | dict:
     """Set device home load. This supports only SB1 schedule structure, but does not apply them. The set_device_parm method must be used instead.
 
@@ -162,7 +170,7 @@ async def set_device_load(
 
 
 async def get_device_parm(
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
     deviceSn: str | None = None,
@@ -325,7 +333,7 @@ async def get_device_parm(
 
 
 async def set_device_parm(
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     paramData: dict,
     paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
@@ -461,7 +469,9 @@ async def set_device_parm(
                 siteId=siteId, paramType=paramType, deviceSn=deviceSn, fromFile=toFile
             )
         # update also cascaded solarbanks schedule since it may depend from SB2 usage mode in schedule
-        if paramType == SolixParmType.SOLARBANK_2_SCHEDULE.value and sb_info.get("sb_cascaded"):
+        if paramType == SolixParmType.SOLARBANK_2_SCHEDULE.value and sb_info.get(
+            "sb_cascaded"
+        ):
             # For two cascaded SB1, their enforced schedule may no longer list the other SB1 anymore when SB2 is in manual mode
             # trigger get_device_load for first SB1 that is cascaded, which will update all cascaded SB1 devices
             if casc_sn := [
@@ -478,7 +488,7 @@ async def set_device_parm(
 
 
 async def set_home_load(  # noqa: C901
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
     all_day: bool = False,
@@ -1358,7 +1368,7 @@ async def set_home_load(  # noqa: C901
 
 
 async def set_sb2_home_load(  # noqa: C901
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
     preset: int | None = None,
@@ -2009,7 +2019,7 @@ async def set_sb2_home_load(  # noqa: C901
 
 
 async def set_sb2_ac_charge(
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
     backup_start: datetime | None = None,
@@ -2162,7 +2172,7 @@ async def set_sb2_ac_charge(
 
 
 async def set_sb2_use_time(  # noqa: C901
-    self,
+    self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
     start_month: int | str | None = None,  # 1-12

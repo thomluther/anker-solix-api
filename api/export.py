@@ -81,7 +81,7 @@ class AnkerSolixApiExport:
             self._logger = _LOGGER
             self._logger.setLevel(logging.DEBUG)
 
-    async def export_data(
+    async def export_data(  # noqa: C901
         self,
         export_path: Path | str | None = None,
         export_folder: Path | str | None = None,

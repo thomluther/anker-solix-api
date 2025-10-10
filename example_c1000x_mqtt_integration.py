@@ -3,37 +3,44 @@
 
 import asyncio
 import logging
+
 from aiohttp import ClientSession
-from api import api
+from api import api  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 CONSOLE: logging.Logger = common.CONSOLE
 
+
 class C1000XController:
     """Example C1000X device controller using MQTT."""
 
-    def __init__(self, api_instance, device_sn):
+    def __init__(self, api_instance, device_sn) -> None:
+        """Initialize."""
         self.api = api_instance
         self.device_sn = device_sn
         self.last_battery_soc = None
 
     async def get_realtime_data(self):
         """Get real-time data from MQTT cache."""
-        if self.api.mqttsession and hasattr(self.api.mqttsession, 'mqtt_data'):
+        if self.api.mqttsession and hasattr(self.api.mqttsession, "mqtt_data"):
             return self.api.mqttsession.mqtt_data.get(self.device_sn, {})
         return {}
 
     async def monitor_battery_and_control(self):
         """Example: Monitor battery and automatically control outputs."""
         data = await self.get_realtime_data()
-        battery_soc = data.get('battery_soc')
+        battery_soc = data.get("battery_soc")
 
         if battery_soc is not None:
             CONSOLE.info(f"Battery SOC: {battery_soc}%")
 
             # Auto-control based on battery level
-            if battery_soc < 20 and self.last_battery_soc and self.last_battery_soc >= 20:
+            if (
+                battery_soc < 20
+                and self.last_battery_soc
+                and self.last_battery_soc >= 20
+            ):
                 # Battery dropped below 20% - disable non-essential outputs
                 CONSOLE.info("Battery low - disabling AC output")
                 await self.api.set_c1000x_ac_output(self.device_sn, False)
@@ -41,7 +48,11 @@ class C1000XController:
                 # Set display to low brightness
                 await self.api.set_c1000x_display_mode(self.device_sn, "low")
 
-            elif battery_soc > 80 and self.last_battery_soc and self.last_battery_soc <= 80:
+            elif (
+                battery_soc > 80
+                and self.last_battery_soc
+                and self.last_battery_soc <= 80
+            ):
                 # Battery above 80% - enable outputs
                 CONSOLE.info("Battery sufficient - enabling AC output")
                 await self.api.set_c1000x_ac_output(self.device_sn, True)
@@ -52,17 +63,17 @@ class C1000XController:
             self.last_battery_soc = battery_soc
 
         # Show other data
-        temperature = data.get('temperature')
+        temperature = data.get("temperature")
         if temperature is not None:
             CONSOLE.info(f"Temperature: {temperature}°C")
 
         power_data = {
-            'AC Output': data.get('ac_output_power', 0),
-            'USB-C 1': data.get('usbc_1_power', 0),
-            'USB-C 2': data.get('usbc_2_power', 0),
-            'USB-A 1': data.get('usba_1_power', 0),
-            'USB-A 2': data.get('usba_2_power', 0),
-            'DC Input': data.get('dc_input_power', 0),
+            "AC Output": data.get("ac_output_power", 0),
+            "USB-C 1": data.get("usbc_1_power", 0),
+            "USB-C 2": data.get("usbc_2_power", 0),
+            "USB-A 1": data.get("usba_1_power", 0),
+            "USB-A 2": data.get("usba_2_power", 0),
+            "DC Input": data.get("dc_input_power", 0),
         }
 
         active_outputs = {k: v for k, v in power_data.items() if v > 0}
@@ -106,6 +117,7 @@ class C1000XController:
         await self.api.set_c1000x_dc_output_mode(self.device_sn, "smart")
 
         CONSOLE.info("Normal mode activated")
+
 
 async def main():
     """Main example demonstrating C1000X MQTT integration."""
@@ -164,14 +176,14 @@ async def main():
             device_dict = {"device_sn": device_sn, "device_pn": "A1761"}
             mqtt_session.realtime_trigger(device_dict, timeout=300)
             CONSOLE.info("Real-time data trigger sent")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             CONSOLE.info(f"Could not trigger real-time data: {e}")
 
         # Monitor for a short period
         for i in range(6):  # 30 seconds
             await asyncio.sleep(5)
             await controller.monitor_battery_and_control()
-            CONSOLE.info(f"Monitoring cycle {i+1}/6 completed")
+            CONSOLE.info(f"Monitoring cycle {i + 1}/6 completed")
 
         # Example 4: Emergency mode demonstration
         CONSOLE.info("\n4. Demonstrating emergency mode")
@@ -189,8 +201,9 @@ async def main():
         CONSOLE.info("- Efficient battery management")
         CONSOLE.info("- Immediate response to device state changes")
 
+
 if __name__ == "__main__":
     try:
         asyncio.run(main(), debug=False)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.info(f"{type(err)}: {err}")

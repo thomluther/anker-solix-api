@@ -11,7 +11,7 @@ import contextlib
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from . import AnkerSolixApi
+    from .api import AnkerSolixApi
 
 
 def validate_command_value(command_id: str, value: Any) -> bool:
@@ -27,13 +27,12 @@ def validate_command_value(command_id: str, value: Any) -> bool:
         "dc_output_mode_select": lambda v: v in [1, 2],
         "ac_output_mode_select": lambda v: v in [1, 2],
     }
-
     rule = validation_rules.get(command_id)
     return rule(value) if rule else True
 
 
 async def _send_c1000x_mqtt_command(
-    api: "AnkerSolixApi",
+    self: AnkerSolixApi,
     device_sn: str,
     command: str,
     parameters: dict,
@@ -42,7 +41,7 @@ async def _send_c1000x_mqtt_command(
     """Send MQTT command to C1000X device.
 
     Args:
-        api: The API instance
+        self: The API instance
         device_sn: Device serial number
         command: Command name for get_command_data
         parameters: Command parameters
@@ -53,47 +52,43 @@ async def _send_c1000x_mqtt_command(
     """
     try:
         # Ensure MQTT session is started
-        if not api.mqttsession:
-            await api.startMqttSession()
-
-        if not api.mqttsession:
-            api._logger.error("Failed to start MQTT session for C1000X control")
+        if not self.mqttsession:
+            await self.startMqttSession()
+        if not self.mqttsession:
+            self._logger.error("Failed to start MQTT session for C1000X control")
             return False
-
         # Get device info for MQTT publish
-        device = api.devices.get(device_sn)
+        device = self.devices.get(device_sn)
         if not device:
-            api._logger.error("Device %s not found for MQTT command", device_sn)
+            self._logger.error("Device %s not found for MQTT command", device_sn)
             return False
-
         device_dict = {
             "device_sn": device_sn,
             "device_pn": device.get("device_pn", "A1761"),
         }
-
         # Generate command hex data
-        hex_data = api.mqttsession.get_command_data(command, parameters)
+        hex_data = self.mqttsession.get_command_data(command, parameters)
         if not hex_data:
-            api._logger.error("Failed to generate MQTT command data for %s", command)
+            self._logger.error("Failed to generate MQTT command data for %s", command)
             return False
-
         # Publish MQTT command
-        _, mqtt_info = api.mqttsession.publish(device_dict, hex_data)
-
+        _, mqtt_info = self.mqttsession.publish(device_dict, hex_data)
         # Wait for publish completion with timeout
         with contextlib.suppress(ValueError, RuntimeError):
             mqtt_info.wait_for_publish(timeout=5)
-
-        if mqtt_info.is_published():
-            api._logger.info("C1000X %s %s", device_sn, description)
-            return True
-        else:
-            api._logger.error("Failed to publish MQTT command for C1000X %s %s", device_sn, description)
+        if not mqtt_info.is_published():
+            self._logger.error(
+                "Failed to publish MQTT command for C1000X %s %s",
+                device_sn,
+                description,
+            )
             return False
-
-    except Exception as e:
-        api._logger.error("Error sending MQTT command to C1000X %s: %s", device_sn, e)
+    except Exception as e:  # pylint: disable=broad-exception-caught  # noqa: BLE001
+        self._logger.error("Error sending MQTT command to C1000X %s: %s", device_sn, e)
         return False
+    else:
+        self._logger.info("C1000X %s %s", device_sn, description)
+        return True
 
 
 async def set_c1000x_ac_output(
@@ -105,6 +100,7 @@ async def set_c1000x_ac_output(
     """Control C1000X AC output power via MQTT.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         enabled: True to enable AC output, False to disable
         toFile: If True, return mock response (for testing compatibility)
@@ -118,9 +114,7 @@ async def set_c1000x_ac_output(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return False
 
     # Validate command value
@@ -145,8 +139,7 @@ async def set_c1000x_ac_output(
     if success:
         # Return mock response for compatibility with existing code
         return {"switch_ac_output_power": value}
-    else:
-        return False
+    return False
 
 
 async def set_c1000x_dc_output(
@@ -158,6 +151,7 @@ async def set_c1000x_dc_output(
     """Control C1000X 12V DC output power via MQTT.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         enabled: True to enable 12V DC output, False to disable
         toFile: If True, return mock response (for testing compatibility)
@@ -171,9 +165,7 @@ async def set_c1000x_dc_output(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return False
 
     # Validate command value
@@ -198,8 +190,7 @@ async def set_c1000x_dc_output(
     if success:
         # Return mock response for compatibility with existing code
         return {"switch_12v_dc_output_power": value}
-    else:
-        return False
+    return False
 
 
 async def set_c1000x_display(
@@ -211,6 +202,7 @@ async def set_c1000x_display(
     """Control C1000X display on/off via MQTT.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         enabled: True to turn display on, False to turn off
         toFile: If True, return mock response (for testing compatibility)
@@ -224,9 +216,7 @@ async def set_c1000x_display(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return False
 
     # Validate command value
@@ -250,8 +240,7 @@ async def set_c1000x_display(
 
     if success:
         return {"switch_display": value}
-    else:
-        return False
+    return False
 
 
 async def set_c1000x_backup_charge(
@@ -263,6 +252,7 @@ async def set_c1000x_backup_charge(
     """Control C1000X backup charge mode via MQTT.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         enabled: True to enable backup charge mode, False to disable
         toFile: If True, return mock response (for testing compatibility)
@@ -276,9 +266,7 @@ async def set_c1000x_backup_charge(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return False
 
     # Validate command value
@@ -302,8 +290,7 @@ async def set_c1000x_backup_charge(
 
     if success:
         return {"backup_charge": value}
-    else:
-        return False
+    return False
 
 
 async def set_c1000x_temp_unit(
@@ -315,6 +302,7 @@ async def set_c1000x_temp_unit(
     """Set C1000X temperature unit via MQTT.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         fahrenheit: True for Fahrenheit, False for Celsius
         toFile: If True, return mock response (for testing compatibility)
@@ -328,9 +316,7 @@ async def set_c1000x_temp_unit(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return False
 
     # Validate command value
@@ -354,8 +340,7 @@ async def set_c1000x_temp_unit(
 
     if success:
         return {"temp_unit_fahrenheit": value}
-    else:
-        return False
+    return False
 
 
 async def set_c1000x_display_mode(
@@ -367,6 +352,7 @@ async def set_c1000x_display_mode(
     """Set C1000X display brightness mode via MQTT.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         mode: Display mode - 0=Off, 1=Low, 2=Medium, 3=High
               Can also be string: "off", "low", "medium", "high"
@@ -382,9 +368,7 @@ async def set_c1000x_display_mode(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return False
 
     # Convert string mode to int
@@ -416,8 +400,7 @@ async def set_c1000x_display_mode(
 
     if success:
         return {"display_mode": mode}
-    else:
-        return False
+    return False
 
 
 async def set_c1000x_light_mode(
@@ -429,6 +412,7 @@ async def set_c1000x_light_mode(
     """Set C1000X light mode via MQTT.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         mode: Light mode - 0=Off, 1=Low, 2=Medium, 3=High, 4=Blinking
               Can also be string: "off", "low", "medium", "high", "blinking"
@@ -444,9 +428,7 @@ async def set_c1000x_light_mode(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return False
 
     # Convert string mode to int
@@ -478,8 +460,7 @@ async def set_c1000x_light_mode(
 
     if success:
         return {"light_mode": mode}
-    else:
-        return False
+    return False
 
 
 async def set_c1000x_dc_output_mode(
@@ -491,6 +472,7 @@ async def set_c1000x_dc_output_mode(
     """Set C1000X 12V DC output mode via MQTT.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         mode: DC output mode - 1=Normal, 2=Smart
               Can also be string: "normal", "smart"
@@ -506,9 +488,7 @@ async def set_c1000x_dc_output_mode(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return False
 
     # Convert string mode to int
@@ -540,8 +520,7 @@ async def set_c1000x_dc_output_mode(
 
     if success:
         return {"12v_dc_output_mode": mode}
-    else:
-        return False
+    return False
 
 
 async def set_c1000x_ac_output_mode(
@@ -553,6 +532,7 @@ async def set_c1000x_ac_output_mode(
     """Set C1000X AC output mode via MQTT.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         mode: AC output mode - 1=Normal, 2=Smart
               Can also be string: "normal", "smart"
@@ -568,9 +548,7 @@ async def set_c1000x_ac_output_mode(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return False
 
     # Convert string mode to int
@@ -602,8 +580,7 @@ async def set_c1000x_ac_output_mode(
 
     if success:
         return {"ac_output_mode": mode}
-    else:
-        return False
+    return False
 
 
 async def get_c1000x_status(
@@ -614,6 +591,7 @@ async def get_c1000x_status(
     """Get comprehensive C1000X device status via MQTT data.
 
     Args:
+        self: The API instance
         deviceSn: Device serial number
         fromFile: If True, read from test file instead of using MQTT data
 
@@ -629,9 +607,7 @@ async def get_c1000x_status(
     # Validate device
     device = self.devices.get(deviceSn)
     if not device or device.get("device_pn") != "A1761":
-        self._logger.error(
-            "Device %s is not a C1000X (A1761) or not found", deviceSn
-        )
+        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
         return {}
 
     # Handle test mode
@@ -655,18 +631,29 @@ async def get_c1000x_status(
         }
 
     # For C1000X, use MQTT data cache instead of cloud API
-    if self.mqttsession and hasattr(self.mqttsession, 'mqtt_data'):
+    if self.mqttsession and hasattr(self.mqttsession, "mqtt_data"):
         mqtt_data = self.mqttsession.mqtt_data.get(deviceSn, {})
         if mqtt_data:
             self._logger.info("C1000X %s status retrieved from MQTT data", deviceSn)
             # Return only the fields we have MQTT mappings for
             status = {}
             mqtt_fields = [
-                "battery_soc", "temperature", "battery_soh",
-                "ac_output_power", "dc_input_power", "grid_to_battery_power",
-                "usbc_1_power", "usbc_2_power", "usba_1_power", "usba_2_power",
-                "exp_1_soc", "exp_1_soh", "exp_1_temperature",
-                "sw_version", "hw_version", "device_sn"
+                "battery_soc",
+                "temperature",
+                "battery_soh",
+                "ac_output_power",
+                "dc_input_power",
+                "grid_to_battery_power",
+                "usbc_1_power",
+                "usbc_2_power",
+                "usba_1_power",
+                "usba_2_power",
+                "exp_1_soc",
+                "exp_1_soh",
+                "exp_1_temperature",
+                "sw_version",
+                "hw_version",
+                "device_sn",
             ]
             for field in mqtt_fields:
                 if field in mqtt_data:

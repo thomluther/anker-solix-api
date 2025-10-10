@@ -589,9 +589,9 @@ class AnkerSolixClientSession:
                         url,
                         body_text,
                     )
-                    raise ClientError(
+                    raise ClientError(  # noqa: TRY301
                         f"Api {self.nickname} no data response for request: {method.upper()} {url}"
-                    )  # noqa: TRY301
+                    )
                 if endpoint == API_LOGIN:
                     self._logger.debug(
                         "Response Data: %s",
