@@ -23,8 +23,10 @@ import logging
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api import api, apitypes, export  # pylint: disable=no-name-in-module
+from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
+from api.apitypes import ApiEndpointServices  # pylint: disable=no-name-in-module
 from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
+from api.export import AnkerSolixApiExport  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -58,12 +60,13 @@ async def main() -> bool:
 
     CONSOLE.info("Exporting found Anker Solix system data for all assigned sites.")
     randomize: bool = True
+    mqttdata: bool = False
     services: set = set()
     try:
         user = common.user()
         async with ClientSession() as websession:
             CONSOLE.info("Trying Api authentication for user %s...", user)
-            myapi = api.AnkerSolixApi(
+            myapi = AnkerSolixApi(
                 user, common.password(), common.country(), websession, SESSION
             )
             if await myapi.async_authenticate():
@@ -74,17 +77,19 @@ async def main() -> bool:
                 )  # Login validation will be done during first API call
 
             resp = input(
-                "INPUT: Which Api endpoint services do you want to export? [A]ll / [P]ower / [C]harging / [H]es / [D]iscover (default): "
+                "INPUT: Which Api endpoint services do you want to export? [A]ll / [P]ower / [C]harging / [H]es / [M]qtt only / [D]iscover (default): "
             )
             if resp != "" or not isinstance(services, set):
                 if resp.upper() in ["A", "LL"]:
-                    services = set(asdict(apitypes.ApiEndpointServices()).values())
+                    services = set(asdict(ApiEndpointServices()).values())
                 elif resp.upper() in ["P", "POWER"]:
-                    services = {apitypes.ApiEndpointServices.power}
+                    services = {ApiEndpointServices.power}
                 elif resp.upper() in ["C", "CHARGING"]:
-                    services = {apitypes.ApiEndpointServices.charging}
+                    services = {ApiEndpointServices.charging}
                 elif resp.upper() in ["H", "HES"]:
-                    services = {apitypes.ApiEndpointServices.hes_svc}
+                    services = {ApiEndpointServices.hes_svc}
+                elif resp.upper() in ["M", "MQTT"]:
+                    services = {"mqtt_only"}
                 else:
                     # default to discover required services
                     services = set()
@@ -104,6 +109,15 @@ async def main() -> bool:
             if resp != "" or not isinstance(randomize, bool):
                 randomize = resp.upper() in ["Y", "YES", "TRUE", 1]
             CONSOLE.info("Randomization of data: %s", randomize)
+            if "mqtt_only" in services:
+                mqttdata = True
+            else:
+                resp = input(
+                    f"INPUT: Do you want to export optional MQTT device data? These may not be completely randomized and export will take > 5 minutes. [Y]es{' (default)' if mqttdata else ''} / [N]o{' (default)' if not mqttdata else ''}: "
+                )
+                if resp != "" or not isinstance(mqttdata, bool):
+                    mqttdata = resp.upper() in ["Y", "YES", "TRUE", 1]
+            CONSOLE.info("MQTT device data export: %s", mqttdata)
             nickname = myapi.apisession.nickname.replace(
                 "*", "x"
             )  # avoid filesystem problems with * in user nicknames
@@ -122,7 +136,7 @@ async def main() -> bool:
                 zipped = resp.upper() not in ["N", "NO", "FALSE", 0]
             CONSOLE.info("Zip output folder: %s", zipped)
 
-            myexport = export.AnkerSolixApiExport(
+            myexport = AnkerSolixApiExport(
                 client=myapi,
                 logger=CONSOLE,
             )
@@ -130,12 +144,12 @@ async def main() -> bool:
                 export_folder=folder,
                 export_services=services,
                 randomized=randomize,
+                mqttdata=mqttdata,
                 zipped=zipped,
             )
             if result and randomize:
-                CONSOLE.info("")
                 CONSOLE.info(
-                    "Following trace or site IDs, Tokens, SNs, MAC or eMail addresses have been randomized in files (from -> to):\n%s",
+                    "\nFollowing trace or site IDs, Tokens, SNs, MAC or eMail addresses have been randomized in files (from -> to):\n%s",
                     json.dumps(myexport.get_random_mapping(), indent=2),
                 )
             return result

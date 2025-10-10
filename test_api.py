@@ -141,7 +141,7 @@ async def testAPI_ENDPOINTS(myapi: api.AnkerSolixApi) -> None:
         await myapi.apisession.request(
             "post",
             api.API_ENDPOINTS["get_site_price"],
-            json={"site_id": siteid},
+            json={"site_id": siteid, "accuracy": 5},
         )
     )
     _out(

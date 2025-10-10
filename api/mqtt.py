@@ -57,6 +57,7 @@ class AnkerSolixMqttSession:
         self.mqtt_data: dict = {}
         # Variable to exchange MID for connections
         self.mids: dict = {}
+        self.testdir: str = self.apisession.testDir()
 
     def on_connect(
         self,
@@ -114,7 +115,7 @@ class AnkerSolixMqttSession:
             (message.get("head") or {}).get("timestamp")
             if isinstance(message, dict)
             else 0
-        ).strftime("%Y-%M-%d %H:%M:%S")
+        ).strftime("%Y-%m-%d %H:%M:%S")
         # extract message payload
         payload = json.loads(message.get("payload") or "")
         # Third party models not included in payload
@@ -124,7 +125,7 @@ class AnkerSolixMqttSession:
         if not (device_sn := payload.get("sn") if isinstance(payload, dict) else None):
             # extract sn from received topic
             device_sn = (str(msg.topic).split("/")[3:4] or [None])[0]
-        data = (payload.get("data") or "") if isinstance(payload, dict) else None
+        data = (payload.get("data")) if isinstance(payload, dict) else None
         # Decrypt base64-encoded encrypted data field from expected dictionary in message payload
         data = b64decode(data) if isinstance(data, str) else data
         self._logger.debug(
@@ -538,7 +539,7 @@ class AnkerSolixMqttSession:
         if isinstance(message, dict):
             timestamp = datetime.fromtimestamp(
                 (message.get("head") or {}).get("timestamp") or 0
-            ).strftime("%Y-%M-%d %H:%M:%S")
+            ).strftime("%Y-%m-%d %H:%M:%S")
         device_sn = (str(topic).split("/")[1:2] or [""])[0]
         if isinstance(data, bytes) and device_sn and model:
             # structure hex data
@@ -700,3 +701,57 @@ class AnkerSolixMqttSession:
                 self.apisession.nickname,
             )
             self.cleanup()
+
+    async def loadFromFile(
+        self, filename: str | Path, starttime: str | datetime | None
+    ) -> dict:
+        """Load first MQTT message after starttime from given file for testing."""
+        filename = str(filename)
+        if isinstance(starttime, datetime):
+            starttime = starttime.strftime("%Y-%m-%d %H:%M:%S")
+        elif not isinstance(starttime, str):
+            starttime = None
+        try:
+            if Path(filename).is_file():
+                async with aiofiles.open(filename, encoding="utf-8") as file:
+                    async for line in file:
+                        message = json.loads(line.strip())
+                        msgtime = message.get("msg_time", "")
+                        if not (starttime and msgtime) or msgtime >= starttime:
+                            self._logger.debug(
+                                "Loaded MQTT message from file %s:\n%s",
+                                filename,
+                                message,
+                            )
+                            return message
+        except OSError as err:
+            self._logger.error(
+                "ERROR: Failed to load MQTT message from file %s\n%s", filename, err
+            )
+        return {}
+
+    async def saveToFile(
+        self, filename: str | Path, data: dict | None = None, append: bool = True
+    ) -> bool:
+        """Save MQTT message to given file for testing."""
+        filename = str(filename)
+        if not isinstance(data, dict):
+            data = {}
+        try:
+            async with aiofiles.open(
+                filename, "a" if append else "w", encoding="utf-8"
+            ) as file:
+                # add message timestamp to data
+                await file.write(
+                    json.dumps(
+                        {"msg_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+                        | data
+                    ) + "\n"
+                )
+                self._logger.debug("Saved MQTT message to file %s:", filename)
+                return True
+        except OSError as err:
+            self._logger.error(
+                "ERROR: Failed to save MQTT message to file %s\n%s", filename, err
+            )
+            return False

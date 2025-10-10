@@ -230,7 +230,7 @@ API_HES_SVC_ENDPOINTS = {
     "get_evcharger_station_info": "charging_hes_svc/get_evcharger_station_info",  # works as member, {"evChargerSn": deviceSn, "featuretype": 1}, featuretype [1,2]
 }
 
-""" Other endpoints neither implemented nor explored: 63 + 68 used => 131
+""" Other endpoints neither implemented nor explored: 63 + 72 used => 135
     'power_service/v1/get_message_not_disturb',  # get do not disturb messages settings
     'power_service/v1/message_not_disturb',  # change do not disturb messages settings
     'power_service/v1/read_message', # payload format unknown
@@ -276,7 +276,7 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/order/export_charge_order',
     'power_service/v1/app/after_sale/get_popup',  # works as site member, {"site_id": siteId}, get active pop ups with code
     'power_service/v1/app/after_sale/check_popup',
-    'power_service/v1/app/after_sale/check_sn',  # checks whether any account device SN is eligable for replacement of battery (recall programs?)
+    'power_service/v1/app/after_sale/check_sn',  # checks whether any account device SN is eligible for replacement of battery (recall programs?)
     'power_service/v1/app/after_sale/mark_sn',
     'power_service/v1/app/share_site/anonymous_join_site',
     'power_service/v1/app/share_site/delete_site_member',
@@ -292,6 +292,10 @@ API_HES_SVC_ENDPOINTS = {
     'power_service/v1/app/report_tlv_event',  # tamper event? unknown what events to report, {"device_sn": deviceSn, "events": [{}]}
     'power_service/v1/app/shelly_ctrl_device', # {"device_sn": deviceSn, "op_type": "parameter", "value": value})) # Control shelly device settings, may require owner, usage known
     'power_service/v1/app/upgrade_event_report', # post an entry to upgrade event report
+    'power_service/v1/app/mothly_report_show',  # This is no typo in the endpoint! Get link to actual html report, but App is required to view
+    'power_service/v1/app/mothly_report_list',  # This is no typo in the endpoint! List existing monthly reports {"site_id": siteId}
+    'power_service/v1/app/get_monthly_report_configs', # get the monthly report messages {"site_id": siteId}
+    'power_service/v1/app/set_monthly_report_configs', # configure the monthly report messages
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
@@ -359,7 +363,7 @@ PPS and Power Panel related: 6 + 12 used => 18 total
     "charging_common_svc/location/set",  # Set default and identifier location
     "charging_common_svc/location/support",
 
-Home Energy System related (X1): 44 + 17 used => 61 total
+Home Energy System related (X1): 44 + 20 used => 64 total
     "charging_hes_svc/adjust_station_price_unit",
     "charging_hes_svc/cancel_pop",
     "charging_hes_svc/check_update",
@@ -403,6 +407,9 @@ Home Energy System related (X1): 44 + 17 used => 61 total
     2*"charging_hes_svc/set_station_evchargers",
     "charging_hes_svc/set_evcharger_station_feature",
     "charging_hes_svc/sync_back_up_history",
+    "charging_hes_svc/share_device/delete_installer_inviting_member",
+    "charging_hes_svc/share_device/invite_installer_member",
+    "charging_hes_svc/share_device/get_installer_invited_list",
 
 Home Energy System related (X1): 5 + 0 used => 5 total
     "charging_hes_dynamic_price_svc/get_area_by_code", # needs owner
@@ -420,7 +427,7 @@ related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
     'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
     'charging_disaster_prepared/disaster_detail',
 
-related to Prime charger models: 7 + 5 used => 12 total
+related to Prime charger models: 7 + 9 used => 16 total
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
     'mini_power/v1/app/charging/delete_charging_mode',
@@ -428,6 +435,10 @@ related to Prime charger models: 7 + 5 used => 12 total
     'mini_power/v1/app/egg/add_easter_egg_trigger_record',
     'mini_power/v1/app/egg/report_easter_egg_trigger_status', # {"device_sn": deviceSn, "report_time": 1734969388, "egg_type": 1}
     'mini_power/v1/app/setting/set_compatibility_status',
+    'mini_power/v1/app/style/get_manual_clock_screensavers',
+    'mini_power/v1/app/style/add_manual_clock_screensavers',
+    'mini_power/v1/app/style/delete_manual_clock_screensavers',
+    'mini_power/v1/app/style/get_url',
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.
@@ -443,6 +454,8 @@ the cached JSON file. Other instances should recognize an update of the cached J
 
 # Following are the JSON filename prefixes for exported endpoint names as defined previously
 API_FILEPREFIXES = {
+    # mqtt message prefixes
+    "mqtt_message": "mqtt_msg",
     # power_service endpoint file prefixes
     "homepage": "homepage",
     "site_list": "site_list",
@@ -1164,12 +1177,14 @@ class SolixNetworkStatus(StrEnum):
     mobile = "3"  # HES systems support also 5G connections, code to be confirmed
     unknown = "unknown"
 
+
 class SolixPpsOutputMode(StrEnum):
     """Enumeration for Anker Solix PPS output modes."""
 
     normal = "1"
     smart = "2"
     unknown = "unknown"
+
 
 class SolixPpsDisplayMode(StrEnum):
     """Enumeration for Anker Solix PPS display and light modes."""
@@ -1180,6 +1195,7 @@ class SolixPpsDisplayMode(StrEnum):
     high = "3"
     blinking = "4"
     unknown = "unknown"
+
 
 @dataclass
 class SolarbankTimeslot:

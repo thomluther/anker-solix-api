@@ -19,7 +19,7 @@ from .apitypes import (
     SolixPriceProvider,
     SolixPriceTypes,
 )
-from .mqtt import AnkerSolixMqttSession
+from .mqtt import AnkerSolixMqttSession, MessageCallback
 from .session import AnkerSolixClientSession
 
 MqttUpdateCallback = Callable[[Any, Any], None]
@@ -215,7 +215,9 @@ class AnkerSolixBaseApi:
             for site in rem_sites:
                 self.sites.pop(site, None)
 
-    async def startMqttSession(self) -> AnkerSolixMqttSession | None:
+    async def startMqttSession(
+        self, message_callback: MessageCallback | None = None
+    ) -> AnkerSolixMqttSession | None:
         """(Re)Start the MQTT session and (Re)connect to server."""
         # Initialize the session if required
         if not self.mqttsession:
@@ -242,8 +244,10 @@ class AnkerSolixBaseApi:
             self.mqttsession.host,
             self.mqttsession.port,
         )
-        # register message callback to extract device MQTT data into device Api cache
-        self.mqttsession.message_callback(func=self.mqtt_received)
+        # register message callback to extract device MQTT data into device Api cache if not custom callback provided
+        self.mqttsession.message_callback(
+            func=message_callback if callable(message_callback) else self.mqtt_received
+        )
         return self.mqttsession
 
     def stopMqttSession(self) -> None:
@@ -1335,7 +1339,9 @@ class AnkerSolixBaseApi:
             ).get("symbol") or None
         return None
 
-    async def get_site_price(self, siteId: str, fromFile: bool = False) -> dict:
+    async def get_site_price(
+        self, siteId: str, decimals: int | None = 5, fromFile: bool = False
+    ) -> dict:
         """Get the power price set for the site.
 
         Example data:
@@ -1347,7 +1353,10 @@ class AnkerSolixBaseApi:
         "accuracy": 2}
         """
         siteId = str(siteId) or ""
+        decimals = int(decimals) if isinstance(decimals, int | float) else None
         data = {"site_id": str(siteId)}
+        if decimals is not None:
+            data["accuracy"] = decimals
         if fromFile:
             # For file data, verify first if there is a modified file to be used for testing
             if not (
@@ -1375,6 +1384,7 @@ class AnkerSolixBaseApi:
         self,
         siteId: str,
         price: float | None = None,
+        decimals: int | None = 5,
         unit: str | None = None,
         co2: float | None = None,
         price_type: str | None = None,  # "fixed" | "use_time" | "dynamic"
@@ -1384,7 +1394,7 @@ class AnkerSolixBaseApi:
         """Set the power price, the unit, CO2 and price type for a site.
 
         Example input:
-        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0}
+        {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0, "accuracy": 5}
         Additional fields have been added to support dynamic prices, dynamic_price ignored if type not dynamic
         {"site_id": 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', "price": 0.325, "site_price_unit": "\u20ac", "site_co2": 0, "price_type": "dynamic", "dynamic_price": {
             "country": "DE",
@@ -1393,6 +1403,7 @@ class AnkerSolixBaseApi:
         }}
         """
         siteId = str(siteId) or ""
+        decimals = int(decimals) if isinstance(decimals, int | float) else None
         # First get the old settings from api dict or Api call to update only requested parameter
         if not (details := (self.sites.get(siteId) or {}).get("site_details") or {}):
             details = await self.get_site_price(siteId=siteId, fromFile=toFile)
@@ -1422,6 +1433,10 @@ class AnkerSolixBaseApi:
         data["site_co2"] = (
             float(co2) if isinstance(co2, float | int) else details.get("site_co2")
         )
+        if "accuracy" in details or decimals is not None:
+            data["accuracy"] = (
+                decimals if decimals is not None else details.get("accuracy")
+            )
         if "price_type" in details or price_type:
             data["price_type"] = price_type if price_type else details.get("price_type")
         if "dynamic_price" in details or provider:

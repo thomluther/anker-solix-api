@@ -568,7 +568,10 @@ class AnkerSolixClientSession:
                 )
                 # request handler has auto-decompression enabled
                 self._logger.debug(
-                    "Api %s response received for request: %s %s", self.nickname, method, url
+                    "Api %s response received for request: %s %s",
+                    self.nickname,
+                    method,
+                    url,
                 )
                 # print response headers
                 self._logger.debug("Response Headers: %s", resp.headers)
@@ -586,7 +589,9 @@ class AnkerSolixClientSession:
                         url,
                         body_text,
                     )
-                    raise ClientError(f"Api {self.nickname} no data response for request: {method.upper()} {url}")  # noqa: TRY301
+                    raise ClientError(
+                        f"Api {self.nickname} no data response for request: {method.upper()} {url}"
+                    )  # noqa: TRY301
                 if endpoint == API_LOGIN:
                     self._logger.debug(
                         "Response Data: %s",
@@ -684,7 +689,8 @@ class AnkerSolixClientSession:
                     body_text,
                 )
                 errors.raise_error(
-                    data, prefix=f"Api {self.nickname} Too Many Requests: {self.request_count}"
+                    data,
+                    prefix=f"Api {self.nickname} Too Many Requests: {self.request_count}",
                 )
             elif resp.status in [502, 504, 522]:
                 # Server may be temporarily overloaded and does not respond
@@ -830,9 +836,8 @@ class AnkerSolixClientSession:
                     return data
         except OSError as err:
             self._logger.error(
-                "ERROR: Failed to load JSON from file %s", masked_filename
+                "ERROR: Failed to load JSON from file %s\n%s", masked_filename, err
             )
-            self._logger.error(err)
         return {}
 
     async def saveToFile(self, filename: str | Path, data: dict | None = None) -> bool:
@@ -852,8 +857,9 @@ class AnkerSolixClientSession:
                 self._logger.debug("Saved JSON to file %s:", masked_filename)
                 return True
         except OSError as err:
-            self._logger.error("ERROR: Failed to save JSON to file %s", masked_filename)
-            self._logger.error(err)
+            self._logger.error(
+                "ERROR: Failed to save JSON to file %s\n%s", masked_filename, err
+            )
             return False
 
     async def deleteModifiedFile(self, filename: str | Path) -> bool:
@@ -872,9 +878,10 @@ class AnkerSolixClientSession:
             self._logger.debug("Remove modified JSON file %s:", masked_filename)
         except OSError as err:
             self._logger.error(
-                "ERROR: Failed to remove modified JSON file %s", masked_filename
+                "ERROR: Failed to remove modified JSON file %s\n%s",
+                masked_filename,
+                err,
             )
-            self._logger.error(err)
             return False
         return True
 

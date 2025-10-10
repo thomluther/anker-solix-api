@@ -422,7 +422,7 @@ class AnkerSolixMqttMonitor:
         if isinstance(message, dict):
             timestamp = datetime.fromtimestamp(
                 (message.get("head") or {}).get("timestamp") or 0
-            ).strftime("%Y-%M-%d %H:%M:%S ")
+            ).strftime("%Y-%m-%d %H:%M:%S ")
         CONSOLE.info(f"\nReceived message on topic: {topic}\n{message}")
         if isinstance(data, bytes):
             CONSOLE.info(f"{timestamp}Device hex data:\n{data.hex(':')}")
@@ -453,7 +453,7 @@ class AnkerSolixMqttMonitor:
         if isinstance(message, dict):
             timestamp = datetime.fromtimestamp(
                 (message.get("head") or {}).get("timestamp") or 0
-            ).strftime("%Y-%M-%d %H:%M:%S")
+            ).strftime("%Y-%m-%d %H:%M:%S")
         common.clearscreen()
         hd = DeviceHexData(model=model or "", hexbytes=data)
         CONSOLE.info(

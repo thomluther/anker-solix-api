@@ -87,7 +87,7 @@ def user() -> str:
     """Get anker account user."""
     if _CREDENTIALS.get("USER"):
         return _CREDENTIALS["USER"]
-    CONSOLE.info("\nEnter Anker Account credentials:")
+    CONSOLE.info("Enter Anker Account credentials:")
     username = input("Username (email): ")
     while not username:
         username = input("Username (email): ")

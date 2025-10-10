@@ -1574,7 +1574,7 @@ class AnkerSolixApiMonitor:
                                             )
                                             if await self.api.startMqttSession():
                                                 CONSOLE.info(
-                                                    f"{Color.GREEN}MQTT session connected{Color.OFF}, subscribing eligeable devices..."
+                                                    f"{Color.GREEN}MQTT session connected{Color.OFF}, subscribing eligible devices..."
                                                 )
                                                 if devs := [
                                                     dev
@@ -1596,7 +1596,7 @@ class AnkerSolixApiMonitor:
                                                     )
                                                 else:
                                                     CONSOLE.info(
-                                                        f"{Color.YELLOW}No eligeable MQTT devices found!{Color.OFF}"
+                                                        f"{Color.YELLOW}No eligible MQTT devices found!{Color.OFF}"
                                                     )
                                         else:
                                             CONSOLE.info(
@@ -1702,7 +1702,7 @@ class AnkerSolixApiMonitor:
                                                         self.triggered = None
                                                 else:
                                                     CONSOLE.info(
-                                                        f"{Color.YELLOW}\nNo eligeable MQTT devices found!{Color.OFF}"
+                                                        f"{Color.YELLOW}\nNo eligible MQTT devices found!{Color.OFF}"
                                                     )
                                         else:
                                             CONSOLE.info(
