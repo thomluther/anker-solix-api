@@ -83,6 +83,18 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         manage_vehicle,
         update_vehicle_options,
     )
+    from .c1000x_controls import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+        get_c1000x_status,
+        set_c1000x_ac_output,
+        set_c1000x_ac_output_mode,
+        set_c1000x_backup_charge,
+        set_c1000x_dc_output,
+        set_c1000x_dc_output_mode,
+        set_c1000x_display,
+        set_c1000x_display_mode,
+        set_c1000x_light_mode,
+        set_c1000x_temp_unit,
+    )
 
     def __init__(
         self,

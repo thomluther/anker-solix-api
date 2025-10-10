@@ -310,6 +310,7 @@ class AnkerSolixMqttSession:
         hexdata = None
         if not isinstance(parameters, dict):
             parameters = {}
+
         if command == "update_trigger":
             hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0057"))
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
@@ -324,6 +325,106 @@ class AnkerSolixMqttSession:
                 )
             )
             hexdata.add_timestamp_field()
+        elif command.startswith("c1000x_"):
+            # C1000X control commands using experimental message type 0058
+            # This may need adjustment based on actual device protocol
+            hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0058"))
+
+            # Add control-specific fields based on command type
+            if command == "c1000x_ac_output":
+                # AC output control: field a1 with value 0/1
+                value = 1 if parameters.get("enabled", False) else 0
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex("a1"),
+                        f_type=DeviceHexDataTypes.ui.value,
+                        f_value=value.to_bytes(length=1, byteorder="little"),
+                    )
+                )
+            elif command == "c1000x_dc_output":
+                # DC output control: field a2 with value 0/1
+                value = 1 if parameters.get("enabled", False) else 0
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex("a2"),
+                        f_type=DeviceHexDataTypes.ui.value,
+                        f_value=value.to_bytes(length=1, byteorder="little"),
+                    )
+                )
+            elif command == "c1000x_display":
+                # Display control: field a3 with value 0/1
+                value = 1 if parameters.get("enabled", False) else 0
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex("a3"),
+                        f_type=DeviceHexDataTypes.ui.value,
+                        f_value=value.to_bytes(length=1, byteorder="little"),
+                    )
+                )
+            elif command == "c1000x_display_mode":
+                # Display mode: field a4 with value 0-3
+                value = int(parameters.get("mode", 0))
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex("a4"),
+                        f_type=DeviceHexDataTypes.ui.value,
+                        f_value=value.to_bytes(length=1, byteorder="little"),
+                    )
+                )
+            elif command == "c1000x_light_mode":
+                # Light mode: field a5 with value 0-4
+                value = int(parameters.get("mode", 0))
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex("a5"),
+                        f_type=DeviceHexDataTypes.ui.value,
+                        f_value=value.to_bytes(length=1, byteorder="little"),
+                    )
+                )
+            elif command == "c1000x_backup_charge":
+                # Backup charge mode: field a6 with value 0/1
+                value = 1 if parameters.get("enabled", False) else 0
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex("a6"),
+                        f_type=DeviceHexDataTypes.ui.value,
+                        f_value=value.to_bytes(length=1, byteorder="little"),
+                    )
+                )
+            elif command == "c1000x_temp_unit":
+                # Temperature unit: field a7 with value 0/1 (0=Celsius, 1=Fahrenheit)
+                value = 1 if parameters.get("fahrenheit", False) else 0
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex("a7"),
+                        f_type=DeviceHexDataTypes.ui.value,
+                        f_value=value.to_bytes(length=1, byteorder="little"),
+                    )
+                )
+            elif command == "c1000x_dc_output_mode":
+                # DC output mode: field a8 with value 1-2 (1=normal, 2=smart)
+                value = int(parameters.get("mode", 1))
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex("a8"),
+                        f_type=DeviceHexDataTypes.ui.value,
+                        f_value=value.to_bytes(length=1, byteorder="little"),
+                    )
+                )
+            elif command == "c1000x_ac_output_mode":
+                # AC output mode: field a9 with value 1-2 (1=normal, 2=smart)
+                value = int(parameters.get("mode", 1))
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex("a9"),
+                        f_type=DeviceHexDataTypes.ui.value,
+                        f_value=value.to_bytes(length=1, byteorder="little"),
+                    )
+                )
+
+            # Add timestamp for all C1000X commands
+            hexdata.add_timestamp_field()
+
         if hexdata:
             self._logger.debug(
                 "Api %s MQTT session generated hexdata for device mqtt command '%s':\n%s",

@@ -517,57 +517,59 @@ SOLIXMQTTMAP = {
         "0405": {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
-            "a5": {"name": "grid_to_battery_power"},
-            "a6": {"name": "ac_output_power"},
-            "a7": {"name": "usbc_1_power"},
-            "a8": {"name": "usbc_2_power"},
-            "a9": {"name": "usba_1_power"},
-            "aa": {"name": "usba_2_power"},
-            "ae": {"name": "dc_input_power"},
-            "c1": {"name": "battery_soc"},
-            "c2": {"name": "exp_1_soc"},
-            "c3": {"name": "battery_soh"},
-            "c4": {"name": "exp_1_soh?"},
-            "b0": {"name": "ac_output_power_total"},
-            "b3": {"name": "sw_version", "values": 1},
-            "b9": {"name": "sw_expansion", "values": 1},
-            "ba": {"name": "sw_controller", "values": 1},
-            "bb": {"name": "switch_ac_output_power"},  # Disabled (0) or enabled (1)
-            "bd": {"name": "temperature"},
-            "be": {"name": "exp_1_temperature"},
-            "d0": {"name": "device_sn"},
-            "d1": {"name": "max_load"},
-            "d2": {"name": "device_timeout_minutes"},
-            "d3": {"name": "display_timeout_seconds"},  # values: 20, 30, 60, 300, 1800
-            "d8": {
-                "name": "switch_12v_dc_output_power"
-            },  # Car 12 V output disabled (0) or enabled (1)
-            "d9": {"name": "display_mode"},  # Off (0), low (1), medium (2), high(3)
-            "dc": {
-                "name": "light_mode"
-            },  # Off (0), low (1), medium (2), high (3), blinking (4)
-            "de": {"name": "switch_display"},  # Off (0), On (1)
-            "dd": {
-                "name": "temp_unit_fahrenheit"
-            },  # Toggle °C (0) or F (1) unit, this does not change temperature value itself
-            "e5": {"name": "backup_charge"},  # Off (0), On (1)
+            # Power monitoring fields
+            "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
+            "a6": {"name": "ac_output_power"},  # Individual AC outlet power
+            "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
+            "a8": {"name": "usbc_2_power"},  # USB-C port 2 output power
+            "a9": {"name": "usba_1_power"},  # USB-A port 1 output power
+            "aa": {"name": "usba_2_power"},  # USB-A port 2 output power
+            "ae": {"name": "dc_input_power"},  # DC input power (solar/car charging)
+            "b0": {"name": "ac_output_power_total"},  # Total AC output power
+            # Battery status fields
+            "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
+            "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
+            "c3": {"name": "battery_soh"},  # Main battery state of health (%)
+            "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
+            # Temperature monitoring
+            "bd": {"name": "temperature"},  # Main device temperature (°C)
+            "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
+            # Version information
+            "b3": {"name": "sw_version", "values": 1},  # Main firmware version
+            "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
+            "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
+            # Device control switches
+            "bb": {"name": "switch_ac_output_power"},  # AC output switch: Disabled (0) or Enabled (1)
+            "d8": {"name": "switch_12v_dc_output_power"},  # 12V DC output switch: Disabled (0) or Enabled (1)
+            "de": {"name": "switch_display"},  # Display switch: Off (0) or On (1)
+            "e5": {"name": "backup_charge"},  # Backup charge mode: Off (0) or On (1)
+            "dd": {"name": "temp_unit_fahrenheit"},  # Temperature unit: Celsius (0) or Fahrenheit (1)
+            # Display and light settings
+            "d9": {"name": "display_mode"},  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+            "dc": {"name": "light_mode"},  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+            # Smart mode configuration (byte field)
             "f8": {
                 "bytes": {
                     "00": {
-                        "name": "12v_dc_output_mode",  # normal (1), smart (2)
+                        "name": "12v_dc_output_mode",  # 12V DC mode: Normal (1), Smart (2) - auto-off below 3W
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "01": {
-                        "name": "ac_output_mode",  # normal (1), smart (2)
+                        "name": "ac_output_mode",  # AC output mode: Normal (1), Smart (2) - auto-off when not charging and low power
                         "type": DeviceHexDataTypes.ui.value,
                     },
                 }
             },
-            "fd": {"name": "exp_1_type"},
-            "fe": {"name": "msg_timestamp"},
+            # Device configuration
+            "d0": {"name": "device_sn"},  # Device serial number
+            "d1": {"name": "max_load"},  # Maximum load setting (W)
+            "d2": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes)
+            "d3": {"name": "display_timeout_seconds"},  # Display timeout: 20, 30, 60, 300, 1800 seconds
+            "fd": {"name": "exp_1_type"},  # Expansion battery type identifier
+            "fe": {"name": "msg_timestamp"},  # Message timestamp
         },
         "0830": {
-            # Interval: ?? seconds, may be triggered on App actions, but no regular interval
+            # Interval: Irregular, triggered on app actions, no fixed interval
             "topic": "param_info",
             "a1": {
                 "name": "hw_version",
