@@ -5,7 +5,7 @@ import asyncio
 import logging
 
 from aiohttp import ClientSession
-from api import api  # pylint: disable=no-name-in-module
+from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -15,11 +15,11 @@ CONSOLE: logging.Logger = common.CONSOLE
 class C1000XController:
     """Example C1000X device controller using MQTT."""
 
-    def __init__(self, api_instance, device_sn) -> None:
+    def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
         """Initialize."""
         self.api = api_instance
         self.device_sn = device_sn
-        self.last_battery_soc = None
+        self.last_battery_soc: int | None = None
 
     async def get_realtime_data(self):
         """Get real-time data from MQTT cache."""
@@ -123,11 +123,12 @@ async def main():
     """Main example demonstrating C1000X MQTT integration."""
     async with ClientSession() as websession:
         # Initialize API
-        myapi = api.AnkerSolixApi(
+        myapi = AnkerSolixApi(
             common.user(), common.password(), common.country(), websession, _LOGGER
         )
 
         # Update device information
+        CONSOLE.info("Checking for C1000X devices...")
         await myapi.update_sites()
         await myapi.update_device_details()
 

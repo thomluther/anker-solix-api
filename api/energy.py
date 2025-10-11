@@ -1,5 +1,7 @@
 """Anker Power/Solix Cloud API class energy related methods."""
 
+from __future__ import annotations
+
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from statistics import mean
@@ -13,7 +15,7 @@ from .apitypes import (
 )
 
 if TYPE_CHECKING:
-    from .api import AnkerSolixApi  # noqa: TC004
+    from .api import AnkerSolixApi
 
 
 async def energy_daily(  # noqa: C901

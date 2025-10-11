@@ -1,5 +1,7 @@
 """Anker Power/Solix Cloud API class vehicle related methods."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from pathlib import Path
 import random
@@ -9,7 +11,7 @@ from typing import TYPE_CHECKING
 from .apitypes import API_ENDPOINTS, API_FILEPREFIXES, SolixDeviceType, SolixVehicle
 
 if TYPE_CHECKING:
-    from .api import AnkerSolixApi  # noqa: TC004
+    from .api import AnkerSolixApi
 
 
 async def get_vehicle_list(

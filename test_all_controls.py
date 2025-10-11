@@ -5,7 +5,7 @@ import asyncio
 import logging
 
 from aiohttp import ClientSession
-from api import api  # pylint: disable=no-name-in-module
+from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -16,11 +16,12 @@ async def test_all_controls():
     """Test all C1000X control methods."""
     async with ClientSession() as websession:
         # Initialize API
-        myapi = api.AnkerSolixApi(
+        myapi = AnkerSolixApi(
             common.user(), common.password(), common.country(), websession, _LOGGER
         )
 
         # Update device information
+        CONSOLE.info("Checking for C1000X devices...")
         await myapi.update_sites()
         await myapi.update_device_details()
 

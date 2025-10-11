@@ -539,14 +539,24 @@ SOLIXMQTTMAP = {
             "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
             "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
             # Device control switches
-            "bb": {"name": "switch_ac_output_power"},  # AC output switch: Disabled (0) or Enabled (1)
-            "d8": {"name": "switch_12v_dc_output_power"},  # 12V DC output switch: Disabled (0) or Enabled (1)
+            "bb": {
+                "name": "switch_ac_output_power"
+            },  # AC output switch: Disabled (0) or Enabled (1)
+            "d8": {
+                "name": "switch_12v_dc_output_power"
+            },  # 12V DC output switch: Disabled (0) or Enabled (1)
             "de": {"name": "switch_display"},  # Display switch: Off (0) or On (1)
             "e5": {"name": "backup_charge"},  # Backup charge mode: Off (0) or On (1)
-            "dd": {"name": "temp_unit_fahrenheit"},  # Temperature unit: Celsius (0) or Fahrenheit (1)
+            "dd": {
+                "name": "temp_unit_fahrenheit"
+            },  # Temperature unit: Celsius (0) or Fahrenheit (1)
             # Display and light settings
-            "d9": {"name": "display_mode"},  # Display brightness: Off (0), Low (1), Medium (2), High (3)
-            "dc": {"name": "light_mode"},  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+            "d9": {
+                "name": "display_mode"
+            },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+            "dc": {
+                "name": "light_mode"
+            },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
             # Smart mode configuration (byte field)
             "f8": {
                 "bytes": {
@@ -563,8 +573,12 @@ SOLIXMQTTMAP = {
             # Device configuration
             "d0": {"name": "device_sn"},  # Device serial number
             "d1": {"name": "max_load"},  # Maximum load setting (W)
-            "d2": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes)
-            "d3": {"name": "display_timeout_seconds"},  # Display timeout: 20, 30, 60, 300, 1800 seconds
+            "d2": {
+                "name": "device_timeout_minutes"
+            },  # Device auto-off timeout (minutes)
+            "d3": {
+                "name": "display_timeout_seconds"
+            },  # Display timeout: 20, 30, 60, 300, 1800 seconds
             "fd": {"name": "exp_1_type"},  # Expansion battery type identifier
             "fe": {"name": "msg_timestamp"},  # Message timestamp
         },
@@ -825,7 +839,7 @@ SOLIXMQTTMAP = {
             "a9": {"name": "pv_to_grid_power"},
             "aa": {"name": "grid_import_energy", "factor": 0.01},
             "ab": {"name": "grid_export_energy", "factor": 0.01},
-            #"ad": {"name": "pv_to_grid_power"},
+            # "ad": {"name": "pv_to_grid_power"},
         },
     },
     "SHEMP3": {

@@ -53,26 +53,19 @@ async def _send_c1000x_mqtt_command(
     try:
         # Ensure MQTT session is started
         if not self.mqttsession:
-            await self.startMqttSession()
-        if not self.mqttsession:
-            self._logger.error("Failed to start MQTT session for C1000X control")
-            return False
+            if not await self.startMqttSession():
+                self._logger.error("Failed to start MQTT session for C1000X control")
+                return False
         # Get device info for MQTT publish
-        device = self.devices.get(device_sn)
-        if not device:
+        if not (device := self.devices.get(device_sn)):
             self._logger.error("Device %s not found for MQTT command", device_sn)
             return False
-        device_dict = {
-            "device_sn": device_sn,
-            "device_pn": device.get("device_pn", "A1761"),
-        }
         # Generate command hex data
-        hex_data = self.mqttsession.get_command_data(command, parameters)
-        if not hex_data:
+        if not (hex_data := self.mqttsession.get_command_data(command, parameters)):
             self._logger.error("Failed to generate MQTT command data for %s", command)
             return False
         # Publish MQTT command
-        _, mqtt_info = self.mqttsession.publish(device_dict, hex_data)
+        _, mqtt_info = self.mqttsession.publish(device, hex_data)
         # Wait for publish completion with timeout
         with contextlib.suppress(ValueError, RuntimeError):
             mqtt_info.wait_for_publish(timeout=5)
@@ -129,11 +122,10 @@ async def set_c1000x_ac_output(
 
     # Send MQTT command
     success = await _send_c1000x_mqtt_command(
-        self,
-        deviceSn,
-        "c1000x_ac_output",
-        {"enabled": enabled},
-        f"AC output {'enabled' if enabled else 'disabled'}",
+        device_sn=deviceSn,
+        command="c1000x_ac_output",
+        parameters={"enabled": enabled},
+        description=f"AC output {'enabled' if enabled else 'disabled'}",
     )
 
     if success:
@@ -180,11 +172,10 @@ async def set_c1000x_dc_output(
 
     # Send MQTT command
     success = await _send_c1000x_mqtt_command(
-        self,
-        deviceSn,
-        "c1000x_dc_output",
-        {"enabled": enabled},
-        f"12V DC output {'enabled' if enabled else 'disabled'}",
+        device_sn=deviceSn,
+        command="c1000x_dc_output",
+        parameters={"enabled": enabled},
+        description=f"12V DC output {'enabled' if enabled else 'disabled'}",
     )
 
     if success:
@@ -231,11 +222,10 @@ async def set_c1000x_display(
 
     # Send MQTT command
     success = await _send_c1000x_mqtt_command(
-        self,
-        deviceSn,
-        "c1000x_display",
-        {"enabled": enabled},
-        f"display {'enabled' if enabled else 'disabled'}",
+        device_sn=deviceSn,
+        command="c1000x_display",
+        parameters={"enabled": enabled},
+        description=f"display {'enabled' if enabled else 'disabled'}",
     )
 
     if success:
@@ -281,11 +271,10 @@ async def set_c1000x_backup_charge(
 
     # Send MQTT command
     success = await _send_c1000x_mqtt_command(
-        self,
-        deviceSn,
-        "c1000x_backup_charge",
-        {"enabled": enabled},
-        f"backup charge mode {'enabled' if enabled else 'disabled'}",
+        device_sn=deviceSn,
+        command="c1000x_backup_charge",
+        parameters={"enabled": enabled},
+        description=f"backup charge mode {'enabled' if enabled else 'disabled'}",
     )
 
     if success:
@@ -331,11 +320,10 @@ async def set_c1000x_temp_unit(
 
     # Send MQTT command
     success = await _send_c1000x_mqtt_command(
-        self,
-        deviceSn,
-        "c1000x_temp_unit",
-        {"fahrenheit": fahrenheit},
-        f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
+        device_sn=deviceSn,
+        command="c1000x_temp_unit",
+        parameters={"fahrenheit": fahrenheit},
+        description=f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
     )
 
     if success:
@@ -391,11 +379,10 @@ async def set_c1000x_display_mode(
 
     # Send MQTT command
     success = await _send_c1000x_mqtt_command(
-        self,
-        deviceSn,
-        "c1000x_display_mode",
-        {"mode": mode},
-        f"display mode set to {original_mode if isinstance(original_mode, str) else mode}",
+        device_sn=deviceSn,
+        command="c1000x_display_mode",
+        parameters={"mode": mode},
+        description=f"display mode set to {original_mode if isinstance(original_mode, str) else mode}",
     )
 
     if success:
@@ -451,11 +438,10 @@ async def set_c1000x_light_mode(
 
     # Send MQTT command
     success = await _send_c1000x_mqtt_command(
-        self,
-        deviceSn,
-        "c1000x_light_mode",
-        {"mode": mode},
-        f"light mode set to {original_mode if isinstance(original_mode, str) else mode}",
+        device_sn=deviceSn,
+        command="c1000x_light_mode",
+        parameters={"mode": mode},
+        description=f"light mode set to {original_mode if isinstance(original_mode, str) else mode}",
     )
 
     if success:
@@ -511,11 +497,10 @@ async def set_c1000x_dc_output_mode(
 
     # Send MQTT command
     success = await _send_c1000x_mqtt_command(
-        self,
-        deviceSn,
-        "c1000x_dc_output_mode",
-        {"mode": mode},
-        f"12V DC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
+        device_sn=deviceSn,
+        command="c1000x_dc_output_mode",
+        parameters={"mode": mode},
+        description=f"12V DC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
     )
 
     if success:
@@ -571,11 +556,10 @@ async def set_c1000x_ac_output_mode(
 
     # Send MQTT command
     success = await _send_c1000x_mqtt_command(
-        self,
-        deviceSn,
-        "c1000x_ac_output_mode",
-        {"mode": mode},
-        f"AC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
+        device_sn=deviceSn,
+        command="c1000x_ac_output_mode",
+        parameters={"mode": mode},
+        description=f"AC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
     )
 
     if success:

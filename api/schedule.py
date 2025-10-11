@@ -1,5 +1,7 @@
 """Anker Power/Solix Cloud API class outsourced schedule related methods."""
 
+from __future__ import annotations
+
 import contextlib
 import copy
 from dataclasses import fields
@@ -27,7 +29,7 @@ from .apitypes import (
 )
 
 if TYPE_CHECKING:
-    from .api import AnkerSolixApi  # noqa: TC004
+    from .api import AnkerSolixApi
 
 
 async def get_device_load(
