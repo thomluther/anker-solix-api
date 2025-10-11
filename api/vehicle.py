@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 async def get_vehicle_list(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     fromFile: bool = False,
 ) -> dict:
     """Get the vehicle list defined for the user.
@@ -62,7 +62,7 @@ async def get_vehicle_list(
 
 
 async def get_vehicle_details(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     vehicleId: str,
     fromFile: bool = False,
 ) -> dict:
@@ -120,7 +120,7 @@ async def get_vehicle_details(
 
 
 async def get_brand_list(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     fromFile: bool = False,
 ) -> dict:
     """Get the vehicle brand list.
@@ -148,7 +148,7 @@ async def get_brand_list(
 
 
 async def get_brand_models(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     brand: str,
     fromFile: bool = False,
 ) -> dict:
@@ -182,7 +182,7 @@ async def get_brand_models(
 
 
 async def get_model_years(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     brand: str,
     model: str,
     fromFile: bool = False,
@@ -219,7 +219,7 @@ async def get_model_years(
 
 
 async def get_model_year_attributes(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     brand: str,
     model: str,
     year: str | int,
@@ -261,7 +261,7 @@ async def get_model_year_attributes(
 
 
 async def update_vehicle_options(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     vehicle: SolixVehicle | str | dict | None = None,
     cacheChain: bool = True,
     fromFile: bool = False,
@@ -326,7 +326,7 @@ async def update_vehicle_options(
 
 
 def get_vehicle_options(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     vehicle: SolixVehicle | str | dict | None = None,
     extendAttributes: bool = False,
 ) -> list:
@@ -400,7 +400,7 @@ def get_vehicle_options(
 
 
 async def get_vehicle_attributes(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     vehicle: SolixVehicle | str | dict | None = None,
     fromFile: bool = False,
 ) -> SolixVehicle | None:
@@ -458,7 +458,7 @@ async def get_vehicle_attributes(
 
 
 async def create_vehicle(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     name: str,
     vehicle: SolixVehicle | str | dict | None,
     toFile: bool = False,
@@ -598,7 +598,7 @@ async def create_vehicle(
 
 
 async def manage_vehicle(  # noqa: C901
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     vehicleId: str,
     action: str,
     vehicle: SolixVehicle | str | dict | None = None,

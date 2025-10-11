@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 async def get_device_load(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     deviceSn: str,
     fromFile: bool = False,
@@ -102,7 +102,7 @@ async def get_device_load(
 
 
 async def set_device_load(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     deviceSn: str,
     loadData: dict,
@@ -170,7 +170,7 @@ async def set_device_load(
 
 
 async def get_device_parm(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
     deviceSn: str | None = None,
@@ -333,7 +333,7 @@ async def get_device_parm(
 
 
 async def set_device_parm(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     paramData: dict,
     paramType: str = SolixParmType.SOLARBANK_SCHEDULE.value,
@@ -488,7 +488,7 @@ async def set_device_parm(
 
 
 async def set_home_load(  # noqa: C901
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     deviceSn: str,
     all_day: bool = False,
@@ -1368,7 +1368,7 @@ async def set_home_load(  # noqa: C901
 
 
 async def set_sb2_home_load(  # noqa: C901
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     deviceSn: str,
     preset: int | None = None,
@@ -2019,7 +2019,7 @@ async def set_sb2_home_load(  # noqa: C901
 
 
 async def set_sb2_ac_charge(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     deviceSn: str,
     backup_start: datetime | None = None,
@@ -2172,7 +2172,7 @@ async def set_sb2_ac_charge(
 
 
 async def set_sb2_use_time(  # noqa: C901
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     deviceSn: str,
     start_month: int | str | None = None,  # 1-12

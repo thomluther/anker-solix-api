@@ -32,7 +32,7 @@ def validate_command_value(command_id: str, value: Any) -> bool:
 
 
 async def _send_c1000x_mqtt_command(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     device_sn: str,
     command: str,
     parameters: dict,
@@ -92,7 +92,7 @@ async def _send_c1000x_mqtt_command(
 
 
 async def set_c1000x_ac_output(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     enabled: bool,
     toFile: bool = False,
@@ -143,7 +143,7 @@ async def set_c1000x_ac_output(
 
 
 async def set_c1000x_dc_output(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     enabled: bool,
     toFile: bool = False,
@@ -194,7 +194,7 @@ async def set_c1000x_dc_output(
 
 
 async def set_c1000x_display(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     enabled: bool,
     toFile: bool = False,
@@ -244,7 +244,7 @@ async def set_c1000x_display(
 
 
 async def set_c1000x_backup_charge(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     enabled: bool,
     toFile: bool = False,
@@ -294,7 +294,7 @@ async def set_c1000x_backup_charge(
 
 
 async def set_c1000x_temp_unit(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     fahrenheit: bool,
     toFile: bool = False,
@@ -344,7 +344,7 @@ async def set_c1000x_temp_unit(
 
 
 async def set_c1000x_display_mode(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     mode: int | str,
     toFile: bool = False,
@@ -404,7 +404,7 @@ async def set_c1000x_display_mode(
 
 
 async def set_c1000x_light_mode(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     mode: int | str,
     toFile: bool = False,
@@ -464,7 +464,7 @@ async def set_c1000x_light_mode(
 
 
 async def set_c1000x_dc_output_mode(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     mode: int | str,
     toFile: bool = False,
@@ -524,7 +524,7 @@ async def set_c1000x_dc_output_mode(
 
 
 async def set_c1000x_ac_output_mode(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     mode: int | str,
     toFile: bool = False,
@@ -584,7 +584,7 @@ async def set_c1000x_ac_output_mode(
 
 
 async def get_c1000x_status(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     fromFile: bool = False,
 ) -> dict:

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 async def energy_daily(  # noqa: C901
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     deviceSn: str,
     startDay: datetime = datetime.today(),
@@ -540,7 +540,7 @@ async def energy_daily(  # noqa: C901
 
 
 async def energy_analysis(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     deviceSn: str,
     rangeType: str | None = None,
@@ -597,7 +597,7 @@ async def energy_analysis(
 
 
 async def home_load_chart(
-    self: AnkerSolixApi, siteId: str, deviceSn: str | None = None
+    self: "AnkerSolixApi", siteId: str, deviceSn: str | None = None
 ) -> dict:
     """Get home load chart data.
 
@@ -614,7 +614,7 @@ async def home_load_chart(
 
 
 async def refresh_pv_forecast(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     siteId: str,
     fromFile: bool = False,
 ) -> None:
@@ -912,7 +912,7 @@ async def refresh_pv_forecast(
 
 
 async def device_pv_energy_daily(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     startDay: datetime = datetime.today(),
     numDays: int = 1,
@@ -971,7 +971,7 @@ async def device_pv_energy_daily(
 
 
 async def get_device_pv_statistics(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     rangeType: str | None = None,
     startDay: datetime | None = None,
@@ -1028,7 +1028,7 @@ async def get_device_pv_statistics(
 
 
 async def get_device_charge_order_stats(
-    self: AnkerSolixApi,
+    self: "AnkerSolixApi",
     deviceSn: str,
     rangeType: str | None = None,
     startDay: datetime | None = None,
