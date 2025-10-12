@@ -1,12 +1,13 @@
 """Data poller modules to create/update Api cache structure for the Anker Power/Solix Cloud API."""
 
 # flake8: noqa: SLF001
+from __future__ import annotations
 
 from asyncio import sleep
 import contextlib
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
-from .apibase import AnkerSolixBaseApi
 from .apitypes import (
     ApiCategories,
     SolarbankStatus,
@@ -19,9 +20,12 @@ from .apitypes import (
 from .hesapi import AnkerSolixHesApi
 from .powerpanel import AnkerSolixPowerpanelApi
 
+if TYPE_CHECKING:
+    from .api import AnkerSolixApi
+
 
 async def poll_sites(  # noqa: C901
-    api: AnkerSolixBaseApi,
+    api: AnkerSolixApi,
     siteId: str | None = None,
     fromFile: bool = False,
     exclude: set | None = None,
@@ -649,6 +653,7 @@ async def poll_sites(  # noqa: C901
                             api.devices[sn] = api.devices[sn] | (
                                 api.powerpanelApi.devices.get(sn) or {}
                             )
+                            api.notify_device(deviceSn=sn)
                         api._site_devices.add(sn)
                 # Extract actual dynamic price if supported and not excluded
                 if {ApiCategories.site_price} - exclude:
@@ -686,7 +691,7 @@ async def poll_sites(  # noqa: C901
 
 
 async def poll_site_details(
-    api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
+    api: AnkerSolixApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the latest updates for additional account or site related details updated less frequently.
 
@@ -837,7 +842,7 @@ async def poll_site_details(
 
 
 async def poll_device_details(  # noqa: C901
-    api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
+    api: AnkerSolixApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the latest updates for additional device info updated less frequently.
 
@@ -1015,9 +1020,14 @@ async def poll_device_details(  # noqa: C901
                     # It appears that get_device_load always provides the active schedule, which may be a minimalistic format when
                     # SB2 is using Manual mode and sync its settings to SB1
                     # get_device_parm with param for SB1 schedule seems to return always the full SB1 schedule, even if not active
-                    if f"{site_id}_{SolixParmType.SOLARBANK_SCHEDULE.value}" not in queried_sites_parm:
+                    if (
+                        f"{site_id}_{SolixParmType.SOLARBANK_SCHEDULE.value}"
+                        not in queried_sites_parm
+                    ):
                         # add queried site ID and parm to skip same queries for other parallel devices in site
-                        queried_sites_parm.add(f"{site_id}_{SolixParmType.SOLARBANK_SCHEDULE.value}")
+                        queried_sites_parm.add(
+                            f"{site_id}_{SolixParmType.SOLARBANK_SCHEDULE.value}"
+                        )
                         api._logger.debug(
                             "Getting api %s schedule details for device",
                             api.apisession.nickname,
@@ -1037,9 +1047,14 @@ async def poll_device_details(  # noqa: C901
                 else:
                     # Note: get_device_load always seems to return SB1 schedule format, which does not contain useful values for the SB2+
                     # Fetch Solarbank 2+ device parameters once per site
-                    if f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}" not in queried_sites_parm:
+                    if (
+                        f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}"
+                        not in queried_sites_parm
+                    ):
                         # add queried site ID and parm to skip same queries for other parallel devices in site
-                        queried_sites_parm.add(f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}")
+                        queried_sites_parm.add(
+                            f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}"
+                        )
                         # Fetch SB2+ schedule once and add to each SB2+ device in site
                         api._logger.debug(
                             "Getting api %s schedule details for device",
@@ -1083,8 +1098,9 @@ async def poll_device_details(  # noqa: C901
 
         # TODO(#0): Fetch other details of specific device types as known and relevant
 
-        # update entry in devices
+        # update entry in devices and notify registered callbacks
         api.devices.update({sn: device})
+        api.notify_device(deviceSn=sn)
 
     # update account dictionary with number of requests
     api._update_account(
@@ -1100,7 +1116,7 @@ async def poll_device_details(  # noqa: C901
 
 
 async def poll_device_energy(  # noqa: C901
-    api: AnkerSolixBaseApi, fromFile: bool = False, exclude: set | None = None
+    api: AnkerSolixApi, fromFile: bool = False, exclude: set | None = None
 ) -> dict:
     """Get the site energy statistics from today and yesterday.
 

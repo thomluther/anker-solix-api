@@ -6,6 +6,7 @@ import logging
 
 from aiohttp import ClientSession
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
+from api.mqtt_c1000x import SolixMqttDeviceC1000x  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -42,39 +43,39 @@ async def test_all_controls():
         if not mqtt_session:
             CONSOLE.info("Failed to start MQTT session")
             return
-
         # Wait for connection
         await asyncio.sleep(3)
 
+        mqttdevice = SolixMqttDeviceC1000x(api_instance=myapi, device_sn=device_sn)
         CONSOLE.info("\n=== Testing All C1000X Controls ===")
 
         # Test all control methods (using safe settings)
         tests = [
-            ("Display Control", lambda: myapi.set_c1000x_display(device_sn, True)),
+            ("Display Control", lambda: mqttdevice.set_display(enabled=True)),
             (
                 "Display Mode Low",
-                lambda: myapi.set_c1000x_display_mode(device_sn, "low"),
+                lambda: mqttdevice.set_display(mode="low"),
             ),
             (
                 "Display Mode Medium",
-                lambda: myapi.set_c1000x_display_mode(device_sn, "medium"),
+                lambda: mqttdevice.set_display(mode="medium"),
             ),
-            ("Light Mode Off", lambda: myapi.set_c1000x_light_mode(device_sn, "off")),
+            ("Light Mode Off", lambda: mqttdevice.set_light(mode="off")),
             (
                 "Temperature Celsius",
-                lambda: myapi.set_c1000x_temp_unit(device_sn, False),
+                lambda: mqttdevice.set_temp_unit(fahrenheit=False),
             ),
             (
                 "Temperature Fahrenheit",
-                lambda: myapi.set_c1000x_temp_unit(device_sn, True),
+                lambda: mqttdevice.set_temp_unit(fahrenheit=True),
             ),
             (
                 "DC Output Mode Normal",
-                lambda: myapi.set_c1000x_dc_output_mode(device_sn, "normal"),
+                lambda: mqttdevice.set_dc_output(mode="normal"),
             ),
             (
                 "AC Output Mode Smart",
-                lambda: myapi.set_c1000x_ac_output_mode(device_sn, "smart"),
+                lambda: mqttdevice.set_ac_output(mode="smart"),
             ),
         ]
 
@@ -96,7 +97,7 @@ async def test_all_controls():
 
         # Test status retrieval from MQTT data
         CONSOLE.info("\nTesting Status Retrieval...")
-        status = await myapi.get_c1000x_status(device_sn)
+        status = mqttdevice.get_status()
         if status:
             CONSOLE.info("✅ Status retrieval: SUCCESS")
             CONSOLE.info(f"   Battery SOC: {status.get('battery_soc', 'N/A')}%")

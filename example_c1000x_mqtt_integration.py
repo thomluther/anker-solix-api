@@ -6,6 +6,7 @@ import logging
 
 from aiohttp import ClientSession
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
+from api.mqtt_c1000x import SolixMqttDeviceC1000x  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -18,23 +19,23 @@ class C1000XController:
     def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
         """Initialize."""
         self.api = api_instance
+        self.mqttdevice = SolixMqttDeviceC1000x(
+            api_instance=api_instance, device_sn=device_sn
+        )
         self.device_sn = device_sn
         self.last_battery_soc: int | None = None
 
-    async def get_realtime_data(self):
+    def get_realtime_data(self):
         """Get real-time data from MQTT cache."""
-        if self.api.mqttsession and hasattr(self.api.mqttsession, "mqtt_data"):
-            return self.api.mqttsession.mqtt_data.get(self.device_sn, {})
-        return {}
+        return self.mqttdevice.mqttdata
 
     async def monitor_battery_and_control(self):
         """Example: Monitor battery and automatically control outputs."""
-        data = await self.get_realtime_data()
+        data = self.get_realtime_data()
         battery_soc = data.get("battery_soc")
 
         if battery_soc is not None:
             CONSOLE.info(f"Battery SOC: {battery_soc}%")
-
             # Auto-control based on battery level
             if (
                 battery_soc < 20
@@ -43,11 +44,10 @@ class C1000XController:
             ):
                 # Battery dropped below 20% - disable non-essential outputs
                 CONSOLE.info("Battery low - disabling AC output")
-                await self.api.set_c1000x_ac_output(self.device_sn, False)
+                await self.mqttdevice.set_ac_output(enabled=False)
 
                 # Set display to low brightness
-                await self.api.set_c1000x_display_mode(self.device_sn, "low")
-
+                await self.mqttdevice.set_display(mode="low")
             elif (
                 battery_soc > 80
                 and self.last_battery_soc
@@ -55,10 +55,10 @@ class C1000XController:
             ):
                 # Battery above 80% - enable outputs
                 CONSOLE.info("Battery sufficient - enabling AC output")
-                await self.api.set_c1000x_ac_output(self.device_sn, True)
+                await self.mqttdevice.set_ac_output(enabled=True)
 
                 # Set display to high brightness
-                await self.api.set_c1000x_display_mode(self.device_sn, "high")
+                await self.mqttdevice.set_display(mode="high")
 
             self.last_battery_soc = battery_soc
 
@@ -85,17 +85,17 @@ class C1000XController:
         CONSOLE.info("Activating emergency mode...")
 
         # Enable backup charge to maintain 100%
-        await self.api.set_c1000x_backup_charge(self.device_sn, True)
+        await self.mqttdevice.set_backup_charge(enabled=True)
 
         # Set display to always on, high brightness
-        await self.api.set_c1000x_display(self.device_sn, True)
-        await self.api.set_c1000x_display_mode(self.device_sn, "high")
+        await self.mqttdevice.set_display(enabled=True)
+        await self.mqttdevice.set_display(mode="high")
 
         # Enable blinking light for visibility
-        await self.api.set_c1000x_light_mode(self.device_sn, "blinking")
+        await self.mqttdevice.set_light(mode="blinking")
 
         # Ensure AC output is enabled
-        await self.api.set_c1000x_ac_output(self.device_sn, True)
+        await self.mqttdevice.set_ac_output(enabled=True)
 
         CONSOLE.info("Emergency mode activated")
 
@@ -104,17 +104,17 @@ class C1000XController:
         CONSOLE.info("Returning to normal mode...")
 
         # Disable backup charge for normal use
-        await self.api.set_c1000x_backup_charge(self.device_sn, False)
+        await self.mqttdevice.set_backup_charge(enabled=False)
 
         # Set display to medium brightness
-        await self.api.set_c1000x_display_mode(self.device_sn, "medium")
+        await self.mqttdevice.set_display(mode="medium")
 
         # Turn off light
-        await self.api.set_c1000x_light_mode(self.device_sn, "off")
+        await self.mqttdevice.set_light(mode="off")
 
         # Enable smart modes for efficiency
-        await self.api.set_c1000x_ac_output_mode(self.device_sn, "smart")
-        await self.api.set_c1000x_dc_output_mode(self.device_sn, "smart")
+        await self.mqttdevice.set_ac_output(mode="smart")
+        await self.mqttdevice.set_dc_output(mode="smart")
 
         CONSOLE.info("Normal mode activated")
 
@@ -166,19 +166,17 @@ async def main():
         modes = ["low", "medium", "high"]
         for mode in modes:
             CONSOLE.info(f"Setting display to {mode}")
-            await myapi.set_c1000x_display_mode(device_sn, mode)
+            await controller.mqttdevice.set_display(mode=mode)
             await asyncio.sleep(1)
 
         # Example 3: Monitor data for a short period
         CONSOLE.info("\n3. Monitoring device for 30 seconds...")
 
         # Enable real-time data trigger if needed
-        try:
-            device_dict = {"device_sn": device_sn, "device_pn": "A1761"}
-            mqtt_session.realtime_trigger(device_dict, timeout=300)
+        if controller.mqttdevice.realtime_trigger(timeout=300):
             CONSOLE.info("Real-time data trigger sent")
-        except Exception as e:  # pylint: disable=broad-exception-caught  # noqa: BLE001
-            CONSOLE.info(f"Could not trigger real-time data: {e}")
+        else:
+            CONSOLE.info("Could not trigger real-time data")
 
         # Monitor for a short period
         for i in range(6):  # 30 seconds

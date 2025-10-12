@@ -23,6 +23,7 @@ from .mqtt import AnkerSolixMqttSession, MessageCallback
 from .session import AnkerSolixClientSession
 
 MqttUpdateCallback = Callable[[Any, Any], None]
+DeviceCacheCallback = Callable[[dict], None]
 
 
 class AnkerSolixBaseApi:
@@ -62,9 +63,10 @@ class AnkerSolixBaseApi:
         # track active devices bound to any site
         self._site_devices: set = set()
         # reset class variables for saving the most recent account, site and device data (Api cache)
-        self.account: dict = {}
-        self.sites: dict = {}
-        self.devices: dict = {}
+        self.account: dict[str, dict] = {}
+        self.sites: dict[str, dict] = {}
+        self.devices: dict[str, dict] = {}
+        self._device_callbacks: dict[str, set] = {}
 
     def testDir(self, subfolder: str | None = None) -> str:
         """Get or set the subfolder for local API test files in the api session."""
@@ -73,6 +75,12 @@ class AnkerSolixBaseApi:
     def endpointLimit(self, limit: int | None = None) -> int:
         """Get or set the api request limit per endpoint per minute."""
         return self.apisession.endpointLimit(limit)
+
+    def logger(self, logger: logging.Logger | None = None) -> logging.Logger:
+        """Get or set the logger for API client."""
+        if logger:
+            self._logger = logger
+        return self._logger
 
     def logLevel(self, level: int | None = None) -> int:
         """Get or set the logger log level."""
@@ -102,9 +110,16 @@ class AnkerSolixBaseApi:
 
     def clearCaches(self) -> None:
         """Clear the api cache dictionaries."""
+        # check callbacks and notify registered devices about removal from cache
+        for callbacks in self._device_callbacks.values():
+            for func in callbacks:
+                if callable(func):
+                    func(device=None)
+        self._device_callbacks = {}
         self.sites = {}
         self.devices = {}
         self.account = {}
+
 
     def customizeCacheId(self, id: str, key: str, value: Any) -> None:
         """Customize a cache identifier with a key and value pair."""
@@ -207,6 +222,10 @@ class AnkerSolixBaseApi:
         ]
         for dev in rem_devices:
             self.devices.pop(dev, None)
+            # check callbacks and notify registered devices about removal from cache
+            for func in self._device_callbacks.pop(dev, set()):
+                if callable(func):
+                    func(device={})
 
     def recycleSites(self, activeSites: set | None = None) -> None:
         """Recycle api site cache and remove sites no longer active according provided activeSites."""
@@ -214,6 +233,22 @@ class AnkerSolixBaseApi:
             rem_sites = [site for site in self.sites if site not in activeSites]
             for site in rem_sites:
                 self.sites.pop(site, None)
+
+    def register_device_callback(
+        self, deviceSn: str, func: DeviceCacheCallback
+    ) -> None:
+        """Register a device callback function to notify about Api cache object changes."""
+        # register callback if callable
+        if callable(func):
+            self._device_callbacks[deviceSn] = (
+                self._device_callbacks.get(deviceSn) or set()
+            ).add(func)
+
+    def notify_device(self, deviceSn: str) -> None:
+        """Notify all callbacks that are registered for a device."""
+        for func in self._device_callbacks.get(deviceSn, set()):
+            if callable(func):
+                func(device=self.devices.get(deviceSn,{}))
 
     async def startMqttSession(
         self, message_callback: MessageCallback | None = None
@@ -593,6 +628,9 @@ class AnkerSolixBaseApi:
                     device["mqtt_data"] = device_mqtt
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
+                    # notify registered devices if new mqtt data cache was generated
+                    if oldsize == 0:
+                        self.notify_device(deviceSn=sn)
             # update MQTT statistic in account cache
             self._update_account(
                 {"mqtt_statistic": self.mqttsession.mqtt_stats.asdict()}
@@ -719,7 +757,7 @@ class AnkerSolixBaseApi:
 
         # update account dictionary with number of requests
         self._update_account({"use_files": fromFile})
-        return self.devices
+        return self.sites
 
     async def update_device_details(
         self, fromFile: bool = False, exclude: set | None = None

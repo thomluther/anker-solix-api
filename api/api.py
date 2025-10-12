@@ -60,18 +60,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         home_load_chart,
         refresh_pv_forecast,
     )
-    from .mqtt_c1000x import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
-        get_c1000x_status,
-        set_c1000x_ac_output,
-        set_c1000x_ac_output_mode,
-        set_c1000x_backup_charge,
-        set_c1000x_dc_output,
-        set_c1000x_dc_output_mode,
-        set_c1000x_display,
-        set_c1000x_display_mode,
-        set_c1000x_light_mode,
-        set_c1000x_temp_unit,
-    )
     from .schedule import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
         get_device_load,
         get_device_parm,

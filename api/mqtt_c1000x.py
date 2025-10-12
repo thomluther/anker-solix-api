@@ -13,637 +13,574 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
 
-
-def validate_command_value(command_id: str, value: Any) -> bool:
-    """Validate command value ranges for C1000X controls."""
-    validation_rules = {
-        "ac_output_control": lambda v: v in [0, 1],
-        "dc_12v_output_control": lambda v: v in [0, 1],
-        "display_control": lambda v: v in [0, 1],
-        "backup_charge_control": lambda v: v in [0, 1],
-        "temp_unit_control": lambda v: v in [0, 1],
-        "display_mode_select": lambda v: v in [0, 1, 2, 3],
-        "light_mode_select": lambda v: v in [0, 1, 2, 3, 4],
-        "dc_output_mode_select": lambda v: v in [1, 2],
-        "ac_output_mode_select": lambda v: v in [1, 2],
-    }
-    rule = validation_rules.get(command_id)
-    return rule(value) if rule else True
+# Define supported Models for this class
+MODELS = ["A1761"]
 
 
-async def _send_c1000x_mqtt_command(
-    self: AnkerSolixApi,
-    device_sn: str,
-    command: str,
-    parameters: dict,
-    description: str,
-) -> bool:
-    """Send MQTT command to C1000X device.
+class SolixMqttDeviceC1000x:
+    """Define the class to handle an Anker Solix MQTT device for controls."""
 
-    Args:
-        self: The API instance
-        device_sn: Device serial number
-        command: Command name for get_command_data
-        parameters: Command parameters
-        description: Human-readable description for logging
+    def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
+        """Initialize."""
+        self.api: AnkerSolixApi = api_instance
+        self.sn: str = device_sn
+        self.pn: str = ""
+        self.device: dict = {}
+        self.mqttdata: dict = {}
+        self.testdir: str = self.api.testDir()
+        self._logger = api_instance.logger()
+        self._filedata: dict = {}
+        # initialize device data
+        self.update_device(device=self.api.devices.get(self.sn))
+        # register callback for Api
+        self.api.register_device_callback(deviceSn=self.sn, func=self.update_device)
 
-    Returns:
-        bool: True if command was sent successfully, False otherwise
-    """
-    try:
-        # Ensure MQTT session is started
-        if not self.mqttsession:
-            if not await self.startMqttSession():
-                self._logger.error("Failed to start MQTT session for C1000X control")
+    def update_device(self, device: dict) -> None:
+        """Define callback for Api device updates."""
+        if isinstance(device, dict) and device.get("device_sn") == self.sn:
+            # Validate device type
+            if (pn := device.get("device_pn")) in MODELS:
+                self.pn = pn
+                self.device = device
+                self.mqttdata = device.get("mqtt_data", {})
+            else:
+                self._logger.error(
+                    "Device %s %s is not in supported models %s for MQTT control",
+                    self.pn,
+                    self.sn,
+                    MODELS,
+                )
+                self.pn = ""
+                self.device = {}
+                self.mqttdata = {}
+
+    def validate_command_value(self, command_id: str, value: Any) -> bool:
+        """Validate command value ranges for C1000X controls."""
+        validation_rules = {
+            "realtime_trigger": lambda v: 30 <= v <= 600,
+            "ac_output_control": lambda v: v in [0, 1],
+            "dc_12v_output_control": lambda v: v in [0, 1],
+            "display_control": lambda v: v in [0, 1],
+            "backup_charge_control": lambda v: v in [0, 1],
+            "temp_unit_control": lambda v: v in [0, 1],
+            "display_mode_select": lambda v: v in [0, 1, 2, 3],
+            "light_mode_select": lambda v: v in [0, 1, 2, 3, 4],
+            "dc_output_mode_select": lambda v: v in [1, 2],
+            "ac_output_mode_select": lambda v: v in [1, 2],
+        }
+        rule = validation_rules.get(command_id)
+        return rule(value) if rule else True
+
+    async def _send_mqtt_command(
+        self,
+        command: str,
+        parameters: dict,
+        description: str,
+    ) -> bool:
+        """Send MQTT command to C1000X device.
+
+        Args:
+            self: The API instance
+            device_sn: Device serial number
+            command: Command name for get_command_data
+            parameters: Command parameters
+            description: Human-readable description for logging
+
+        Returns:
+            bool: True if command was sent successfully, False otherwise
+        """
+        try:
+            # Ensure MQTT session is started
+            if not self.api.mqttsession:
+                if not await self.api.startMqttSession():
+                    self._logger.error(
+                        "Failed to start MQTT session for device control"
+                    )
+                    return False
+            # Generate command hex data
+            if not (
+                hex_data := self.api.mqttsession.get_command_data(command, parameters)
+            ):
+                self._logger.error(
+                    "Failed to generate MQTT command data for %s", command
+                )
                 return False
-        # Get device info for MQTT publish
-        if not (device := self.devices.get(device_sn)):
-            self._logger.error("Device %s not found for MQTT command", device_sn)
-            return False
-        # Generate command hex data
-        if not (hex_data := self.mqttsession.get_command_data(command, parameters)):
-            self._logger.error("Failed to generate MQTT command data for %s", command)
-            return False
-        # Publish MQTT command
-        _, mqtt_info = self.mqttsession.publish(device, hex_data)
-        # Wait for publish completion with timeout
-        with contextlib.suppress(ValueError, RuntimeError):
-            mqtt_info.wait_for_publish(timeout=5)
-        if not mqtt_info.is_published():
+            # Publish MQTT command
+            _, mqtt_info = self.api.mqttsession.publish(self.device, hex_data)
+            # Wait for publish completion with timeout
+            with contextlib.suppress(ValueError, RuntimeError):
+                mqtt_info.wait_for_publish(timeout=5)
+            if not mqtt_info.is_published():
+                self._logger.error(
+                    "Failed to publish MQTT command for device %s %s %s",
+                    self.pn,
+                    self.sn,
+                    description,
+                )
+                return False
+        except Exception as e:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             self._logger.error(
-                "Failed to publish MQTT command for C1000X %s %s",
-                device_sn,
-                description,
+                "Error sending MQTT command to device %s %s: %s", self.pn, self.sn, e
             )
             return False
-    except Exception as e:  # pylint: disable=broad-exception-caught  # noqa: BLE001
-        self._logger.error("Error sending MQTT command to C1000X %s: %s", device_sn, e)
-        return False
-    else:
-        self._logger.info("C1000X %s %s", device_sn, description)
+        else:
+            self._logger.info("Device %s %s %s", self.pn, self.sn, description)
+            return True
+
+    def realtime_trigger(self, timeout: int = 60) -> bool:
+        """Trigger device realtime data publish.
+
+        Args:
+            timeout: Seconds for realtime publish to stop
+
+        Returns:
+            bool: True if message was published, false otherwise
+
+        Example:
+            await mydevice.realtime_trigger(timeout=300)
+        """
+        # Validate command value
+        if not self.validate_command_value("realtime_trigger", timeout):
+            self._logger.error(
+                "Device %s %s control error - Invalid realtime trigger timeout: %s",
+                self.pn,
+                self.sn,
+                timeout,
+            )
+            return False
+        # Validate MQTT connection prior trigger
+        if not (self.api.mqttsession and self.api.mqttsession.client.is_connected()):
+            self._logger.error(
+                "Device %s %s control error - No MQTT connection active",
+                self.pn,
+                self.sn,
+            )
+            return False
+        msginfo = self.api.mqttsession.realtime_trigger(self.device, timeout=timeout)
+        with contextlib.suppress(ValueError, RuntimeError):
+            msginfo.wait_for_publish(timeout=2)
+        if not msginfo.is_published():
+            self._logger.error(
+                "Error sending MQTT realtime trigger to device %s %s", self.pn, self.sn
+            )
+            return False
         return True
 
+    async def set_ac_output(
+        self,
+        enabled: bool | None = None,
+        mode: int | str | None = None,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Control C1000X AC output power via MQTT.
 
-async def set_c1000x_ac_output(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    enabled: bool,
-    toFile: bool = False,
-) -> bool | dict:
-    """Control C1000X AC output power via MQTT.
+        Args:
+            enabled: True to enable AC output, False to disable
+            mode: AC output mode - 1=Normal, 2=Smart
+                Can also be string: "normal", "smart"
+            toFile: If True, return mock response (for testing compatibility)
 
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        enabled: True to enable AC output, False to disable
-        toFile: If True, return mock response (for testing compatibility)
+        Returns:
+            dict: Mock response if successful, False otherwise
 
-    Returns:
-        dict: Mock response if successful, False otherwise
-
-    Example:
-        await api.set_c1000x_ac_output("DEVICE_SN", True)
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return False
-
-    # Validate command value
-    value = 1 if enabled else 0
-    if not validate_command_value("ac_output_control", value):
-        self._logger.error("Invalid AC output value: %s", value)
-        return False
-
-    # Handle test mode
-    if toFile:
-        return {"switch_ac_output_power": value}
-
-    # Send MQTT command
-    success = await _send_c1000x_mqtt_command(
-        device_sn=deviceSn,
-        command="c1000x_ac_output",
-        parameters={"enabled": enabled},
-        description=f"AC output {'enabled' if enabled else 'disabled'}",
-    )
-
-    if success:
-        # Return mock response for compatibility with existing code
-        return {"switch_ac_output_power": value}
-    return False
-
-
-async def set_c1000x_dc_output(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    enabled: bool,
-    toFile: bool = False,
-) -> bool | dict:
-    """Control C1000X 12V DC output power via MQTT.
-
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        enabled: True to enable 12V DC output, False to disable
-        toFile: If True, return mock response (for testing compatibility)
-
-    Returns:
-        dict: Mock response if successful, False otherwise
-
-    Example:
-        await api.set_c1000x_dc_output("DEVICE_SN", True)
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return False
-
-    # Validate command value
-    value = 1 if enabled else 0
-    if not validate_command_value("dc_12v_output_control", value):
-        self._logger.error("Invalid 12V DC output value: %s", value)
-        return False
-
-    # Handle test mode
-    if toFile:
-        return {"switch_12v_dc_output_power": value}
-
-    # Send MQTT command
-    success = await _send_c1000x_mqtt_command(
-        device_sn=deviceSn,
-        command="c1000x_dc_output",
-        parameters={"enabled": enabled},
-        description=f"12V DC output {'enabled' if enabled else 'disabled'}",
-    )
-
-    if success:
-        # Return mock response for compatibility with existing code
-        return {"switch_12v_dc_output_power": value}
-    return False
-
-
-async def set_c1000x_display(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    enabled: bool,
-    toFile: bool = False,
-) -> bool | dict:
-    """Control C1000X display on/off via MQTT.
-
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        enabled: True to turn display on, False to turn off
-        toFile: If True, return mock response (for testing compatibility)
-
-    Returns:
-        dict: Mock response if successful, False otherwise
-
-    Example:
-        await api.set_c1000x_display("DEVICE_SN", True)
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return False
-
-    # Validate command value
-    value = 1 if enabled else 0
-    if not validate_command_value("display_control", value):
-        self._logger.error("Invalid display value: %s", value)
-        return False
-
-    # Handle test mode
-    if toFile:
-        return {"switch_display": value}
-
-    # Send MQTT command
-    success = await _send_c1000x_mqtt_command(
-        device_sn=deviceSn,
-        command="c1000x_display",
-        parameters={"enabled": enabled},
-        description=f"display {'enabled' if enabled else 'disabled'}",
-    )
-
-    if success:
-        return {"switch_display": value}
-    return False
-
-
-async def set_c1000x_backup_charge(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    enabled: bool,
-    toFile: bool = False,
-) -> bool | dict:
-    """Control C1000X backup charge mode via MQTT.
-
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        enabled: True to enable backup charge mode, False to disable
-        toFile: If True, return mock response (for testing compatibility)
-
-    Returns:
-        dict: Mock response if successful, False otherwise
-
-    Example:
-        await api.set_c1000x_backup_charge("DEVICE_SN", True)
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return False
-
-    # Validate command value
-    value = 1 if enabled else 0
-    if not validate_command_value("backup_charge_control", value):
-        self._logger.error("Invalid backup charge value: %s", value)
-        return False
-
-    # Handle test mode
-    if toFile:
-        return {"backup_charge": value}
-
-    # Send MQTT command
-    success = await _send_c1000x_mqtt_command(
-        device_sn=deviceSn,
-        command="c1000x_backup_charge",
-        parameters={"enabled": enabled},
-        description=f"backup charge mode {'enabled' if enabled else 'disabled'}",
-    )
-
-    if success:
-        return {"backup_charge": value}
-    return False
-
-
-async def set_c1000x_temp_unit(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    fahrenheit: bool,
-    toFile: bool = False,
-) -> bool | dict:
-    """Set C1000X temperature unit via MQTT.
-
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        fahrenheit: True for Fahrenheit, False for Celsius
-        toFile: If True, return mock response (for testing compatibility)
-
-    Returns:
-        dict: Mock response if successful, False otherwise
-
-    Example:
-        await api.set_c1000x_temp_unit("DEVICE_SN", False)  # Celsius
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return False
-
-    # Validate command value
-    value = 1 if fahrenheit else 0
-    if not validate_command_value("temp_unit_control", value):
-        self._logger.error("Invalid temperature unit value: %s", value)
-        return False
-
-    # Handle test mode
-    if toFile:
-        return {"temp_unit_fahrenheit": value}
-
-    # Send MQTT command
-    success = await _send_c1000x_mqtt_command(
-        device_sn=deviceSn,
-        command="c1000x_temp_unit",
-        parameters={"fahrenheit": fahrenheit},
-        description=f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
-    )
-
-    if success:
-        return {"temp_unit_fahrenheit": value}
-    return False
-
-
-async def set_c1000x_display_mode(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    mode: int | str,
-    toFile: bool = False,
-) -> bool | dict:
-    """Set C1000X display brightness mode via MQTT.
-
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        mode: Display mode - 0=Off, 1=Low, 2=Medium, 3=High
-              Can also be string: "off", "low", "medium", "high"
-        toFile: If True, return mock response (for testing compatibility)
-
-    Returns:
-        dict: Mock response if successful, False otherwise
-
-    Example:
-        await api.set_c1000x_display_mode("DEVICE_SN", 2)  # Medium
-        await api.set_c1000x_display_mode("DEVICE_SN", "high")
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return False
-
-    # Convert string mode to int
-    mode_map = {"off": 0, "low": 1, "medium": 2, "high": 3}
-    original_mode = mode
-    if isinstance(mode, str):
-        mode = mode_map.get(mode.lower())
-        if mode is None:
-            self._logger.error("Invalid display mode string: %s", original_mode)
+        Example:
+            await mydevice.set_ac_output(enabled=True)
+            await mydevice.set_ac_output(mode=1)  # Normal
+            await mydevice.set_ac_output(mode="smart")
+        """
+        # response
+        resp = {}
+        # Validate command value
+        enabled = 1 if enabled else 0 if enabled is not None else None
+        if enabled is not None and not self.validate_command_value(
+            "ac_output_control", enabled
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid AC output enabled value: %s",
+                self.pn,
+                self.sn,
+                enabled,
+            )
             return False
-
-    # Validate command value
-    if not validate_command_value("display_mode_select", mode):
-        self._logger.error("Invalid display mode value: %s", mode)
-        return False
-
-    # Handle test mode
-    if toFile:
-        return {"display_mode": mode}
-
-    # Send MQTT command
-    success = await _send_c1000x_mqtt_command(
-        device_sn=deviceSn,
-        command="c1000x_display_mode",
-        parameters={"mode": mode},
-        description=f"display mode set to {original_mode if isinstance(original_mode, str) else mode}",
-    )
-
-    if success:
-        return {"display_mode": mode}
-    return False
-
-
-async def set_c1000x_light_mode(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    mode: int | str,
-    toFile: bool = False,
-) -> bool | dict:
-    """Set C1000X light mode via MQTT.
-
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        mode: Light mode - 0=Off, 1=Low, 2=Medium, 3=High, 4=Blinking
-              Can also be string: "off", "low", "medium", "high", "blinking"
-        toFile: If True, return mock response (for testing compatibility)
-
-    Returns:
-        dict: Mock response if successful, False otherwise
-
-    Example:
-        await api.set_c1000x_light_mode("DEVICE_SN", 3)  # High
-        await api.set_c1000x_light_mode("DEVICE_SN", "blinking")
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return False
-
-    # Convert string mode to int
-    mode_map = {"off": 0, "low": 1, "medium": 2, "high": 3, "blinking": 4}
-    original_mode = mode
-    if isinstance(mode, str):
-        mode = mode_map.get(mode.lower())
-        if mode is None:
-            self._logger.error("Invalid light mode string: %s", original_mode)
+        # Convert string mode to int
+        mode_map = {"normal": 1, "smart": 2}
+        original_mode = mode
+        if isinstance(mode, str):
+            if (mode := mode_map.get(mode.lower())) is None:
+                self._logger.error(
+                    "Device %s %s control error - Invalid AC output mode string: %s",
+                    self.pn,
+                    self.sn,
+                    original_mode,
+                )
+                return False
+        if mode is not None and not self.validate_command_value(
+            "ac_output_mode_select", mode
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid AC output mode value: %s",
+                self.pn,
+                self.sn,
+                mode,
+            )
             return False
+        # Send MQTT commands
+        if enabled is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_ac_output",
+                parameters={"enabled": enabled},
+                description=f"AC output {'enabled' if enabled else 'disabled'}",
+            ):
+                resp["switch_ac_output_power"] = enabled
+                if toFile:
+                    self._filedata["switch_ac_output_power"] = enabled
+        if mode is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_ac_output_mode",
+                parameters={"mode": mode},
+                description=f"AC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
+            ):
+                resp["ac_output_mode"] = mode
+                if toFile:
+                    self._filedata["ac_output_mode"] = mode
+        return resp or False
 
-    # Validate command value
-    if not validate_command_value("light_mode_select", mode):
-        self._logger.error("Invalid light mode value: %s", mode)
-        return False
+    async def set_dc_output(
+        self,
+        enabled: bool | None = None,
+        mode: int | str | None = None,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Control C1000X 12V DC output power via MQTT.
 
-    # Handle test mode
-    if toFile:
-        return {"light_mode": mode}
+        Args:
+            enabled: True to enable 12V DC output, False to disable
+            mode: DC output mode - 1=Normal, 2=Smart
+                Can also be string: "normal", "smart"
+            toFile: If True, return mock response (for testing compatibility)
 
-    # Send MQTT command
-    success = await _send_c1000x_mqtt_command(
-        device_sn=deviceSn,
-        command="c1000x_light_mode",
-        parameters={"mode": mode},
-        description=f"light mode set to {original_mode if isinstance(original_mode, str) else mode}",
-    )
+        Returns:
+            dict: Mock response if successful, False otherwise
 
-    if success:
-        return {"light_mode": mode}
-    return False
-
-
-async def set_c1000x_dc_output_mode(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    mode: int | str,
-    toFile: bool = False,
-) -> bool | dict:
-    """Set C1000X 12V DC output mode via MQTT.
-
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        mode: DC output mode - 1=Normal, 2=Smart
-              Can also be string: "normal", "smart"
-        toFile: If True, return mock response (for testing compatibility)
-
-    Returns:
-        dict: Mock response if successful, False otherwise
-
-    Example:
-        await api.set_c1000x_dc_output_mode("DEVICE_SN", 2)  # Smart
-        await api.set_c1000x_dc_output_mode("DEVICE_SN", "normal")
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return False
-
-    # Convert string mode to int
-    mode_map = {"normal": 1, "smart": 2}
-    original_mode = mode
-    if isinstance(mode, str):
-        mode = mode_map.get(mode.lower())
-        if mode is None:
-            self._logger.error("Invalid DC output mode string: %s", original_mode)
+        Example:
+            await mydevice.set_dc_output(enabled=True)
+            await mydevice.set_dc_output(mode=2)  # Smart
+            await mydevice.set_dc_output(mode="normal")
+        """
+        # response
+        resp = {}
+        # Validate command value
+        enabled = 1 if enabled else 0 if enabled is not None else None
+        if enabled is not None and not self.validate_command_value(
+            "dc_12v_output_control", enabled
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid DC output enabled value: %s",
+                self.pn,
+                self.sn,
+                enabled,
+            )
             return False
-
-    # Validate command value
-    if not validate_command_value("dc_output_mode_select", mode):
-        self._logger.error("Invalid DC output mode value: %s", mode)
-        return False
-
-    # Handle test mode
-    if toFile:
-        return {"12v_dc_output_mode": mode}
-
-    # Send MQTT command
-    success = await _send_c1000x_mqtt_command(
-        device_sn=deviceSn,
-        command="c1000x_dc_output_mode",
-        parameters={"mode": mode},
-        description=f"12V DC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
-    )
-
-    if success:
-        return {"12v_dc_output_mode": mode}
-    return False
-
-
-async def set_c1000x_ac_output_mode(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    mode: int | str,
-    toFile: bool = False,
-) -> bool | dict:
-    """Set C1000X AC output mode via MQTT.
-
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        mode: AC output mode - 1=Normal, 2=Smart
-              Can also be string: "normal", "smart"
-        toFile: If True, return mock response (for testing compatibility)
-
-    Returns:
-        dict: Mock response if successful, False otherwise
-
-    Example:
-        await api.set_c1000x_ac_output_mode("DEVICE_SN", 1)  # Normal
-        await api.set_c1000x_ac_output_mode("DEVICE_SN", "smart")
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return False
-
-    # Convert string mode to int
-    mode_map = {"normal": 1, "smart": 2}
-    original_mode = mode
-    if isinstance(mode, str):
-        mode = mode_map.get(mode.lower())
-        if mode is None:
-            self._logger.error("Invalid AC output mode string: %s", original_mode)
+        # Convert string mode to int
+        mode_map = {"normal": 1, "smart": 2}
+        original_mode = mode
+        if isinstance(mode, str):
+            if (mode := mode_map.get(mode.lower())) is None:
+                self._logger.error(
+                    "Device %s %s control error - Invalid DC output mode string: %s",
+                    self.pn,
+                    self.sn,
+                    original_mode,
+                )
+                return False
+        if mode is not None and not self.validate_command_value(
+            "dc_output_mode_select", mode
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid DC output mode value: %s",
+                self.pn,
+                self.sn,
+                mode,
+            )
             return False
+        # Send MQTT commands
+        if enabled is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_dc_output",
+                parameters={"enabled": enabled},
+                description=f"12V DC output {'enabled' if enabled else 'disabled'}",
+            ):
+                resp["switch_12v_dc_output_power"] = enabled
+                if toFile:
+                    self._filedata["switch_12v_dc_output_power"] = enabled
+        if mode is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_dc_output_mode",
+                parameters={"mode": mode},
+                description=f"12V DC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
+            ):
+                resp["12v_dc_output_mode"] = mode
+                if toFile:
+                    self._filedata["12v_dc_output_mode"] = mode
+        return resp or False
 
-    # Validate command value
-    if not validate_command_value("ac_output_mode_select", mode):
-        self._logger.error("Invalid AC output mode value: %s", mode)
-        return False
+    async def set_display(
+        self,
+        enabled: bool | None = None,
+        mode: int | str | None = None,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Control C1000X display settings via MQTT.
 
-    # Handle test mode
-    if toFile:
-        return {"ac_output_mode": mode}
+        Args:
+            enabled: True to turn display on, False to turn off
+            mode: Display mode - 0=Off, 1=Low, 2=Medium, 3=High
+                Can also be string: "off", "low", "medium", "high"
+            toFile: If True, return mock response (for testing compatibility)
 
-    # Send MQTT command
-    success = await _send_c1000x_mqtt_command(
-        device_sn=deviceSn,
-        command="c1000x_ac_output_mode",
-        parameters={"mode": mode},
-        description=f"AC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
-    )
+        Returns:
+            dict: Mock response if successful, False otherwise
 
-    if success:
-        return {"ac_output_mode": mode}
-    return False
+        Example:
+            await mydevice.set_display(enabled=True)
+            await mydevice.set_display(mode=2)  # Medium
+            await mydevice.set_display(mode="high")
+        """
+        # response
+        resp = {}
+        # Validate command value
+        enabled = 1 if enabled else 0 if enabled is not None else None
+        if enabled is not None and not self.validate_command_value(
+            "display_control", enabled
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid display enabled value: %s",
+                self.pn,
+                self.sn,
+                enabled,
+            )
+            return False
+        # Convert string mode to int
+        mode_map = {"off": 0, "low": 1, "medium": 2, "high": 3}
+        original_mode = mode
+        if isinstance(mode, str):
+            if (mode := mode_map.get(mode.lower())) is None:
+                self._logger.error(
+                    "Device %s %s control error - Invalid display mode string: %s",
+                    self.pn,
+                    self.sn,
+                    original_mode,
+                )
+                return False
+        if mode is not None and not self.validate_command_value(
+            "display_mode_select", mode
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid display mode value: %s",
+                self.pn,
+                self.sn,
+                mode,
+            )
+            return False
+        # Send MQTT commands
+        if enabled is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_display",
+                parameters={"enabled": enabled},
+                description=f"display {'enabled' if enabled else 'disabled'}",
+            ):
+                resp["switch_display"] = enabled
+                if toFile:
+                    self._filedata["switch_display"] = enabled
+        if mode is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_display_mode",
+                parameters={"mode": mode},
+                description=f"display mode set to {original_mode if isinstance(original_mode, str) else mode}",
+            ):
+                resp["display_mode"] = mode
+                if toFile:
+                    self._filedata["display_mode"] = mode
+        return resp or False
 
+    async def set_backup_charge(
+        self,
+        enabled: bool,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Control C1000X backup charge mode via MQTT.
 
-async def get_c1000x_status(
-    self: AnkerSolixApi,
-    deviceSn: str,
-    fromFile: bool = False,
-) -> dict:
-    """Get comprehensive C1000X device status via MQTT data.
+        Args:
+            enabled: True to enable backup charge mode, False to disable
+            toFile: If True, return mock response (for testing compatibility)
 
-    Args:
-        self: The API instance
-        deviceSn: Device serial number
-        fromFile: If True, read from test file instead of using MQTT data
+        Returns:
+            dict: Mock response if successful, False otherwise
 
-    Returns:
-        dict: Device status including all switch states, modes, and settings
-              Uses MQTT data cache for real-time values
+        Example:
+            await mydevice.set_backup_charge(enabled=True)
+        """
+        # response
+        resp = {}
+        # Validate command value
+        enabled = 1 if enabled else 0 if enabled is not None else None
+        if enabled is not None and not self.validate_command_value(
+            "backup_charge_control", enabled
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid backup charge enabled value: %s",
+                self.pn,
+                self.sn,
+                enabled,
+            )
+            return False
+        # Send MQTT commands
+        if enabled is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_backup_charge",
+                parameters={"enabled": enabled},
+                description=f"backup charge mode {'enabled' if enabled else 'disabled'}",
+            ):
+                resp["backup_charge"] = enabled
+                if toFile:
+                    self._filedata["backup_charge"] = enabled
+        return resp or False
 
-    Example:
-        status = await api.get_c1000x_status("DEVICE_SN")
-        print(f"AC Output: {status.get('switch_ac_output_power')}")
-        print(f"Battery SOC: {status.get('battery_soc')}%")
-    """
-    # Validate device
-    device = self.devices.get(deviceSn)
-    if not device or device.get("device_pn") != "A1761":
-        self._logger.error("Device %s is not a C1000X (A1761) or not found", deviceSn)
-        return {}
+    async def set_temp_unit(
+        self,
+        fahrenheit: bool,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Set C1000X temperature unit via MQTT.
 
-    # Handle test mode
-    if fromFile:
-        # Return a mock status for testing
-        return {
-            "switch_ac_output_power": 1,
-            "switch_12v_dc_output_power": 1,
-            "switch_display": 1,
-            "backup_charge": 0,
-            "temp_unit_fahrenheit": 0,
-            "display_mode": 2,
-            "light_mode": 0,
-            "12v_dc_output_mode": 1,
-            "ac_output_mode": 1,
-            "battery_soc": 85,
-            "temperature": 25,
-            "max_load": 1000,
-            "device_timeout_minutes": 60,
-            "display_timeout_seconds": 60,
-        }
+        Args:
+            fahrenheit: True for Fahrenheit, False for Celsius
+            toFile: If True, return mock response (for testing compatibility)
 
-    # For C1000X, use MQTT data cache instead of cloud API
-    if self.mqttsession and hasattr(self.mqttsession, "mqtt_data"):
-        mqtt_data = self.mqttsession.mqtt_data.get(deviceSn, {})
-        if mqtt_data:
-            self._logger.info("C1000X %s status retrieved from MQTT data", deviceSn)
-            # Return only the fields we have MQTT mappings for
-            status = {}
-            mqtt_fields = [
-                "battery_soc",
-                "temperature",
-                "battery_soh",
-                "ac_output_power",
-                "dc_input_power",
-                "grid_to_battery_power",
-                "usbc_1_power",
-                "usbc_2_power",
-                "usba_1_power",
-                "usba_2_power",
-                "exp_1_soc",
-                "exp_1_soh",
-                "exp_1_temperature",
-                "sw_version",
-                "hw_version",
-                "device_sn",
-            ]
-            for field in mqtt_fields:
-                if field in mqtt_data:
-                    status[field] = mqtt_data[field]
-            return status
+        Returns:
+            dict: Mock response if successful, False otherwise
 
-    # Fallback: If no MQTT data available, return empty dict
-    self._logger.warning("No MQTT data available for C1000X %s status", deviceSn)
-    return {}
+        Example:
+            await mydevice.set_temp_unit(fahrenheit=False)  # Celsius
+        """
+        # response
+        resp = {}
+        # Validate command value
+        fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
+        if fahrenheit is not None and not self.validate_command_value(
+            "backup_charge_control", fahrenheit
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",
+                self.pn,
+                self.sn,
+                fahrenheit,
+            )
+            return False
+        # Send MQTT commands
+        if fahrenheit is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_temp_unit",
+                parameters={"fahrenheit": fahrenheit},
+                description=f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
+            ):
+                resp["temp_unit_fahrenheit"] = fahrenheit
+                if toFile:
+                    self._filedata["temp_unit_fahrenheit"] = fahrenheit
+        return resp or False
+
+    async def set_light(
+        self,
+        mode: int | str,
+        toFile: bool = False,
+    ) -> bool | dict:
+        """Set C1000X light mode via MQTT.
+
+        Args:
+            mode: Light mode - 0=Off, 1=Low, 2=Medium, 3=High, 4=Blinking
+                Can also be string: "off", "low", "medium", "high", "blinking"
+            toFile: If True, return mock response (for testing compatibility)
+
+        Returns:
+            dict: Mock response if successful, False otherwise
+
+        Example:
+            await mydevice.set_light_mode(mode=3)  # High
+            await mydevice.set_light_mode(mode="blinking")
+        """
+        # response
+        resp = {}
+        # Convert string mode to int
+        mode_map = {"off": 0, "low": 1, "medium": 2, "high": 3, "blinking": 4}
+        original_mode = mode
+        # Validate command value
+        if isinstance(mode, str):
+            if (mode := mode_map.get(mode.lower())) is None:
+                self._logger.error(
+                    "Device %s %s control error - Invalid light mode string: %s",
+                    self.pn,
+                    self.sn,
+                    original_mode,
+                )
+                return False
+        if mode is not None and not self.validate_command_value(
+            "light_mode_select", mode
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid light mode value: %s",
+                self.pn,
+                self.sn,
+                mode,
+            )
+            return False
+        # Send MQTT commands
+        if mode is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_light_mode",
+                parameters={"mode": mode},
+                description=f"light mode set to {original_mode if isinstance(original_mode, str) else mode}",
+            ):
+                resp["light_mode"] = mode
+                if toFile:
+                    self._filedata["light_mode"] = mode
+        return resp or False
+
+    def get_status(
+        self,
+        fromFile: bool = False,
+    ) -> dict:
+        """Get comprehensive C1000X device status via MQTT data.
+
+        Args:
+            fromFile: If True, read from test file instead of using MQTT data
+
+        Returns:
+            dict: Device status including all switch states, modes, and settings
+                Uses MQTT data cache for real-time values
+
+        Example:
+            status = api.get_status()
+            print(f"AC Output: {status.get('switch_ac_output_power')}")
+            print(f"Battery SOC: {status.get('battery_soc')}%")
+        """
+        # TODO: Remove mock once file mode is supported for MQTT data
+        # Handle test mode
+        if fromFile:
+            # Update real data with modifications from testing
+            self._logger.info(
+                "Device %s %s status with optional MQTT test control changes",
+                self.pn,
+                self.sn,
+            )
+            return self.mqttdata | self._filedata
+
+        # Return accumulated MQTT data cache instead of API cache for device status
+        if self.mqttdata:
+            self._logger.info(
+                "Device %s %s status retrieved from MQTT data", self.pn, self.sn
+            )
+        else:
+            self._logger.warning(
+                "No MQTT data available for device %s %s status", self.pn, self.sn
+            )
+        return self.mqttdata

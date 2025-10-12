@@ -56,6 +56,7 @@ A17C0_0407 = {
     "a2": {"name": "device_sn"},
     "a3": {"name": "wifi_name"},
     "a4": {"name": "wifi_signal"},
+    "a5": {"name": "charging_status"},
 }
 
 A17C1_0405 = {
