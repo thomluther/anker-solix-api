@@ -240,9 +240,9 @@ class AnkerSolixBaseApi:
         """Register a device callback function to notify about Api cache object changes."""
         # register callback if callable
         if callable(func):
-            self._device_callbacks[deviceSn] = (
-                self._device_callbacks.get(deviceSn) or set()
-            ).add(func)
+            callbacks = self._device_callbacks.get(deviceSn) or set()
+            callbacks.add(func)
+            self._device_callbacks[deviceSn] = callbacks
 
     def notify_device(self, deviceSn: str) -> None:
         """Notify all callbacks that are registered for a device."""

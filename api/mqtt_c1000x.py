@@ -80,8 +80,6 @@ class SolixMqttDeviceC1000x:
         """Send MQTT command to C1000X device.
 
         Args:
-            self: The API instance
-            device_sn: Device serial number
             command: Command name for get_command_data
             parameters: Command parameters
             description: Human-readable description for logging
@@ -184,9 +182,9 @@ class SolixMqttDeviceC1000x:
             dict: Mock response if successful, False otherwise
 
         Example:
-            await mydevice.set_ac_output(enabled=True)
-            await mydevice.set_ac_output(mode=1)  # Normal
-            await mydevice.set_ac_output(mode="smart")
+            await mydevice.set_ac_output(enabled=True)  # ✅ VALIDATED
+            await mydevice.set_ac_output(mode=1)  # Normal - ✅ VALIDATED
+            await mydevice.set_ac_output(mode="smart")  # ✅ VALIDATED
         """
         # response
         resp = {}
@@ -263,9 +261,9 @@ class SolixMqttDeviceC1000x:
             dict: Mock response if successful, False otherwise
 
         Example:
-            await mydevice.set_dc_output(enabled=True)
-            await mydevice.set_dc_output(mode=2)  # Smart
-            await mydevice.set_dc_output(mode="normal")
+            await mydevice.set_dc_output(enabled=True)  # ✅ VALIDATED
+            await mydevice.set_dc_output(mode=2)  # Smart - ✅ VALIDATED
+            await mydevice.set_dc_output(mode="normal")  # ✅ VALIDATED
         """
         # response
         resp = {}
@@ -342,9 +340,9 @@ class SolixMqttDeviceC1000x:
             dict: Mock response if successful, False otherwise
 
         Example:
-            await mydevice.set_display(enabled=True)
-            await mydevice.set_display(mode=2)  # Medium
-            await mydevice.set_display(mode="high")
+            await mydevice.set_display(enabled=True)  # ✅ VALIDATED
+            await mydevice.set_display(mode=2)  # Medium - ✅ VALIDATED
+            await mydevice.set_display(mode="high")  # ✅ VALIDATED
         """
         # response
         resp = {}
@@ -418,7 +416,7 @@ class SolixMqttDeviceC1000x:
             dict: Mock response if successful, False otherwise
 
         Example:
-            await mydevice.set_backup_charge(enabled=True)
+            await mydevice.set_backup_charge(enabled=True)  # ⚠️ PARTIALLY VALIDATED (field-based protocol)
         """
         # response
         resp = {}
@@ -461,14 +459,14 @@ class SolixMqttDeviceC1000x:
             dict: Mock response if successful, False otherwise
 
         Example:
-            await mydevice.set_temp_unit(fahrenheit=False)  # Celsius
+            await mydevice.set_temp_unit(fahrenheit=False)  # Celsius - ✅ VALIDATED
         """
         # response
         resp = {}
         # Validate command value
         fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
         if fahrenheit is not None and not self.validate_command_value(
-            "backup_charge_control", fahrenheit
+            "temp_unit_control", fahrenheit
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",
@@ -505,8 +503,8 @@ class SolixMqttDeviceC1000x:
             dict: Mock response if successful, False otherwise
 
         Example:
-            await mydevice.set_light_mode(mode=3)  # High
-            await mydevice.set_light_mode(mode="blinking")
+            await mydevice.set_light(mode=3)  # High - ✅ VALIDATED
+            await mydevice.set_light(mode="blinking")  # ✅ VALIDATED
         """
         # response
         resp = {}
@@ -543,6 +541,128 @@ class SolixMqttDeviceC1000x:
                 resp["light_mode"] = mode
                 if toFile:
                     self._filedata["light_mode"] = mode
+        return resp or False
+
+    async def set_device_timeout(
+        self,
+        timeout_minutes: int | None = None,
+        toFile: bool = False,
+    ) -> dict | bool:
+        """Set device auto-off timeout.
+
+        Args:
+            timeout_minutes: Timeout in minutes (0=never, 30, 120, 240, 720, 1440)
+            toFile: If True, save to test file instead of sending command
+
+        Returns:
+            dict: Response with timeout setting or False if failed
+
+        Example:
+            # Set 2 hour timeout
+            result = await device.set_device_timeout(timeout_minutes=120)
+        """
+        resp = {}
+        if timeout_minutes is not None and not self.validate_command_value(
+            "device_timeout_minutes", timeout_minutes
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid timeout value: %s",
+                self.pn,
+                self.sn,
+                timeout_minutes,
+            )
+            return False
+        # Send MQTT command
+        if timeout_minutes is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_device_timeout",
+                parameters={"timeout_minutes": timeout_minutes},
+                description=f"Device timeout set to {timeout_minutes} minutes",
+            ):
+                resp["device_timeout_minutes"] = timeout_minutes
+                if toFile:
+                    self._filedata["device_timeout_minutes"] = timeout_minutes
+        return resp or False
+
+    async def set_max_load(
+        self,
+        max_watts: int | None = None,
+        toFile: bool = False,
+    ) -> dict | bool:
+        """Set maximum AC input load (current limit).
+
+        Args:
+            max_watts: Maximum load in watts (200, 500, 700, 800, 900, 1000)
+            toFile: If True, save to test file instead of sending command
+
+        Returns:
+            dict: Response with max load setting or False if failed
+
+        Example:
+            # Set 800W max load
+            result = await device.set_max_load(max_watts=800)
+        """
+        resp = {}
+        if max_watts is not None and not self.validate_command_value(
+            "max_load", max_watts
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid max load value: %s",
+                self.pn,
+                self.sn,
+                max_watts,
+            )
+            return False
+        # Send MQTT command
+        if max_watts is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_max_load",
+                parameters={"max_watts": max_watts},
+                description=f"Max load set to {max_watts}W",
+            ):
+                resp["max_load"] = max_watts
+                if toFile:
+                    self._filedata["max_load"] = max_watts
+        return resp or False
+
+    async def set_ultrafast_charging(
+        self,
+        enabled: bool,
+        toFile: bool = False,
+    ) -> dict | bool:
+        """Set UltraFast charging mode (1300W max).
+
+        Args:
+            enabled: True to enable UltraFast charging, False to disable
+            toFile: If True, return mock response (for testing compatibility)
+
+        Returns:
+            dict: Response with ultrafast_charging status if successful, False otherwise
+
+        Example:
+            # Enable UltraFast charging (1300W max)
+            result = await device.set_ultrafast_charging(enabled=True)
+        """
+        resp = {}
+        if enabled is not None and not self.validate_command_value(
+            "ultrafast_charging", 1 if enabled else 0
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid ultrafast charging value: %s",
+                self.pn,
+                self.sn,
+                enabled,
+            )
+            return False
+        if enabled is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_ultrafast_toggle",
+                parameters={"enabled": enabled},
+                description=f"UltraFast charging {'enabled' if enabled else 'disabled'}",
+            ):
+                resp["ultrafast_charging"] = enabled
+                if toFile:
+                    self._filedata["ultrafast_charging"] = enabled
         return resp or False
 
     def get_status(

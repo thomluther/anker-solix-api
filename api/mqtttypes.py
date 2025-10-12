@@ -504,9 +504,28 @@ class DeviceHexData:
 
     def hex(self, sep: str = "") -> str:
         """Print the hex bytes with optional separator."""
+        hex_data = self.hexbytes
+
+        # Add XOR checksum for C1000X control commands
+        if (self.model == "A1761" or
+            (self.msg_header and self.msg_header.msgtype.hex() in ["004a", "004f"])):
+            # First, update the message length to include the checksum byte
+            updated_hex = bytearray(hex_data)
+            if len(updated_hex) >= 4:
+                current_length = int.from_bytes(updated_hex[2:4], byteorder="little")
+                new_length = current_length + 1  # Add 1 for checksum byte
+                updated_hex[2:4] = new_length.to_bytes(2, byteorder="little")
+
+            # Calculate XOR checksum for all bytes
+            xor_checksum = 0
+            for byte in updated_hex:
+                xor_checksum ^= byte
+            # Append checksum byte
+            hex_data = updated_hex + bytes([xor_checksum])
+
         if sep:
-            return self.hexbytes.hex(sep=sep)
-        return self.hexbytes.hex()
+            return hex_data.hex(sep=sep)
+        return hex_data.hex()
 
     def decode(self) -> str:
         """Return the field representation in human readable format."""
