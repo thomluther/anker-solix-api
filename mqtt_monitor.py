@@ -204,6 +204,9 @@ class AnkerSolixMqttMonitor:
                         deviceDict=device_selected
                     ):
                         topics.add(f"{prefix}#")
+                    # Command messages (app to device)
+                    if cmd_prefix := mqtt_session.get_topic_prefix(deviceDict=device_selected, publish=True):
+                        topics.add(f"{cmd_prefix}#")
                     try:
                         activetopic = None
                         realtime = False
@@ -255,11 +258,12 @@ class AnkerSolixMqttMonitor:
                                         )
                                 elif k == "s":
                                     CONSOLE.info(
-                                        f"{Color.GREEN}Subscribing root topic...{Color.OFF}"
+                                        f"{Color.GREEN}Subscribing root topics...{Color.OFF}"
                                     )
                                     topics.clear()
                                     activetopic = None
                                     topics.add(f"{prefix}#")
+                                    topics.add(f"{cmd_prefix}#")
                                 elif k == "t":
                                     if tl := list(self.found_topics):
                                         index = (
