@@ -721,18 +721,18 @@ class AnkerSolixMqttSession:
             return False
 
 
-def generate_mqtt_command(
+def generate_mqtt_command(  # noqa: C901
     command: str = "update_trigger", parameters: dict | None = None
 ) -> DeviceHexData | None:
     r"""Compose the hex data for MQTT publish payload to Anker Solix devices.
 
-    Example:
-    ==================== Publish Header for update trigger ========================-
+    Hex command example for update trigger:
+    '==================== Publish Header for update trigger ========================
     ff 09   : 2 Byte Anker Solix message marker (supposed 'ff 09')
     1f 00   : 2 Byte total message length (31) in Bytes (Little Endian format)
     03 00 0f: 3 Byte fixed message pattern (supposed `03 00 0f` for sending message)
     00 57   : 2 Byte message type pattern (varies per device model and message type)
-    == Fields ==|- Value (Hex/Decode Options)======================================-
+    == Fields ==|- Value (Hex/Decode Options)=======================================
     Fld Len Typ    uIntLe/var     sIntLe
     a1  01  --  22
     └->   1 unk           34             -> fix
@@ -742,7 +742,7 @@ def generate_mqtt_command(
     └->   5 var                      300 -> Update timeout in sec
     fe  05  03  c8:d7:b6:68
     └->   5 var               1756813256 -> Unix Timestamp
-    ================================================================================
+    ==============================================================================='
     """
 
     hexdata = None
@@ -813,7 +813,7 @@ def generate_mqtt_command(
     elif command.startswith("c1000x_"):
         # C1000X control commands using mobile app protocol patterns
         # These patterns were captured from actual mobile app MQTT traffic and validated
-        
+
         if command == "c1000x_ac_output":
             # AC output control: Message type 004a (VALIDATED ✅)
             value = 1 if parameters.get("enabled", False) else 0
@@ -925,7 +925,7 @@ def generate_mqtt_command(
                 hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # ON
             else:
                 hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))  # OFF
-        
+
         # Add timestamp field for all C1000X commands
         if hexdata:
             hexdata.add_timestamp_field()

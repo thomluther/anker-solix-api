@@ -114,12 +114,11 @@ class AnkerSolixBaseApi:
         for callbacks in self._device_callbacks.values():
             for func in callbacks:
                 if callable(func):
-                    func(device=None)
+                    func(device={})
         self._device_callbacks = {}
         self.sites = {}
         self.devices = {}
         self.account = {}
-
 
     def customizeCacheId(self, id: str, key: str, value: Any) -> None:
         """Customize a cache identifier with a key and value pair."""
@@ -240,15 +239,15 @@ class AnkerSolixBaseApi:
         """Register a device callback function to notify about Api cache object changes."""
         # register callback if callable
         if callable(func):
-            self._device_callbacks[deviceSn] = (
-                self._device_callbacks.get(deviceSn) or set()
-            ).add(func)
+            dev_callbacks = self._device_callbacks.get(deviceSn) or set()
+            dev_callbacks.add(func)
+            self._device_callbacks[deviceSn] = dev_callbacks
 
     def notify_device(self, deviceSn: str) -> None:
         """Notify all callbacks that are registered for a device."""
         for func in self._device_callbacks.get(deviceSn, set()):
             if callable(func):
-                func(device=self.devices.get(deviceSn,{}))
+                func(device=self.devices.get(deviceSn, {}))
 
     async def startMqttSession(
         self, message_callback: MessageCallback | None = None
