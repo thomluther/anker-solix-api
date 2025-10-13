@@ -50,6 +50,24 @@ class DeviceHexDataTypes(Enum):
 # To simplify the defined map, smaller and re-usable mappings should be defined independently and just re-used in the overall SOLIXMQTTMAP for
 # the model types that use same field mapping structure. For example various models of the same family most likely share complete or subset of message maps
 
+TRIGGER_0057 = {
+    # Command: Real time data message trigger
+    "topic": "req",
+    "a1": {"name": "pattern_22"},
+    "a2": {
+        "name": "set_realtime_data",  # Disable (0) | Enable (1)
+        "type": DeviceHexDataTypes.ui.value,
+    },
+    "a3": {
+        "name": "set_timeout",  # realtime timeout in seconds when enabled
+        "type": DeviceHexDataTypes.var.value,
+    },
+    "fe": {
+        "name": "msg_timestamp",
+        "type": DeviceHexDataTypes.var.value,
+    },
+}
+
 A17C0_0407 = {
     # Solarbank network message
     "topic": "state_info",
@@ -505,6 +523,7 @@ A17C5_0500 = {
 SOLIXMQTTMAP = {
     # Power Charger C300 DC
     "A1728": {
+        "0057": TRIGGER_0057,
         "0830": {
             # Interval: ?? seconds
             "topic": "param_info",
@@ -520,6 +539,7 @@ SOLIXMQTTMAP = {
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
+        "0057": TRIGGER_0057,
         "0405": {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
@@ -603,6 +623,144 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 1 E1600
     "A17C0": {
+        "0050": {
+            # Control Command for temp unit
+            "topic": "req",
+            "a1": {"name": "pattern_22"},
+            "a2": {
+                "name": "set_temp_unit_fahrenheit",  # Celcius(0) | Fahrenheit (1)
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "fe": {
+                "name": "msg_timestamp",
+                "type": DeviceHexDataTypes.var.value,
+            },
+        },
+        "0056": {
+            # Status check request?
+            "topic": "req",
+            "a1": {"name": "pattern_22"},
+            "a2": {
+                "name": "device_sn",
+                "type": DeviceHexDataTypes.str.value,
+                "length": 16,
+            },
+            "a3": {
+                "name": "charging_status",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "a4": {
+                "name": "output_preset",  # in W
+                "type": DeviceHexDataTypes.var.value,
+            },
+            "a5": {
+                "name": "status_timeout_sec?",  # timeout for next status message?
+                "type": DeviceHexDataTypes.var.value,
+            },
+            "a6": {
+                "name": "local_timestamp",  # used for time synchronization?
+                "type": DeviceHexDataTypes.var.value,
+            },
+            "a7": {
+                "name": "next_status_timestamp",  # Requested time for next status message +56-57 seconds
+                "type": DeviceHexDataTypes.var.value,
+            },
+            "a8": {
+                "name": "unknown_1?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "a9": {
+                "name": "unknown_2?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "aa": {
+                "name": "unknown_3?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "fe": {
+                "name": "msg_timestamp",
+                "type": DeviceHexDataTypes.var.value,
+            },
+        },
+        "0057": TRIGGER_0057,
+        "0067": {
+            # Command Set Power cutoff
+            "topic": "req",
+            "a1": {"name": "pattern_22"},
+            "a2": {
+                "name": "output_cutoff_data",  # 10 | 5 %
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "a3": {
+                "name": "lowpower_input_data",  # 5 | 4 %
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "a4": {
+                "name": "input_cutoff_data",  # 10 | 5 %
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "fe": {
+                "name": "msg_timestamp",
+                "type": DeviceHexDataTypes.var.value,
+            },
+        },
+        "0068": {
+            # Command Set Inverter Type and limits
+            "topic": "req",
+            "a1": {"name": "pattern_22"},
+            "a2": {
+                "name": "output_cutoff_data",  # 10 | 5 %
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "a3": {
+                "name": "lowpower_input_data",  # 5 | 4 %
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "a4": {
+                "name": "input_cutoff_data",  # 10 | 5 %
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "a5": {
+                "name": "inverter_brand",  # Hex bytes of brand name, length varies
+                "type": DeviceHexDataTypes.bin.value,
+            },
+            "a6": {
+                "name": "inverter_model",  # Hey bytes of model name, length varies
+                "type": DeviceHexDataTypes.bin.value,
+            },
+            "a7": {
+                "name": "set_min_load",  # in W
+                "type": DeviceHexDataTypes.sile.value,
+            },
+            "a8": {
+                "name": "set_max_load",  # in W
+                "type": DeviceHexDataTypes.sile.value,
+            },
+            "a9": {
+                "name": "unknown_1?",  # 0
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "aa": {
+                "name": "ch_1_min_what?",  # 500
+                "type": DeviceHexDataTypes.var.value,
+            },
+            "ab": {
+                "name": "ch_1_max_what?",  # 10000
+                "type": DeviceHexDataTypes.var.value,
+            },
+            "ac": {
+                "name": "ch_2_min_what?",  # 500
+                "type": DeviceHexDataTypes.var.value,
+            },
+            "ad": {
+                "name": "ch_2_max_what?",  # 10000
+                "type": DeviceHexDataTypes.var.value,
+            },
+            "fe": {
+                "name": "msg_timestamp",
+                "type": DeviceHexDataTypes.var.value,
+            },
+        },
         "0405": {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
@@ -668,6 +826,7 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 2 E1600 Pro
     "A17C1": {
+        "0057": TRIGGER_0057,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A17C1_0405,
         # Interval: varies, probably upon change
@@ -680,6 +839,7 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 2 E1600 AC
     "A17C2": {
+        "0057": TRIGGER_0057,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A17C5_0405,
         # Interval: varies, probably upon change
@@ -692,6 +852,7 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 2 E1600 Plus
     "A17C3": {
+        "0057": TRIGGER_0057,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A17C1_0405,
         # Interval: varies, probably upon change
@@ -704,6 +865,7 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 3 E2700 Pro
     "A17C5": {
+        "0057": TRIGGER_0057,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A17C5_0405,
         # Interval: varies, probably upon change
@@ -835,6 +997,7 @@ SOLIXMQTTMAP = {
         "0500": A17C5_0500,
     },
     "A17X7": {
+        "0057": TRIGGER_0057,
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             "topic": "param_info",
@@ -849,6 +1012,7 @@ SOLIXMQTTMAP = {
         },
     },
     "SHEMP3": {
+        "0057": TRIGGER_0057,
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             "topic": "param_info",
