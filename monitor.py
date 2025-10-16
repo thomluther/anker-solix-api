@@ -143,7 +143,7 @@ class AnkerSolixApiMonitor:
             CONSOLE.info(
                 f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/[{Color.YELLOW}C{Color.OFF}]ustomize cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
                 f"MQTT [{Color.YELLOW}S{Color.OFF}]ession toggle, [{Color.YELLOW}R{Color.OFF}]eal time trigger, "
-                f"[{Color.YELLOW}M{Color.OFF}]qtt display toggle, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]calls toggle, "
+                f"[{Color.YELLOW}M{Color.OFF}]qtt display toggle, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls toggle, "
                 f"[{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
             )
         return ""
