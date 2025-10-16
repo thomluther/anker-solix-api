@@ -156,7 +156,7 @@ class AnkerSolixClientSession:
 
     def testDir(self, subfolder: str | None = None) -> str:
         """Get or set the subfolder for local API test files."""
-        if not subfolder or subfolder == self._testdir:
+        if not subfolder or str(subfolder) == self._testdir:
             return self._testdir
         if not Path(subfolder).is_dir():
             self._logger.error(
@@ -165,8 +165,8 @@ class AnkerSolixClientSession:
                 subfolder,
             )
         else:
-            self._testdir = subfolder
-            self._logger.info("Set api %s test folder to: %s", self.nickname, subfolder)
+            self._testdir = str(subfolder)
+            self._logger.info("Set api %s test folder to: %s", self.nickname, self._testdir)
         return self._testdir
 
     def logLevel(self, level: int | None = None) -> int:

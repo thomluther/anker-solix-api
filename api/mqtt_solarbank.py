@@ -16,6 +16,12 @@ if TYPE_CHECKING:
 
 # Define supported Models for this class
 MODELS = ["A17C0"]
+# Define supported and validated controls per Model
+FEATURES = {
+    "realtime_trigger": MODELS,
+    "set_temp_unit": MODELS,
+    "set_power_cutoff": MODELS,
+}
 
 
 class SolixMqttDeviceSolarbank(SolixMqttDevice):
@@ -23,6 +29,8 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
 
     def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
         """Initialize."""
+        self.models = MODELS
+        self.features = FEATURES
         super().__init__(api_instance=api_instance, device_sn=device_sn)
 
     def validate_command_value(self, command_id: str, value: Any) -> bool:
@@ -71,6 +79,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             command="solarbank_temp_unit",
             parameters={"fahrenheit": fahrenheit},
             description=f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
+            toFile=toFile,
         ):
             resp["temp_unit_fahrenheit"] = fahrenheit
         if toFile:
@@ -117,6 +126,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             command="solarbank_power_cutoff",
             parameters={"limit": limit},
             description=f"Power cutoff set to {limit!s} %",
+            toFile=toFile,
         ):
             resp["output_cutoff_data"] = limit
             resp["lowpower_input_data"] = 4 if limit == 5 else 5

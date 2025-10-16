@@ -288,7 +288,7 @@ class AnkerSolixMqttSession:
         self, command: str = "update_trigger", parameters: dict | None = None
     ) -> str | None:
         """Compose the hex data for MQTT publish payload to Anker Solix devices."""
-        if (hexdata := generate_mqtt_command(command=command, parameters=parameters)):
+        if hexdata := generate_mqtt_command(command=command, parameters=parameters):
             self._logger.debug(
                 "Api %s MQTT session generated hexdata for device mqtt command '%s':\n%s",
                 self.apisession.nickname,
@@ -566,7 +566,7 @@ class AnkerSolixMqttSession:
         self,
         topics: set,
         trigger_devices: set,
-        msg_callback: Callable,
+        msg_callback: Callable | None = None,
         timeout: int = 120,
     ) -> None:
         """Run MQTT message poller and optional device update trigger in background.
@@ -580,11 +580,18 @@ class AnkerSolixMqttSession:
         """
         try:
             # register message callback function
-            self.message_callback(func=msg_callback)
+            if msg_callback and not self.message_callback(func=msg_callback):
+                self._logger.error(
+                    "Api %s MQTT session message callback is not callable: %s",
+                    self.apisession.nickname,
+                    msg_callback,
+                )
+                self.cleanup()
+                return False
             client = await self.connect_client_async()
             if not client.is_connected:
                 self._logger.error(
-                    "Api %s MQTT session failed connection to Anker Solix MQTT server %s:%s",
+                    "Api %s MQTT session failed connection to Anker Solix MQTT server %s: %s",
                     self.apisession.nickname,
                     self.host,
                     self.port,
@@ -592,7 +599,7 @@ class AnkerSolixMqttSession:
                 self.cleanup()
                 return False
             self._logger.debug(
-                "Api %s MQTT session connected successfully to Anker Solix MQTT server %s:%s",
+                "Api %s MQTT session connected successfully to Anker Solix MQTT server %s: %s",
                 self.apisession.nickname,
                 self.host,
                 self.port,
@@ -658,7 +665,6 @@ class AnkerSolixMqttSession:
                     if restart:
                         start = datetime.now()
                 await asyncio.sleep(5)
-
         except asyncio.CancelledError:
             self._logger.info(
                 "Api %s MQTT session message poller was cancelled",
@@ -666,11 +672,162 @@ class AnkerSolixMqttSession:
             )
             self.cleanup()
 
+    async def file_poller(
+        self,
+        folderdict: dict,
+        speed: float = 1,
+        msg_callback: Callable | None = None,
+    ) -> None:
+        """Run MQTT message poller from files for the active folder defined in provided folder dict.
+
+        The poller will cycle through all recorded messages of subscribed devices and call
+        the msg_callback function at corresponding delays.
+        The messages will repeat after the last message was used for the callback.
+        The speed parameter can be used to increase or decrease the runtime through existing messages.
+        To change the speed at poller runtime, specify the speed key in the referenced folder dict
+        """
+        if not isinstance(folderdict, dict):
+            return None
+        try:
+            # register message callback function
+            if msg_callback and not self.message_callback(func=msg_callback):
+                self._logger.error(
+                    "Api %s MQTT session message callback is not callable: %s",
+                    self.apisession.nickname,
+                    msg_callback,
+                )
+                return False
+            # initialize MQTT statistics for file poller
+            self.mqtt_stats = MqttDataStats()
+            active_folder: str | None = None
+            timestamps = []
+            # merge initial speed options
+            if (newspeed := folderdict.get("speed")) and isinstance(
+                newspeed, float | int
+            ):
+                speed = newspeed
+            else:
+                folderdict["speed"] = speed
+            while True:
+                # Update active folder and reset msg cycle
+                if active_folder != folderdict.get("folder"):
+                    active_folder = None
+                    active_msgs = {}
+                    timestamps = []
+                    time_idx = 0
+                    duration = 0
+                    addtime = 0
+                    speedstart = 0
+                    if folderdict:
+                        active_folder = folderdict.get("folder")
+                        # create new cache for saved messages
+                        files = await self.get_mqtt_files(folder=active_folder or None)
+                        for file in files:
+                            for timestr, message in (
+                                await self.loadFromFile(filename=file)
+                            ).items():
+                                if (
+                                    timestamp := int(
+                                        datetime.fromisoformat(timestr).timestamp()
+                                    )
+                                    if timestr
+                                    else 0
+                                ):
+                                    active_msgs[timestamp] = (
+                                        active_msgs.get(timestamp) or []
+                                    ) + [message]
+                        # sort messages
+                        if timestamps := sorted(active_msgs.keys()):
+                            # get messages duration, 60 seconds at least for a cycle
+                            duration = max(
+                                60, timestamps[len(timestamps) - 1] - timestamps[0]
+                            )
+                            cycleoffset = datetime.now().timestamp() - timestamps[0]
+                            addtime = 0
+                            speedstart = timestamps[0]
+                            # write cycle progress into folderdict
+                            folderdict["progress"] = 0
+                            folderdict["duration"] = duration
+                if timestamps:
+                    cycle_now = (
+                        speedstart
+                        + (datetime.now().timestamp() - cycleoffset - speedstart)
+                        * speed
+                    )
+                    while (
+                        time_idx < len(timestamps) and timestamps[time_idx] <= cycle_now
+                    ):
+                        # write cycle progress into folderdict
+                        folderdict["progress"] = round((timestamps[time_idx]-timestamps[0])/duration*100,2)
+                        # simulate mqtt messages for timestamp
+                        for message in active_msgs.get(timestamps[time_idx]) or []:
+                            self._logger.debug(
+                                "Api %s MQTT session loaded message from %s:\n%s",
+                                self.apisession.nickname,
+                                datetime.fromtimestamp(timestamps[time_idx]).strftime(
+                                    "%Y-%m-%d %H:%M:%S"
+                                ),
+                                message,
+                            )
+                            # mock timestamp in message for subsequent cycles
+                            if addtime > 0 and (
+                                timestamp := (message.get("head") or {}).get(
+                                    "timestamp"
+                                )
+                            ):
+                                message["head"]["timestamp"] = int(timestamp + addtime)
+                            # simulate MQTT message
+                            mqtt_msg = mqtt.MQTTMessage(
+                                topic=message.pop("topic", "").encode()
+                            )
+                            mqtt_msg.payload = json.dumps(message).encode()
+                            self.on_message(client=None, userdata=None, msg=mqtt_msg)
+                        time_idx += 1
+                    # check for cycle reset with 5 sec gap after last message
+                    if (
+                        time_idx >= len(timestamps)
+                        and (cycle_now - timestamps[0]) >= duration + 5
+                    ):
+                        time_idx = 0
+                        # reset cycle offset with 5 sec gap between last and first message
+                        cycleoffset = datetime.now().timestamp() - timestamps[0]
+                        addtime += duration + 5
+                        speedstart = timestamps[0]
+                    # check for speed change at runtime
+                    if (newspeed := folderdict.get("speed")) and speed != newspeed:
+                        # reset the offset into the cycle
+                        speed = newspeed
+                        speedstart = timestamps[max(0, time_idx - 1)]
+                await asyncio.sleep(0.5)
+        except asyncio.CancelledError:
+            self._logger.info(
+                "Api %s MQTT session file poller was cancelled",
+                self.apisession.nickname,
+            )
+
+    async def get_mqtt_files(self, folder: str | Path) -> list:
+        """Get actual list of mqtt message files from provided folder."""
+        if isinstance(folder, str):
+            folder = Path(folder)
+        if isinstance(folder, Path) and folder.is_dir():
+            loop = asyncio.get_running_loop()
+            contentlist = await loop.run_in_executor(None, os.scandir, folder)
+            return [
+                (folder / f.name).absolute()
+                for f in contentlist
+                if f.is_file() and f.name.startswith("mqtt_msg_")
+            ]
+        return []
+
     async def loadFromFile(
-        self, filename: str | Path, starttime: str | datetime | None
+        self, filename: str | Path, starttime: str | datetime | None = None
     ) -> dict:
-        """Load first MQTT message after starttime from given file for testing."""
+        """Load all or optionally the first MQTT message after starttime from given file for testing.
+
+        It will return a dict with message timestamp and the message object itself.
+        """
         filename = str(filename)
+        messages = {}
         if isinstance(starttime, datetime):
             starttime = starttime.strftime("%Y-%m-%d %H:%M:%S")
         elif not isinstance(starttime, str):
@@ -680,19 +837,18 @@ class AnkerSolixMqttSession:
                 async with aiofiles.open(filename, encoding="utf-8") as file:
                     async for line in file:
                         message = json.loads(line.strip())
-                        msgtime = message.get("msg_time", "")
-                        if not (starttime and msgtime) or msgtime >= starttime:
-                            self._logger.debug(
-                                "Loaded MQTT message from file %s:\n%s",
-                                filename,
-                                message,
-                            )
-                            return message
+                        if isinstance(message, dict):
+                            msgtime = str(message.pop("msg_time", ""))
+                            if not starttime:
+                                messages[msgtime] = message
+                            elif msgtime and msgtime >= starttime:
+                                messages[msgtime] = message
+                                return messages
         except OSError as err:
             self._logger.error(
-                "ERROR: Failed to load MQTT message from file %s\n%s", filename, err
+                "ERROR: Failed to load MQTT messages from file %s\n%s", filename, err
             )
-        return {}
+        return messages
 
     async def saveToFile(
         self, filename: str | Path, data: dict | None = None, append: bool = True
@@ -710,7 +866,8 @@ class AnkerSolixMqttSession:
                     json.dumps(
                         {"msg_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
                         | data
-                    ) + "\n"
+                    )
+                    + "\n"
                 )
                 self._logger.debug("Saved MQTT message to file %s:", filename)
                 return True
@@ -767,7 +924,7 @@ def generate_mqtt_command(  # noqa: C901
         # Solarbank control commands using various message types
         # Add control-specific fields based on command type
         if command == "solarbank_temp_unit":
-            # Temperature unit: Value 0/1 (0=Celsius, 1=Fahrenheit)
+            # Temperature unit: Value 0/1 (0=Celsius, 1=Fahrenheit) (VALIDATED SB1 ✅)
             value = 1 if parameters.get("fahrenheit") else 0
             hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0050"))
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
@@ -780,7 +937,7 @@ def generate_mqtt_command(  # noqa: C901
             )
             hexdata.add_timestamp_field()
         elif command == "solarbank_power_cutoff":
-            # Valid option 5 or 10 in %
+            # Valid option 5 or 10 in % (VALIDATED SB1 ⚠️ Changed on device, but not in App! App needs additional change via Api)
             value = 5 if str(parameters.get("limit")) == "5" else 10
             lowpower = 4 if value == 5 else 5
             hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0067"))
@@ -817,7 +974,9 @@ def generate_mqtt_command(  # noqa: C901
         if command == "c1000x_ac_output":
             # AC output control: Message type 004a (VALIDATED ✅)
             value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004a"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004a")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             if value == 1:
                 hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
@@ -826,7 +985,9 @@ def generate_mqtt_command(  # noqa: C901
         elif command == "c1000x_dc_output":
             # DC output control: Message type 004b (VALIDATED ✅)
             value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004b"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004b")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             if value == 1:
                 hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
@@ -835,17 +996,25 @@ def generate_mqtt_command(  # noqa: C901
         elif command == "c1000x_light_mode":
             # Light mode control: Message type 004f (VALIDATED ✅)
             mode = int(parameters.get("mode", 0))
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004f"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004f")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             mode_hex_map = {
-                0: "a2020100", 1: "a2020101", 2: "a2020102", 3: "a2020103", 4: "a2020104"
+                0: "a2020100",
+                1: "a2020101",
+                2: "a2020102",
+                3: "a2020103",
+                4: "a2020104",
             }
             mode_hex = mode_hex_map.get(mode, "a2020100")
             hexdata.update_field(DeviceHexDataField(hexbytes=mode_hex))
         elif command == "c1000x_display":
             # Display control: Message type 0050 (VALIDATED ✅)
             value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0050"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0050")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             if value == 1:
                 hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
@@ -854,17 +1023,19 @@ def generate_mqtt_command(  # noqa: C901
         elif command == "c1000x_display_mode":
             # Display mode: Message type 004c (VALIDATED ✅)
             value = int(parameters.get("mode", 0))
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004c"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004c")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            mode_hex_map = {
-                0: "a2020100", 1: "a2020101", 2: "a2020102", 3: "a2020103"
-            }
+            mode_hex_map = {0: "a2020100", 1: "a2020101", 2: "a2020102", 3: "a2020103"}
             mode_hex = mode_hex_map.get(value, "a2020100")
             hexdata.update_field(DeviceHexDataField(hexbytes=mode_hex))
         elif command == "c1000x_backup_charge":
             # Backup charge mode: field e5 (PARTIALLY VALIDATED ⚠️ - field-based protocol)
             value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0057"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0057")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             hexdata.update_field(
                 DeviceHexDataField(
@@ -876,7 +1047,9 @@ def generate_mqtt_command(  # noqa: C901
         elif command == "c1000x_temp_unit":
             # Temperature unit: Message type 0057 (VALIDATED ✅)
             value = 1 if parameters.get("fahrenheit", False) else 0
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0057"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0057")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
             # Temperature unit field pattern from mobile app capture
@@ -884,7 +1057,9 @@ def generate_mqtt_command(  # noqa: C901
         elif command == "c1000x_dc_output_mode":
             # DC output mode: Message type 0076 (VALIDATED ✅)
             value = int(parameters.get("mode", 1))
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0076"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0076")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             if value == 1:
                 hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # Normal
@@ -893,7 +1068,9 @@ def generate_mqtt_command(  # noqa: C901
         elif command == "c1000x_ac_output_mode":
             # AC output mode: Message type 0077 (VALIDATED ✅)
             value = int(parameters.get("mode", 1))
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0077"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0077")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             if value == 1:
                 hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # Normal
@@ -902,7 +1079,9 @@ def generate_mqtt_command(  # noqa: C901
         elif command == "c1000x_device_timeout":
             # Device timeout: Message type 0046 (VALIDATED ✅)
             timeout_minutes = int(parameters.get("timeout_minutes", 720))
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0046"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0046")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             # Convert minutes to the hex format used by mobile app
             timeout_hex = f"a20302{timeout_minutes:04x}"
@@ -910,7 +1089,9 @@ def generate_mqtt_command(  # noqa: C901
         elif command == "c1000x_max_load":
             # Max load: Message type 0044 (VALIDATED ✅)
             max_watts = int(parameters.get("max_watts", 1000))
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0044"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0044")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             # Convert watts to the hex format used by mobile app
             load_hex = f"a20302{max_watts:04x}"
@@ -918,7 +1099,9 @@ def generate_mqtt_command(  # noqa: C901
         elif command == "c1000x_ultrafast_toggle":
             # UltraFast charging toggle: Message type 005e (CAPTURED FROM MOBILE APP)
             enabled = parameters.get("enabled", False)
-            hexdata = DeviceHexData(model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="005e"))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="005e")
+            )
             hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
             # ON/OFF toggle pattern from mobile app capture
             if enabled:
@@ -930,4 +1113,3 @@ def generate_mqtt_command(  # noqa: C901
         if hexdata:
             hexdata.add_timestamp_field()
     return hexdata
-

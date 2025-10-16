@@ -16,6 +16,22 @@ if TYPE_CHECKING:
 
 # Define supported Models for this class
 MODELS = ["A1761"]
+# Define supported and validated controls per Model
+FEATURES = {
+    "realtime_trigger": MODELS,
+    "ac_output_control": MODELS,
+    "dc_12v_output_control": MODELS,
+    "display_control": MODELS,
+    "backup_charge_control": MODELS,
+    "temp_unit_control": MODELS,
+    "display_mode_select": MODELS,
+    "light_mode_select": MODELS,
+    "dc_output_mode_select": MODELS,
+    "ac_output_mode_select": MODELS,
+    "device_timeout_minutes": MODELS,
+    "max_load": MODELS,
+    "ultrafast_charging": MODELS,
+}
 
 
 class SolixMqttDeviceC1000x(SolixMqttDevice):
@@ -23,6 +39,8 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
 
     def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
         """Initialize."""
+        self.models = MODELS
+        self.features = FEATURES
         super().__init__(api_instance=api_instance, device_sn=device_sn)
 
     def validate_command_value(self, command_id: str, value: Any) -> bool:

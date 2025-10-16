@@ -43,7 +43,7 @@ from .mqtt import AnkerSolixMqttSession
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.3.1.0"
+VERSION: str = "3.4.0.0"
 
 
 class AnkerSolixApiExport:
@@ -1979,6 +1979,7 @@ class AnkerSolixApiExport:
             if self.randomized:
                 message = self._check_keys(message)
             # replace randomized device serial in message keys or unknown fields
+            message["topic"] = topic
             msgstr = json.dumps(message).replace(device_sn, randsn)
             # save the message
             filename = f"{API_FILEPREFIXES['mqtt_message']}_{randsn}_{msgtype}.json"

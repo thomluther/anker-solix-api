@@ -623,6 +623,48 @@ async def poll_sites(  # noqa: C901
                         isAdmin=admin,
                     ):
                         api._site_devices.add(sn)
+                sb_pps_info = mysite.get("solarbank_pps_info") or {}
+                for sbpps in sb_pps_info.get("pps_list") or []:
+                    # work around for device_name which is actually the device_alias in scene info
+                    if "device_name" in sbpps:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        sbpps = dict(sbpps).copy()
+                        sbpps.update({"alias_name": sbpps.pop("device_name")})
+                    if sn := api._update_dev(
+                        sbpps,
+                        devType=SolixDeviceType.SOLARBANK_PPS.value,
+                        siteId=myid,
+                        isAdmin=admin,
+                    ):
+                        api._site_devices.add(sn)
+                cb_info = mysite.get("combiner_box_info") or {}
+                for cb in cb_info.get("combiner_box_list") or []:
+                    # work around for device_name which is actually the device_alias in scene info
+                    if "device_name" in cb:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        cb = dict(cb).copy()
+                        cb.update({"alias_name": cb.pop("device_name")})
+                    if sn := api._update_dev(
+                        cb,
+                        devType=SolixDeviceType.COMBINER_BOX.value,
+                        siteId=myid,
+                        isAdmin=admin,
+                    ):
+                        api._site_devices.add(sn)
+                cp_info = mysite.get("charging_pile_info") or {}
+                for cp in cp_info.get("charging_pile_list") or []:
+                    # work around for device_name which is actually the device_alias in scene info
+                    if "device_name" in cp:
+                        # modify only a copy of the device dict to prevent changing the scene info dict
+                        cp = dict(cp).copy()
+                        cp.update({"alias_name": cp.pop("device_name")})
+                    if sn := api._update_dev(
+                        cp,
+                        devType=SolixDeviceType.EV_CHARGER.value,
+                        siteId=myid,
+                        isAdmin=admin,
+                    ):
+                        api._site_devices.add(sn)
                 for solar in mysite.get("solar_list") or []:
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in solar:

@@ -584,6 +584,67 @@ API_FILEPREFIXES = {
 }
 
 
+""" Anker Solix Device overview
+Model  Name                                     Platform
+----------------------------------------------------------------------------------------------------
+A1722  SOLIX C300                               Portable Power Station
+A1723  SOLIX C300X                              Portable Power Station
+A1725  SOLIX C200(X)                            Portable Power Station
+A1726  SOLIX C300 DC                            Portable Power Station
+A1727  SOLIX C200 DC                            Portable Power Station
+A1728  SOLIX C300X DC                           Portable Power Station
+A1729  SOLIX C200X DC                           Portable Power Station
+A1753  SOLIX C800                               Portable Power Station
+A1754  SOLIX C800 Plus                          Portable Power Station
+A1755  SOLIX C800X                              Portable Power Station
+A1761  SOLIX C1000(X)                           Portable Power Station
+A1762  Portable Power Station 1000              Portable Power Station
+A1770  F1200 (Bluetooth)                        Portable Power Station
+A1771  F1200 (Bluetooth and WLAN)               Portable Power Station
+A1772  SOLIX F1500                              Portable Power Station
+A1780  767 PowerHouse (SOLIX F2000)             Portable Power Station
+A1780P 767 Power House (SOLIX F2000) with WLAN  Portable Power Station
+A1781  SOLIX F2600                              Portable Power Station
+A1790  SOLIX F3800                              Portable Power Station
+A1790P SOLIX F3800 Plus                         Portable Power Station
+A17A0  Powered Cooler 30                        Powered Cooler
+A17A1  Powered Cooler 40                        Powered Cooler
+A17A2  Powered Cooler 50                        Powered Cooler
+A17A3  SOLIX Everfrost 2 23L                    Powered Cooler
+A17A4  SOLIX Everfrost 2 40L                    Powered Cooler
+A17A5  SOLIX Everfrost 2 58L                    Powered Cooler
+A17C0  Solarbank E1600                          Balcony Solar Power System
+A17C1  Solarbank 2 E1600 Pro                    Balcony Solar Power System
+A17C2  Solarbank 2 E1600 AC                     Balcony Solar Power System
+A17C3  Solarbank 2 E1600 Plus                   Balcony Solar Power System
+A17C5  Solarbank 3 E2700 Pro                    Balcony Solar Power System
+A17X7  Smart Meter                              Accessory
+A17X8  Smart Plug                               Accessory
+A2345  250W Prime Charger                       Charger
+A25X7  Prime Wireless Charger                   Charger
+A5101  X1-P6K-US/S                              Residential Storage System
+A5102  X1-H(3.68~6)K-S                          Residential Storage System
+A5103  X1-H (5~12)K-T                           Residential Storage System
+A5140  MI60 Microinverter                       Balcony Solar Power System
+A5143  MI80 Microinverter(BLE)                  Balcony Solar Power System
+A5150  Microinverter                            Residential Storage System
+A5191  V1 Smart EV Charger                      Smart EV Charger
+A5220  Battery Module                           Residential Storage System
+A5341  Backup Controller                        Residential Storage System
+A5450  Zigbee Dongle                            Residential Storage System
+A91B2  240W Charging Station                    Charger
+AE1R0  Anker SOLIX P1 Meter                     Accessory
+----------------------------------------------------------------------------------------------------
+Summary: 47 Models
+20 Portable Power Station
+ 6 Powered Cooler
+ 7 Balcony Solar Power System
+ 3 Accessory
+ 3 Charger
+ 7 Residential Storage System
+ 1 Smart EV Charger
+"""
+
 LOGIN_RESPONSE: dict = {
     "user_id": str,
     "email": str,
@@ -916,6 +977,10 @@ class SolixDeviceCategory:
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX F3000 Portable Power Station with SM support (US Market)
+    A17E1: str = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # SOLIX Solarbank Prime E10 Power Module (US Market)
+
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
     # Home Power Panels
@@ -939,7 +1004,9 @@ class SolixDeviceCategory:
     A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L
     # Charging Stations
     A2345: str = SolixDeviceType.CHARGER.value  # Anker 250W Prime Charger
+    A25X7: str = SolixDeviceType.CHARGER.value  # Prime Wireless Charger
     A91B2: str = SolixDeviceType.CHARGER.value  # Anker 240W Charging Station
+    A110A: str = SolixDeviceType.CHARGER.value  # Anker Prime Power Bank 300 W, 250mAh
     # EV Charger
     A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
 

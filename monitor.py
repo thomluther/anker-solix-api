@@ -2,9 +2,12 @@
 """Example exec module to use the Anker API for continuously querying and displaying important parameters of Anker Solix sites and devices.
 
 This module will prompt for the Anker account details if not pre-set in the header. Upon successful authentication,
-you will see the solarbank parameters displayed and refreshed at regular interval.
+you will see system and device parameters and values displayed and refreshed at regular interval.
+
+Optionally you can enable MQTT in Live and File mode to mix-in konwn/described binary MQTT message values.
 
 Note: When the system owning account is used, more details for the systems and devices can be queried and displayed.
+MQTT messages can only be subscribed for owned devices, which does not work for system member accounts.
 """
 
 import asyncio
@@ -65,6 +68,7 @@ class AnkerSolixApiMonitor:
         self.next_dev_refr: int = 0
         self.triggered: datetime | None = None
         self.rt_timeout: int = RTTIMEOUT
+        self.folderdict: dict = {}
         self.showMqttDevice: bool = False
         self.delayed_refresh: bool = False
         self.loop: asyncio.AbstractEventLoop
@@ -77,46 +81,74 @@ class AnkerSolixApiMonitor:
             return [f.resolve() for f in folder.iterdir() if f.is_dir()]
         return []
 
-    def get_menu_option(self) -> str:
+    def get_menu_options(self, details: bool = False) -> str:
         """Print the key menu and return the input."""
-        if self.use_file:
-            return input(
-                f"[{Color.YELLOW}D{Color.OFF}]ebug cache, [{Color.YELLOW}S{Color.OFF}]ite refresh, [{Color.YELLOW}A{Color.OFF}]ll refresh, "
-                f"select [{Color.YELLOW}O{Color.OFF}]ther file, toggle [{Color.YELLOW}N{Color.OFF}]ext/[{Color.YELLOW}P{Color.OFF}]revious file, "
-                f"[{Color.YELLOW}C{Color.OFF}]ustomize, [{Color.YELLOW}E{Color.OFF}]V toggle or [{Color.RED}Q{Color.OFF}]uit: "
+        if details:
+            CONSOLE.info(
+                f"\n%s\n{Color.YELLOW}{'File usage' if self.use_file else 'Live'} Monitor key menu:{Color.OFF}\n%s",
+                100 * "-",
+                100 * "-",
             )
-        CONSOLE.info(
-            f"\n%s\n{Color.YELLOW}Live Monitor key menu:{Color.OFF}\n%s",
-            100 * "-",
-            100 * "-",
-        )
-        CONSOLE.info(f"[{Color.YELLOW}K{Color.OFF}]ey list to show this menu")
-        CONSOLE.info(
-            f"[{Color.YELLOW}E{Color.OFF}]lectric Vehicle display toggle ON (default) or OFF"
-        )
-        CONSOLE.info(f"[{Color.YELLOW}D{Color.OFF}]ebug actual Api cache")
-        CONSOLE.info(f"[{Color.YELLOW}C{Color.OFF}]ustomize an Api cache entry")
-        CONSOLE.info(
-            f"[{Color.YELLOW}V{Color.OFF}]iew actual MQTT data cache and extracted device data"
-        )
-        CONSOLE.info(
-            f"[{Color.YELLOW}A{Color.OFF}]pi call display toggle OFF (default) or ON"
-        )
-        CONSOLE.info(
-            f"[{Color.YELLOW}S{Color.OFF}]witch MQTT session OFF (default) or ON"
-        )
-        CONSOLE.info(
-            f"[{Color.YELLOW}R{Color.OFF}]eal time MQTT data trigger (Timeout 1 min). Only possible if MQTT session is ON"
-        )
-        CONSOLE.info(
-            f"[{Color.YELLOW}M{Color.OFF}]qtt device or Api device (default) display toggle"
-        )
-        CONSOLE.info(
-            f"[{Color.RED}Q{Color.OFF}]uit, [{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop live monitor"
-        )
-        return input(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...")
+            CONSOLE.info(f"[{Color.YELLOW}K{Color.OFF}]ey list to show this menu")
+            CONSOLE.info(
+                f"[{Color.YELLOW}E{Color.OFF}]lectric Vehicle display toggle ON (default) or OFF"
+            )
+            CONSOLE.info(f"[{Color.YELLOW}D{Color.OFF}]ebug actual Api cache")
+            CONSOLE.info(f"[{Color.YELLOW}C{Color.OFF}]ustomize an Api cache entry")
+            CONSOLE.info(
+                f"[{Color.YELLOW}V{Color.OFF}]iew actual MQTT data cache and extracted device data"
+            )
+            CONSOLE.info(
+                f"[{Color.YELLOW}A{Color.OFF}]pi call display toggle OFF (default) or ON"
+            )
+            CONSOLE.info(
+                f"Toggle MQTT [{Color.YELLOW}S{Color.OFF}]ession OFF (default) or ON"
+            )
+            if self.use_file:
+                CONSOLE.info(
+                    f"Change MQTT message speed [{Color.YELLOW}+{Color.OFF}] faster / [{Color.YELLOW}-{Color.OFF}] slower"
+                )
+                CONSOLE.info(f"Immediate s[{Color.YELLOW}I{Color.OFF}]te refresh")
+                CONSOLE.info(f"Immediate refresh for a[{Color.YELLOW}L{Color.OFF}]l")
+                CONSOLE.info(
+                    f"Select [{Color.YELLOW}N{Color.OFF}]next folder for monitoring"
+                )
+                CONSOLE.info(
+                    f"Select [{Color.YELLOW}P{Color.OFF}]previous folder for monitoring"
+                )
+                CONSOLE.info(
+                    f"Select [{Color.YELLOW}O{Color.OFF}]ther folder for monitoring"
+                )
+            else:
+                CONSOLE.info(
+                    f"[{Color.YELLOW}R{Color.OFF}]eal time MQTT data trigger (Timeout 1 min). Only possible if MQTT session is ON"
+                )
+            CONSOLE.info(
+                f"[{Color.YELLOW}M{Color.OFF}]qtt device or Api device (default) display toggle"
+            )
+            CONSOLE.info(
+                f"[{Color.RED}Q{Color.OFF}]uit, [{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop monitor"
+            )
+            return input(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...")
+        if self.use_file:
+            CONSOLE.info(
+                f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/[{Color.YELLOW}C{Color.OFF}]ustomize cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
+                f"[{Color.YELLOW}N{Color.OFF}]ext/[{Color.YELLOW}P{Color.OFF}]rev/[{Color.YELLOW}O{Color.OFF}]ther folder, "
+                f"s[{Color.YELLOW}I{Color.OFF}]te/A[{Color.YELLOW}L{Color.OFF}]l refresh, "
+                f"MQTT [{Color.YELLOW}S{Color.OFF}]ession ({Color.YELLOW}+{Color.OFF}/{Color.YELLOW}-{Color.OFF}), "
+                f"[{Color.YELLOW}M{Color.OFF}]qtt display, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls, "
+                f"[{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
+            )
+        else:
+            CONSOLE.info(
+                f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/[{Color.YELLOW}C{Color.OFF}]ustomize cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
+                f"MQTT [{Color.YELLOW}S{Color.OFF}]ession toggle, [{Color.YELLOW}R{Color.OFF}]eal time trigger, "
+                f"[{Color.YELLOW}M{Color.OFF}]qtt display toggle, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]calls toggle, "
+                f"[{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
+            )
+        return ""
 
-    def customize_cache(self) -> None:
+    def customize_cache(self) -> bool:
         """Customize a key in the Api cache and restart device details refresh."""
         CONSOLE.info("Site IDs and Device SNs for customization:")
         cache: dict = self.api.sites | self.api.devices
@@ -151,6 +183,8 @@ class AnkerSolixApiMonitor:
             input(f"Hit [{Color.YELLOW}Enter{Color.OFF}] to refresh all data...")
             self.next_dev_refr = 0
             self.next_refr = datetime.now().astimezone()
+            return True
+        return False
 
     async def print_wait_progress(self, seconds: int) -> None:
         """Print wait progress for data poller monitoring for given number of seconds."""
@@ -217,23 +251,30 @@ class AnkerSolixApiMonitor:
                 CONSOLE.info(f"{'Received Topics':<{col1}}: {topics!s}")
         CONSOLE.info(f"{'-' * 100}")
         # Print MQTT stats
-        trigger_sec = (
-            int((self.triggered - datetime.now()).total_seconds())
-            if self.triggered
-            else None
-        )
-        CONSOLE.info(
-            f"Active MQTT topics: {Color.GREEN if self.api.mqttsession.subscriptions else Color.RED}"
-            f"{str(self.api.mqttsession.subscriptions or ' None ')[1:-1]}{Color.OFF}"
-        )
-        CONSOLE.info(
-            f"Realtime Triggered: {Color.GREEN + str(trigger_sec) + ' sec' if self.triggered is not None else Color.RED + 'OFF'}{Color.OFF}, "
-            f"Devices: {Color.CYAN + str(self.api.mqttsession.triggered_devices or ' None ')[1:-1]}{Color.OFF}"
-        )
+        if self.use_file:
+            CONSOLE.info(
+                f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{Color.OFF}, Message cycle duration: {Color.CYAN}"
+                f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}"
+            )
+        else:
+            trigger_sec = (
+                int((self.triggered - datetime.now()).total_seconds())
+                if self.triggered
+                else None
+            )
+            CONSOLE.info(
+                f"Active MQTT topics: {Color.GREEN if self.api.mqttsession.subscriptions else Color.RED}"
+                f"{str(self.api.mqttsession.subscriptions or ' None ')[1:-1]}{Color.OFF}"
+            )
+            CONSOLE.info(
+                f"Realtime Triggered: {Color.GREEN + str(trigger_sec) + ' sec' if self.triggered is not None else Color.RED + 'OFF'}{Color.OFF}, "
+                f"Devices: {Color.CYAN + str(self.api.mqttsession.triggered_devices or ' None ')[1:-1]}{Color.OFF}"
+            )
         CONSOLE.info(f"MQTT {self.api.mqttsession.mqtt_stats!s}")
         CONSOLE.info(
             f"'Received Messages : {json.dumps(self.api.mqttsession.mqtt_stats.dev_messages)}"
         )
+        self.get_menu_options()
 
     async def print_api_data_delayed(
         self, mqtt_mixin: bool = True, delay: int = 0
@@ -455,8 +496,12 @@ class AnkerSolixApiMonitor:
                 ota = dev.get("is_ota_update")
                 if m1 := c and mqtt.get("temperature", ""):
                     m2 = c and mqtt.get("hw_version", "")
+                    if m1 and mqtt.get("temp_unit_fahrenheit"):
+                        m1 = f"{float(m1) * 9 / 5 + 32:>4} °F"
+                    else:
+                        m1 = f"{m1:>4} °C"
                     CONSOLE.info(
-                        f"{'Battery Temp':<{col1}}: {m1 and c}{m1:>4}{' °C':<{col2 - 4}}{co} "
+                        f"{'Battery Temp':<{col1}}: {m1 and c}{m1:<{col2}}{co} "
                         f"{'HW Version':<{col3}}: {m2 and c}{m2}{co}"
                     )
                 m1 = c and mqtt.get("sw_version", "")
@@ -511,7 +556,7 @@ class AnkerSolixApiMonitor:
                 m3 = c and mqtt.get("battery_soh", "")
                 soc = f"{m1 or dev.get('battery_soc', '---'):>4} %"
                 CONSOLE.info(
-                    f"{'Battery SOC/SOH':<{col1}}: {m1 and c}{soc} /{m3 and c}{m3 if m3 else '---':>4} {'%':<{col2-13}}{co} "
+                    f"{'Battery SOC/SOH':<{col1}}: {m1 and c}{soc} /{m3 and c}{m3 if m3 else '---':>4} {'%':<{col2 - 13}}{co} "
                     f"{'Min SOC':<{col3}}: {m2 and c}{m2 or (dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} %{co}"
                 )
                 energy = f"{dev.get('battery_energy', '----'):>4} Wh"
@@ -530,9 +575,13 @@ class AnkerSolixApiMonitor:
                         if m1 := c and mqtt.get(f"exp_{i}_sn", ""):
                             m2 = c and mqtt.get(f"exp_{i}_soc", "")
                             m3 = c and mqtt.get(f"exp_{i}_temperature", "")
+                            if m3 and mqtt.get("temp_unit_fahrenheit"):
+                                m3 = f"{float(m3) * 9 / 5 + 32:>4} °F"
+                            else:
+                                m3 = f"{m3:>4} °C"
                             CONSOLE.info(
                                 f"{'Exp. ' + str(i) + ' SN':<{col1}}: {m1 and c}{m1:<{col2}}{co} "
-                                f"{'Exp. ' + str(i) + ' SOC/Temp':<{col3}}: {m2 and c}{m2:>3} %{co} / {m3 and c}{m3:>3} °C{co}"
+                                f"{'Exp. ' + str(i) + ' SOC/Temp':<{col3}}: {m2 and c}{m2:>3} %{co} / {m3 and c}{m3}{co}"
                             )
                         else:
                             break
@@ -616,8 +665,8 @@ class AnkerSolixApiMonitor:
                         f"{'Grid to Battery':<{col1}}: {m1 and c}{m1 or dev.get('grid_to_battery_power', '---'):>4} {unit:<{col2 - 5}}{co} "
                         f"{'AC Input Power':<{col3}}: {m2 and c}{m2 or dev.get('other_input_power', '---'):>4} {unit}{co}"
                     )
-                m1 = c and mqtt.get("charge_power", "")
-                m2 = c and mqtt.get("discharge_power", "")
+                m1 = c and mqtt.get("charging_power", "")
+                m2 = c and mqtt.get("discharging_power", "")
                 m3 = c and mqtt.get("charged_energy", "")
                 m4 = c and mqtt.get("discharged_energy", "")
                 CONSOLE.info(
@@ -636,14 +685,18 @@ class AnkerSolixApiMonitor:
                     demand = site.get("home_load_power") or ""
                     load = (site.get("solarbank_info") or {}).get("to_home_load") or ""
                     diff = ""
+                    if m1 := c and str(mqtt.get("home_demand", "")):
+                        demand = m1
+                    if m2 := c and str(mqtt.get("ac_output_power_signed","") or mqtt.get("ac_output_power","")):
+                        load = m2
                     with contextlib.suppress(ValueError):
                         if float(demand) > float(load):
                             diff = "(-)"
                         elif float(demand) < float(load):
                             diff = "(+)"
                     CONSOLE.info(
-                        f"{'Home Demand':<{col1}}: {demand or '---':>4} {unit:<{col2 - 5}} "
-                        f"{'SB Home Load':<{col3}}: {load or '---':>4} {unit}  {diff}"
+                        f"{'Home Demand':<{col1}}: {str(m1) and c}{demand or '---':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'SB Home Load':<{col3}}: {str(m2) and c}{load or '---':>4} {unit}{co}  {diff}"
                     )
                     # Total smart plug power and other power?
                     CONSOLE.info(
@@ -844,7 +897,10 @@ class AnkerSolixApiMonitor:
                     )
                 if m1 := c and mqtt.get("temperature", ""):
                     m2 = c and mqtt.get("max_load", "")
-                    m1 = f"{m1:>4} °C"
+                    if m1 and mqtt.get("temp_unit_fahrenheit"):
+                        m1 = f"{float(m1) * 9 / 5 + 32:>4} °F"
+                    else:
+                        m1 = f"{m1:>4} °C"
                     CONSOLE.info(
                         f"{'Batt. Temp.':<{col1}}: {m1 and c}{m1:<{col2}}{co} "
                         f"{'Max. Load':<{col3}}: {m2 and c}{m2 or '----':>4} W{co}"
@@ -858,7 +914,10 @@ class AnkerSolixApiMonitor:
                     )
                 if m1 := c and mqtt.get("exp_1_temperature", ""):
                     m2 = c and mqtt.get("exp_1_type", "")
-                    m1 = f"{m1:>4} °C"
+                    if m1 and mqtt.get("temp_unit_fahrenheit"):
+                        m1 = f"{float(m1) * 9 / 5 + 32:>4} °F"
+                    else:
+                        m1 = f"{m1:>4} °C"
                     CONSOLE.info(
                         f"{'Exp. Temp.':<{col1}}: {m1 and c}{m1:<{col2}}{co} "
                         f"{'Exp. Type':<{col3}}: {m2 and c}{m2 or 'Unknown'}{co}"
@@ -1224,19 +1283,26 @@ class AnkerSolixApiMonitor:
         CONSOLE.info("=" * 80)
         # Print MQTT stats if session active
         if self.api.mqttsession:
-            trigger_sec = (
-                int((self.triggered - datetime.now()).total_seconds())
-                if self.triggered
-                else None
-            )
-            CONSOLE.info(
-                f"Active MQTT topics: {Color.GREEN}{str(self.api.mqttsession.subscriptions or ' None ')[1:-1]}{co}"
-            )
-            CONSOLE.info(
-                f"Realtime Triggered: {Color.GREEN + str(trigger_sec) + ' sec' if self.triggered is not None else Color.RED + 'OFF'}{co}, "
-                f"Devices: {Color.CYAN + str(self.api.mqttsession.triggered_devices or ' None ')[1:-1]}{co}"
-            )
+            if self.use_file:
+                CONSOLE.info(
+                    f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{co}, Message cycle duration: {Color.CYAN}"
+                    f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){co}"
+                )
+            else:
+                trigger_sec = (
+                    int((self.triggered - datetime.now()).total_seconds())
+                    if self.triggered
+                    else None
+                )
+                CONSOLE.info(
+                    f"Active MQTT topics: {Color.GREEN}{str(self.api.mqttsession.subscriptions or ' None ')[1:-1]}{co}"
+                )
+                CONSOLE.info(
+                    f"Realtime Triggered: {Color.GREEN + str(trigger_sec) + ' sec' if self.triggered is not None else Color.RED + 'OFF'}{co}, "
+                    f"Devices: {Color.CYAN + str(self.api.mqttsession.triggered_devices or ' None ')[1:-1]}{co}"
+                )
             CONSOLE.info(f"MQTT {self.api.mqttsession.mqtt_stats!s}")
+        self.get_menu_options()
 
     async def main(self) -> None:  # noqa: C901
         """Run Main routine to start the monitor in a loop."""
@@ -1246,7 +1312,6 @@ class AnkerSolixApiMonitor:
         exampleslist: list = self.get_subfolders(
             Path(__file__).parent / "examples"
         ) + self.get_subfolders(Path(__file__).parent / "exports")
-        testfolder: str | None = None
         # refresh interval in seconds, will be prompted
         refresh_interval: int = 0
         # interval count for details refresh
@@ -1258,9 +1323,9 @@ class AnkerSolixApiMonitor:
                 CONSOLE.info(f"({Color.CYAN}0{Color.OFF}) Real time from Anker cloud")
                 for idx, filename in enumerate(exampleslist, start=1):
                     CONSOLE.info(f"({Color.YELLOW}{idx}{Color.OFF}) {filename}")
-                CONSOLE.info(f"({Color.RED}q{Color.OFF}) Quit")
+                CONSOLE.info(f"({Color.RED}Q{Color.OFF}) Quit")
             selection = input(
-                f"Input Source number {Color.CYAN}0{Color.YELLOW}-{len(exampleslist)}{Color.OFF}) or [{Color.RED}q{Color.OFF}]uit: "
+                f"Input Source number {Color.CYAN}0{Color.YELLOW}-{len(exampleslist)}{Color.OFF}) or [{Color.RED}Q{Color.OFF}]uit: "
             )
             if (
                 selection.upper() in ["Q", "QUIT"]
@@ -1269,11 +1334,11 @@ class AnkerSolixApiMonitor:
                 or int(selection) > len(exampleslist)
             ):
                 return False
-            if (selection := int(selection)) == 0:
+            if (folderselection := int(selection)) == 0:
                 self.use_file = False
             else:
                 self.use_file = True
-                testfolder = exampleslist[selection - 1]
+                self.folderdict["folder"] = exampleslist[folderselection - 1]
         else:
             self.use_file = False
         try:
@@ -1290,7 +1355,7 @@ class AnkerSolixApiMonitor:
                 )
                 if self.use_file:
                     # set the correct test folder for Api
-                    self.api.testDir(testfolder)
+                    self.api.testDir(self.folderdict.get("folder"))
                 elif await self.api.async_authenticate():
                     CONSOLE.info(
                         f"Anker Cloud authentication: {Color.GREEN}OK{Color.OFF}"
@@ -1301,7 +1366,7 @@ class AnkerSolixApiMonitor:
                         f"Anker Cloud authentication: {Color.CYAN}CACHED{Color.OFF}"
                     )
 
-                while not self.use_file:
+                while True:
                     resp = input(
                         f"How many seconds refresh interval should be used? ({Color.YELLOW}5-600{Color.OFF}, default: {Color.CYAN}30{Color.OFF}): "
                     )
@@ -1331,6 +1396,7 @@ class AnkerSolixApiMonitor:
                 deferred: bool = False
                 # get running loop to run blocking code
                 self.loop = asyncio.get_running_loop()
+                mqtt_task: asyncio.Task | None = None
                 while True:
                     now = datetime.now().astimezone()
                     if self.next_refr <= now:
@@ -1377,8 +1443,6 @@ class AnkerSolixApiMonitor:
                             )
                             if selection.isdigit() and 0 <= int(selection) <= 50:
                                 self.api.apisession.endpointLimit(int(selection))
-                            # Show key menu before starting poller
-                            self.get_menu_option()
 
                         CONSOLE.info("\nRunning site refresh...")
                         await self.api.update_sites(
@@ -1433,12 +1497,11 @@ class AnkerSolixApiMonitor:
                             CONSOLE.info(
                                 "Using input source folder: %s", self.api.testDir()
                             )
-                        else:
-                            CONSOLE.info(
-                                "Anker Solix Monitor (refresh %s s, details refresh countdown %s):",
-                                refresh_interval,
-                                self.next_dev_refr,
-                            )
+                        CONSOLE.info(
+                            "Anker Solix Monitor (refresh %s s, details refresh countdown %s):",
+                            refresh_interval,
+                            self.next_dev_refr,
+                        )
                         CONSOLE.info(
                             "Sites: %s, Devices: %s",
                             len(self.api.sites),
@@ -1446,133 +1509,183 @@ class AnkerSolixApiMonitor:
                         )
                         # print the data but enforece Api data only after refresh
                         self.print_api_data(mqtt_mixin=False)
-                    # ask to reload or switch to next file or wait for refresh cycle of real time monitoring
-                    if self.use_file:
-                        while self.use_file:
-                            CONSOLE.info("Api Requests: %s", self.api.request_count)
-                            CONSOLE.log(
-                                logging.INFO if self.showApiCalls else logging.DEBUG,
-                                self.api.request_count.get_details(last_hour=True),
-                            )
-                            CONSOLE.debug(json.dumps(self.api.sites, indent=2))
-                            CONSOLE.debug(json.dumps(self.api.devices, indent=2))
-                            self.api.request_count.recycle(last_time=datetime.now())
-                            resp = self.get_menu_option()
-                            if resp.upper() in ["D", "DEBUG"]:
-                                # print the whole cache
-                                CONSOLE.info(
-                                    "Api cache:\n%s",
-                                    json.dumps(self.api.getCaches(), indent=2),
-                                )
-                            if resp.upper() in ["S", "SITE"]:
-                                # set device details refresh to future to reload only site info
-                                self.next_dev_refr += 1
+                    CONSOLE.info("Api Requests: %s", self.api.request_count)
+                    CONSOLE.log(
+                        logging.INFO if self.showApiCalls else logging.DEBUG,
+                        self.api.request_count.get_details(last_hour=True),
+                    )
+                    try:
+                        # start task to print wait progress
+                        wait_task = self.loop.create_task(
+                            self.print_wait_progress(seconds=refresh_interval)
+                        )
+                        # key press loop
+                        while True:
+                            if wait_task.done():
                                 break
-                            if resp.upper() in ["A", "ALL"]:
-                                self.next_dev_refr = 0
-                                break
-                            if resp.upper() in ["C", "USTOMIZE"]:
-                                self.customize_cache()
-                                break
-                            if resp.upper() in ["O", "OTHER"] and exampleslist:
-                                CONSOLE.info("Select the input source for the monitor:")
-                                for idx, filename in enumerate(exampleslist, start=1):
-                                    CONSOLE.info(
-                                        f"({Color.YELLOW}{idx}{Color.OFF}) {filename}"
-                                    )
-                                CONSOLE.info(f"({Color.RED}q{Color.OFF}) Quit")
-                                while self.use_file:
-                                    selection = input(
-                                        f"Enter source file number ({Color.YELLOW}1-{len(exampleslist)}{Color.OFF}) or [{Color.RED}q{Color.OFF}]uit: "
-                                    )
-                                    if selection.upper() in ["Q", "QUIT"]:
-                                        return True
-                                    if selection.isdigit() and 1 <= (
-                                        selection := int(selection)
-                                    ) <= len(exampleslist):
-                                        break
-                                testfolder = exampleslist[selection - 1]
-                                self.api.testDir(testfolder)
-                                self.api.clearCaches()
-                                self.next_dev_refr = 0
-                                break
-                            if resp.upper() in ["N", "NEXT"] and exampleslist:
-                                selection = (
-                                    (selection + 1)
-                                    if selection < len(exampleslist)
-                                    else 1
-                                )
-                                testfolder = exampleslist[selection - 1]
-                                self.api.testDir(testfolder)
-                                self.api.clearCaches()
-                                self.next_dev_refr = 0
-                                break
-                            if resp.upper() in ["P", "PREVIOUS"] and exampleslist:
-                                selection = (
-                                    (selection - 1)
-                                    if selection > 1
-                                    else len(exampleslist)
-                                )
-                                testfolder = exampleslist[selection - 1]
-                                self.api.testDir(testfolder)
-                                self.api.clearCaches()
-                                self.next_dev_refr = 0
-                                break
-                            if resp.upper() in ["E", "EV"]:
-                                self.showVehicles = not self.showVehicles
-                                break
-                            if resp.upper() in ["Q", "QUIT"]:
-                                return True
-                    else:
-                        try:
-                            CONSOLE.info(
-                                "Api Requests: %s",
-                                self.api.request_count,
-                            )
-                            CONSOLE.log(
-                                logging.INFO if self.showApiCalls else logging.DEBUG,
-                                self.api.request_count.get_details(last_hour=True),
-                            )
-                            # start task to print wait progress
-                            wait_task = self.loop.create_task(
-                                self.print_wait_progress(seconds=refresh_interval)
-                            )
-                            while True:
-                                # Check if Api poller wait interval finished
-                                if wait_task.done():
+                            break_refresh = False
+                            # Check if realtime trigger is timed out
+                            if self.triggered and self.triggered <= datetime.now():
+                                self.triggered = None
+                                if self.api.mqttsession:
+                                    self.api.mqttsession.triggered_devices = set()
+                            # Check if a key was pressed
+                            if k := await self.loop.run_in_executor(
+                                None, common.getkey
+                            ):
+                                k = k.lower()
+                                if k == "k":
+                                    # print key menu
+                                    self.get_menu_options(details=True)
                                     break
-                                # Check if realtime trigger is timed out
-                                if self.triggered and self.triggered <= datetime.now():
-                                    self.triggered = None
-                                    if self.api.mqttsession:
-                                        self.api.mqttsession.triggered_devices = set()
-                                # Check if a key was pressed
-                                if k := await self.loop.run_in_executor(
-                                    None, common.getkey
+                                if k == "o" and exampleslist and self.use_file:
+                                    CONSOLE.info(
+                                        "Select the input source for the monitor:"
+                                    )
+                                    for idx, filename in enumerate(
+                                        exampleslist, start=1
+                                    ):
+                                        CONSOLE.info(
+                                            f"({Color.YELLOW}{idx}{Color.OFF}) {filename}"
+                                        )
+                                    CONSOLE.info(f"({Color.RED}C{Color.OFF}) Cancel")
+                                    while True:
+                                        selection = input(
+                                            f"Enter source file number ({Color.YELLOW}1-{len(exampleslist)}{Color.OFF}) or [{Color.RED}C{Color.OFF}]ancel: "
+                                        )
+                                        if selection.upper() in ["C", "CANCEL"]:
+                                            selection = None
+                                            break
+                                        if selection.isdigit() and 1 <= int(
+                                            selection
+                                        ) <= len(exampleslist):
+                                            folderselection = int(selection)
+                                            break
+                                    if selection:
+                                        self.api.testDir(
+                                            exampleslist[folderselection - 1]
+                                        )
+                                        self.api.clearCaches()
+                                        self.api.request_count.recycle(
+                                            last_time=datetime.now()
+                                        )
+                                        self.folderdict["folder"] = self.api.testDir()
+                                        self.next_dev_refr = 0
+                                        break_refresh = True
+                                    else:
+                                        break
+                                elif k == "n" and exampleslist and self.use_file:
+                                    folderselection = (
+                                        (folderselection + 1)
+                                        if folderselection < len(exampleslist)
+                                        else 1
+                                    )
+                                    self.api.testDir(exampleslist[folderselection - 1])
+                                    self.api.clearCaches()
+                                    self.api.request_count.recycle(
+                                        last_time=datetime.now()
+                                    )
+                                    self.folderdict["folder"] = self.api.testDir()
+                                    self.next_dev_refr = 0
+                                    break_refresh = True
+                                elif k == "p" and exampleslist and self.use_file:
+                                    folderselection = (
+                                        (folderselection - 1)
+                                        if folderselection > 1
+                                        else len(exampleslist)
+                                    )
+                                    self.api.testDir(exampleslist[folderselection - 1])
+                                    self.api.clearCaches()
+                                    self.api.request_count.recycle(
+                                        last_time=datetime.now()
+                                    )
+                                    self.folderdict["folder"] = self.api.testDir()
+                                    self.next_dev_refr = 0
+                                    break_refresh = True
+                                elif k == "i" and self.use_file:
+                                    CONSOLE.info(
+                                        f"{Color.YELLOW}\nRefreshing sites...{Color.OFF}"
+                                    )
+                                    # set device details refresh to future to reload only site info
+                                    self.next_dev_refr += 1
+                                    break_refresh = True
+                                elif k == "l" and self.use_file:
+                                    CONSOLE.info(
+                                        f"{Color.YELLOW}\nRefreshing all details...{Color.OFF}"
+                                    )
+                                    self.next_dev_refr = 0
+                                    break_refresh = True
+                                elif (
+                                    k == "+" and self.use_file and self.api.mqttsession
                                 ):
-                                    k = k.lower()
-                                    if k == "k":
-                                        # print key menu
-                                        self.get_menu_option()
-                                    elif k == "e":
-                                        # Toggle vehicle display
-                                        if self.showVehicles:
-                                            CONSOLE.info(
-                                                f"{Color.RED}\nDisabling Electric Vehicle display...{Color.OFF}"
-                                            )
-                                            self.showVehicles = False
-                                        else:
-                                            CONSOLE.info(
-                                                f"{Color.YELLOW}\nEnabling Electric Vehicle display...!{Color.OFF}"
-                                            )
-                                            self.showVehicles = True
-                                    elif k == "s":
-                                        # Toggle MQTT session state
-                                        if not self.api.mqttsession:
-                                            CONSOLE.info(
-                                                f"{Color.YELLOW}\nStarting MQTT session...{Color.OFF}"
-                                            )
-                                            if await self.api.startMqttSession():
+                                    if (speed := self.folderdict.get("speed", 1)) < 16:
+                                        CONSOLE.info(
+                                            f"{Color.GREEN}\nIncreasing MQTT message speed...{Color.OFF}"
+                                        )
+                                        self.folderdict["speed"] = round(
+                                            min(16, 2 * speed), 2
+                                        )
+                                        break
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nMax MQTT message speed reached!{Color.OFF}"
+                                    )
+                                elif (
+                                    k == "-" and self.use_file and self.api.mqttsession
+                                ):
+                                    if (
+                                        speed := self.folderdict.get("speed", 1)
+                                    ) > 0.25:
+                                        CONSOLE.info(
+                                            f"{Color.CYAN}\nDecreasing MQTT message speed...{Color.OFF}"
+                                        )
+                                        self.folderdict["speed"] = round(
+                                            max(0.25, speed / 2), 2
+                                        )
+                                        break
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nMin MQTT message speed reached!{Color.OFF}"
+                                    )
+                                elif k == "e":
+                                    # Toggle vehicle display
+                                    if self.showVehicles:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nDisabling Electric Vehicle display...{Color.OFF}"
+                                        )
+                                        self.showVehicles = False
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.YELLOW}\nEnabling Electric Vehicle display...!{Color.OFF}"
+                                        )
+                                        self.showVehicles = True
+                                    if self.use_file:
+                                        break_refresh = True
+                                elif k == "s":
+                                    # Toggle MQTT session state
+                                    if not self.api.mqttsession:
+                                        CONSOLE.info(
+                                            f"{Color.YELLOW}\nStarting MQTT session...{Color.OFF}"
+                                        )
+                                        if await self.api.startMqttSession(
+                                            fromFile=self.use_file
+                                        ):
+                                            if self.use_file:
+                                                # set the value print as callback for mqtt value refreshes
+                                                self.api.mqtt_update_callback(
+                                                    func=self.print_device_mqtt
+                                                )
+                                                # Create task for polling mqtt messages from files for testing
+                                                mqtt_task = self.loop.create_task(
+                                                    self.api.mqttsession.file_poller(
+                                                        folderdict=self.folderdict,
+                                                        speed=1,
+                                                    )
+                                                )
+                                                CONSOLE.info(
+                                                    f"{Color.GREEN}MQTT file data poller task was started.{Color.OFF}"
+                                                )
+                                                await asyncio.sleep(1)
+                                                break
+                                            else:  # noqa: RET508
                                                 CONSOLE.info(
                                                     f"{Color.GREEN}MQTT session connected{Color.OFF}, subscribing eligible devices..."
                                                 )
@@ -1600,174 +1713,193 @@ class AnkerSolixApiMonitor:
                                                     )
                                         else:
                                             CONSOLE.info(
-                                                f"{Color.RED}\nStopping MQTT session...!{Color.OFF}"
+                                                f"{Color.RED}Failed to start MQTT session!{Color.OFF}"
                                             )
-                                            self.api.stopMqttSession()
-                                            self.triggered = None
-                                            if self.showMqttDevice:
-                                                self.showMqttDevice = False
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nStopping MQTT session...!{Color.OFF}"
+                                        )
+                                        if mqtt_task:
+                                            mqtt_task.cancel()
+                                            # Wait for the task to finish cancellation
+                                            try:
+                                                await mqtt_task
+                                            except asyncio.CancelledError:
                                                 CONSOLE.info(
-                                                    f"{Color.CYAN}Toggling back to Api device display for next refresh...{Color.OFF}"
+                                                    "MQTT file data poller task was cancelled."
                                                 )
-                                    elif k == "a":
-                                        # Toggle Api call display
-                                        if self.showApiCalls:
+                                        self.api.stopMqttSession()
+                                        self.triggered = None
+                                        if self.showMqttDevice:
+                                            self.showMqttDevice = False
                                             CONSOLE.info(
-                                                f"{Color.RED}\nDisabling Api call display...{Color.OFF}"
+                                                f"{Color.CYAN}Toggling back to Api device display for next refresh...{Color.OFF}"
                                             )
-                                            self.showApiCalls = False
-                                        else:
+                                            if self.use_file:
+                                                break_refresh = True
+                                elif k == "a":
+                                    # Toggle Api call display
+                                    if self.showApiCalls:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nDisabling Api call display...{Color.OFF}"
+                                        )
+                                        self.showApiCalls = False
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.YELLOW}\nEnabling Api call display for next refresh...!{Color.OFF}"
+                                        )
+                                        self.showApiCalls = True
+                                    if self.use_file:
+                                        break_refresh = True
+                                elif k == "m":
+                                    # Toggle Mqtt device or Api device data display
+                                    if self.api.mqttsession:
+                                        if self.showMqttDevice:
                                             CONSOLE.info(
-                                                f"{Color.YELLOW}\nEnabling Api call display...!{Color.OFF}"
-                                            )
-                                            self.showApiCalls = True
-                                    elif k == "m":
-                                        # Toggle Mqtt device or Api device data display
-                                        if self.api.mqttsession:
-                                            if self.showMqttDevice:
-                                                CONSOLE.info(
-                                                    f"{Color.CYAN}\nEnabling Api device display...{Color.OFF}"
-                                                )
-                                                self.showMqttDevice = False
-                                                await asyncio.sleep(1)
-                                                self.print_api_data()
-                                            else:
-                                                CONSOLE.info(
-                                                    f"{Color.YELLOW}\nEnabling MQTT device display...!{Color.OFF}"
-                                                )
-                                                self.showMqttDevice = True
-                                                await asyncio.sleep(1)
-                                                self.print_device_mqtt(deviceSn=None)
-                                        else:
-                                            CONSOLE.info(
-                                                f"{Color.RED}\nNo MQTT session active to enable MQTT device display!{Color.OFF}"
+                                                f"{Color.CYAN}\nEnabling Api device display...{Color.OFF}"
                                             )
                                             self.showMqttDevice = False
-                                    elif k == "r":
-                                        # Real time trigger
-                                        if (
-                                            self.api.mqttsession
-                                            and self.api.mqttsession.client
-                                        ):
-                                            if not self.api.mqttsession.client.is_connected():
-                                                CONSOLE.info(
-                                                    f"{Color.YELLOW}\nMQTT session not connected, trying reconnection...{Color.OFF}"
-                                                )
-                                                self.api.startMqttSession()
-                                            # Cycle through devices and publish trigger for each applicable device
-                                            if self.api.mqttsession.client.is_connected():
-                                                if devs := [
-                                                    dev
-                                                    for dev in self.api.devices.values()
-                                                    if dev.get("mqtt_supported")
-                                                ]:
-                                                    CONSOLE.info(
-                                                        f"{Color.CYAN}\nTriggering real time MQTT data for {self.rt_timeout} seconds...{Color.OFF}"
-                                                    )
-                                                    for dev in devs:
-                                                        resp = self.api.mqttsession.realtime_trigger(
-                                                            deviceDict=dev,
-                                                            timeout=self.rt_timeout,
-                                                        )
-                                                        with contextlib.suppress(
-                                                            ValueError, RuntimeError
-                                                        ):
-                                                            resp.wait_for_publish(
-                                                                timeout=2
-                                                            )
-                                                        sn = dev.get("device_sn")
-                                                        if resp.is_published():
-                                                            CONSOLE.info(
-                                                                f"Triggered device: {Color.GREEN}{sn} ({dev.get('device_pn')}) - "
-                                                                f"{dev.get('name') or 'NoName'}{Color.OFF}"
-                                                            )
-                                                            self.api.mqttsession.triggered_devices.add(
-                                                                sn
-                                                            )
-                                                        else:
-                                                            CONSOLE.info(
-                                                                f"{Color.RED}\nFailed to publish Real Time trigger message for {sn}{Color.OFF}"
-                                                            )
-                                                            self.api.mqttsession.triggered_devices.discard(
-                                                                sn
-                                                            )
-                                                    if self.api.mqttsession.triggered_devices:
-                                                        self.triggered = (
-                                                            datetime.now()
-                                                            + timedelta(
-                                                                seconds=self.rt_timeout
-                                                            )
-                                                        )
-                                                    else:
-                                                        self.triggered = None
-                                                else:
-                                                    CONSOLE.info(
-                                                        f"{Color.YELLOW}\nNo eligible MQTT devices found!{Color.OFF}"
-                                                    )
                                         else:
                                             CONSOLE.info(
-                                                f"{Color.RED}\nReal time MQTT data requires active MQTT session...{Color.OFF}"
+                                                f"{Color.YELLOW}\nEnabling MQTT device display...!{Color.OFF}"
                                             )
-                                    elif k == "d":
-                                        # print the whole cache
+                                            self.showMqttDevice = True
+                                        await asyncio.sleep(1)
+                                        break
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nNo MQTT session active to enable MQTT device display!{Color.OFF}"
+                                    )
+                                    self.showMqttDevice = False
+                                elif k == "r" and not self.use_file:
+                                    # Real time trigger
+                                    if (
+                                        self.api.mqttsession
+                                        and self.api.mqttsession.client
+                                    ):
+                                        if not self.api.mqttsession.client.is_connected():
+                                            CONSOLE.info(
+                                                f"{Color.YELLOW}\nMQTT session not connected, trying reconnection...{Color.OFF}"
+                                            )
+                                            self.api.startMqttSession()
+                                        # Cycle through devices and publish trigger for each applicable device
+                                        if self.api.mqttsession.client.is_connected():
+                                            if devs := [
+                                                dev
+                                                for dev in self.api.devices.values()
+                                                if dev.get("mqtt_supported")
+                                            ]:
+                                                CONSOLE.info(
+                                                    f"{Color.CYAN}\nTriggering real time MQTT data for {self.rt_timeout} seconds...{Color.OFF}"
+                                                )
+                                                for dev in devs:
+                                                    resp = self.api.mqttsession.realtime_trigger(
+                                                        deviceDict=dev,
+                                                        timeout=self.rt_timeout,
+                                                    )
+                                                    with contextlib.suppress(
+                                                        ValueError, RuntimeError
+                                                    ):
+                                                        resp.wait_for_publish(timeout=2)
+                                                    sn = dev.get("device_sn")
+                                                    if resp.is_published():
+                                                        CONSOLE.info(
+                                                            f"Triggered device: {Color.GREEN}{sn} ({dev.get('device_pn')}) - "
+                                                            f"{dev.get('name') or 'NoName'}{Color.OFF}"
+                                                        )
+                                                        self.api.mqttsession.triggered_devices.add(
+                                                            sn
+                                                        )
+                                                    else:
+                                                        CONSOLE.info(
+                                                            f"{Color.RED}\nFailed to publish Real Time trigger message for {sn}{Color.OFF}"
+                                                        )
+                                                        self.api.mqttsession.triggered_devices.discard(
+                                                            sn
+                                                        )
+                                                if self.api.mqttsession.triggered_devices:
+                                                    self.triggered = (
+                                                        datetime.now()
+                                                        + timedelta(
+                                                            seconds=self.rt_timeout
+                                                        )
+                                                    )
+                                                else:
+                                                    self.triggered = None
+                                            else:
+                                                CONSOLE.info(
+                                                    f"{Color.YELLOW}\nNo eligible MQTT devices found!{Color.OFF}"
+                                                )
+                                    else:
                                         CONSOLE.info(
-                                            "\nApi cache:\n%s",
-                                            json.dumps(self.api.getCaches(), indent=2),
+                                            f"{Color.RED}\nReal time MQTT data requires active MQTT session...{Color.OFF}"
                                         )
+                                elif k == "d":
+                                    # print the whole cache
+                                    CONSOLE.info(
+                                        "\nApi cache:\n%s",
+                                        json.dumps(self.api.getCaches(), indent=2),
+                                    )
+                                    input(
+                                        f"Hit [{Color.CYAN}Enter{Color.OFF}] to continue...\n"
+                                    )
+                                    break
+                                elif k == "v":
+                                    # print all extracted MQTT values (MQTT session cache) and device data
+                                    if self.api.mqttsession:
+                                        CONSOLE.info(
+                                            "\nMQTT value cache:\n%s",
+                                            json.dumps(
+                                                self.api.mqttsession.mqtt_data,
+                                                indent=2,
+                                            ),
+                                        )
+                                        for dev in [
+                                            dev
+                                            for dev in self.api.devices.values()
+                                            if (
+                                                not self.site_selected
+                                                or dev.get("site_id")
+                                                == self.site_selected
+                                            )
+                                            and dev.get("mqtt_data")
+                                        ]:
+                                            CONSOLE.info(
+                                                f"Extracted MQTT device data: {Color.MAG}{dev.get('name') or 'NoName'} - "
+                                                f"{dev.get('device_sn')} ({dev.get('device_pn')}){Color.OFF}\n"
+                                                f"{json.dumps(dev.get('mqtt_data'), indent=2)}"
+                                            )
                                         input(
                                             f"Hit [{Color.CYAN}Enter{Color.OFF}] to continue...\n"
                                         )
-                                    elif k == "v":
-                                        # print all extracted MQTT values (MQTT session cache) and device data
-                                        if self.api.mqttsession:
-                                            CONSOLE.info(
-                                                "\nMQTT value cache:\n%s",
-                                                json.dumps(
-                                                    self.api.mqttsession.mqtt_data,
-                                                    indent=2,
-                                                ),
-                                            )
-                                            for dev in [
-                                                dev
-                                                for dev in self.api.devices.values()
-                                                if (
-                                                    not self.site_selected
-                                                    or dev.get("site_id")
-                                                    == self.site_selected
-                                                )
-                                                and dev.get("mqtt_data")
-                                            ]:
-                                                CONSOLE.info(
-                                                    f"Extracted MQTT device data: {Color.MAG}{dev.get('name') or 'NoName'} - "
-                                                    f"{dev.get('device_sn')} ({dev.get('device_pn')}){Color.OFF}\n"
-                                                    f"{json.dumps(dev.get('mqtt_data'), indent=2)}"
-                                                )
-                                            input(
-                                                f"Hit [{Color.CYAN}Enter{Color.OFF}] to continue...\n"
-                                            )
-                                        else:
-                                            CONSOLE.info(
-                                                f"{Color.RED}\nMQTT device data require active MQTT session...{Color.OFF}"
-                                            )
-                                    elif k == "c":
-                                        CONSOLE.info(
-                                            f"\n{Color.YELLOW}Customizing Api cache entry...{Color.OFF}"
-                                        )
-                                        self.customize_cache()
-                                    elif k in ["esc", "q"]:
-                                        CONSOLE.info(
-                                            f"{Color.RED}\nStopping monitor...{Color.OFF}"
-                                        )
-                                        raise asyncio.CancelledError
-                                    await asyncio.sleep(0.5)
-                        finally:
-                            # Cancel the started tasks
-                            wait_task.cancel()
-                            # Wait for the tasks to finish cancellation
-                            try:
-                                await wait_task
-                            except asyncio.CancelledError:
-                                CONSOLE.info("\nData poller wait task was cancelled.")
+                                        break
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nMQTT device data require active MQTT session...{Color.OFF}"
+                                    )
+                                elif k == "c":
+                                    CONSOLE.info(
+                                        f"\n{Color.YELLOW}Customizing Api cache entry...{Color.OFF}"
+                                    )
+                                    if self.customize_cache():
+                                        break_refresh = True
+                                    else:
+                                        break
+                                elif k in ["esc", "q"]:
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nStopping monitor...{Color.OFF}"
+                                    )
+                                    raise asyncio.CancelledError
+                                if break_refresh:
+                                    self.next_refr = datetime.now().astimezone()
+                                    wait_task.cancel()
+                                await asyncio.sleep(0.5)
+                    finally:
+                        # Cancel the started tasks
+                        wait_task.cancel()
+                        # Wait for the tasks to finish cancellation
+                        try:
+                            await wait_task
+                        except asyncio.CancelledError:
+                            CONSOLE.info("\nData poller wait task was cancelled.")
         except (
             asyncio.CancelledError,
             KeyboardInterrupt,

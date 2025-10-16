@@ -250,34 +250,35 @@ class AnkerSolixBaseApi:
                 func(device=self.devices.get(deviceSn, {}))
 
     async def startMqttSession(
-        self, message_callback: MessageCallback | None = None
+        self, message_callback: MessageCallback | None = None, fromFile: bool = False
     ) -> AnkerSolixMqttSession | None:
-        """(Re)Start the MQTT session and (Re)connect to server."""
+        """(Re)Start the MQTT session, and if not fromFile also (Re)connect to server."""
         # Initialize the session if required
         if not self.mqttsession:
             self.mqttsession = AnkerSolixMqttSession(apisession=self.apisession)
-        # (Re)Connect the MQTT client
-        if not self.mqttsession.client or not self.mqttsession.client.is_connected():
-            await self.mqttsession.connect_client_async()
-        # Start the loop to process network traffic and callbacks
-        if self.mqttsession.client:
-            self.mqttsession.client.loop_start()
-        else:
-            self._logger.error(
-                "Api %s failed connecting to MQTT server %s:%s",
+        if not fromFile:
+            # (Re)Connect the MQTT client
+            if not self.mqttsession.client or not self.mqttsession.client.is_connected():
+                await self.mqttsession.connect_client_async()
+            # Start the loop to process network traffic and callbacks
+            if self.mqttsession.client:
+                self.mqttsession.client.loop_start()
+            else:
+                self._logger.error(
+                    "Api %s failed connecting to MQTT server %s:%s",
+                    self.apisession.nickname,
+                    self.mqttsession.host,
+                    self.mqttsession.port,
+                )
+                self.mqttsession.cleanup()
+                self.mqttsession = None
+                return self.mqttsession
+            self._logger.debug(
+                "Api %s connected successfully to MQTT server %s:%s",
                 self.apisession.nickname,
                 self.mqttsession.host,
                 self.mqttsession.port,
             )
-            self.mqttsession.cleanup()
-            self.mqttsession = None
-            return self.mqttsession
-        self._logger.debug(
-            "Api %s connected successfully to MQTT server %s:%s",
-            self.apisession.nickname,
-            self.mqttsession.host,
-            self.mqttsession.port,
-        )
         # register message callback to extract device MQTT data into device Api cache if not custom callback provided
         self.mqttsession.message_callback(
             func=message_callback if callable(message_callback) else self.mqtt_received

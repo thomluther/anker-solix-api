@@ -16,16 +16,23 @@ if TYPE_CHECKING:
 
 # Define supported Models for this class
 MODELS = []
+# Define supported and validated controls per Model
+FEATURES = {"realtime_trigger": MODELS}
 
 
 class SolixMqttDevice:
     """Define the base class to handle an Anker Solix MQTT device for controls."""
+
+    models: list = MODELS
+    features: dict = FEATURES
 
     def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
         """Initialize."""
         self.api: AnkerSolixApi = api_instance
         self.sn: str = device_sn
         self.pn: str = ""
+        self.models = self.models or MODELS
+        self.features = self.features or FEATURES
         self.device: dict = {}
         self.mqttdata: dict = {}
         self.testdir: str = self.api.testDir()
@@ -39,8 +46,8 @@ class SolixMqttDevice:
     def update_device(self, device: dict) -> None:
         """Define callback for Api device updates."""
         if isinstance(device, dict) and device.get("device_sn") == self.sn:
-            # Validate device type
-            if (pn := device.get("device_pn")) in MODELS:
+            # Validate device type or accept any if not defined
+            if (pn := device.get("device_pn")) in self.models or not self.models:
                 self.pn = pn
                 self.device = device
                 self.mqttdata = device.get("mqtt_data", {})

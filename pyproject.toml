@@ -1,6 +1,6 @@
 [project]
 name = "Anker-Solix-Api"
-version = "3.3.0"
+version = "3.4.0"
 description = "Python library for Anker Solix Power devices (Solarbank, Inverter, PPS etc)"
 readme = "README.md"
 license = { text = "MIT" }
