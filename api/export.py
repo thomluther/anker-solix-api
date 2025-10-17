@@ -398,7 +398,7 @@ class AnkerSolixApiExport:
             len(self.api_power.sites),
             len(self.api_power.devices),
         )
-        return bool(self.api_power.sites or self.api_power.sites)
+        return bool(self.api_power.sites or self.api_power.devices)
 
     async def export_common_data(self) -> bool:
         """Run functions to export common data."""

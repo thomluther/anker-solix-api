@@ -376,10 +376,11 @@ class AnkerSolixBaseApi:
                 device.update({"type": devType.lower()})
             if siteId:
                 device.update({"site_id": str(siteId)})
-            if isAdmin:
-                device.update({"is_admin": True})
-            elif isAdmin is False and device.get("is_admin") is None:
-                device.update({"is_admin": False})
+            if isAdmin is not None:
+                device["is_admin"] = isAdmin
+            elif device.get("is_admin") is None and (value := devData.get("ms_device_type")) is not None:
+                # Update admin based on ms device type for standalone devices
+                device["is_admin"] = value in [0, 1]
             for key, value in devData.items():
                 try:
                     #
@@ -388,9 +389,6 @@ class AnkerSolixBaseApi:
                     if key in ["device_sw_version"] and value:
                         # Example for key name conversion when value is given
                         device.update({"sw_version": str(value)})
-                    elif key in ["ms_device_type"] and "is_admin" not in device:
-                        # Update admin based on ms device type for standalone devices
-                        device.update({"is_admin": value in [0, 1]})
                     elif key in [
                         # Examples for boolean key values
                         "wifi_online",
