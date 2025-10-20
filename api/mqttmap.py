@@ -544,6 +544,7 @@ SOLIXMQTTMAP = {
         "0405": {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
+            "a4": {"name": "unknown_1?"},
             # Power monitoring fields
             "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
             "a6": {"name": "ac_output_power"},  # Individual AC outlet power
@@ -554,10 +555,13 @@ SOLIXMQTTMAP = {
             "ae": {"name": "dc_input_power"},  # DC input power (solar/car charging)
             "b0": {"name": "ac_output_power_total"},  # Total AC output power
             # Battery status fields
+            "c0": {"name": "expansion_packs_a?"},
             "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
             "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
             "c3": {"name": "battery_soh"},  # Main battery state of health (%)
             "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
+            "c5": {"name": "expansion_packs_b?"},
+            "d7": {"name": "expansion_packs_c?"},
             # Temperature monitoring
             "bd": {"name": "temperature"},  # Main device temperature (°C)
             "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)

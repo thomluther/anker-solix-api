@@ -258,7 +258,10 @@ class AnkerSolixBaseApi:
             self.mqttsession = AnkerSolixMqttSession(apisession=self.apisession)
         if not fromFile:
             # (Re)Connect the MQTT client
-            if not self.mqttsession.client or not self.mqttsession.client.is_connected():
+            if (
+                not self.mqttsession.client
+                or not self.mqttsession.client.is_connected()
+            ):
                 await self.mqttsession.connect_client_async()
             # Start the loop to process network traffic and callbacks
             if self.mqttsession.client:
@@ -378,7 +381,10 @@ class AnkerSolixBaseApi:
                 device.update({"site_id": str(siteId)})
             if isAdmin is not None:
                 device["is_admin"] = isAdmin
-            elif device.get("is_admin") is None and (value := devData.get("ms_device_type")) is not None:
+            elif (
+                device.get("is_admin") is None
+                and (value := devData.get("ms_device_type")) is not None
+            ):
                 # Update admin based on ms device type for standalone devices
                 device["is_admin"] = value in [0, 1]
             for key, value in devData.items():
@@ -470,6 +476,8 @@ class AnkerSolixBaseApi:
                     mqtt := (self.mqttsession.mqtt_data.get(sn) or {}).copy()
                 ) and oldtime < (mqtt.get("last_message") or ""):
                     # cycle through all items and extract what is needed for the device type
+                    calc_efficiency = False
+                    calc_capacity = False
                     for key, value in mqtt.items():
                         # Implement device MQTT merge code with key filtering, conversion, consolidation, calculation or dependency updates
                         # skip value update marker for static fields that may be extracted from various messages
@@ -509,7 +517,6 @@ class AnkerSolixBaseApi:
                                 # keys with value that should be saved as int string
                                 "battery_soc",
                                 "battery_soc_total",
-                                "battery_soh",
                                 "exp_1_soc",
                                 "exp_2_soc",
                                 "exp_3_soc",
@@ -562,11 +569,18 @@ class AnkerSolixBaseApi:
                             .isdigit()
                         ):
                             device_mqtt[key] = f"{float(value):.0f}"
+                            # trigger device capacity calculation with SOC updates
+                            if "battery_soc" in key or (
+                                str(key).startswith("exp") and str(key).endswith("soc")
+                            ):
+                                calc_capacity = True
                         elif (
                             key
                             in [
                                 # keys with value that should be saved as rounded as 3 decimal float string
                                 "pv_yield",
+                                "battery_soh",
+                                "exp_1_soh",
                                 "charged_energy",
                                 "discharged_energy",
                                 "output_energy",
@@ -586,6 +600,13 @@ class AnkerSolixBaseApi:
                             .isdigit()
                         ):
                             device_mqtt[key] = f"{float(value):.3f}"
+                            if key in [
+                                "output_energy",
+                                "pv_yield",
+                                "charged_energy",
+                                "discharged_energy",
+                            ]:
+                                calc_efficiency = True
                         elif (
                             key
                             in [
@@ -596,10 +617,18 @@ class AnkerSolixBaseApi:
                                 "allow_export_switch",
                                 "priority_discharge_switch",
                                 "grid_export_disabled",
-                                "light_mode",
+                                "display_mode",
+                                "switch_display",
+                                "display_timeout_seconds",
                                 "switch_light_off",
+                                "light_mode",
                                 "switch_ac_socket",
+                                "switch_ac_output_power",
+                                "switch_12v_dc_output_power",
+                                "ac_output_mode",
+                                "12v_dc_output_mode",
                                 "grid_export_disabled",
+                                "backup_charge",
                                 "temp_unit_fahrenheit",
                                 "expansion_packs",
                                 "parallel_devices",
@@ -623,16 +652,61 @@ class AnkerSolixBaseApi:
                         else:
                             value_updated = False
                         updated = updated or value_updated
+                    # calculate extra fields if required values were updated
+                    if calc_efficiency:
+                        if (pv := device_mqtt.get("pv_yield")) and (
+                            out := device_mqtt.get("output_energy")
+                        ):
+                            device_mqtt["system_efficiency"] = (
+                                f"{(float(out) / float(pv) * 100):.3f}"
+                            )
+                        if (charge := device_mqtt.get("charged_energy")) and (
+                            discharge := device_mqtt.get("discharged_energy")
+                        ):
+                            device_mqtt["battery_efficiency"] = (
+                                f"{(float(discharge) / float(charge) * 100):.3f}"
+                            )
                     device["mqtt_data"] = device_mqtt
+                    # trigger device cache update for cap calculation with total or main device soc updates
+                    if (
+                        calc_capacity
+                        and not device.get("battery_soc")
+                        and (cap := device.get("battery_capacity"))
+                    ):
+                        # calculate total expansions if expansions are available and no number in mqtt cache
+                        if not (exp := mqtt.get("expansion_packs")):
+                            device_mqtt["expansion_packs"] = len([
+                                k
+                                for k in [f"exp_{i!s}_soc" for i in range(1, 6)]
+                                if device_mqtt.get(k)
+                            ])
+                        # calculate total soc if expansions are available and no total soc in mqtt cache
+                        if not (tsoc := mqtt.get("battery_soc_total")):
+                            # calculate total soc based on expansions
+                            if soclist := [
+                                float(device_mqtt.get(k))
+                                for k in (
+                                    ["battery_soc"]
+                                    + [f"exp_{i!s}_soc" for i in range(1, 6)]
+                                )
+                                if device_mqtt.get(k)
+                            ]:
+                                tsoc = round(sum(soclist) / len(soclist))
+                                device_mqtt["battery_soc_total"] = f"{float(tsoc):.0f}"
+                        # trigger with old capacity since this will cause capacity recalculation
+                        if tsoc:
+                            self._update_dev({"device_sn": sn, "battery_capacity": cap})
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated
                     if oldsize == 0:
                         self.notify_device(deviceSn=sn)
-            # update MQTT statistic in account cache
-            self._update_account(
-                {"mqtt_statistic": self.mqttsession.mqtt_stats.asdict()}
-            )
+
+            # update MQTT statistic in account cache, convert datetime to json compatible format
+            stats = self.mqttsession.mqtt_stats.asdict()
+            if (start := stats.pop("start_time")) and isinstance(start, datetime):
+                stats["start_time"] = start.strftime("%Y-%m-%d %H:%M")
+            self._update_account({"mqtt_statistic": stats})
         return updated
 
     async def update_sites(
