@@ -51,20 +51,11 @@ async def main():
 
         # Example commands using F3800 wrapper methods
         try:
-            '''
-            # Turn on AC output (wrapper)
-            CONSOLE.info("\nTurning AC output OFF via wrapper...")
-            result = await mqttdevice.set_ac_output(enabled=False)
-            CONSOLE.info(f"Result: {'Success' if result else 'Failed'}")
-            await asyncio.sleep(2)
-
             # Generate AC output ON hex (test mode, no publish)
             CONSOLE.info("\nGenerating AC output ON hex (test mode, no publish)...")
             await mqttdevice.set_ac_output(enabled=True, toFile=True)
             await asyncio.sleep(1)
-            '''
 
-            '''
             # Turn on 12V DC Car output (wrapper)
             CONSOLE.info("\nTurning 12V DC (Car) output ON...")
             result = await mqttdevice.set_dc_output(enabled=True)
@@ -88,34 +79,26 @@ async def main():
             result = await mqttdevice.set_display_mode(mode=3)  # 3=High
             CONSOLE.info(f"Result: {'Success' if result else 'Failed'}")
             await asyncio.sleep(2)
-            '''
 
             # Temporarily change max load to 1000W, wait 5 seconds, then restore to 200W
-            try:
-                CONSOLE.info("\nTemporarily setting max load to 1000W for 5 seconds...")
-                result = await mqttdevice.set_max_load(max_watts=1000)
-                CONSOLE.info(f"Set max load to 1000W: {'Success' if result else 'Failed'}")
-                await asyncio.sleep(5)
+            CONSOLE.info("\nTemporarily setting max load to 1000W for 5 seconds...")
+            result = await mqttdevice.set_max_load(max_watts=1000)
+            CONSOLE.info(f"Set max load to 1000W: {'Success' if result else 'Failed'}")
+            await asyncio.sleep(5)
 
-                CONSOLE.info("Restoring max load to 200W...")
-                result = await mqttdevice.set_max_load(max_watts=200)
-                CONSOLE.info(f"Restore max load to 200W: {'Success' if result else 'Failed'}")
-                await asyncio.sleep(2)
-            except Exception as mx_err:
-                CONSOLE.error(f"Error during max load change test: {mx_err}")
-
-            
+            CONSOLE.info("Restoring max load to 200W...")
+            result = await mqttdevice.set_max_load(max_watts=200)
+            CONSOLE.info(f"Restore max load to 200W: {'Success' if result else 'Failed'}")
+            await asyncio.sleep(2)
 
             # Set Real-Time Data ON (not implemented in wrapper yet)
             # You may add a wrapper for this in the future
 
-            '''
             # Return to normal settings
             CONSOLE.info("\nReturning to normal settings...")
             await mqttdevice.set_display(enabled=False)
             await mqttdevice.set_light(mode=0)
             await mqttdevice.set_dc_output(enabled=False)
-            '''
             CONSOLE.info("Done!")
 
         except Exception as e:
