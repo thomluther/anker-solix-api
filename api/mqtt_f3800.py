@@ -30,7 +30,6 @@ FEATURES = {
     "ac_output_mode_select": MODELS,
     "device_timeout_minutes": MODELS,
     "max_load": MODELS,
-    "ultrafast_charging": MODELS,
 }
 
 
@@ -58,7 +57,6 @@ class SolixMqttDeviceF3800(SolixMqttDevice):
             "ac_output_mode_select": lambda v: v in [1, 2],
             "device_timeout_minutes": lambda v: 30 <= v <= 1440,
             "max_load": lambda v: 100 <= v <= 2000,
-            "ultrafast_charging": lambda v: v in [0, 1],
         }
         rule = validation_rules.get(command_id)
         return rule(value) if rule else True
