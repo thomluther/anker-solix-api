@@ -266,6 +266,28 @@ class AnkerSolixBaseApi:
             # Start the loop to process network traffic and callbacks
             if self.mqttsession.client:
                 self.mqttsession.client.loop_start()
+                # Wait briefly for the client to establish the connection
+                # Paho's connect_async is non-blocking; some servers are fast but we still
+                # need to wait until client.is_connected() becomes True before returning.
+                import asyncio
+
+                timeout = 5.0
+                interval = 0.1
+                waited = 0.0
+                while not self.mqttsession.client.is_connected() and waited < timeout:
+                    await asyncio.sleep(interval)
+                    waited += interval
+                if not self.mqttsession.client.is_connected():
+                    self._logger.error(
+                        "Api %s failed to connect to MQTT server within %.1f seconds %s:%s",
+                        self.apisession.nickname,
+                        timeout,
+                        self.mqttsession.host,
+                        self.mqttsession.port,
+                    )
+                    self.mqttsession.cleanup()
+                    self.mqttsession = None
+                    return self.mqttsession
             else:
                 self._logger.error(
                     "Api %s failed connecting to MQTT server %s:%s",

@@ -7,6 +7,9 @@ can dump the output to a file. The tool will display a usage menu before monitor
 it reacts on key press for the menu options. The menu can be displayed again with 'm'.
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import asyncio
 from datetime import datetime
 from functools import partial

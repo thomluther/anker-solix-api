@@ -19,3 +19,4 @@ poetry.lock
 /ankertest.py
 /client.py
 /daily_energy_*.csv
+.env

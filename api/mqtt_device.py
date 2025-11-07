@@ -108,6 +108,18 @@ class SolixMqttDevice:
                             "Failed to start MQTT session for device control"
                         )
                         return False
+                # Ensure MQTT client is connected before publishing
+                if not (
+                    self.api.mqttsession
+                    and self.api.mqttsession.client
+                    and self.api.mqttsession.client.is_connected()
+                ):
+                    # Try to (re)start the mqtt session which will wait for connection
+                    if not await self.api.startMqttSession():
+                        self._logger.error(
+                            "Failed to establish MQTT connection for device control"
+                        )
+                        return False
                 # Publish MQTT command
                 _, mqtt_info = self.api.mqttsession.publish(self.device, hexdata.hex())
                 # Wait for publish completion with timeout
