@@ -973,7 +973,7 @@ def generate_mqtt_command(  # noqa: C901
         # These patterns were captured from actual mobile app MQTT traffic and validated
 
         if command == "c1000x_ac_output":
-            # AC output mode: Message type 0077 (VALIDATED ✅)
+            # AC output control: Message type 004a (VALIDATED ✅)
             value = 1 if parameters.get("enabled", False) else 0
             hexdata = DeviceHexData(
                 model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="004a")
