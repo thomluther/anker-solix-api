@@ -119,6 +119,9 @@ class AnkerSolixBaseApi:
         self.sites = {}
         self.devices = {}
         self.account = {}
+        # check active MQTT session and stop it
+        if self.mqttsession:
+            self.stopMqttSession()
 
     def customizeCacheId(self, id: str, key: str, value: Any) -> None:
         """Customize a cache identifier with a key and value pair."""
@@ -258,10 +261,7 @@ class AnkerSolixBaseApi:
             self.mqttsession = AnkerSolixMqttSession(apisession=self.apisession)
         if not fromFile:
             # (Re)Connect the MQTT client
-            if (
-                not self.mqttsession.client
-                or not self.mqttsession.client.is_connected()
-            ):
+            if not self.mqttsession.is_connected():
                 await self.mqttsession.connect_client_async()
             # Start the loop to process network traffic and callbacks
             if self.mqttsession.client:
@@ -696,7 +696,7 @@ class AnkerSolixBaseApi:
                         and (cap := device.get("battery_capacity"))
                     ):
                         # calculate total expansions if expansions are available and no number in mqtt cache
-                        if not (exp := mqtt.get("expansion_packs")):
+                        if not mqtt.get("expansion_packs"):
                             device_mqtt["expansion_packs"] = len([
                                 k
                                 for k in [f"exp_{i!s}_soc" for i in range(1, 6)]

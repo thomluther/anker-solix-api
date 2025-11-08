@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from .apitypes import SolixDefaults
 from .mqtt_device import SolixMqttDevice
 
 if TYPE_CHECKING:
@@ -46,7 +47,9 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
     def validate_command_value(self, command_id: str, value: Any) -> bool:
         """Validate command value ranges for device controls."""
         validation_rules = {
-            "realtime_trigger": lambda v: 30 <= v <= 600,
+            "realtime_trigger": lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
+            <= v
+            <= SolixDefaults.TRIGGER_TIMEOUT_MAX,
             "ac_output_control": lambda v: v in [0, 1],
             "dc_12v_output_control": lambda v: v in [0, 1],
             "display_control": lambda v: v in [0, 1],

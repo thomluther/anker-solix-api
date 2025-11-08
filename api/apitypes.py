@@ -1125,6 +1125,10 @@ class SolixDefaults:
     REQUEST_TIMEOUT_DEF: int = 10
     # Request limit per endpoint per minute
     ENDPOINT_LIMIT_DEF: int = 10
+    # Seconds timeout for MQTT realtime trigger
+    TRIGGER_TIMEOUT_MIN: int = 30
+    TRIGGER_TIMEOUT_MAX: int = 600
+    TRIGGER_TIMEOUT_DEF: int = 300
     # Inverter limit
     MICRO_INVERTER_LIMIT_MIN: int = 0
     MICRO_INVERTER_LIMIT_MAX: int = 800

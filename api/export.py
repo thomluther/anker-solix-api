@@ -1859,7 +1859,7 @@ class AnkerSolixApiExport:
                     # wait at least first minute for messages without trigger
                     await asyncio.sleep(70)
                     # Ensure MQTT client is still connected
-                    if not self.api_power.mqttsession.client.is_connected():
+                    if not self.api_power.mqttsession.is_connected():
                         self._logger.info(
                             "MQTT session not connected, trying reconnection..."
                         )
@@ -1867,7 +1867,7 @@ class AnkerSolixApiExport:
                             message_callback=self.dump_device_mqtt
                         )
                     # Cycle through devices and publish trigger for each applicable device
-                    if self.api_power.mqttsession.client.is_connected():
+                    if self.api_power.mqttsession.is_connected():
                         self._logger.info(
                             "Triggering MQTT real time data for 60 seconds and waiting for messages..."
                         )
