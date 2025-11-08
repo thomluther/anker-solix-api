@@ -139,9 +139,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 try:
                     if key in ["product_code", "device_pn"] and value:
                         device["device_pn"] = str(value)
-                        # Flag device for supported mqtt data extraction if admin and model defined in MQTT map
-                        if device.get("is_admin") and str(value) in SOLIXMQTTMAP:
+                        # Flag device for supported mqtt trigger if admin and device not passive
+                        if device.get("is_admin") and not device.get("is_passive"):
                             device["mqtt_supported"] = True
+                            device["mqtt_described"] = bool(str(value) in SOLIXMQTTMAP)
                         # check if capacity should be calculated
                         if not device.get("battery_capacity") and hasattr(
                             SolixDeviceCapacity, str(value)

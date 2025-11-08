@@ -9,6 +9,7 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, Any
 
+from .apitypes import SolixDefaults
 from .mqtt import generate_mqtt_command
 
 if TYPE_CHECKING:
@@ -66,7 +67,9 @@ class SolixMqttDevice:
         """Validate command value ranges for device controls."""
         # This has to be updated according to specifc device commands and rules
         validation_rules = {
-            "realtime_trigger": lambda v: 30 <= v <= 600,
+            "realtime_trigger": lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
+            <= v
+            <= SolixDefaults.TRIGGER_TIMEOUT_MAX,
         }
         rule = validation_rules.get(command_id)
         return rule(value) if rule else True
@@ -134,7 +137,7 @@ class SolixMqttDevice:
 
     def realtime_trigger(
         self,
-        timeout: int = 60,
+        timeout: int = SolixDefaults.TRIGGER_TIMEOUT_DEF,
         toFile: bool = False,
     ) -> bool:
         """Trigger device realtime data publish.
@@ -161,7 +164,7 @@ class SolixMqttDevice:
         if not toFile:
             # Validate MQTT connection prior trigger
             if not (
-                self.api.mqttsession and self.api.mqttsession.client.is_connected()
+                self.api.mqttsession and self.api.mqttsession.is_connected()
             ):
                 self._logger.error(
                     "Device %s %s control error - No MQTT connection active",

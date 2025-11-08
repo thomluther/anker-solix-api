@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from .apitypes import SolixDefaults
 from .mqtt_device import SolixMqttDevice
 
 if TYPE_CHECKING:
@@ -36,7 +37,9 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
     def validate_command_value(self, command_id: str, value: Any) -> bool:
         """Validate command value ranges for controls."""
         validation_rules = {
-            "realtime_trigger": lambda v: 30 <= v <= 600,
+            "realtime_trigger": lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
+            <= v
+            <= SolixDefaults.TRIGGER_TIMEOUT_MAX,
             "temp_unit_control": lambda v: v in [0, 1],
             "power_cutoff_select": lambda v: v in [5, 10],
         }

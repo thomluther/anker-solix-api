@@ -1711,7 +1711,7 @@ class AnkerSolixApiMonitor:
                                                 if devs := [
                                                     dev
                                                     for dev in self.api.devices.values()
-                                                    if dev.get("mqtt_supported")
+                                                    if dev.get("mqtt_described")
                                                 ]:
                                                     for dev in devs:
                                                         topic = f"{self.api.mqttsession.get_topic_prefix(deviceDict=dev)}#"
@@ -1791,21 +1791,18 @@ class AnkerSolixApiMonitor:
                                     self.showMqttDevice = False
                                 elif k == "r" and not self.use_file:
                                     # Real time trigger
-                                    if (
-                                        self.api.mqttsession
-                                        and self.api.mqttsession.client
-                                    ):
-                                        if not self.api.mqttsession.client.is_connected():
+                                    if self.api.mqttsession:
+                                        if not self.api.mqttsession.is_connected():
                                             CONSOLE.info(
                                                 f"{Color.YELLOW}\nMQTT session not connected, trying reconnection...{Color.OFF}"
                                             )
                                             self.api.startMqttSession()
                                         # Cycle through devices and publish trigger for each applicable device
-                                        if self.api.mqttsession.client.is_connected():
+                                        if self.api.mqttsession.is_connected():
                                             if devs := [
                                                 dev
                                                 for dev in self.api.devices.values()
-                                                if dev.get("mqtt_supported")
+                                                if dev.get("mqtt_described")
                                             ]:
                                                 CONSOLE.info(
                                                     f"{Color.CYAN}\nTriggering real time MQTT data for {self.rt_timeout} seconds...{Color.OFF}"

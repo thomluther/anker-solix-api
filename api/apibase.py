@@ -119,6 +119,9 @@ class AnkerSolixBaseApi:
         self.sites = {}
         self.devices = {}
         self.account = {}
+        # check active MQTT session and stop it
+        if self.mqttsession:
+            self.stopMqttSession()
 
     def customizeCacheId(self, id: str, key: str, value: Any) -> None:
         """Customize a cache identifier with a key and value pair."""
@@ -258,10 +261,7 @@ class AnkerSolixBaseApi:
             self.mqttsession = AnkerSolixMqttSession(apisession=self.apisession)
         if not fromFile:
             # (Re)Connect the MQTT client
-            if (
-                not self.mqttsession.client
-                or not self.mqttsession.client.is_connected()
-            ):
+            if not self.mqttsession.is_connected():
                 await self.mqttsession.connect_client_async()
             # Start the loop to process network traffic and callbacks
             if self.mqttsession.client:

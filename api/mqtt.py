@@ -5,6 +5,7 @@ from base64 import b64decode, b64encode
 from collections.abc import Callable
 import contextlib
 from datetime import datetime, timedelta
+from functools import partial
 import json
 import os
 from pathlib import Path
@@ -16,6 +17,7 @@ import aiofiles
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
+from .apitypes import SolixDefaults
 from .mqtttypes import (
     DeviceHexData,
     DeviceHexDataField,
@@ -351,7 +353,7 @@ class AnkerSolixMqttSession:
         """Add topic to subscription set and subscribe if just added and client is already connected."""
         if topic and topic not in self.subscriptions:
             # Try to subscribe topic first if client already connected
-            if self.client and self.client.is_connected():
+            if self.is_connected():
                 _, mid = self.client.subscribe(topic)
                 # check if mid was recorded with subscription error
                 if reason_code := self.mids.pop(str(mid), None):
@@ -383,7 +385,7 @@ class AnkerSolixMqttSession:
         """Remove topic from subscription set and unsubscribe if already connected."""
         if topic and topic in self.subscriptions:
             # Try to unsubscribe topic if client already connected
-            if self.client and self.client.is_connected():
+            if self.is_connected():
                 _, mid = self.client.unsubscribe(topic)
                 # check if mid was recorded with unsubscription error
                 if reason_code := self.mids.pop(str(mid), None):
@@ -418,6 +420,11 @@ class AnkerSolixMqttSession:
         # Use Non blocking connect with loop_start
         self.client.connect_async(host=self.host, port=self.port, keepalive=keepalive)
         return self.client
+
+    def is_connected(self) -> bool:
+        """Return MQTT client connection state if client was started already."""
+        # return client connection state is client started
+        return bool(self.client and self.client.is_connected())
 
     async def create_client(self) -> mqtt.Client | None:
         """Create and configure MQTT client with SSL/TLS certificates queried from Anker Solix api session."""
@@ -472,13 +479,19 @@ class AnkerSolixMqttSession:
                     self._temp_cert_files.append(filename)
             # Configure SSL/TLS using temporary files
             if len(self._temp_cert_files) == 3:
-                self.client.tls_set(
-                    ca_certs=self._temp_cert_files[0],
-                    certfile=self._temp_cert_files[1],
-                    keyfile=self._temp_cert_files[2],
-                    cert_reqs=ssl.CERT_REQUIRED,
-                    tls_version=ssl.PROTOCOL_TLS,
-                    ciphers=None,
+                # run this in loop executor to avoid blocking calls to files
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(
+                    None,
+                    partial(
+                        self.client.tls_set,
+                        ca_certs=self._temp_cert_files[0],
+                        certfile=self._temp_cert_files[1],
+                        keyfile=self._temp_cert_files[2],
+                        cert_reqs=ssl.CERT_REQUIRED,
+                        tls_version=ssl.PROTOCOL_TLS,
+                        ciphers=None,
+                    ),
                 )
             else:
                 self.client = None
@@ -529,7 +542,7 @@ class AnkerSolixMqttSession:
 
     def cleanup(self):
         """Clean up client connections and delete certificate files."""
-        if self.client and self.client.is_connected:
+        if self.is_connected():
             self.client.disconnect()
             self.client.loop_stop()
         self.client = None
@@ -550,7 +563,7 @@ class AnkerSolixMqttSession:
     def realtime_trigger(
         self,
         deviceDict: dict,
-        timeout: int = 300,
+        timeout: int = SolixDefaults.TRIGGER_TIMEOUT_DEF,
     ) -> mqtt.MQTTMessageInfo:
         """Trigger MQTT real time data for Anker Solix device via MQTT message."""
 
@@ -589,7 +602,7 @@ class AnkerSolixMqttSession:
                 self.cleanup()
                 return False
             client = await self.connect_client_async()
-            if not client.is_connected:
+            if not client.is_connected():
                 self._logger.error(
                     "Api %s MQTT session failed connection to Anker Solix MQTT server %s: %s",
                     self.apisession.nickname,

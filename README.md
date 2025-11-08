@@ -295,8 +295,53 @@ When using the real time option, it will prompt for the Anker account details if
 Upon successful authentication, you will see relevant parameter of supported devices displayed and refreshed at regular interval.
 When using monitoring from local json file folder, the values will not change. But this option is useful to validate the api parsing with various system constellations. You can navigate through the list of json folders to verify/debug various system exports with the tool.
 
+<details>
+<summary><b>Expand to see monitor tool usage overview</b><br><br></summary>
+
+### Live Monitor key menu:
+
+```console
+----------------------------------------------------------------------------------------------------
+[K]ey list to show this menu
+[E]lectric Vehicle display toggle ON (default) or OFF
+[D]ebug actual Api cache
+[C]ustomize an Api cache entry
+[V]iew actual MQTT data cache and extracted device data
+[A]pi call display toggle OFF (default) or ON
+Toggle MQTT [S]ession OFF (default) or ON
+[R]eal time MQTT data trigger (Timeout 1 min). Only possible if MQTT session is ON
+[M]qtt device or Api device (default) display toggle
+[Q]uit, [ESC] or [CTRL-C] to stop monitor
+----------------------------------------------------------------------------------------------------
+```
+
+### File usage Monitor key menu:
+
+```console
+----------------------------------------------------------------------------------------------------
+[K]ey list to show this menu
+[E]lectric Vehicle display toggle ON (default) or OFF
+[D]ebug actual Api cache
+[C]ustomize an Api cache entry
+[V]iew actual MQTT data cache and extracted device data
+[A]pi call display toggle OFF (default) or ON
+Toggle MQTT [S]ession OFF (default) or ON
+Change MQTT message speed [+] faster / [-] slower
+Immediate s[I]te refresh
+Immediate refresh for a[L]l
+Select [N]next folder for monitoring
+Select [P]previous folder for monitoring
+Select [O]ther folder for monitoring
+[M]qtt device or Api device (default) display toggle
+[Q]uit, [ESC] or [CTRL-C] to stop monitor
+----------------------------------------------------------------------------------------------------
+```
+</details>
+
 > [!TIP]
-> If the system owning account is used, more details for the owning sites and devices can be queried and displayed.
+> If the system owning account is used, more details for the owning sites and devices can be queried and displayed. You can also compare the monitor data
+with mobile App data.
+
 
 ## mqtt_monitor.py
 
@@ -310,6 +355,24 @@ you will see the owned devices of the user account and you can select a device y
 can dump the output to a file. The tool will display a usage menu before monitoring starts. While monitoring,
 it reacts on key press for the menu options. The menu can be displayed again with 'm'.
 The tool also utilizes the built in real time data trigger, which can trigger frequent data updates of your owned devices.
+
+<details>
+<summary><b>Expand to see monitor tool usage overview</b><br><br></summary>
+
+### MQTT Monitor key menu:
+
+```console
+----------------------------------------------------------------------------------------------------
+[M]enu to show this key list
+[U]nsubscribe all topics. This will stop receiving MQTT messages
+[S]ubscribe root topic. This will subscribe root only
+[T]oggle subscribed topic. If only one topic identified from root topic, toggling is not possible
+[R]eal time data trigger toggle OFF (Default) or ON
+[V]iew value extraction refresh screen or MQTT message decoding
+[Q]uit, [ESC] or [CTRL-C] to stop MQTT monitor
+----------------------------------------------------------------------------------------------------
+```
+</details>
 
 > [!TIP]
 > For byte value decoding and possible field descriptions, you should monitor your app in parallel. See discussion [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222) for MQTT details and general data decoding instructions.
