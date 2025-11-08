@@ -336,6 +336,49 @@ Select [O]ther folder for monitoring
 [Q]uit, [ESC] or [CTRL-C] to stop monitor
 ----------------------------------------------------------------------------------------------------
 ```
+
+### Command line options for monitor tool
+
+Command line arguments allow making the monitor tool more suitable for automation and non-interactive usage.
+Keep in mind that credential prompts are only avoided if they are defined as environment variables:
+  - ANKERUSER=<username>
+  - ANKERPASSWORD=<password>
+  - ANKERCOUNTRY=<country_id>
+
+
+#### Main usage options
+- `--live-cloud` / `--live`: Skip interactive mode, use live cloud data directly
+- `--site-id`: Monitor specific site ID only instead of all sites and devices for account
+- `--enable-mqtt` / `--mqtt`: Auto-start MQTT session for real-time device data
+- `--realtime` / `--rt`: Automatically trigger real-time MQTT data on startup
+- `--mqtt-display`: Show pure MQTT data instead of mixed API+MQTT display
+
+#### Configuration Options
+- `--interval` / `-i`: Modify default refresh interval (5-600 seconds, default: 30)
+- `--endpoint-limit`: Modify default API endpoint limit for request throttling (default: 10)
+- `--energy-stats` / `--energy`: Include daily site energy statistics, only shown with API display
+- `--no-vehicles` / `--no-ev`: Disable electric vehicle display for API display
+
+#### Debug & Logging
+- `--api-calls`: Show API call statistics and details
+- `--debug-http`: Control HTTP request/response debug logging (separated from API stats)
+
+
+#### Command line argument usage examples
+
+```bash
+# Quick monitoring with MQTT and real-time data
+python monitor.py --live --mqtt --rt
+
+# Energy monitoring with custom interval
+python monitor.py --live --energy-stats --interval 60
+
+# Monitor specific site with pure MQTT display
+python monitor.py --live --mqtt --mqtt-display --site-id ABC123
+
+# Debug mode with HTTP logging
+python monitor.py --live --mqtt --debug-http
+```
 </details>
 
 > [!TIP]
