@@ -10,6 +10,7 @@ Note: When the system owning account is used, more details for the systems and d
 MQTT messages can only be subscribed for owned devices, which does not work for system member accounts.
 """
 
+import argparse
 import asyncio
 import contextlib
 from datetime import datetime, timedelta
@@ -52,24 +53,113 @@ SHOWAPICALLS = False
 RTTIMEOUT = 60
 
 
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Anker Solix Monitor - Monitor your Anker Solix devices in real-time"
+    )
+    parser.add_argument(
+        "--live-cloud", "--live",
+        action="store_true",
+        help="Use live cloud data (default: interactive mode asks for input source)"
+    )
+    parser.add_argument(
+        "--enable-mqtt", "--mqtt",
+        action="store_true",
+        help="Enable MQTT session for real-time device data"
+    )
+    parser.add_argument(
+        "--realtime", "--rt",
+        action="store_true",
+        help="Enable real-time MQTT trigger on startup (requires --enable-mqtt)"
+    )
+    parser.add_argument(
+        "--mqtt-display",
+        action="store_true",
+        help="Show pure MQTT data display instead of mixed API+MQTT display (requires --enable-mqtt)"
+    )
+    parser.add_argument(
+        "--interval", "-i",
+        type=int,
+        default=30,
+        choices=range(5, 601),
+        metavar="[5-600]",
+        help="Refresh interval in seconds (default: 30)"
+    )
+    parser.add_argument(
+        "--energy-stats", "--energy",
+        action="store_true",
+        help="Include daily site energy statistics"
+    )
+    parser.add_argument(
+        "--site-id",
+        type=str,
+        help="Monitor specific site ID only"
+    )
+    parser.add_argument(
+        "--no-vehicles", "--no-ev",
+        action="store_true",
+        help="Disable electric vehicle display"
+    )
+    parser.add_argument(
+        "--api-calls",
+        action="store_true",
+        help="Show API call statistics and details"
+    )
+    parser.add_argument(
+        "--debug-http",
+        action="store_true",
+        help="Show HTTP request/response debug messages (very verbose)"
+    )
+    parser.add_argument(
+        "--endpoint-limit",
+        type=int,
+        default=10,
+        choices=range(0, 51),
+        metavar="[0-50]",
+        help="API endpoint limit for request throttling (0=disabled, default: 10)"
+    )
+
+    args = parser.parse_args()
+
+    # Validate argument combinations
+    if args.realtime and not args.enable_mqtt:
+        parser.error("--realtime requires --enable-mqtt to be specified")
+    if args.mqtt_display and not args.enable_mqtt:
+        parser.error("--mqtt-display requires --enable-mqtt to be specified")
+
+    return args
+
+
 class AnkerSolixApiMonitor:
     """Define the class for the monitor."""
 
-    def __init__(self) -> None:
+    def __init__(self, args=None) -> None:
         """Initialize."""
-        self.interactive: bool = INTERACTIVE
-        self.showApiCalls: bool = SHOWAPICALLS
-        self.showVehicles: bool = True
-        self.use_file: bool = False
+        # Parse command line arguments if not provided
+        if args is None:
+            args = parse_arguments()
+
+        # Set configuration based on command line arguments
+        self.interactive: bool = INTERACTIVE and not args.live_cloud
+        self.showApiCalls: bool = args.api_calls or SHOWAPICALLS
+        self.showVehicles: bool = not args.no_vehicles
+        self.use_file: bool = not args.live_cloud and INTERACTIVE
         self.api: AnkerSolixApi | None = None
-        self.site_selected: str | None = None
-        self.energy_stats: bool = False
+        self.site_selected: str | None = args.site_id
+        self.energy_stats: bool = args.energy_stats
+        self.refresh_interval: int = args.interval
+        self.enable_mqtt: bool = args.enable_mqtt
+        self.enable_realtime: bool = args.realtime
+        self.endpoint_limit: int = args.endpoint_limit
+        self.debug_http: bool = args.debug_http
+        # Set MQTT display mode from command line
+        self.showMqttDevice: bool = args.mqtt_display and args.enable_mqtt
         self.next_refr: datetime
         self.next_dev_refr: int = 0
         self.triggered: datetime | None = None
         self.rt_timeout: int = RTTIMEOUT
         self.folderdict: dict = {}
-        self.showMqttDevice: bool = False
         self.delayed_sn_refresh: set = set()
         self.loop: asyncio.AbstractEventLoop
 
@@ -1331,8 +1421,8 @@ class AnkerSolixApiMonitor:
         exampleslist: list = self.get_subfolders(
             Path(__file__).parent / "examples"
         ) + self.get_subfolders(Path(__file__).parent / "exports")
-        # refresh interval in seconds, will be prompted
-        refresh_interval: int = 0
+        # refresh interval in seconds, will be prompted or set from args
+        refresh_interval: int = self.refresh_interval
         # interval count for details refresh
         details_refresh: int = 10
         if self.interactive:
@@ -1365,12 +1455,27 @@ class AnkerSolixApiMonitor:
                 user = "" if self.use_file else common.user()
                 if not self.use_file:
                     CONSOLE.info("Trying Api authentication for user %s...", user)
+
+                # Create a logger for the API with appropriate level
+                if self.debug_http:
+                    api_logger = CONSOLE
+                else:
+                    # Create a logger that suppresses DEBUG messages
+                    api_logger = logging.getLogger(f"{__name__}.api")
+                    api_logger.setLevel(logging.INFO)
+                    # Add the same handler as CONSOLE but with INFO level
+                    handler = logging.StreamHandler()
+                    handler.setLevel(logging.INFO)
+                    handler.setFormatter(logging.Formatter('%(message)s'))
+                    api_logger.addHandler(handler)
+                    api_logger.propagate = False
+
                 self.api = AnkerSolixApi(
                     user,
                     "" if self.use_file else common.password(),
                     "" if self.use_file else common.country(),
                     websession,
-                    CONSOLE,
+                    api_logger,
                 )
                 if self.use_file:
                     # set the correct test folder for Api
@@ -1385,27 +1490,28 @@ class AnkerSolixApiMonitor:
                         f"Anker Cloud authentication: {Color.CYAN}CACHED{Color.OFF}"
                     )
 
-                while True:
-                    resp = input(
-                        f"How many seconds refresh interval should be used? ({Color.YELLOW}5-600{Color.OFF}, default: {Color.CYAN}30{Color.OFF}): "
-                    )
-                    if not resp:
-                        refresh_interval = 30
-                        break
-                    if resp.isdigit() and 5 <= int(resp) <= 600:
-                        refresh_interval = int(resp)
-                        break
+                if self.interactive:
+                    while True:
+                        resp = input(
+                            f"How many seconds refresh interval should be used? ({Color.YELLOW}5-600{Color.OFF}, default: {Color.CYAN}30{Color.OFF}): "
+                        )
+                        if not resp:
+                            refresh_interval = 30
+                            break
+                        if resp.isdigit() and 5 <= int(resp) <= 600:
+                            refresh_interval = int(resp)
+                            break
 
-                # ask for including energy details
-                while True:
-                    resp = input(
-                        f"Do you want to include daily site energy statistics? ([{Color.YELLOW}Y{Color.OFF}]es / [{Color.CYAN}N{Color.OFF}]o = default): "
-                    )
-                    if not resp or resp.upper() in ["N", "NO"]:
-                        break
-                    if resp.upper() in ["Y", "YES"]:
-                        self.energy_stats = True
-                        break
+                    # ask for including energy details
+                    while True:
+                        resp = input(
+                            f"Do you want to include daily site energy statistics? ([{Color.YELLOW}Y{Color.OFF}]es / [{Color.CYAN}N{Color.OFF}]o = default): "
+                        )
+                        if not resp or resp.upper() in ["N", "NO"]:
+                            break
+                        if resp.upper() in ["Y", "YES"]:
+                            self.energy_stats = True
+                            break
 
                 # Run loop to update Solarbank parameters
                 self.next_refr = datetime.now().astimezone()
@@ -1440,7 +1546,7 @@ class AnkerSolixApiMonitor:
                                 )
                                 for s in sites
                             ]
-                            if len(site_names) > 2:
+                            if self.interactive and len(site_names) > 2:
                                 CONSOLE.info("Select which Site to be monitored:")
                                 for idx, sitename in enumerate(site_names):
                                     CONSOLE.info(
@@ -1455,13 +1561,17 @@ class AnkerSolixApiMonitor:
                                     self.site_selected = site_names[
                                         int(selection)
                                     ].split(",")[0]
-                            # ask which endpoint limit should be applied
-                            selection = input(
-                                f"Enter Api endpoint limit for request throttling ({Color.YELLOW}1-50, 0 = disabled{Color.OFF}) "
-                                f"[Default: {Color.CYAN}{self.api.apisession.endpointLimit()}{Color.OFF}]: "
-                            )
-                            if selection.isdigit() and 0 <= int(selection) <= 50:
-                                self.api.apisession.endpointLimit(int(selection))
+                            # ask which endpoint limit should be applied or use command line arg
+                            if self.interactive:
+                                selection = input(
+                                    f"Enter Api endpoint limit for request throttling ({Color.YELLOW}1-50, 0 = disabled{Color.OFF}) "
+                                    f"[Default: {Color.CYAN}{self.api.apisession.endpointLimit()}{Color.OFF}]: "
+                                )
+                                if selection.isdigit() and 0 <= int(selection) <= 50:
+                                    self.api.apisession.endpointLimit(int(selection))
+                            else:
+                                # Set endpoint limit from command line argument
+                                self.api.apisession.endpointLimit(self.endpoint_limit)
 
                         CONSOLE.info("\nRunning site refresh...")
                         await self.api.update_sites(
@@ -1508,6 +1618,72 @@ class AnkerSolixApiMonitor:
                             seconds=refresh_interval
                         )
                         self.next_dev_refr = details_refresh
+
+                        # Auto-start MQTT session if enabled via command line
+                        if self.enable_mqtt and not self.api.mqttsession and not self.use_file:
+                            CONSOLE.info("Auto-starting MQTT session...")
+                            if await self.api.startMqttSession(fromFile=self.use_file):
+                                CONSOLE.info(f"{Color.GREEN}MQTT session connected{Color.OFF}, subscribing eligible devices...")
+                                if devs := [
+                                    dev
+                                    for dev in self.api.devices.values()
+                                    if dev.get("mqtt_supported")
+                                ]:
+                                    for dev in devs:
+                                        topic = f"{self.api.mqttsession.get_topic_prefix(deviceDict=dev)}#"
+                                        resp = self.api.mqttsession.subscribe(topic)
+                                        if resp and resp.is_failure:
+                                            CONSOLE.info(f"{Color.RED}Failed subscription for topic: {topic}{Color.OFF}")
+                                    # set the value print as callback for mqtt value refreshes
+                                    self.api.mqtt_update_callback(func=self.print_device_mqtt)
+
+                                    # Auto-trigger realtime if enabled via command line
+                                    if self.enable_realtime:
+                                        # Give MQTT client more time to fully connect and try multiple times
+                                        for attempt in range(5):
+                                            await asyncio.sleep(1)
+                                            if self.api.mqttsession.client and self.api.mqttsession.client.is_connected():
+                                                CONSOLE.info(
+                                                    f"{Color.CYAN}Auto-triggering real time MQTT data for {self.rt_timeout} seconds... "
+                                                    f"(attempt {attempt + 1}){Color.OFF}"
+                                                )
+                                                break
+                                            elif attempt == 4:  # Last attempt
+                                                CONSOLE.info(
+                                                    f"{Color.YELLOW}MQTT client not fully connected after 5 attempts, "
+                                                    f"skipping auto real-time trigger{Color.OFF}"
+                                                )
+                                                client_status = (
+                                                    self.api.mqttsession.client.is_connected()
+                                                    if self.api.mqttsession.client
+                                                    else 'No client'
+                                                )
+                                                CONSOLE.info(f"Client status: {client_status}")
+
+                                    if self.enable_realtime and self.api.mqttsession.client and self.api.mqttsession.client.is_connected():
+                                        for dev in devs:
+                                            resp = self.api.mqttsession.realtime_trigger(
+                                                deviceDict=dev,
+                                                timeout=self.rt_timeout,
+                                            )
+                                            with contextlib.suppress(ValueError, RuntimeError):
+                                                resp.wait_for_publish(timeout=2)
+                                            sn = dev.get("device_sn")
+                                            if resp.is_published():
+                                                CONSOLE.info(
+                                                    f"Triggered device: {Color.GREEN}{sn} ({dev.get('device_pn')}) - "
+                                                    f"{dev.get('name') or 'NoName'}{Color.OFF}"
+                                                )
+                                                self.api.mqttsession.triggered_devices.add(sn)
+                                            else:
+                                                CONSOLE.info(f"{Color.RED}Failed to publish Real Time trigger message for {sn}{Color.OFF}")
+                                                self.api.mqttsession.triggered_devices.discard(sn)
+                                        if self.api.mqttsession.triggered_devices:
+                                            self.triggered = datetime.now() + timedelta(seconds=self.rt_timeout)
+                                else:
+                                    CONSOLE.info(f"{Color.YELLOW}No eligible MQTT devices found!{Color.OFF}")
+                            else:
+                                CONSOLE.info(f"{Color.RED}Failed to start MQTT session!{Color.OFF}")
                     if self.showMqttDevice:
                         self.print_device_mqtt(deviceSn=None)
                     else:
@@ -1526,8 +1702,8 @@ class AnkerSolixApiMonitor:
                             len(self.api.sites),
                             len(self.api.devices),
                         )
-                        # print the data but enforece Api data only after refresh
-                        self.print_api_data(mqtt_mixin=False)
+                        # print the data with MQTT mixin if MQTT session is active
+                        self.print_api_data(mqtt_mixin=bool(self.api.mqttsession))
                     CONSOLE.info("Api Requests: %s", self.api.request_count)
                     CONSOLE.log(
                         logging.INFO if self.showApiCalls else logging.DEBUG,
@@ -1938,7 +2114,27 @@ class AnkerSolixApiMonitor:
 # run async main
 if __name__ == "__main__":
     try:
-        if not asyncio.run(AnkerSolixApiMonitor().main(), debug=False):
+        # Parse command line arguments
+        args = parse_arguments()
+
+        # Print configuration when in non-interactive mode
+        if args.live_cloud:
+            CONSOLE.info("Configuration:")
+            CONSOLE.info(f"  Live cloud mode: {Color.GREEN}Enabled{Color.OFF}")
+            CONSOLE.info(f"  MQTT session: {Color.GREEN if args.enable_mqtt else Color.RED}{'Enabled' if args.enable_mqtt else 'Disabled'}{Color.OFF}")
+            CONSOLE.info(f"  MQTT display mode: {Color.GREEN if args.mqtt_display else Color.CYAN}{'Pure MQTT' if args.mqtt_display else 'Mixed API+MQTT'}{Color.OFF}")
+            CONSOLE.info(f"  Real-time trigger: {Color.GREEN if args.realtime else Color.RED}{'Enabled' if args.realtime else 'Disabled'}{Color.OFF}")
+            CONSOLE.info(f"  Refresh interval: {Color.CYAN}{args.interval}{Color.OFF} seconds")
+            CONSOLE.info(f"  Energy statistics: {Color.GREEN if args.energy_stats else Color.RED}{'Enabled' if args.energy_stats else 'Disabled'}{Color.OFF}")
+            if args.site_id:
+                CONSOLE.info(f"  Monitoring site: {Color.YELLOW}{args.site_id}{Color.OFF}")
+            CONSOLE.info(f"  Electric vehicles: {Color.GREEN if not args.no_vehicles else Color.RED}{'Enabled' if not args.no_vehicles else 'Disabled'}{Color.OFF}")
+            CONSOLE.info(f"  API call statistics: {Color.GREEN if args.api_calls else Color.RED}{'Enabled' if args.api_calls else 'Disabled'}{Color.OFF}")
+            CONSOLE.info(f"  HTTP debug logging: {Color.GREEN if args.debug_http else Color.RED}{'Enabled' if args.debug_http else 'Disabled'}{Color.OFF}")
+            CONSOLE.info(f"  Endpoint limit: {Color.CYAN}{args.endpoint_limit if args.endpoint_limit > 0 else 'Disabled'}{Color.OFF}")
+            CONSOLE.info("")
+
+        if not asyncio.run(AnkerSolixApiMonitor(args).main(), debug=False):
             CONSOLE.warning("\nAborted!")
     except KeyboardInterrupt:
         CONSOLE.warning("\nAborted!")
