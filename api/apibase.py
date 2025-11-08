@@ -674,7 +674,7 @@ class AnkerSolixBaseApi:
                         and (cap := device.get("battery_capacity"))
                     ):
                         # calculate total expansions if expansions are available and no number in mqtt cache
-                        if not (exp := mqtt.get("expansion_packs")):
+                        if not mqtt.get("expansion_packs"):
                             device_mqtt["expansion_packs"] = len([
                                 k
                                 for k in [f"exp_{i!s}_soc" for i in range(1, 6)]

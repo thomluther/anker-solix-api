@@ -115,7 +115,7 @@ def parse_arguments() -> argparse.Namespace:
         "--endpoint-limit",
         type=int,
         default=10,
-        choices=range(0, 51),
+        choices=range(51),
         metavar="[0-50]",
         help="API endpoint limit for request throttling (0=disabled, default: 10)",
     )
