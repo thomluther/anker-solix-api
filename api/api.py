@@ -14,6 +14,7 @@ from .apibase import AnkerSolixBaseApi
 from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
+    PowerdockStatus,
     SmartmeterStatus,
     SolarbankAiemsRuntimeStatus,
     SolarbankDeviceMetrics,
@@ -905,6 +906,25 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["err_code", "priority", "auto_switch", "running_time"]:
                         device[key] = value
 
+                    # power dock specific keys
+                    elif key in ["dock_status"]:
+                        # decode the dock status into a description
+                        device.update(
+                            {
+                                key: str(value),
+                                "dock_status_desc": next(
+                                    iter(
+                                        [
+                                            item.name
+                                            for item in PowerdockStatus
+                                            if item.value == str(value)
+                                        ]
+                                    ),
+                                    PowerdockStatus.unknown.name,
+                                ),
+                            }
+                        )
+
                     # hes specific keys
                     elif key in ["hes_data"] and isinstance(value, dict):
                         # decode the status into a description
@@ -1665,6 +1685,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             station_sn = station.get("device_sn") or ""
             # Name can be completed by model definition
             station.pop("device_name", None)
+            # Power dock status need to be renamed to avoid conflict with device status
+            station["dock_status"] = station.pop("status", 0)
             if station_param := (site_details.get("station_settings") or {}):
                 station["power_cutoff_data"] = station_param.get("soc_list") or []
                 # extract active setting for station
@@ -1682,8 +1704,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # drop same name device limits as those field may be used to control individual device settings
             self._update_dev(
                 {
-                    "alias_name": "Power Dock",
-                    "is_passive": True,
+                    "alias_name": (self.devices.get(station_sn) or {}).get("alias") or "Power Dock",
+                    "is_passive": "wifi_online" not in (self.devices.get(station_sn) or {}),
                     "current_power": data.get("current_power"),
                     "all_power_limit": station.pop("power_limit", None)
                     or data.get("all_power_limit")

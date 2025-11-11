@@ -587,6 +587,7 @@ API_FILEPREFIXES = {
 """ Anker Solix Device overview
 Model  Name                                     Platform
 ----------------------------------------------------------------------------------------------------
+A110A  26K Prime Power Bank                     Power Bank
 A1722  SOLIX C300                               Portable Power Station
 A1723  SOLIX C300X                              Portable Power Station
 A1725  SOLIX C200(X)                            Portable Power Station
@@ -633,12 +634,14 @@ A5220  Battery Module                           Residential Storage System
 A5341  Backup Controller                        Residential Storage System
 A5450  Zigbee Dongle                            Residential Storage System
 A91B2  240W Charging Station                    Charger
+AE100  SOLIX Power Dock                         Balcony Solar Power System
 AE1R0  Anker SOLIX P1 Meter                     Accessory
 ----------------------------------------------------------------------------------------------------
-Summary: 47 Models
+Summary: 49 Models
+ 1 Power Bank
 20 Portable Power Station
  6 Powered Cooler
- 7 Balcony Solar Power System
+ 8 Balcony Solar Power System
  3 Accessory
  3 Charger
  7 Residential Storage System
@@ -689,6 +692,7 @@ class SolixDeviceType(Enum):
     HES = "hes"
     SOLARBANK_PPS = "solarbank_pps"
     CHARGER = "charger"
+    POWERBANK = "powerbank"
     EV_CHARGER = "ev_charger"
     VEHICLE = "vehicle"
 
@@ -1009,7 +1013,8 @@ class SolixDeviceCategory:
     A2345: str = SolixDeviceType.CHARGER.value  # Anker 250W Prime Charger
     A25X7: str = SolixDeviceType.CHARGER.value  # Prime Wireless Charger
     A91B2: str = SolixDeviceType.CHARGER.value  # Anker 240W Charging Station
-    A110A: str = SolixDeviceType.CHARGER.value  # Anker Prime Power Bank 300 W, 250mAh
+    # Power Bank
+    A110A: str = SolixDeviceType.POWERBANK.value  # Anker Prime Power Bank 300 W, 250mAh
     # EV Charger
     A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
 
@@ -1221,6 +1226,14 @@ class SmartmeterStatus(StrEnum):
 
     # TODO(#106) Update Smartmeter grid status description once known
     ok = "0"  # normal grid state when smart meter is measuring
+    unknown = "unknown"
+
+
+class PowerdockStatus(StrEnum):
+    """Enumeration for Anker Solix Power Dock status."""
+
+    # TODO(#MS) Update status description once known
+    ok = "0"  # normal power dock state
     unknown = "unknown"
 
 

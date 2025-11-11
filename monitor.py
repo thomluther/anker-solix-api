@@ -602,6 +602,14 @@ class AnkerSolixApiMonitor:
                     )
 
             if devtype == SolixDeviceType.COMBINER_BOX.value:
+                CONSOLE.info(
+                    f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} "
+                    f"{'Status Code':<{col3}}: {dev.get('status', '-')!s}"
+                )
+                CONSOLE.info(
+                    f"{'Dock Status':<{col1}}: {str(dev.get('dock_status_desc', '-------')).capitalize():<{col2}} "
+                    f"{'Status Code':<{col3}}: {dev.get('dock_status', '-')!s}"
+                )
                 unit = dev.get("power_unit", "W")
                 # print station details
                 CONSOLE.info(
