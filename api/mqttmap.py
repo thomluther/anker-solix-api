@@ -47,6 +47,83 @@ from .mqttcmdmap import (
 # To simplify the defined map, smaller and re-usable mappings should be defined independently and just re-used in the overall SOLIXMQTTMAP for
 # the model types that use same field mapping structure. For example various models of the same family most likely share complete or subset of message maps
 
+A1722_0405 = {
+    # C300 AC param info
+    "topic": "param_info",
+    "a4": {"name": "remaining_time_hours", "factor": 0.1},
+    "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
+    "a8": {"name": "usbc_2_power"},  # USB-C port 2 output power
+    "a9": {"name": "usbc_3_power"},  # USB-C port 3 output power
+    "aa": {"name": "usba_1_power"},  # USB-A port 1 output power
+    "ac": {"name": "dc_input_power"},  # DC input power (solar/car charging)
+    "ad": {"name": "ac_input_power"},  # Total Input in W (int)
+    "ae": {"name": "ac_output_power"},  # Total Output in W (int)
+    "b7": {
+        "name": "ac_output_power_switch"
+    },  # AC output switch: Disabled (0) or Enabled (1)
+    "b8": {"name": "dc_charging_status"},  # None (0), Charging (1)
+    "b9": {"name": "temperature"},  # In Celsius
+    "ba": {"name": "charging_status"},  # None (0), Discharging (1), Charging (2) ???
+    "bb": {"name": "battery_soc?"},  # Battery SOC
+    "bc": {"name": "battery_soh?"},  # Battery Health?
+    "c1": {
+        "name": "dc_output_power_switch"
+    },  # DC output switch: Disabled (0) or Enabled (1)
+    "cf": {
+        "name": "display_mode"
+    },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+}
+
+A1722_0830 = {
+    # C300 AC/DC param info
+    "topic": "param_info",
+    "a1": {
+        "name": "sw_version",
+        "type": DeviceHexDataTypes.str.value,
+    },
+    "a2": {
+        "name": "hw_version",
+        "type": DeviceHexDataTypes.str.value,
+    },
+}
+
+A1728_0405 = {
+    # C300(X) DC param info
+    "topic": "param_info",
+    "a3": {"name": "remaining_time_hours", "factor": 0.1},
+    "a4": {"name": "usbc_1_power"},  # USB-C left output power
+    "a5": {"name": "usbc_2_power"},  # USB-C center output power
+    "a6": {"name": "usbc_3_power"},  # USB-C right output power
+    "a7": {"name": "usbc_4_power"},  # USB-C solar output power
+    "a8": {"name": "usba_1_power"},  # USB-A left output power
+    "a9": {"name": "usba_2_power"},  # USB-A right output power
+    "ab": {"name": "photovoltaic_power"},  # Total solar input
+    "ac": {"name": "dc_input_power?"},  # DC input power (solar/car charging)?
+    "b6": {
+        "name": "dc_charging_status"
+    },  # TODO: Define possible states: Inactive (0), Charging (x), Discharging (x), Both (x)
+    "b7": {"name": "battery_soc"},  # Battery SOC
+    "b9": {
+        "name": "usbc_1_status"
+    },  # USB-C left status: Inactive (0), Discharging (1), Charging (2)
+    "ba": {
+        "name": "usbc_2_status"
+    },  # USB-C center status: Inactive (0), Discharging (1), Charging (2)
+    "bb": {
+        "name": "usbc_3_status"
+    },  # USB-C right status: Inactive (0), Discharging (1), Charging (2)
+    "bc": {
+        "name": "usbc_4_status"
+    },  # USB-C solar status: Inactive (0), Discharging (1), Charging (2)
+    "bd": {
+        "name": "usba_1_status"
+    },  # USB-A left status: Inactive (0), Discharging (1), Charging (2)
+    "be": {
+        "name": "usba_2_status"
+    },  # USB-A right status: Inactive (0), Discharging (1), Charging (2)
+    "c3": {"name": "device_sn"},
+}
+
 A1790_0405 = {
     # F3800 param info
     "topic": "param_info",
@@ -66,6 +143,8 @@ A1790_0405 = {
     "b1": {"name": "charging_power"},  # Total charging (AC + Solar)
     "b2": {"name": "output_power"},
     "b4": {"name": "discharging_power?"},
+    "b5": {"name": "sw_version?", "values": 1},  # Main firmware version
+    "ba": {"name": "sw_expansion?", "values": 1},  # Expansion firmware version
     "bc": {
         "name": "ac_output_power_switch"
     },  # AC output switch: Disabled (0) or Enabled (1)
@@ -630,36 +709,39 @@ A17C5_0500 = {
 
 # Following is the consolidated mapping for all device types and messages
 SOLIXMQTTMAP = {
+    # Power Charger C300 AC
+    "A1722": {
+        "0057": CMD_REALTIME_TRIGGER,
+        "0405": A1722_0405,  # Interval: ?? seconds
+        "0830": A1722_0830,  # Interval: ?? seconds
+    },
     # Power Charger C300 DC
+    "A1726": {
+        "0057": CMD_REALTIME_TRIGGER,
+        "0405": A1728_0405,  # Interval: ?? seconds
+        "0830": A1722_0830,  # Interval: ?? seconds
+    },
+    # Power Charger C300X DC
     "A1728": {
         "0057": CMD_REALTIME_TRIGGER,
-        "0830": {
-            # Interval: ?? seconds
-            "topic": "param_info",
-            "a1": {
-                "name": "sw_version",
-                "type": DeviceHexDataTypes.str.value,
-            },
-            "a2": {
-                "name": "hw_version",
-                "type": DeviceHexDataTypes.str.value,
-            },
-        },
+        "0405": A1728_0405,  # Interval: ?? seconds
+        "0830": A1722_0830,  # Interval: ?? seconds
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
-        "0044": CMD_DEVICE_MAX_LOAD,
-        "0045": CMD_DEVICE_TIMEOUT_MIN,
-        "004a": CMD_AC_OUTPUT_SWITCH,
-        "004b": CMD_DC_OUTPUT_SWITCH,
+        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Add supported values or options/range?
+        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
-        "0050": CMD_TEMP_UNIT,  # TODO: Validate and Update correct message type
+        # TODO: Validate and Update correct message type for temp unit switch command
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # TODO: Validate and Update correct message type
         # TODO: Command available for Display timeout setting? 20, 30, 60, 300, 1800 seconds?
         "0057": CMD_REALTIME_TRIGGER,
-        "005e": CMD_AC_FAST_CHARGE_SWITCH,
+        "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
         "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Smart (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Smart (0)
         "0405": {
@@ -746,20 +828,20 @@ SOLIXMQTTMAP = {
     },
     # PPS F3800
     "A1790": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Supported values or options/range
-        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Supported values or options/range
-        "004a": CMD_AC_OUTPUT_SWITCH,
-        "004b": CMD_DC_OUTPUT_SWITCH,
+        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Add supported values or options/range?
+        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
-        "0050": CMD_TEMP_UNIT,
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
         # TODO: Command available for Display timeout setting? Which options are available?
         "0057": CMD_REALTIME_TRIGGER,
         "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
-        "0079": CMD_PORT_MEMORY_SWITCH,  # Enabled (1), Disabled (0)
+        "0079": CMD_PORT_MEMORY_SWITCH,  # Port Memory switch: Disabled (0) or Enabled (1)
         "0405": A1790_0405,
         "040a": A1790_040a,
         "0410": A1790_0410,
@@ -768,14 +850,14 @@ SOLIXMQTTMAP = {
     },
     # PPS F3800 Plus
     "A1790P": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Supported values or options/range
-        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Supported values or options/range
-        "004a": CMD_AC_OUTPUT_SWITCH,
-        "004b": CMD_DC_OUTPUT_SWITCH,
+        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Add supported values or options/range?
+        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
-        "0050": CMD_TEMP_UNIT,
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
         # TODO: Command available for Display timeout setting? Which options are available?
         "0057": CMD_REALTIME_TRIGGER,
@@ -790,11 +872,11 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 1 E1600
     "A17C0": {
-        "0050": CMD_TEMP_UNIT,
-        "0056": CMD_SB_STATUS_CHECK,
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
+        "0056": CMD_SB_STATUS_CHECK,  # Complex command with multiple parms
         "0057": CMD_REALTIME_TRIGGER,
-        "0067": CMD_SB_POWER_CUTOFF,
-        "0068": CMD_SB_INVERTER_TYPE,
+        "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
+        "0068": CMD_SB_INVERTER_TYPE,  # Complex command with multiple parms
         "0405": {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
