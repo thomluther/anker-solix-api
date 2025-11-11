@@ -2,11 +2,11 @@
 
 from .apitypes import DeviceHexDataTypes
 from .mqttcmdmap import (
-    CMD_12V_DC_OUTPUT_MODE,
     CMD_AC_CHARGE_LIMIT,
     CMD_AC_FAST_CHARGE_SWITCH,
     CMD_AC_OUTPUT_MODE,
     CMD_AC_OUTPUT_SWITCH,
+    CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
     CMD_DEVICE_MAX_LOAD,
     CMD_DEVICE_TIMEOUT_MIN,
@@ -166,7 +166,7 @@ A1780_0405 = {
     "f8": {
         "bytes": {
             "00": {
-                "name": "12v_dc_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
+                "name": "dc_12v_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
@@ -201,7 +201,7 @@ A1790_0405 = {
     "a9": {"name": "usbc_3_power"},
     "aa": {"name": "usba_1_power?"},
     "ab": {"name": "usba_2_power?"},
-    "ac": {"name": "12v_dc_output_power_switch?"},
+    "ac": {"name": "dc_12v_output_power_switch?"},
     "ad": {"name": "battery_soc_total"},
     "ae": {"name": "photovoltaic_power"},  # Total solar input
     "af": {"name": "pv_1_power"},
@@ -243,13 +243,13 @@ A1790_0405 = {
     "c5": {"name": "usba_1_status?"},
     "c6": {"name": "usba_2_status?"},
     "c7": {
-        "name": "12v_dc_output_power_switch"
+        "name": "dc_output_power_switch"
     },  # 12V DC output switch: Disabled (0) or Enabled (1)
     "cc": {"name": "device_sn"},
     "cd": {"name": "ac_input_limit"},  # User Setting (AC Charge Watts)
     "cf": {"name": "display_timeout_seconds"},  # User Setting (in seconds)
     "d3": {"name": "ac_output_power_switch_dup?"},  # Duplicate of bc?
-    "d4": {"name": "12v_dc_output_power_switch_dup?"},  # Duplicate of c7?
+    "d4": {"name": "dc_output_power_switch_dup?"},  # Duplicate of c7?
     "d5": {
         "name": "display_mode"
     },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
@@ -810,7 +810,7 @@ SOLIXMQTTMAP = {
         # TODO: Command available for Display timeout setting? 20, 30, 60, 300, 1800 seconds?
         "0057": CMD_REALTIME_TRIGGER,
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
-        "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Smart (0)
+        "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Smart (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Smart (0)
         "0405": {
             # Interval: ~3-5 seconds, but only with realtime trigger
@@ -844,7 +844,7 @@ SOLIXMQTTMAP = {
             "d2": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes) #TODO: Options?
             "d3": {"name": "display_timeout_seconds"},  # Options: 20, 30, 60, 300, 1800 seconds
             "d7": {"name": "expansion_packs_c?"},
-            "d8": {"name": "12v_dc_output_power_switch"},  # Disabled (0) or Enabled (1)
+            "d8": {"name": "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
             "d9": {"name": "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
             "dc": {"name": "light_mode"},  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
             "dd": {"name": "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
@@ -853,7 +853,7 @@ SOLIXMQTTMAP = {
             "f8": {
                 "bytes": {
                     "00": {
-                        "name": "12v_dc_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
+                        "name": "dc_12v_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "01": {
@@ -907,7 +907,7 @@ SOLIXMQTTMAP = {
         "0052": CMD_DISPLAY_SWITCH,
         # TODO: Command available for Display timeout setting? Which options are available?
         "0057": CMD_REALTIME_TRIGGER,
-        "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Off (0)
+        "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0079": CMD_PORT_MEMORY_SWITCH,  # Port Memory switch: Disabled (0) or Enabled (1)
         # Interval: ~3-5 seconds, but only with realtime trigger
@@ -934,7 +934,7 @@ SOLIXMQTTMAP = {
         "0052": CMD_DISPLAY_SWITCH,
         # TODO: Command available for Display timeout setting? Which options are available?
         "0057": CMD_REALTIME_TRIGGER,
-        "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Off (0)
+        "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0079": CMD_PORT_MEMORY_SWITCH,  # Enabled (1), Disabled (0)
         # Interval: ~3-5 seconds, but only with realtime trigger

@@ -202,14 +202,14 @@ class SolixMqttDeviceF3800(SolixMqttDevice):
             description=f"12V DC output {'enabled' if enabled else 'disabled'}",
             toFile=toFile,
         ):
-            resp["switch_12v_dc_output_power"] = enabled
+            resp["dc_output_power_switch"] = enabled
         if mode is not None and await self._send_mqtt_command(
             command="f3800_dc_output_mode",
             parameters={"mode": mode},
             description=f"12V DC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
             toFile=toFile,
         ):
-            resp["12v_dc_output_mode"] = mode
+            resp["dc_12v_output_mode"] = mode
         if toFile:
             self._filedata.update(resp)
         return resp or False
@@ -329,7 +329,7 @@ class SolixMqttDeviceF3800(SolixMqttDevice):
             description=f"backup charge mode {'enabled' if enabled else 'disabled'}",
             toFile=toFile,
         ):
-            resp["backup_charge"] = enabled
+            resp["backup_charge_switch"] = enabled
         if toFile:
             self._filedata.update(resp)
         return resp or False

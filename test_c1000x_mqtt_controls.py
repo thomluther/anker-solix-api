@@ -212,14 +212,14 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
 
                     # Control switches and modes
                     control_fields = {
-                        "switch_ac_output_power": "AC output switch (0=Disabled, 1=Enabled)",
-                        "switch_12v_dc_output_power": "12V DC output switch (0=Disabled, 1=Enabled)",
-                        "switch_display": "Display switch (0=Off, 1=On)",
-                        "backup_charge": "Backup charge mode (0=Off, 1=On)",
+                        "ac_output_power_switch": "AC output switch (0=Disabled, 1=Enabled)",
+                        "dc_output_power_switch": "12V DC output switch (0=Disabled, 1=Enabled)",
+                        "display_switch": "Display switch (0=Off, 1=On)",
+                        "backup_charge_switch": "Backup charge mode (0=Off, 1=On)",
                         "temp_unit_fahrenheit": "Temperature unit (0=Celsius, 1=Fahrenheit)",
                         "display_mode": "Display brightness (0=Off, 1=Low, 2=Medium, 3=High)",
                         "light_mode": "LED light mode (0=Off, 1=Low, 2=Medium, 3=High, 4=Blinking)",
-                        "12v_dc_output_mode": "12V DC mode (1=Normal, 2=Smart)",
+                        "dc_12v_output_mode": "12V DC mode (1=Normal, 2=Smart)",
                         "ac_output_mode": "AC output mode (1=Normal, 2=Smart)",
                     }
                     CONSOLE.info("\nControl Switches and Modes:")

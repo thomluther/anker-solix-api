@@ -18,6 +18,7 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
+from .mqttcmdmap import SolixMqttCommands
 from .mqtttypes import (
     DeviceHexData,
     DeviceHexDataField,
@@ -286,7 +287,7 @@ class AnkerSolixMqttSession:
         return topic
 
     def get_command_data(
-        self, command: str = "update_trigger", parameters: dict | None = None
+        self, command: str = SolixMqttCommands.realtime_trigger, parameters: dict | None = None
     ) -> str | None:
         """Compose the hex data for MQTT publish payload to Anker Solix devices."""
         if hexdata := generate_mqtt_command(command=command, parameters=parameters):
@@ -334,7 +335,7 @@ class AnkerSolixMqttSession:
                     "account_id": self.mqtt_info.get("user_id"),
                     "device_sn": sn,
                     # data field in payload must be b64 encoded
-                    "data": b64encode(hexbytes).decode("utf-8"),
+                    "data": b64encode(hexbytes or b'').decode("utf-8"),
                 },
                 separators=(",", ":"),
             ),
@@ -580,7 +581,7 @@ class AnkerSolixMqttSession:
         return self.publish(
             deviceDict=deviceDict,
             hexbytes=self.get_command_data(
-                command="update_trigger",
+                command=SolixMqttCommands.realtime_trigger,
                 parameters={"timeout": timeout},
             ),
         )[1]
@@ -671,7 +672,7 @@ class AnkerSolixMqttSession:
                                     "device_pn": pn,
                                 },
                                 hexbytes=self.get_command_data(
-                                    command="update_trigger",
+                                    command=SolixMqttCommands.realtime_trigger,
                                     parameters={"timeout": timeout},
                                 ),
                             )
@@ -902,7 +903,7 @@ class AnkerSolixMqttSession:
 
 
 def generate_mqtt_command(  # noqa: C901
-    command: str = "update_trigger", parameters: dict | None = None
+    command: str = SolixMqttCommands.realtime_trigger, parameters: dict | None = None
 ) -> DeviceHexData | None:
     r"""Compose the hex data for MQTT publish payload to Anker Solix devices.
 
@@ -929,7 +930,9 @@ def generate_mqtt_command(  # noqa: C901
     if not isinstance(parameters, dict):
         parameters = {}
 
-    if command == "update_trigger":
+    # TODO: Add method to build command based on MQTT Map description
+
+    if command == SolixMqttCommands.realtime_trigger:
         hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0057"))
         hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
         hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
@@ -943,10 +946,7 @@ def generate_mqtt_command(  # noqa: C901
             )
         )
         hexdata.add_timestamp_field()
-    elif command.startswith("solarbank_"):
-        # Solarbank control commands using various message types
-        # Add control-specific fields based on command type
-        if command == "solarbank_temp_unit":
+    elif command == SolixMqttCommands.temp_unit_switch:
             # Temperature unit: Value 0/1 (0=Celsius, 1=Fahrenheit) (VALIDATED SB1 ✅)
             value = 1 if parameters.get("fahrenheit") else 0
             hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0050"))
@@ -959,37 +959,37 @@ def generate_mqtt_command(  # noqa: C901
                 )
             )
             hexdata.add_timestamp_field()
-        elif command == "solarbank_power_cutoff":
-            # Valid option 5 or 10 in % (VALIDATED SB1 ⚠️ Changed on device, but not in App! App needs additional change via Api)
-            value = 5 if str(parameters.get("limit")) == "5" else 10
-            lowpower = 4 if value == 5 else 5
-            hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0067"))
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            # output_cutoff_data
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a2"),
-                    f_type=DeviceHexDataTypes.ui.value,
-                    f_value=value.to_bytes(length=1, byteorder="little"),
-                )
+    elif command == SolixMqttCommands.sb_power_cutoff_select:
+        # Valid option 5 or 10 in % (VALIDATED SB1 ⚠️ Changed on device, but not in App! App needs additional change via Api)
+        value = 5 if str(parameters.get("limit")) == "5" else 10
+        lowpower = 4 if value == 5 else 5
+        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0067"))
+        hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
+        # output_cutoff_data
+        hexdata.update_field(
+            DeviceHexDataField(
+                f_name=bytes.fromhex("a2"),
+                f_type=DeviceHexDataTypes.ui.value,
+                f_value=value.to_bytes(length=1, byteorder="little"),
             )
-            # lowpower_input_data
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a3"),
-                    f_type=DeviceHexDataTypes.ui.value,
-                    f_value=lowpower.to_bytes(length=1, byteorder="little"),
-                )
+        )
+        # lowpower_input_data
+        hexdata.update_field(
+            DeviceHexDataField(
+                f_name=bytes.fromhex("a3"),
+                f_type=DeviceHexDataTypes.ui.value,
+                f_value=lowpower.to_bytes(length=1, byteorder="little"),
             )
-            # input_cutoff_data
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a4"),
-                    f_type=DeviceHexDataTypes.ui.value,
-                    f_value=value.to_bytes(length=1, byteorder="little"),
-                )
+        )
+        # input_cutoff_data
+        hexdata.update_field(
+            DeviceHexDataField(
+                f_name=bytes.fromhex("a4"),
+                f_type=DeviceHexDataTypes.ui.value,
+                f_value=value.to_bytes(length=1, byteorder="little"),
             )
-            hexdata.add_timestamp_field()
+        )
+        hexdata.add_timestamp_field()
     elif command.startswith("c1000x_"):
         # C1000X control commands using mobile app protocol patterns
         # These patterns were captured from actual mobile app MQTT traffic and validated

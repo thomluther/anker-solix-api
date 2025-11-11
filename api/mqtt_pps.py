@@ -1,8 +1,7 @@
-"""C1000X MQTT device control methods for AnkerSolixApi.
+"""MQTT device control methods for Anker Solix Portable Power Stations.
 
-This module contains control methods specific to the Anker C1000X (A1761) portable power station.
+This module contains control methods specific to portable power stations (PPS).
 These methods provide comprehensive device control via MQTT commands.
-C1000X devices use MQTT-only communication for control operations.
 """
 
 from __future__ import annotations
@@ -11,33 +10,35 @@ from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
 from .mqtt_device import SolixMqttDevice
+from .mqttcmdmap import SolixMqttCommands
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
 
 # Define supported Models for this class
-MODELS = ["A1761"]
-# Define supported and validated controls per Model
+MODELS = ["A1761", "A1790", "A1790P"]
+# Define supported and validated MQTT command controls per Model
 FEATURES = {
-    "realtime_trigger": MODELS,
-    "ac_output_control": MODELS,
-    "dc_12v_output_control": MODELS,
-    "display_control": MODELS,
-    "backup_charge_control": MODELS,
-    "temp_unit_control": MODELS,
-    "display_mode_select": MODELS,
-    "light_mode_select": MODELS,
-    "dc_output_mode_select": MODELS,
-    "ac_output_mode_select": MODELS,
-    "device_timeout_minutes": MODELS,
-    "max_load": MODELS,
-    "ac_charge_limit": MODELS,
-    "ultrafast_charging": MODELS,
+    SolixMqttCommands.realtime_trigger: MODELS,
+    SolixMqttCommands.temp_unit_switch: MODELS,
+    SolixMqttCommands.device_max_load: MODELS,
+    SolixMqttCommands.device_timeout_minutes: MODELS,
+    SolixMqttCommands.ac_charge_switch: MODELS,
+    SolixMqttCommands.ac_charge_limit: MODELS,
+    SolixMqttCommands.ac_output_switch: MODELS,
+    SolixMqttCommands.ac_fast_charge_switch: ["A1761"],
+    SolixMqttCommands.ac_output_mode_select: MODELS,
+    SolixMqttCommands.dc_output_switch: MODELS,
+    SolixMqttCommands.dc_12v_output_mode_select: MODELS,
+    SolixMqttCommands.display_switch: MODELS,
+    SolixMqttCommands.display_mode_select: MODELS,
+    SolixMqttCommands.light_mode_select: MODELS,
+    SolixMqttCommands.port_memory_switch: ["A1790", "A1790P"],
 }
 
 
-class SolixMqttDeviceC1000x(SolixMqttDevice):
-    """Define the class to handle an Anker Solix MQTT device for controls."""
+class SolixMqttDevicePps(SolixMqttDevice):
+    """Define the class to handle an Anker Solix MQTT device for PPS controls."""
 
     def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
         """Initialize."""
@@ -47,23 +48,25 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
 
     def validate_command_value(self, command_id: str, value: Any) -> bool:
         """Validate command value ranges for device controls."""
+        # TODO: Enhance validation rules to extract options or ranges from command description per model
         validation_rules = {
-            "realtime_trigger": lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
+            SolixMqttCommands.realtime_trigger: lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
             <= v
             <= SolixDefaults.TRIGGER_TIMEOUT_MAX,
-            "ac_output_control": lambda v: v in [0, 1],
-            "dc_12v_output_control": lambda v: v in [0, 1],
-            "display_control": lambda v: v in [0, 1],
-            "backup_charge_control": lambda v: v in [0, 1],
-            "temp_unit_control": lambda v: v in [0, 1],
-            "display_mode_select": lambda v: v in [0, 1, 2, 3],
-            "light_mode_select": lambda v: v in [0, 1, 2, 3, 4],
-            "dc_output_mode_select": lambda v: v in [1, 2],
-            "ac_output_mode_select": lambda v: v in [1, 2],
-            "device_timeout_minutes": lambda v: 30 <= v <= 1440,
-            "max_load": lambda v: 100 <= v <= 2000,
-            "ac_charge_limit": lambda v: 100 <= v <= 800,
-            "ultrafast_charging": lambda v: v in [0, 1],
+            SolixMqttCommands.ac_output_switch: lambda v: v in [0, 1],
+            SolixMqttCommands.dc_output_switch: lambda v: v in [0, 1],
+            SolixMqttCommands.display_switch: lambda v: v in [0, 1],
+            SolixMqttCommands.ac_charge_switch: lambda v: v in [0, 1],
+            SolixMqttCommands.temp_unit_switch: lambda v: v in [0, 1],
+            SolixMqttCommands.port_memory_switch: lambda v: v in [0, 1],
+            SolixMqttCommands.display_mode_select: lambda v: v in [0, 1, 2, 3],
+            SolixMqttCommands.light_mode_select: lambda v: v in [0, 1, 2, 3, 4],
+            SolixMqttCommands.dc_12v_output_mode_select: lambda v: v in [1, 2],
+            SolixMqttCommands.ac_output_mode_select: lambda v: v in [1, 2],
+            SolixMqttCommands.device_timeout_minutes: lambda v: 30 <= v <= 1440,
+            SolixMqttCommands.device_max_load: lambda v: 100 <= v <= 2000,
+            SolixMqttCommands.ac_charge_limit: lambda v: 100 <= v <= 800,
+            SolixMqttCommands.ac_fast_charge_switch: lambda v: v in [0, 1],
         }
         rule = validation_rules.get(command_id)
         return rule(value) if rule else True
@@ -74,7 +77,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         mode: int | str | None = None,
         toFile: bool = False,
     ) -> bool | dict:
-        """Control C1000X AC output power via MQTT.
+        """Control AC output power via MQTT.
 
         Args:
             enabled: True to enable AC output, False to disable
@@ -95,7 +98,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         # Validate command value
         enabled = 1 if enabled else 0 if enabled is not None else None
         if enabled is not None and not self.validate_command_value(
-            "ac_output_control", enabled
+            SolixMqttCommands.ac_output_switch, enabled
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid AC output enabled value: %s",
@@ -117,7 +120,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
                 )
                 return False
         if mode is not None and not self.validate_command_value(
-            "ac_output_mode_select", mode
+            SolixMqttCommands.ac_output_mode_select, mode
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid AC output mode value: %s",
@@ -128,14 +131,14 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         # Send MQTT commands
         if enabled is not None and await self._send_mqtt_command(
-            command="c1000x_ac_output",
+            command=SolixMqttCommands.ac_output_switch,
             parameters={"enabled": enabled},
             description=f"AC output {'enabled' if enabled else 'disabled'}",
             toFile=toFile,
         ):
-            resp["switch_ac_output_power"] = enabled
+            resp["ac_output_power_switch"] = enabled
         if mode is not None and await self._send_mqtt_command(
-            command="c1000x_ac_output_mode",
+            command=SolixMqttCommands.ac_output_mode_select,
             parameters={"mode": mode},
             description=f"AC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
             toFile=toFile,
@@ -151,10 +154,10 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         mode: int | str | None = None,
         toFile: bool = False,
     ) -> bool | dict:
-        """Control C1000X 12V DC output power via MQTT.
+        """Control DC output power via MQTT.
 
         Args:
-            enabled: True to enable 12V DC output, False to disable
+            enabled: True to enable DC output, False to disable
             mode: DC output mode - 1=Normal, 2=Smart
                 Can also be string: "normal", "smart"
             toFile: If True, return mock response (for testing compatibility)
@@ -172,7 +175,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         # Validate command value
         enabled = 1 if enabled else 0 if enabled is not None else None
         if enabled is not None and not self.validate_command_value(
-            "dc_12v_output_control", enabled
+            SolixMqttCommands.dc_output_switch, enabled
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid DC output enabled value: %s",
@@ -194,7 +197,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
                 )
                 return False
         if mode is not None and not self.validate_command_value(
-            "dc_output_mode_select", mode
+            SolixMqttCommands.dc_12v_output_mode_select, mode
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid DC output mode value: %s",
@@ -205,14 +208,14 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         # Send MQTT commands
         if enabled is not None and await self._send_mqtt_command(
-            command="c1000x_dc_output",
+            command=SolixMqttCommands.dc_output_switch,
             parameters={"enabled": enabled},
-            description=f"12V DC output {'enabled' if enabled else 'disabled'}",
+            description=f"DC output {'enabled' if enabled else 'disabled'}",
             toFile=toFile,
         ):
             resp["dc_output_power_switch"] = enabled
         if mode is not None and await self._send_mqtt_command(
-            command="c1000x_dc_output_mode",
+            command=SolixMqttCommands.dc_12v_output_mode,
             parameters={"mode": mode},
             description=f"12V DC output mode set to {original_mode if isinstance(original_mode, str) else mode}",
             toFile=toFile,
@@ -228,7 +231,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         mode: int | str | None = None,
         toFile: bool = False,
     ) -> bool | dict:
-        """Control C1000X display settings via MQTT.
+        """Control display settings via MQTT.
 
         Args:
             enabled: True to turn display on, False to turn off
@@ -249,7 +252,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         # Validate command value
         enabled = 1 if enabled else 0 if enabled is not None else None
         if enabled is not None and not self.validate_command_value(
-            "display_control", enabled
+            SolixMqttCommands.display_switch, enabled
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid display enabled value: %s",
@@ -271,7 +274,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
                 )
                 return False
         if mode is not None and not self.validate_command_value(
-            "display_mode_select", mode
+            SolixMqttCommands.display_mode_select, mode
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid display mode value: %s",
@@ -282,16 +285,16 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         # Send MQTT commands
         if enabled is not None and await self._send_mqtt_command(
-            command="c1000x_display",
+            command=SolixMqttCommands.display_switch,
             parameters={"enabled": enabled},
             description=f"display {'enabled' if enabled else 'disabled'}",
             toFile=toFile,
         ):
             resp["switch_display"] = enabled
         if mode is not None and await self._send_mqtt_command(
-            command="c1000x_display_mode",
+            command=SolixMqttCommands.display_mode,
             parameters={"mode": mode},
-            description=f"display mode set to {original_mode if isinstance(original_mode, str) else mode}",
+            description=f"Display mode set to {original_mode if isinstance(original_mode, str) else mode}",
             toFile=toFile,
         ):
             resp["display_mode"] = mode
@@ -304,7 +307,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         enabled: bool,
         toFile: bool = False,
     ) -> bool | dict:
-        """Control C1000X backup charge mode via MQTT.
+        """Control backup charge mode via MQTT.
 
         Args:
             enabled: True to enable backup charge mode, False to disable
@@ -321,7 +324,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         # Validate command value
         enabled = 1 if enabled else 0 if enabled is not None else None
         if enabled is not None and not self.validate_command_value(
-            "backup_charge_control", enabled
+            SolixMqttCommands.ac_charge_switch, enabled
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid backup charge enabled value: %s",
@@ -332,7 +335,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         # Send MQTT commands
         if enabled is not None and await self._send_mqtt_command(
-            command="c1000x_backup_charge",
+            command=SolixMqttCommands.backup_charge_switch,
             parameters={"enabled": enabled},
             description=f"backup charge mode {'enabled' if enabled else 'disabled'}",
             toFile=toFile,
@@ -347,7 +350,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         fahrenheit: bool,
         toFile: bool = False,
     ) -> bool | dict:
-        """Set C1000X temperature unit via MQTT.
+        """Set temperature unit via MQTT.
 
         Args:
             fahrenheit: True for Fahrenheit, False for Celsius
@@ -364,7 +367,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         # Validate command value
         fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
         if fahrenheit is not None and not self.validate_command_value(
-            "backup_charge_control", fahrenheit
+            SolixMqttCommands.temp_unit_switch, fahrenheit
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",
@@ -375,7 +378,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         # Send MQTT commands
         if fahrenheit is not None and await self._send_mqtt_command(
-            command="c1000x_temp_unit",
+            command=SolixMqttCommands.temp_unit_fahrenheit,
             parameters={"fahrenheit": fahrenheit},
             description=f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
             toFile=toFile,
@@ -390,7 +393,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         mode: int | str,
         toFile: bool = False,
     ) -> bool | dict:
-        """Set C1000X light mode via MQTT.
+        """Set light mode via MQTT.
 
         Args:
             mode: Light mode - 0=Off, 1=Low, 2=Medium, 3=High, 4=Blinking
@@ -420,7 +423,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
                 )
                 return False
         if mode is not None and not self.validate_command_value(
-            "light_mode_select", mode
+            SolixMqttCommands.light_mode_select, mode
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid light mode value: %s",
@@ -431,7 +434,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         # Send MQTT commands
         if mode is not None and await self._send_mqtt_command(
-            command="c1000x_light_mode",
+            command=SolixMqttCommands.light_mode,
             parameters={"mode": mode},
             description=f"light mode set to {original_mode if isinstance(original_mode, str) else mode}",
             toFile=toFile,
@@ -461,7 +464,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         """
         resp = {}
         if timeout_minutes is not None and not self.validate_command_value(
-            "device_timeout_minutes", timeout_minutes
+            SolixMqttCommands.device_timeout_minutes, timeout_minutes
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid timeout value: %s",
@@ -472,14 +475,14 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         if timeout_minutes is not None:
             if toFile or await self._send_mqtt_command(
-                command="c1000x_device_timeout",
+                command=SolixMqttCommands.device_timeout_minutes,
                 parameters={"timeout_minutes": timeout_minutes},
                 description=f"Device timeout set to {timeout_minutes} minutes",
                 toFile=toFile,
             ):
                 resp["device_timeout_minutes"] = timeout_minutes
                 if toFile:
-                    self._filedata["device_timeout_minutes"] = timeout_minutes
+                    self._filedata.update(resp)
         return resp or False
 
     async def set_max_load(
@@ -487,7 +490,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         max_watts: int | None = None,
         toFile: bool = False,
     ) -> dict | bool:
-        """Set maximum AC input load (current limit).
+        """Set maximum AC output load in Watt.
 
         Args:
             max_watts: Maximum load in watts (100-2000)
@@ -502,7 +505,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         """
         resp = {}
         if max_watts is not None and not self.validate_command_value(
-            "max_load", max_watts
+            SolixMqttCommands.device_max_load, max_watts
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid max load value: %s",
@@ -513,40 +516,40 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         if max_watts is not None:
             if toFile or await self._send_mqtt_command(
-                command="c1000x_max_load",
+                command=SolixMqttCommands.device_max_load,
                 parameters={"max_watts": max_watts},
                 description=f"Max load set to {max_watts}W",
                 toFile=toFile,
             ):
                 resp["max_load"] = max_watts
                 if toFile:
-                    self._filedata["max_load"] = max_watts
+                    self._filedata.update(resp)
         return resp or False
 
-    async def set_max_load(
+    async def set_charge_limit(
         self,
         max_watts: int | None = None,
         toFile: bool = False,
     ) -> dict | bool:
-        """Set maximum AC output load.
+        """Set maximum AC charge limit in Watt.
 
         Args:
-            max_watts: Maximum load in watts (100-2000)
+            max_watts: Maximum load in watts (100-800)
             toFile: If True, return mock response (for testing compatibility)
 
         Returns:
             dict: Response with max_load if successful, False otherwise
 
         Example:
-            # Set 800W max load
+            # Set 800W charge limit
             result = await device.set_max_load(max_watts=800)
         """
         resp = {}
         if max_watts is not None and not self.validate_command_value(
-            "max_load", max_watts
+            SolixMqttCommands.ac_charge_limit, max_watts
         ):
             self._logger.error(
-                "Device %s %s control error - Invalid max load value: %s",
+                "Device %s %s control error - Invalid AC charge limit value: %s",
                 self.pn,
                 self.sn,
                 max_watts,
@@ -554,29 +557,29 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         if max_watts is not None:
             if toFile or await self._send_mqtt_command(
-                command="c1000x_max_load",
+                command=SolixMqttCommands.ac_charge_limit,
                 parameters={"max_watts": max_watts},
-                description=f"Max load set to {max_watts}W",
+                description=f"AC charge limit set to {max_watts}W",
                 toFile=toFile,
             ):
-                resp["max_load"] = max_watts
+                resp["ac_charge_limit"] = max_watts
                 if toFile:
-                    self._filedata["max_load"] = max_watts
+                    self._filedata.update(resp)
         return resp or False
 
-    async def set_ultrafast_charging(
+    async def set_fast_charging(
         self,
         enabled: bool,
         toFile: bool = False,
     ) -> dict | bool:
-        """Set UltraFast charging mode (1300W max).
+        """Set Fast charging mode (e.g. 1300W max).
 
         Args:
             enabled: True to enable UltraFast charging, False to disable
             toFile: If True, return mock response (for testing compatibility)
 
         Returns:
-            dict: Response with ultrafast_charging status if successful, False otherwise
+            dict: Response with fast_charging status if successful, False otherwise
 
         Example:
             # Enable UltraFast charging (1300W max)
@@ -584,7 +587,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         """
         resp = {}
         if enabled is not None and not self.validate_command_value(
-            "ultrafast_charging", 1 if enabled else 0
+            SolixMqttCommands.ac_fast_charge_switch, 1 if enabled else 0
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid ultrafast charging value: %s",
@@ -595,12 +598,12 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             return False
         if enabled is not None:
             if toFile or await self._send_mqtt_command(
-                command="c1000x_ultrafast_toggle",
+                command=SolixMqttCommands.ac_fast_charge_switch,
                 parameters={"enabled": enabled},
-                description=f"UltraFast charging {'enabled' if enabled else 'disabled'}",
+                description=f"Fast charging {'enabled' if enabled else 'disabled'}",
                 toFile=toFile,
             ):
-                resp["ultrafast_charging"] = enabled
+                resp["fast_charging_switch"] = enabled
                 if toFile:
-                    self._filedata["ultrafast_charging"] = enabled
+                    self._filedata.update(resp)
         return resp or False

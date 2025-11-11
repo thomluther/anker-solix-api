@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
 from .mqtt_device import SolixMqttDevice
+from .mqttcmdmap import SolixMqttCommands
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -19,9 +20,9 @@ if TYPE_CHECKING:
 MODELS = ["A17C0"]
 # Define supported and validated controls per Model
 FEATURES = {
-    "realtime_trigger": MODELS,
-    "set_temp_unit": MODELS,
-    "set_power_cutoff": MODELS,
+    SolixMqttCommands.realtime_trigger: MODELS,
+    SolixMqttCommands.temp_unit_switch: MODELS,
+    SolixMqttCommands.sb_power_cutoff_select: MODELS,
 }
 
 
@@ -36,12 +37,13 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
 
     def validate_command_value(self, command_id: str, value: Any) -> bool:
         """Validate command value ranges for controls."""
+        # TODO: Enhance validation rules to extract options or ranges from command description per model
         validation_rules = {
-            "realtime_trigger": lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
+            SolixMqttCommands.realtime_trigger: lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
             <= v
             <= SolixDefaults.TRIGGER_TIMEOUT_MAX,
-            "temp_unit_control": lambda v: v in [0, 1],
-            "power_cutoff_select": lambda v: v in [5, 10],
+            SolixMqttCommands.temp_unit_switch: lambda v: v in [0, 1],
+            SolixMqttCommands.sb_power_cutoff_select: lambda v: v in [5, 10],
         }
         rule = validation_rules.get(command_id)
         return rule(value) if rule else True
@@ -68,7 +70,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         # Validate command value
         fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
         if fahrenheit is not None and not self.validate_command_value(
-            "backup_charge_control", fahrenheit
+            SolixMqttCommands.temp_unit_switch, fahrenheit
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",
@@ -79,7 +81,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             return False
         # Send MQTT commands
         if fahrenheit is not None and await self._send_mqtt_command(
-            command="solarbank_temp_unit",
+            command=SolixMqttCommands.temp_unit_switch,
             parameters={"fahrenheit": fahrenheit},
             description=f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
             toFile=toFile,
@@ -115,7 +117,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             else 10
         )
         if limit is not None and not self.validate_command_value(
-            "power_cutoff_select", limit
+            SolixMqttCommands.sb_power_cutoff_select, limit
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",
@@ -126,7 +128,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             return False
         # Send MQTT commands
         if limit is not None and await self._send_mqtt_command(
-            command="solarbank_power_cutoff",
+            command=SolixMqttCommands.sb_power_cutoff_select,
             parameters={"limit": limit},
             description=f"Power cutoff set to {limit!s} %",
             toFile=toFile,

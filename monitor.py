@@ -984,13 +984,13 @@ class AnkerSolixApiMonitor:
                         f"{'Display Timeout':<{col3}}: {m2 and (c or cm)}{(m2 or '---'):>4} Sec.{co}"
                     )
                 if m1 := cm and str(mqtt.get("ac_output_power_switch", "")):
-                    m2 = cm and str(mqtt.get("12v_dc_output_power_switch", ""))
+                    m2 = cm and str(mqtt.get("dc_output_power_switch", ""))
                     m3 = cm and str(mqtt.get("ac_output_mode", ""))
-                    m4 = cm and str(mqtt.get("12v_dc_output_mode", ""))
+                    m4 = cm and str(mqtt.get("dc_12v_output_mode", ""))
                     CONSOLE.info(
                         f"{'AC Out Ctrl':<{col1}}: {m1 and (c or cm)}{' ON' if m1 == '1' else 'OFF' if m1 == '0' else '(' + m1 + ')'} / "
                         f"{([item.name for item in SolixPpsOutputMode if item.value == m3] or ['unknown'])[0].capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
-                        f"{'12V DC Ctrl':<{col3}}: {m2 and (c or cm)}{' ON' if m2 == '1' else 'OFF' if m2 == '0' else '(' + m2 + ')'} / "
+                        f"{'DC Out Ctrl':<{col3}}: {m2 and (c or cm)}{' ON' if m2 == '1' else 'OFF' if m2 == '0' else '(' + m2 + ')'} / "
                         f"{([item.name for item in SolixPpsOutputMode if item.value == m4] or ['unknown'])[0].capitalize() + ' (' + m4 + ')'}{co}"
                     )
 
@@ -1020,7 +1020,7 @@ class AnkerSolixApiMonitor:
                         f"{'Exp. 1 SOC/SOH':<{col1}}: {m1 and (c or cm)}{soc} /{m3 if m3 else ' --.--':>7} {'%':<{col2 - 16}}{co} "
                         f"{'Exp. 1 Temp.':<{col3}}: {m2 and (c or cm)}{m2 or '-- °C'!s:>7}{co}"
                     )
-                m1 = cm and str(mqtt.get("backup_charge", ""))
+                m1 = cm and str(mqtt.get("backup_charge_switch", ""))
                 m2 = cm and mqtt.get("exp_1_type", "")
                 if m1 or m2:
                     CONSOLE.info(

@@ -1,7 +1,8 @@
 """MQTT basic device control methods for AnkerSolixApi.
 
 This module contains common control methods for Anker Solix MQTT device classes.
-Specific decive classes should be inherited from this base class
+Specific device classes should be inherited from this base class
+It also provides an MQTT device factory to create correct device class instance depending on specific device
 """
 
 from __future__ import annotations
@@ -9,16 +10,46 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, Any
 
-from .apitypes import SolixDefaults
+from .apitypes import SolixDefaults, SolixDeviceType
 from .mqtt import generate_mqtt_command
+from .mqtt_pps import SolixMqttDevicePps
+from .mqtt_solarbank import SolixMqttDeviceSolarbank
+from .mqttcmdmap import SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 
 if TYPE_CHECKING:
-    from .api import AnkerSolixApi
+    from .api import AnkerSolixApi  # noqa: TC004
 
 # Define supported Models for this class
 MODELS = []
 # Define supported and validated controls per Model
-FEATURES = {"realtime_trigger": MODELS}
+FEATURES = {
+    SolixMqttCommands.realtime_trigger: MODELS,
+}
+
+
+class SolixMqttDeviceFactory:
+    """Define the class to create the appropriate MQTT device class based on device PN."""
+
+    def __init__(self) -> None:
+        """Initialize."""
+
+    def create(
+        self, api_instance: AnkerSolixApi, device_sn: str
+    ) -> SolixMqttDevice | None:
+        """Create the required MQTT device class instance."""
+        if isinstance(api_instance, AnkerSolixApi) and isinstance(device_sn, str):
+            dev = api_instance.devices.get(device_sn) or {}
+            if (pn := dev.get("device_pn")) and dev.get("mqtt_supported"):
+                category = dev.get("type")
+                # TODO: Enhance factory with additional classes as MQTT commands are described
+                if category in [SolixDeviceType.PPS.name] and pn in SOLIXMQTTMAP:
+                    return SolixMqttDevicePps(api_instance, device_sn)
+                if category in [SolixDeviceType.SOLARBANK.name] and pn in SOLIXMQTTMAP:
+                    return SolixMqttDeviceSolarbank(api_instance, device_sn)
+                # return default MQTT device supporting only the realtime trigger control
+                return SolixMqttDevice(api_instance, device_sn)
+        return None
 
 
 class SolixMqttDevice:
@@ -163,9 +194,7 @@ class SolixMqttDevice:
             return False
         if not toFile:
             # Validate MQTT connection prior trigger
-            if not (
-                self.api.mqttsession and self.api.mqttsession.is_connected()
-            ):
+            if not (self.api.mqttsession and self.api.mqttsession.is_connected()):
                 self._logger.error(
                     "Device %s %s control error - No MQTT connection active",
                     self.pn,
