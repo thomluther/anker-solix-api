@@ -47,6 +47,132 @@ from .mqttcmdmap import (
 # To simplify the defined map, smaller and re-usable mappings should be defined independently and just re-used in the overall SOLIXMQTTMAP for
 # the model types that use same field mapping structure. For example various models of the same family most likely share complete or subset of message maps
 
+A1790_0405 = {
+    # F3800 param info
+    "topic": "param_info",
+    "a4": {"name": "remaining_time_hours", "factor": 0.1},  # In hours
+    "a5": {"name": "ac_input_power"},
+    "a6": {"name": "ac_output_power"},
+    "a7": {"name": "usbc_1_power"},
+    "a8": {"name": "usbc_2_power"},
+    "a9": {"name": "usbc_3_power"},
+    "aa": {"name": "usba_1_power?"},
+    "ab": {"name": "usba_2_power?"},
+    "ac": {"name": "12v_dc_output_power_switch?"},
+    "ad": {"name": "battery_soc_total"},
+    "ae": {"name": "photovoltaic_power"},  # Total solar input
+    "af": {"name": "pv_1_power"},
+    "b0": {"name": "pv_2_power"},
+    "b1": {"name": "charging_power"},  # Total charging (AC + Solar)
+    "b2": {"name": "output_power"},
+    "b4": {"name": "discharging_power?"},
+    "bc": {
+        "name": "ac_output_power_switch"
+    },  # AC output switch: Disabled (0) or Enabled (1)
+    "bd": {
+        "name": "charging_status",  # Publishes the raw integer value (0-3)
+        # TODO: Define merged status names for each status value to avoid split field name per bit (they belong to charging_status value)
+        "bytes": {
+            "00": [  # Parse Byte 0 of the value
+                {
+                    "name": "solar_active",
+                    "mask": 0x01,
+                },  # Bit 0 (Mask 0b01) - Solar voltage is present
+                {
+                    "name": "ac_charge_active",
+                    "mask": 0x02,
+                },  # Bit 1 (Mask 0b10) - AC charging is active
+            ]
+        },
+    },
+    "be": {"name": "temperature"},  # In Celsius
+    "bf": {"name": "display_status"},  # Asleep (0), Manual Off (1), On (2)
+    "c0": {"name": "battery_soc_total_dup?"},  # Duplicate of ad?
+    "c1": {
+        "name": "max_soc"
+    },  # User Setting (Max SoC %) TODO: What is the command to define SOC max limit?
+    # TODO: What does USB status mean, is that a toggle setting? If port is used, this should be indicated by power as well
+    "c2": {"name": "usbc_1_status"},
+    "c3": {"name": "usbc_2_status"},
+    "c4": {"name": "usbc_3_status"},
+    "c5": {"name": "usba_1_status?"},
+    "c6": {"name": "usba_2_status?"},
+    "c7": {
+        "name": "12v_dc_output_power_switch"
+    },  # 12V DC output switch: Disabled (0) or Enabled (1)
+    "cc": {"name": "device_sn"},
+    "cd": {"name": "ac_input_limit"},  # User Setting (AC Charge Watts)
+    "cf": {"name": "display_timeout_seconds"},  # User Setting (in seconds)
+    "d3": {"name": "ac_output_power_switch_dup?"},  # Duplicate of bc?
+    "d4": {"name": "12v_dc_output_power_switch_dup?"},  # Duplicate of c7?
+    "d5": {
+        "name": "display_mode"
+    },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+    "d8": {
+        "name": "temp_unit_fahrenheit"
+    },  # Temperature unit: Celsius (0) or Fahrenheit (1)
+    "d9": {
+        "name": "light_mode"
+    },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+    "f6": {"name": "region?"},  # Value 21333 ("US")
+    "f7": {
+        "name": "port_memory_switch"
+    },  # Port Memory switch: Disabled (0) or Enabled (1)
+    "fd": {"name": "device_model"},
+    "fe": {"name": "msg_timestamp"},
+}
+
+A1790_040a = {
+    # F3800 param info
+    "topic": "param_info",
+}
+
+A1790_0410 = {
+    # F3800 param info
+    "topic": "param_info",
+    "a2": {
+        "bytes": {
+            "0": {
+                "name": "power_panel_sn?",
+                "length": 16,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a3": {
+        "bytes": {
+            "0": {
+                "name": "pps_1_sn?",
+                "length": 16,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a4": {
+        "bytes": {
+            "0": {
+                "name": "pps_2_sn?",
+                "length": 16,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a5": {"name": "pps_1_model?"},
+    "a6": {"name": "pps_2_model?"},
+    "fe": {"name": "msg_timestamp"},
+}
+
+A1790_0804 = {
+    # F3800 param info
+    "topic": "param_info",
+}
+
+A1790_0830 = {
+    # F3800 param info
+    "topic": "param_info",
+    "a1": {"name": "sw_version?", "values": 4},
+    "a2": {"name": "fw_version", "values": 4},
+}
 
 A17C0_0407 = {
     # Solarbank network message
@@ -540,8 +666,8 @@ SOLIXMQTTMAP = {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
             "a4": {
-                "name": "remaining_time_min?",
-                "factor": 6,
+                "name": "remaining_time_hours?",
+                "factor": 0.1,
             },  # In Minutes? (value * factor)
             "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
             "a6": {"name": "ac_output_power"},  # Individual AC outlet power
@@ -587,7 +713,9 @@ SOLIXMQTTMAP = {
                 "name": "temp_unit_fahrenheit"
             },  # Temperature unit: Celsius (0) or Fahrenheit (1)
             "de": {"name": "display_switch"},  # Display switch: Off (0) or On (1)
-            "e5": {"name": "backup_charge_switch"},  # Backup charge switch: Off (0) or On (1)
+            "e5": {
+                "name": "backup_charge_switch"
+            },  # Backup charge switch: Off (0) or On (1)
             "f8": {
                 "bytes": {
                     "00": {
@@ -616,9 +744,10 @@ SOLIXMQTTMAP = {
             },
         },
     },
-    "A1790P": {
-        "0044": CMD_DEVICE_MAX_LOAD,# TODO: Supported values or options/range
-        "0045": CMD_DEVICE_TIMEOUT_MIN, # TODO: Supported values or options/range
+    # PPS F3800
+    "A1790": {
+        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Supported values or options/range
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Supported values or options/range
         "004a": CMD_AC_OUTPUT_SWITCH,
         "004b": CMD_DC_OUTPUT_SWITCH,
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
@@ -631,79 +760,33 @@ SOLIXMQTTMAP = {
         "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0079": CMD_PORT_MEMORY_SWITCH,  # Enabled (1), Disabled (0)
-        "0405": {
-            "topic": "param_info",
-            "a4": {"name": "remaining_time_min", "factor": 6},  # In Minutes (value * 6)
-            "a5": {"name": "ac_input_power"},
-            "a6": {"name": "ac_output_power"},
-            "a7": {"name": "usbc_1_power"},
-            "a8": {"name": "usbc_2_power"},
-            "a9": {"name": "usbc_3_power"},
-            "aa": {"name": "usba_1_power?"},
-            "ab": {"name": "usba_2_power?"},
-            "ac": {"name": "12v_dc_output_power_switch?"},
-            "ad": {"name": "battery_soc_total"},
-            "ae": {"name": "photovoltaic_power"},  # Total solar input
-            "af": {"name": "pv_1_power"},
-            "b0": {"name": "pv_2_power"},
-            "b1": {"name": "charging_power"},  # Total charging (AC + Solar)
-            "b2": {"name": "output_power"},
-            "b4": {"name": "battery_voltage?"},
-            "bc": {
-                "name": "ac_output_power_switch"
-            },  # AC output switch: Disabled (0) or Enabled (1)
-            "bd": {
-                "name": "charging_status",  # Publishes the raw integer value (0-3)
-                # TODO: Define merged status names for each status value to avoid split field name per bit (they belong to charging_status value)
-                "bytes": {
-                    "00": [  # Parse Byte 0 of the value
-                        {
-                            "name": "solar_active",
-                            "mask": 0x01,
-                        },  # Bit 0 (Mask 0b01) - Solar voltage is present
-                        {
-                            "name": "ac_charge_active",
-                            "mask": 0x02,
-                        },  # Bit 1 (Mask 0b10) - AC charging is active
-                    ]
-                },
-            },
-            "be": {"name": "temperature"},  # In Celsius
-            "bf": {"name": "display_status"},  # Asleep (0), Manual Off (1), On (2)
-            "c0": {"name": "battery_soc_total_dup?"},  # Duplicate of ad?
-            "c1": {
-                "name": "max_soc_limit"
-            },  # User Setting (Max SoC %) TODO: What is the command to define SOC max limit?
-            # TODO: What does USB status mean, is that a toggle setting? If port is used, this should be indicated by power as well
-            "c2": {"name": "usbc_1_status"},
-            "c3": {"name": "usbc_2_status"},
-            "c4": {"name": "usbc_3_status"},
-            "c5": {"name": "usba_1_status?"},
-            "c6": {"name": "usba_2_status?"},
-            "c7": {
-                "name": "12v_dc_output_power_switch"
-            },  # 12V DC output switch: Disabled (0) or Enabled (1)
-            "cc": {"name": "device_sn"},
-            "cd": {"name": "ac_input_limit"},  # User Setting (AC Charge Watts)
-            "cf": {"name": "display_timeout_status"},  # User Setting (in seconds)
-            "d3": {"name": "ac_output_power_switch_dup?"},  # Duplicate of bc?
-            "d4": {"name": "12v_dc_output_power_switch_dup?"},  # Duplicate of c7?
-            "d5": {
-                "name": "display_mode"
-            },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
-            "d8": {
-                "name": "temp_unit_fahrenheit"
-            },  # Temperature unit: Celsius (0) or Fahrenheit (1)
-            "d9": {
-                "name": "light_mode"
-            },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-            "f6": {"name": "region?"},  # Value 21333 ("US")
-            "f7": {
-                "name": "port_memory_switch"
-            },  # Port Memory switch: Disabled (0) or Enabled (1)
-            "fd": {"name": "device_model"},
-            "fe": {"name": "msg_timestamp"},
-        },
+        "0405": A1790_0405,
+        "040a": A1790_040a,
+        "0410": A1790_0410,
+        "0804": A1790_0804,
+        "0830": A1790_0830,
+    },
+    # PPS F3800 Plus
+    "A1790P": {
+        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Supported values or options/range
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Supported values or options/range
+        "004a": CMD_AC_OUTPUT_SWITCH,
+        "004b": CMD_DC_OUTPUT_SWITCH,
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+        "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
+        "0050": CMD_TEMP_UNIT,
+        "0052": CMD_DISPLAY_SWITCH,
+        # TODO: Command available for Display timeout setting? Which options are available?
+        "0057": CMD_REALTIME_TRIGGER,
+        "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Off (0)
+        "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
+        "0079": CMD_PORT_MEMORY_SWITCH,  # Enabled (1), Disabled (0)
+        "0405": A1790_0405,
+        "040a": A1790_040a,
+        "0410": A1790_0410,
+        "0804": A1790_0804,
+        "0830": A1790_0830,
     },
     # Solarbank 1 E1600
     "A17C0": {
