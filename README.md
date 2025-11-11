@@ -217,15 +217,15 @@ Device type | Description
 
 
 > [!IMPORTANT]
-> While some api responses may show standalone devices that you can manage with your Anker account, the cloud api does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values but only for the time they are prompted in the App. Therefore there may not be any endpoints that provide usage data or settings of such stand alone devices. If your device is tracking energy statistics, it it likely using the power api that seems to be the unique Anker service to record energy data over time.
+> While some api responses may show standalone devices that you can manage with your Anker account, the cloud api does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values but only for the time they are prompted in the App. Therefore there may not be any Api endpoints that provide usage data or settings of such stand alone devices. If your device is tracking energy statistics, it it likely using the power api that seems to be the unique Anker service to record energy data over time.
 
 
 # MQTT client
 
-This is a rather new implementation in the library. It provides data classes to structure the byte data as received in MQTT or Bluetooth messages. The modules also contains a data mapping for the byte fields as known so far. This mapping description must be enhanced for each device model, constellation and message type that is provided, to allow MQTT data extraction and usage.
+This is a rather new implementation in the library. It provides data classes to structure the byte data as received in MQTT or Bluetooth messages. The modules also contains a data mapping for the byte fields as known so far. This mapping descriptions in `mqttmap.py` and `mqttcmdmap.py` must be enhanced for each device model, constellation and message type that is provided, to allow MQTT data decoding, extraction and usage.
 
 > [!IMPORTANT]
-> At this point there is NO integration of MQTT data to the Api cache since the propriatary byte data must be described first for various devices.
+> At this point there is limited integration of MQTT data to the Api cache since the propriatary byte data must be described first for various devices.
 This is where YOU can contribute as device owner, see discussion [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222).
 
 Following is a code snipped how you can utilize the library for easy byte data structuring and see decoding options of your received byte data packages from MQTT or BT clients. You can use this in the client example above.
@@ -302,7 +302,17 @@ Example exec module to use the Anker Api for continuously querying and displayin
 This module can use real time data from your Anker account, or optionally use json files from your local examples or export folder.
 When using the real time option, it will prompt for the Anker account details if not pre-set in the header or defined in environment variables.
 Upon successful authentication, you will see relevant parameter of supported devices displayed and refreshed at regular interval.
-When using monitoring from local json file folder, the values will not change. But this option is useful to validate the api parsing with various system constellations. You can navigate through the list of json folders to verify/debug various system exports with the tool.
+When using monitoring from local json file folder, the values will not change typically, with the exception of mixed in MQTT data from MQTT file poller. The file option is useful to validate the Api parsing with various system constellations, as well as validating MQTT data extraction. You can navigate through the list of json folders to verify/debug various system exports with the tool.
+
+> [!NOTE]
+> MQTT data in File mode can only be extracted if the export files contain MQTT data (optional), the MQTT session is enabled in the monitor tool and an MQTT data description is defined in the `mqttmap.py` for the device PN.
+
+The monitor uses following value highlighting with enabled MQTT session to distinguish their data source:
+- Yellow: Device MQTT values with any new extracted data
+- Cyan: Last device MQTT values
+- No color: Api data
+
+Beside value highlighting, systems, devices, vehicles etc have their own highlighting to recognize corresponding sections quickly in the Api display.
 
 <details>
 <summary><b>Expand to see monitor tool usage overview</b><br><br></summary>
