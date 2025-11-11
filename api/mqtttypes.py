@@ -5,8 +5,8 @@ from datetime import datetime
 import struct
 from typing import Any
 
-from .apitypes import Color, SolixDeviceCategory
-from .mqttmap import SOLIXMQTTMAP, DeviceHexDataTypes
+from .apitypes import Color, DeviceHexDataTypes, SolixDeviceCategory
+from .mqttmap import SOLIXMQTTMAP
 
 
 @dataclass(order=True, kw_only=True)
@@ -17,7 +17,7 @@ class DeviceHexDataHeader:
     FF 09    | 2 Bytes fixed message prefix for Anker Solix message
     XX XX    | 2 Bytes message length (including prefix), little endian format
     XX XX XX | 3 Bytes pattern that seem identical across all messages (supposed `03 00/01 0f` for send/receive)
-    XX XX    | 2 Bytes pattern for type of message, e.g. `84 05` on telemetry packets and `04 09` for others, depends on device model, to be figured out
+    XX XX    | 2 Bytes pattern for type of message, e.g. `04 05` on telemetry packets and `04 08` for others, depends on device model, to be figured out
     XX       | 1 optional Byte, seems increment for certain messages, fix for others or not used
     e.g. ff09 3b00 03010f 0407 xx ..data..
     """

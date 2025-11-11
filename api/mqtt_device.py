@@ -104,8 +104,8 @@ class SolixMqttDevice:
             )
         else:
             try:
-                # Ensure MQTT session is started
-                if not self.api.mqttsession:
+                # Ensure MQTT session is started and connected
+                if not self.api.mqttsession or not self.api.mqttsession.is_connected():
                     if not await self.api.startMqttSession():
                         self._logger.error(
                             "Failed to start MQTT session for device control"

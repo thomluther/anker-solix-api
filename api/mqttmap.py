@@ -1,28 +1,25 @@
 """Define mapping for MQTT messages field conversions depending on Anker Solix model."""
 
-from enum import Enum
-
-
-class DeviceHexDataTypes(Enum):
-    """Enumeration for Anker Solix HEX data value types."""
-
-    str = bytes.fromhex("00")  # various number of bytes, string (Base type)
-    ui = bytes.fromhex("01")  # 1 byte fix, unsigned int (Base type)
-    sile = bytes.fromhex("02")  # 2 bytes fix, signed int LE (Base type)
-    # var is always 4 bytes, but could be 1-4 * int, 1-2 * signed int LE or 4 Byte signed int LE
-    # mapping must specify "values" to indicate number of values in bytes from beginning. Default is 0 for 1 value in 4 bytes
-    var = bytes.fromhex("03")
-    # bin is multiple bytes, mostly 00 or 01 but also others, bitmap pattern for settings
-    # mapping must specify start byte string ("00"-"xx") for fields and field description is a list, since single field can be used for various named settings
-    # each named setting must describe a "mask" integer to indicate which bit(s) are relevant for the named setting, e.g. mask 0x64 => 0100 0000
-    bin = bytes.fromhex("04")
-    sfle = bytes.fromhex("05")  # 4 bytes, signed float LE (Base type)
-    # 06 can be many bytes, mix of Str and Byte values
-    # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type" with a DeviceHexDataTypes base type vor value conversion.
-    # The "length" with int for byte count can be specified (default is 1 Byte), where Length of 0 indicates that first byte contains variable field length
-    strb = bytes.fromhex("06")
-    unk = bytes.fromhex("FF")  # unkonwn marker
-
+from .apitypes import DeviceHexDataTypes
+from .mqttcmdmap import (
+    CMD_12V_DC_OUTPUT_MODE,
+    CMD_AC_CHARGE_LIMIT,
+    CMD_AC_FAST_CHARGE_SWITCH,
+    CMD_AC_OUTPUT_MODE,
+    CMD_AC_OUTPUT_SWITCH,
+    CMD_DC_OUTPUT_SWITCH,
+    CMD_DEVICE_MAX_LOAD,
+    CMD_DEVICE_TIMEOUT_MIN,
+    CMD_DISPLAY_MODE,
+    CMD_DISPLAY_SWITCH,
+    CMD_LIGHT_MODE,
+    CMD_PORT_MEMORY_SWITCH,
+    CMD_REALTIME_TRIGGER,
+    CMD_SB_INVERTER_TYPE,
+    CMD_SB_POWER_CUTOFF,
+    CMD_SB_STATUS_CHECK,
+    CMD_TEMP_UNIT,
+)
 
 # SOLIXMQTTMAP descriptions:
 # It is a nested structure to describe value extraction from Solix MQTT messages per model.messagetype.fieldname.attributes
@@ -50,23 +47,6 @@ class DeviceHexDataTypes(Enum):
 # To simplify the defined map, smaller and re-usable mappings should be defined independently and just re-used in the overall SOLIXMQTTMAP for
 # the model types that use same field mapping structure. For example various models of the same family most likely share complete or subset of message maps
 
-TRIGGER_0057 = {
-    # Command: Real time data message trigger
-    "topic": "req",
-    "a1": {"name": "pattern_22"},
-    "a2": {
-        "name": "set_realtime_data",  # Disable (0) | Enable (1)
-        "type": DeviceHexDataTypes.ui.value,
-    },
-    "a3": {
-        "name": "set_timeout",  # realtime timeout in seconds when enabled
-        "type": DeviceHexDataTypes.var.value,
-    },
-    "fe": {
-        "name": "msg_timestamp",
-        "type": DeviceHexDataTypes.var.value,
-    },
-}
 
 A17C0_0407 = {
     # Solarbank network message
@@ -123,8 +103,8 @@ A17C1_0405 = {
     #     "bytes": {
     #         "00": [
     #             {"name": "light_mode", "mask": 0x40}, # Normal mode (0) or Mood mode (1)
-    #             {"name": "switch_light_off", "mask": 0x20}, # Enable (0) or disable (1) LEDs
-    #             {"name": "switch_ac_socket", "mask": 0x08}, # Disable (0) or enable (1) AC socket
+    #             {"name": "light_off_switch", "mask": 0x20}, # Enable (0) or disable (1) LEDs
+    #             {"name": "ac_socket_switch", "mask": 0x08}, # Disable (0) or enable (1) AC socket
     #             {"name": "temp_unit_fahrenheit", "mask": 0x01},  # Toggle °C(0) or F(1) unit, this does not change temperature value itself
     #         ],
     #     }
@@ -148,8 +128,8 @@ A17C1_0408 = {
     #     "bytes": {
     #         "00": [
     #             {"name": "light_mode", "mask": 0x40}, # Normal mode (0) or Mood mode (1)
-    #             {"name": "switch_light_off", "mask": 0x20}, # Enable (0) or disable (1) LEDs
-    #             {"name": "switch_ac_socket", "mask": 0x08},  # Disable (0) or enable (1) AC socket
+    #             {"name": "light_off_switch", "mask": 0x20}, # Enable (0) or disable (1) LEDs
+    #             {"name": "ac_socket_switch", "mask": 0x08},  # Disable (0) or enable (1) AC socket
     #             {"name": "temp_unit_fahrenheit", "mask": 0x01},  # Toggle °C(0) or F(1) unit, this does not change temperature value itself
     #         ],
     #     }
@@ -430,11 +410,11 @@ A17C5_0405 = {
                     "mask": 0x40,
                 },  # Normal mode (0) or Mood mode (1)
                 {
-                    "name": "switch_light_off",
+                    "name": "light_off_switch",
                     "mask": 0x20,
                 },  # Enable (0) or disable (1) LEDs
                 {
-                    "name": "switch_ac_socket",
+                    "name": "ac_socket_switch",
                     "mask": 0x08,
                 },  # Disable (0) or enable (1) AC socket
                 {
@@ -521,10 +501,12 @@ A17C5_0500 = {
     # Only binary fields, format unknown
 }
 
+
+# Following is the consolidated mapping for all device types and messages
 SOLIXMQTTMAP = {
     # Power Charger C300 DC
     "A1728": {
-        "0057": TRIGGER_0057,
+        "0057": CMD_REALTIME_TRIGGER,
         "0830": {
             # Interval: ?? seconds
             "topic": "param_info",
@@ -540,12 +522,27 @@ SOLIXMQTTMAP = {
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
-        "0057": TRIGGER_0057,
+        "0044": CMD_DEVICE_MAX_LOAD,
+        "0045": CMD_DEVICE_TIMEOUT_MIN,
+        "004a": CMD_AC_OUTPUT_SWITCH,
+        "004b": CMD_DC_OUTPUT_SWITCH,
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+        "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
+        "0050": CMD_TEMP_UNIT,  # TODO: Validate and Update correct message type
+        "0052": CMD_DISPLAY_SWITCH,  # TODO: Validate and Update correct message type
+        # TODO: Command available for Display timeout setting? 20, 30, 60, 300, 1800 seconds?
+        "0057": CMD_REALTIME_TRIGGER,
+        "005e": CMD_AC_FAST_CHARGE_SWITCH,
+        "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Smart (0)
+        "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Smart (0)
         "0405": {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
-            "a4": {"name": "unknown_1?"},
-            # Power monitoring fields
+            "a4": {
+                "name": "remaining_time_min?",
+                "factor": 6,
+            },  # In Minutes? (value * factor)
             "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
             "a6": {"name": "ac_output_power"},  # Individual AC outlet power
             "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
@@ -554,41 +551,43 @@ SOLIXMQTTMAP = {
             "aa": {"name": "usba_2_power"},  # USB-A port 2 output power
             "ae": {"name": "dc_input_power"},  # DC input power (solar/car charging)
             "b0": {"name": "ac_output_power_total"},  # Total AC output power
-            # Battery status fields
+            "b3": {"name": "sw_version", "values": 1},  # Main firmware version
+            "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
+            "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
+            "bb": {
+                "name": "ac_output_power_switch"
+            },  # AC output switch: Disabled (0) or Enabled (1)
+            "bd": {"name": "temperature"},  # Main device temperature (°C)
+            "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
             "c0": {"name": "expansion_packs_a?"},
             "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
             "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
             "c3": {"name": "battery_soh"},  # Main battery state of health (%)
             "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
             "c5": {"name": "expansion_packs_b?"},
+            "d0": {"name": "device_sn"},  # Device serial number
+            "d1": {"name": "max_load"},  # Maximum load setting (W)
+            "d2": {
+                "name": "device_timeout_minutes"
+            },  # Device auto-off timeout (minutes)
+            "d3": {
+                "name": "display_timeout_seconds"
+            },  # Display timeout: 20, 30, 60, 300, 1800 seconds
             "d7": {"name": "expansion_packs_c?"},
-            # Temperature monitoring
-            "bd": {"name": "temperature"},  # Main device temperature (°C)
-            "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
-            # Version information
-            "b3": {"name": "sw_version", "values": 1},  # Main firmware version
-            "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
-            "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
-            # Device control switches
-            "bb": {
-                "name": "switch_ac_output_power"
-            },  # AC output switch: Disabled (0) or Enabled (1)
             "d8": {
-                "name": "switch_12v_dc_output_power"
+                "name": "12v_dc_output_power_switch"
             },  # 12V DC output switch: Disabled (0) or Enabled (1)
-            "de": {"name": "switch_display"},  # Display switch: Off (0) or On (1)
-            "e5": {"name": "backup_charge"},  # Backup charge mode: Off (0) or On (1)
-            "dd": {
-                "name": "temp_unit_fahrenheit"
-            },  # Temperature unit: Celsius (0) or Fahrenheit (1)
-            # Display and light settings
             "d9": {
                 "name": "display_mode"
             },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
             "dc": {
                 "name": "light_mode"
             },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-            # Smart mode configuration (byte field)
+            "dd": {
+                "name": "temp_unit_fahrenheit"
+            },  # Temperature unit: Celsius (0) or Fahrenheit (1)
+            "de": {"name": "display_switch"},  # Display switch: Off (0) or On (1)
+            "e5": {"name": "backup_charge_switch"},  # Backup charge switch: Off (0) or On (1)
             "f8": {
                 "bytes": {
                     "00": {
@@ -601,15 +600,6 @@ SOLIXMQTTMAP = {
                     },
                 }
             },
-            # Device configuration
-            "d0": {"name": "device_sn"},  # Device serial number
-            "d1": {"name": "max_load"},  # Maximum load setting (W)
-            "d2": {
-                "name": "device_timeout_minutes"
-            },  # Device auto-off timeout (minutes)
-            "d3": {
-                "name": "display_timeout_seconds"
-            },  # Display timeout: 20, 30, 60, 300, 1800 seconds
             "fd": {"name": "exp_1_type"},  # Expansion battery type identifier
             "fe": {"name": "msg_timestamp"},  # Message timestamp
         },
@@ -626,146 +616,102 @@ SOLIXMQTTMAP = {
             },
         },
     },
+    "A1790P": {
+        "0044": CMD_DEVICE_MAX_LOAD,# TODO: Supported values or options/range
+        "0045": CMD_DEVICE_TIMEOUT_MIN, # TODO: Supported values or options/range
+        "004a": CMD_AC_OUTPUT_SWITCH,
+        "004b": CMD_DC_OUTPUT_SWITCH,
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+        "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
+        "0050": CMD_TEMP_UNIT,
+        "0052": CMD_DISPLAY_SWITCH,
+        # TODO: Command available for Display timeout setting? Which options are available?
+        "0057": CMD_REALTIME_TRIGGER,
+        "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Off (0)
+        "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
+        "0079": CMD_PORT_MEMORY_SWITCH,  # Enabled (1), Disabled (0)
+        "0405": {
+            "topic": "param_info",
+            "a4": {"name": "remaining_time_min", "factor": 6},  # In Minutes (value * 6)
+            "a5": {"name": "ac_input_power"},
+            "a6": {"name": "ac_output_power"},
+            "a7": {"name": "usbc_1_power"},
+            "a8": {"name": "usbc_2_power"},
+            "a9": {"name": "usbc_3_power"},
+            "aa": {"name": "usba_1_power?"},
+            "ab": {"name": "usba_2_power?"},
+            "ac": {"name": "12v_dc_output_power_switch?"},
+            "ad": {"name": "battery_soc_total"},
+            "ae": {"name": "photovoltaic_power"},  # Total solar input
+            "af": {"name": "pv_1_power"},
+            "b0": {"name": "pv_2_power"},
+            "b1": {"name": "charging_power"},  # Total charging (AC + Solar)
+            "b2": {"name": "output_power"},
+            "b4": {"name": "battery_voltage?"},
+            "bc": {
+                "name": "ac_output_power_switch"
+            },  # AC output switch: Disabled (0) or Enabled (1)
+            "bd": {
+                "name": "charging_status",  # Publishes the raw integer value (0-3)
+                # TODO: Define merged status names for each status value to avoid split field name per bit (they belong to charging_status value)
+                "bytes": {
+                    "00": [  # Parse Byte 0 of the value
+                        {
+                            "name": "solar_active",
+                            "mask": 0x01,
+                        },  # Bit 0 (Mask 0b01) - Solar voltage is present
+                        {
+                            "name": "ac_charge_active",
+                            "mask": 0x02,
+                        },  # Bit 1 (Mask 0b10) - AC charging is active
+                    ]
+                },
+            },
+            "be": {"name": "temperature"},  # In Celsius
+            "bf": {"name": "display_status"},  # Asleep (0), Manual Off (1), On (2)
+            "c0": {"name": "battery_soc_total_dup?"},  # Duplicate of ad?
+            "c1": {
+                "name": "max_soc_limit"
+            },  # User Setting (Max SoC %) TODO: What is the command to define SOC max limit?
+            # TODO: What does USB status mean, is that a toggle setting? If port is used, this should be indicated by power as well
+            "c2": {"name": "usbc_1_status"},
+            "c3": {"name": "usbc_2_status"},
+            "c4": {"name": "usbc_3_status"},
+            "c5": {"name": "usba_1_status?"},
+            "c6": {"name": "usba_2_status?"},
+            "c7": {
+                "name": "12v_dc_output_power_switch"
+            },  # 12V DC output switch: Disabled (0) or Enabled (1)
+            "cc": {"name": "device_sn"},
+            "cd": {"name": "ac_input_limit"},  # User Setting (AC Charge Watts)
+            "cf": {"name": "display_timeout_status"},  # User Setting (in seconds)
+            "d3": {"name": "ac_output_power_switch_dup?"},  # Duplicate of bc?
+            "d4": {"name": "12v_dc_output_power_switch_dup?"},  # Duplicate of c7?
+            "d5": {
+                "name": "display_mode"
+            },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+            "d8": {
+                "name": "temp_unit_fahrenheit"
+            },  # Temperature unit: Celsius (0) or Fahrenheit (1)
+            "d9": {
+                "name": "light_mode"
+            },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+            "f6": {"name": "region?"},  # Value 21333 ("US")
+            "f7": {
+                "name": "port_memory_switch"
+            },  # Port Memory switch: Disabled (0) or Enabled (1)
+            "fd": {"name": "device_model"},
+            "fe": {"name": "msg_timestamp"},
+        },
+    },
     # Solarbank 1 E1600
     "A17C0": {
-        "0050": {
-            # Control Command for temp unit
-            "topic": "req",
-            "a1": {"name": "pattern_22"},
-            "a2": {
-                "name": "set_temp_unit_fahrenheit",  # Celcius(0) | Fahrenheit (1)
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "fe": {
-                "name": "msg_timestamp",
-                "type": DeviceHexDataTypes.var.value,
-            },
-        },
-        "0056": {
-            # Status check request?
-            "topic": "req",
-            "a1": {"name": "pattern_22"},
-            "a2": {
-                "name": "device_sn",
-                "type": DeviceHexDataTypes.str.value,
-                "length": 16,
-            },
-            "a3": {
-                "name": "charging_status",
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "a4": {
-                "name": "output_preset",  # in W
-                "type": DeviceHexDataTypes.var.value,
-            },
-            "a5": {
-                "name": "status_timeout_sec?",  # timeout for next status message?
-                "type": DeviceHexDataTypes.var.value,
-            },
-            "a6": {
-                "name": "local_timestamp",  # used for time synchronization?
-                "type": DeviceHexDataTypes.var.value,
-            },
-            "a7": {
-                "name": "next_status_timestamp",  # Requested time for next status message +56-57 seconds
-                "type": DeviceHexDataTypes.var.value,
-            },
-            "a8": {
-                "name": "unknown_1?",
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "a9": {
-                "name": "unknown_2?",
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "aa": {
-                "name": "unknown_3?",
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "fe": {
-                "name": "msg_timestamp",
-                "type": DeviceHexDataTypes.var.value,
-            },
-        },
-        "0057": TRIGGER_0057,
-        "0067": {
-            # Command Set Power cutoff
-            "topic": "req",
-            "a1": {"name": "pattern_22"},
-            "a2": {
-                "name": "output_cutoff_data",  # 10 | 5 %
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "a3": {
-                "name": "lowpower_input_data",  # 5 | 4 %
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "a4": {
-                "name": "input_cutoff_data",  # 10 | 5 %
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "fe": {
-                "name": "msg_timestamp",
-                "type": DeviceHexDataTypes.var.value,
-            },
-        },
-        "0068": {
-            # Command Set Inverter Type and limits
-            "topic": "req",
-            "a1": {"name": "pattern_22"},
-            "a2": {
-                "name": "output_cutoff_data",  # 10 | 5 %
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "a3": {
-                "name": "lowpower_input_data",  # 5 | 4 %
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "a4": {
-                "name": "input_cutoff_data",  # 10 | 5 %
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "a5": {
-                "name": "inverter_brand",  # Hex bytes of brand name, length varies
-                "type": DeviceHexDataTypes.bin.value,
-            },
-            "a6": {
-                "name": "inverter_model",  # Hey bytes of model name, length varies
-                "type": DeviceHexDataTypes.bin.value,
-            },
-            "a7": {
-                "name": "set_min_load",  # in W
-                "type": DeviceHexDataTypes.sile.value,
-            },
-            "a8": {
-                "name": "set_max_load",  # in W
-                "type": DeviceHexDataTypes.sile.value,
-            },
-            "a9": {
-                "name": "unknown_1?",  # 0
-                "type": DeviceHexDataTypes.ui.value,
-            },
-            "aa": {
-                "name": "ch_1_min_what?",  # 500
-                "type": DeviceHexDataTypes.var.value,
-            },
-            "ab": {
-                "name": "ch_1_max_what?",  # 10000
-                "type": DeviceHexDataTypes.var.value,
-            },
-            "ac": {
-                "name": "ch_2_min_what?",  # 500
-                "type": DeviceHexDataTypes.var.value,
-            },
-            "ad": {
-                "name": "ch_2_max_what?",  # 10000
-                "type": DeviceHexDataTypes.var.value,
-            },
-            "fe": {
-                "name": "msg_timestamp",
-                "type": DeviceHexDataTypes.var.value,
-            },
-        },
+        "0050": CMD_TEMP_UNIT,
+        "0056": CMD_SB_STATUS_CHECK,
+        "0057": CMD_REALTIME_TRIGGER,
+        "0067": CMD_SB_POWER_CUTOFF,
+        "0068": CMD_SB_INVERTER_TYPE,
         "0405": {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
@@ -833,7 +779,7 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 2 E1600 Pro
     "A17C1": {
-        "0057": TRIGGER_0057,
+        "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A17C1_0405,
         # Interval: varies, probably upon change
@@ -846,7 +792,7 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 2 E1600 AC
     "A17C2": {
-        "0057": TRIGGER_0057,
+        "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A17C5_0405,
         # Interval: varies, probably upon change
@@ -859,7 +805,7 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 2 E1600 Plus
     "A17C3": {
-        "0057": TRIGGER_0057,
+        "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A17C1_0405,
         # Interval: varies, probably upon change
@@ -872,7 +818,7 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 3 E2700 Pro
     "A17C5": {
-        "0057": TRIGGER_0057,
+        "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A17C5_0405,
         # Interval: varies, probably upon change
@@ -1004,7 +950,7 @@ SOLIXMQTTMAP = {
         "0500": A17C5_0500,
     },
     "A17X7": {
-        "0057": TRIGGER_0057,
+        "0057": CMD_REALTIME_TRIGGER,
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             "topic": "param_info",
@@ -1019,7 +965,7 @@ SOLIXMQTTMAP = {
         },
     },
     "SHEMP3": {
-        "0057": TRIGGER_0057,
+        "0057": CMD_REALTIME_TRIGGER,
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             "topic": "param_info",

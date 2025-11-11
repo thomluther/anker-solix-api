@@ -188,7 +188,7 @@ class AnkerSolixMqttMonitor:
                         f"\nStarting MQTT server connection for device {device_sn} (model {device_pn})..."
                     )
                     # Initialize the session
-                    if not (mqtt_session := await self.api.startMqttSession()):
+                    if not ((mqtt_session := await self.api.startMqttSession()) and mqtt_session.is_connected()):
                         return False
                     CONSOLE.info(
                         f"Connected successfully to MQTT server {mqtt_session.host}:{mqtt_session.port}"

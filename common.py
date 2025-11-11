@@ -4,6 +4,7 @@ import datetime
 import getpass
 import logging
 import os
+from pathlib import Path
 import select
 import sys
 
@@ -76,6 +77,10 @@ handler.setFormatter(logging.Formatter("%(message)s"))
 SAMELINE.addHandler(handler)
 
 # Optional default Anker Account credentials to be used
+# load environment variables from .env file at runtime if file exists
+if (Path(__file__).parent / ".env").is_file():
+    from dotenv import load_dotenv
+    load_dotenv()
 _CREDENTIALS = {
     "USER": os.getenv("ANKERUSER"),
     "PASSWORD": os.getenv("ANKERPASSWORD"),

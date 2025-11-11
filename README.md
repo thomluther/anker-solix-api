@@ -26,8 +26,9 @@ The library is currently supported on
 
 # Required libraries
 
-The dependencies of this project are `cryptography`, `aiohttp`, `aiofiles`.
-You can either install them manually (e.g. via a package manager) or use [`poetry`](https://github.com/python-poetry/poetry).
+The dependencies of this project are `cryptography`, `aiohttp`, `aiofiles` and `paho-mqtt` for the Api library modules.
+The tools utilizing the common.py module optionally require `python-dotenv` to support definition of credentials via local `.env` file that can be utilized for loading environment variables at runtime only.
+You can either install the requirements manually (e.g. via a package manager) or use [`poetry`](https://github.com/python-poetry/poetry).
 
 ## Poetry
 
@@ -61,11 +62,11 @@ poetry run python [...].py
 To install the dependencies manually consult your favorite package manager, for example:
 
 ```shell
-sudo pip install cryptography aiohttp aiofiles paho-mqtt
+sudo pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
 ```
 or
 ```shell
-sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt
+sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt python-python-dotenv
 ```
 
 You should then be able to run programs with:
@@ -267,6 +268,14 @@ _CREDENTIALS = {
     "COUNTRY": os.getenv("ANKERCOUNTRY"),
 }
 ```
+Those environment variables can optionally be defined in a local .env file in your repo root folder which is excluded from repo updates.
+```console
+ANKERUSER="username"
+ANKERPASSWORD="password"
+ANKERCOUNTRY="2_char_country_id"
+```
+Those variables will only be loaded at runtime when importing the common module.
+
 
 ## export_system.py
 

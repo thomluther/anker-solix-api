@@ -122,27 +122,7 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                     )
                 )
 
-                # FORCE immediate data collection - wait a bit for poller to establish connection
-                CONSOLE.info("Waiting for MQTT poller to establish connection...")
-                await asyncio.sleep(5)
-
-                # Check connection status
-                if mqtt_session.client:
-                    if is_connected := mqtt_session.client.is_connected():
-                        CONSOLE.info(
-                            f"MQTT connection status: {'Connected' if is_connected else 'Disconnected'}"
-                        )
-                    else:
-                        CONSOLE.info("Waiting for connection to establish...")
-                        for wait_i in range(20):
-                            await asyncio.sleep(1)
-                            if mqtt_session.client.is_connected():
-                                CONSOLE.info(f"✓ Connected after {wait_i + 6} seconds")
-                                break
-                        else:
-                            CONSOLE.info("✗ Connection failed - cannot send triggers")
-
-                # Send update trigger if connected
+                # FORCE immediate data collection via update trigger if connected
                 if mqtt_session.is_connected():
                     CONSOLE.info("Forcing immediate device data update...")
                     if mqttdevice.realtime_trigger(timeout=60):

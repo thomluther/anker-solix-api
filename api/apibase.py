@@ -263,19 +263,16 @@ class AnkerSolixBaseApi:
             # (Re)Connect the MQTT client
             if not self.mqttsession.is_connected():
                 await self.mqttsession.connect_client_async()
-            # Start the loop to process network traffic and callbacks
-            if self.mqttsession.client:
-                self.mqttsession.client.loop_start()
-            else:
-                self._logger.error(
-                    "Api %s failed connecting to MQTT server %s:%s",
-                    self.apisession.nickname,
-                    self.mqttsession.host,
-                    self.mqttsession.port,
-                )
-                self.mqttsession.cleanup()
-                self.mqttsession = None
-                return self.mqttsession
+                if not self.mqttsession.is_connected():
+                    self._logger.error(
+                        "Api %s failed connecting to MQTT server %s:%s",
+                        self.apisession.nickname,
+                        self.mqttsession.host,
+                        self.mqttsession.port,
+                    )
+                    self.mqttsession.cleanup()
+                    self.mqttsession = None
+                    return self.mqttsession
             self._logger.debug(
                 "Api %s connected successfully to MQTT server %s:%s",
                 self.apisession.nickname,
@@ -618,17 +615,17 @@ class AnkerSolixBaseApi:
                                 "priority_discharge_switch",
                                 "grid_export_disabled",
                                 "display_mode",
-                                "switch_display",
+                                "display_switch",
                                 "display_timeout_seconds",
-                                "switch_light_off",
+                                "light_off_switch",
                                 "light_mode",
-                                "switch_ac_socket",
-                                "switch_ac_output_power",
-                                "switch_12v_dc_output_power",
+                                "ac_socket_switch",
+                                "ac_output_power_switch",
+                                "12v_dc_output_power_switch",
                                 "ac_output_mode",
                                 "12v_dc_output_mode",
                                 "grid_export_disabled",
-                                "backup_charge",
+                                "backup_charge_switch",
                                 "temp_unit_fahrenheit",
                                 "expansion_packs",
                                 "parallel_devices",

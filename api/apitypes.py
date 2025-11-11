@@ -874,12 +874,12 @@ class SolixDeviceCapacity:
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
     A1780: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1780_1: int = 2048  # Expansion Battery for F2000
-    A1780P: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767) with WIFI
+    A1780P: int = 2048  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767) with WIFI
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
     A1782: int = 3072  # SOLIX F3000 Portable Power Station with Smart Meter support
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
-    A1790P: int = 3840  # SOLIX F3800 Portable Power Station
+    A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
 
 
@@ -972,7 +972,10 @@ class SolixDeviceCategory:
     A1772: str = SolixDeviceType.PPS.value  # SOLIX F1500 Portable Power Station
     A1780: str = (
         SolixDeviceType.PPS.value
-    )  # SOLIX F2000 Portable Power Station (PowerHouse 767)
+    )  # SOLIX F2000 Portable Power Station (PowerHouse 767) with Wifi
+    A1780P: str = (
+        SolixDeviceType.PPS.value
+    )  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767)
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
@@ -1459,3 +1462,24 @@ class Color(StrEnum):
     MAG = "\033[35m"
     WHITE = "\033[37m"
     OFF = "\033[0m"
+
+
+class DeviceHexDataTypes(Enum):
+    """Enumeration for Anker Solix MQTT HEX data value types."""
+
+    str = bytes.fromhex("00")  # various number of bytes, string (Base type)
+    ui = bytes.fromhex("01")  # 1 byte fix, unsigned int (Base type)
+    sile = bytes.fromhex("02")  # 2 bytes fix, signed int LE (Base type)
+    # var is always 4 bytes, but could be 1-4 * int, 1-2 * signed int LE or 4 Byte signed int LE
+    # mapping must specify "values" to indicate number of values in bytes from beginning. Default is 0 for 1 value in 4 bytes
+    var = bytes.fromhex("03")
+    # bin is multiple bytes, mostly 00 or 01 but also others, bitmap pattern for settings
+    # mapping must specify start byte string ("00"-"xx") for fields and field description is a list, since single field can be used for various named settings
+    # each named setting must describe a "mask" integer to indicate which bit(s) are relevant for the named setting, e.g. mask 0x64 => 0100 0000
+    bin = bytes.fromhex("04")
+    sfle = bytes.fromhex("05")  # 4 bytes, signed float LE (Base type)
+    # 06 can be many bytes, mix of Str and Byte values
+    # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type" with a DeviceHexDataTypes base type vor value conversion.
+    # The "length" with int for byte count can be specified (default is 1 Byte), where Length of 0 indicates that first byte contains variable field length
+    strb = bytes.fromhex("06")
+    unk = bytes.fromhex("FF")  # unkonwn marker

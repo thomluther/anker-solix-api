@@ -800,8 +800,8 @@ class AnkerSolixApiMonitor:
                         f"{'Other (Plan)':<{col3}}: {site.get('other_loads_power') or '---':>4} {unit}"
                     )
                     if m3 := cm and str(mqtt.get("light_mode", "")):
-                        m1 = cm and mqtt.get("switch_light_off", "")
-                        m2 = cm and mqtt.get("switch_ac_socket", "")
+                        m1 = cm and mqtt.get("light_off_switch", "")
+                        m2 = cm and mqtt.get("ac_socket_switch", "")
                         mode = (
                             [
                                 item.name
@@ -967,7 +967,7 @@ class AnkerSolixApiMonitor:
                         f"{'Light Mode':<{col1}}: {m2 and (c or cm)}"
                         f"{([item.name for item in SolixPpsDisplayMode if item.value == m2] or ['unknown'])[0].capitalize() + ' (' + m2 + ')':<{col2 - 6}}{co} "
                     )
-                if m1 := cm and str(mqtt.get("switch_display", "")):
+                if m1 := cm and str(mqtt.get("display_switch", "")):
                     m2 = cm and str(mqtt.get("display_timeout_seconds", ""))
                     m3 = cm and str(mqtt.get("display_mode", ""))
                     CONSOLE.info(
@@ -975,8 +975,8 @@ class AnkerSolixApiMonitor:
                         f"{([item.name for item in SolixPpsDisplayMode if item.value == m3] or ['unknown'])[0].capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
                         f"{'Display Timeout':<{col3}}: {m2 and (c or cm)}{(m2 or '---'):>4} Sec.{co}"
                     )
-                if m1 := cm and str(mqtt.get("switch_ac_output_power", "")):
-                    m2 = cm and str(mqtt.get("switch_12v_dc_output_power", ""))
+                if m1 := cm and str(mqtt.get("ac_output_power_switch", "")):
+                    m2 = cm and str(mqtt.get("12v_dc_output_power_switch", ""))
                     m3 = cm and str(mqtt.get("ac_output_mode", ""))
                     m4 = cm and str(mqtt.get("12v_dc_output_mode", ""))
                     CONSOLE.info(
@@ -1622,7 +1622,7 @@ class AnkerSolixApiMonitor:
                             and not self.use_file
                         ):
                             CONSOLE.info("Auto-starting MQTT session...")
-                            if mqttsession := await self.api.startMqttSession():
+                            if (mqttsession := await self.api.startMqttSession()) and mqttsession.is_connected():
                                 CONSOLE.info(
                                     f"{Color.GREEN}MQTT session connected{Color.OFF}, subscribing eligible devices..."
                                 )
@@ -1644,62 +1644,47 @@ class AnkerSolixApiMonitor:
                                     )
                                     # Auto-trigger realtime if enabled via command line
                                     if self.enable_realtime:
-                                        # Give MQTT client more time to fully connect and wait more seconds
-                                        for _ in range(5):
-                                            await asyncio.sleep(1)
-                                            if mqttsession.is_connected():
-                                                break
-                                        if mqttsession.is_connected():
-                                            CONSOLE.info(
-                                                f"{Color.CYAN}Auto-triggering real time MQTT data for {self.rt_timeout} seconds... "
+                                        CONSOLE.info(
+                                            f"{Color.CYAN}Auto-triggering real time MQTT data for {self.rt_timeout} seconds... "
+                                        )
+                                        for dev in devs:
+                                            resp = mqttsession.realtime_trigger(
+                                                deviceDict=dev,
+                                                timeout=self.rt_timeout,
                                             )
-                                            for dev in devs:
-                                                resp = mqttsession.realtime_trigger(
-                                                    deviceDict=dev,
-                                                    timeout=self.rt_timeout,
+                                            with contextlib.suppress(
+                                                ValueError, RuntimeError
+                                            ):
+                                                resp.wait_for_publish(timeout=2)
+                                            sn = dev.get("device_sn")
+                                            if resp.is_published():
+                                                CONSOLE.info(
+                                                    f"Triggered device: {Color.GREEN}{sn} ({dev.get('device_pn')}) - "
+                                                    f"{dev.get('name') or 'NoName'}{Color.OFF}"
                                                 )
-                                                with contextlib.suppress(
-                                                    ValueError, RuntimeError
-                                                ):
-                                                    resp.wait_for_publish(timeout=2)
-                                                sn = dev.get("device_sn")
-                                                if resp.is_published():
-                                                    CONSOLE.info(
-                                                        f"Triggered device: {Color.GREEN}{sn} ({dev.get('device_pn')}) - "
-                                                        f"{dev.get('name') or 'NoName'}{Color.OFF}"
-                                                    )
-                                                    mqttsession.triggered_devices.add(
-                                                        sn
-                                                    )
-                                                else:
-                                                    CONSOLE.info(
-                                                        f"{Color.RED}Failed to publish Real Time trigger message for {sn}{Color.OFF}"
-                                                    )
-                                                    mqttsession.triggered_devices.discard(
-                                                        sn
-                                                    )
-                                            if mqttsession.triggered_devices:
-                                                self.triggered = (
-                                                    datetime.now()
-                                                    + timedelta(seconds=self.rt_timeout)
+                                                mqttsession.triggered_devices.add(
+                                                    sn
                                                 )
-                                        else:
-                                            CONSOLE.info(
-                                                f"{Color.YELLOW}MQTT client not fully connected after 5 attempts, "
-                                                f"skipping auto real-time trigger{Color.OFF}"
-                                            )
-                                            client_status = (
-                                                mqttsession.is_connected()
-                                                if self.api.mqttsession.client
-                                                else "No client"
-                                            )
-                                            CONSOLE.info(
-                                                f"Client status: {client_status}"
+                                            else:
+                                                CONSOLE.info(
+                                                    f"{Color.RED}Failed to publish Real Time trigger message for {sn}{Color.OFF}"
+                                                )
+                                                mqttsession.triggered_devices.discard(
+                                                    sn
+                                                )
+                                        if mqttsession.triggered_devices:
+                                            self.triggered = (
+                                                datetime.now()
+                                                + timedelta(seconds=self.rt_timeout)
                                             )
                                 else:
                                     CONSOLE.info(
                                         f"{Color.YELLOW}No eligible MQTT devices found!{Color.OFF}"
                                     )
+                            elif mqttsession:
+                                CONSOLE.info(
+                                    f"{Color.YELLOW}MQTT client not fully connected yet, skipping subscription and real-time trigger{Color.OFF}"
+                                )
                             else:
                                 CONSOLE.info(
                                     f"{Color.RED}Failed to start MQTT session!{Color.OFF}"
@@ -1903,7 +1888,7 @@ class AnkerSolixApiMonitor:
                                                 )
                                                 await asyncio.sleep(1)
                                                 break
-                                            else:  # noqa: RET508
+                                            if mqttsession.is_connected():
                                                 CONSOLE.info(
                                                     f"{Color.GREEN}MQTT session connected{Color.OFF}, subscribing eligible devices..."
                                                 )
@@ -1929,6 +1914,10 @@ class AnkerSolixApiMonitor:
                                                     CONSOLE.info(
                                                         f"{Color.YELLOW}No eligible MQTT devices found!{Color.OFF}"
                                                     )
+                                            else:
+                                                CONSOLE.info(
+                                                    f"{Color.RED}Failed to connect client of MQTT session!{Color.OFF}"
+                                                )
                                         else:
                                             CONSOLE.info(
                                                 f"{Color.RED}Failed to start MQTT session!{Color.OFF}"
@@ -2044,6 +2033,10 @@ class AnkerSolixApiMonitor:
                                                 CONSOLE.info(
                                                     f"{Color.YELLOW}\nNo eligible MQTT devices found!{Color.OFF}"
                                                 )
+                                        else:
+                                            CONSOLE.info(
+                                                f"{Color.RED}\nReal time MQTT data requires connected MQTT session...{Color.OFF}"
+                                            )
                                     else:
                                         CONSOLE.info(
                                             f"{Color.RED}\nReal time MQTT data requires active MQTT session...{Color.OFF}"
