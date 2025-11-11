@@ -47,6 +47,19 @@ from .mqttcmdmap import (
 # To simplify the defined map, smaller and re-usable mappings should be defined independently and just re-used in the overall SOLIXMQTTMAP for
 # the model types that use same field mapping structure. For example various models of the same family most likely share complete or subset of message maps
 
+PPS_VERSIONS_0830 = {
+    # Various PPS device version param info
+    "topic": "param_info",
+    "a1": {
+        "name": "sw_version",
+        "type": DeviceHexDataTypes.str.value,
+    },
+    "a2": {
+        "name": "hw_version",
+        "type": DeviceHexDataTypes.str.value,
+    },
+}
+
 A1722_0405 = {
     # C300 AC param info
     "topic": "param_info",
@@ -72,19 +85,6 @@ A1722_0405 = {
     "cf": {
         "name": "display_mode"
     },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
-}
-
-A1722_0830 = {
-    # C300 AC/DC param info
-    "topic": "param_info",
-    "a1": {
-        "name": "sw_version",
-        "type": DeviceHexDataTypes.str.value,
-    },
-    "a2": {
-        "name": "hw_version",
-        "type": DeviceHexDataTypes.str.value,
-    },
 }
 
 A1728_0405 = {
@@ -122,6 +122,72 @@ A1728_0405 = {
         "name": "usba_2_status"
     },  # USB-A right status: Inactive (0), Discharging (1), Charging (2)
     "c3": {"name": "device_sn"},
+}
+
+A1780_0405 = {
+    # F2000(P) param info
+    "topic": "param_info",
+    "a4": {"name": "remaining_time_hours?", "factor": 0.1},  # In hours
+    "a5": {"name": "ac_input_power"},  # AC charging power to battery
+    "a6": {"name": "ac_output_power"},  # Individual AC outlet power
+    "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
+    "a8": {"name": "usbc_2_power"},  # USB-C port 2 output power
+    "a9": {"name": "usbc_3_power"},  # USB-C port 3 output power
+    "aa": {"name": "usba_1_power"},  # USB-A port 1 output power
+    "ab": {"name": "usba_2_power"},  # USB-A port 2 output power
+    "ac": {"name": "12v_1_power"},  # 12V port 1 output power
+    "ad": {"name": "12v_2_power"},  # 12V port 2 output power
+    "ae": {"name": "dc_input_power"},  # DC input power (solar/car charging)
+    "af": {"name": "ac_input_power"},  # AC input power (230V)
+    "b0": {"name": "output_power_total"},  # Total output power
+    "b3": {"name": "sw_version", "values": 1},  # Main firmware version
+    "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
+    "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
+    "bd": {"name": "temperature"},  # Main device temperature (°C)
+    "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
+    "c0": {"name": "expansion_packs_a?"},
+    "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
+    "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
+    "c3": {"name": "battery_soh"},  # Main battery state of health (%)
+    "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
+    "c5": {"name": "expansion_packs_b?"},
+    "d0": {"name": "device_sn"},
+    "d1": {"name": "max_load"},  # Maximum load setting (W)
+    "d3": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes)
+    "d4": {"name": "display_timeout_seconds"},  # Display timeout: 20, 30, 60, 300, 1800 seconds
+    "d7": {"name": "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "d8": {"name": "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "d9": {"name": "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "db": {"name": "energy_saving_mode"},  # Disabled (0) or Enabled (1)
+    "dc": {"name": "light_mode"},  # Off (0), Low (1), Medium (2), High (3), Blinking (4)
+    "dd": {"name": "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
+    "de": {"name": "display_switch"},  # Off (0) or On (1)
+    "e5": {"name": "backup_charge_switch"},  # Off (0) or On (1)
+    "f8": {
+        "bytes": {
+            "00": {
+                "name": "12v_dc_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                "name": "ac_output_mode",  # Normal (1), Smart (2) - auto-off when not charging and low power
+                "type": DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "fd": {"name": "exp_1_type"},  # Expansion battery type identifier
+    "fe": {"name": "msg_timestamp"},  # Message timestamp
+}
+
+A1780_0408 = {
+    # F2000(P) state info
+    "topic": "state_info",
+    "a3": {"name": "device_sn"},
+    "a4": {"name": "local_timestamp?"},
+    "a5": {"name": "utc_timestamp?"},
+    "a6": {"name": "discharged_energy?", "factor": 0.001},  # in kWh
+    "a7": {"name": "charged_energy?", "factor": 0.001},  # in kWh
+    "ac": {"name": "battery_soc"},  # in %
 }
 
 A1790_0405 = {
@@ -197,7 +263,7 @@ A1790_0405 = {
     "f7": {
         "name": "port_memory_switch"
     },  # Port Memory switch: Disabled (0) or Enabled (1)
-    "fd": {"name": "device_model"},
+    "fd": {"name": "exp_1_type"},  # Expansion battery type identifier
     "fe": {"name": "msg_timestamp"},
 }
 
@@ -244,13 +310,6 @@ A1790_0410 = {
 A1790_0804 = {
     # F3800 param info
     "topic": "param_info",
-}
-
-A1790_0830 = {
-    # F3800 param info
-    "topic": "param_info",
-    "a1": {"name": "sw_version?", "values": 4},
-    "a2": {"name": "fw_version", "values": 4},
 }
 
 A17C0_0407 = {
@@ -712,20 +771,26 @@ SOLIXMQTTMAP = {
     # Power Charger C300 AC
     "A1722": {
         "0057": CMD_REALTIME_TRIGGER,
-        "0405": A1722_0405,  # Interval: ?? seconds
-        "0830": A1722_0830,  # Interval: ?? seconds
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": A1722_0405,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": PPS_VERSIONS_0830,
     },
     # Power Charger C300 DC
     "A1726": {
         "0057": CMD_REALTIME_TRIGGER,
-        "0405": A1728_0405,  # Interval: ?? seconds
-        "0830": A1722_0830,  # Interval: ?? seconds
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": A1728_0405,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": PPS_VERSIONS_0830,
     },
     # Power Charger C300X DC
     "A1728": {
         "0057": CMD_REALTIME_TRIGGER,
-        "0405": A1728_0405,  # Interval: ?? seconds
-        "0830": A1722_0830,  # Interval: ?? seconds
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": A1728_0405,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": PPS_VERSIONS_0830,
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
@@ -762,9 +827,7 @@ SOLIXMQTTMAP = {
             "b3": {"name": "sw_version", "values": 1},  # Main firmware version
             "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
             "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
-            "bb": {
-                "name": "ac_output_power_switch"
-            },  # AC output switch: Disabled (0) or Enabled (1)
+            "bb": {"name": "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
             "bd": {"name": "temperature"},  # Main device temperature (°C)
             "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
             "c0": {"name": "expansion_packs_a?"},
@@ -775,37 +838,23 @@ SOLIXMQTTMAP = {
             "c5": {"name": "expansion_packs_b?"},
             "d0": {"name": "device_sn"},  # Device serial number
             "d1": {"name": "max_load"},  # Maximum load setting (W)
-            "d2": {
-                "name": "device_timeout_minutes"
-            },  # Device auto-off timeout (minutes)
-            "d3": {
-                "name": "display_timeout_seconds"
-            },  # Display timeout: 20, 30, 60, 300, 1800 seconds
+            "d2": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes) #TODO: Options?
+            "d3": {"name": "display_timeout_seconds"},  # Options: 20, 30, 60, 300, 1800 seconds
             "d7": {"name": "expansion_packs_c?"},
-            "d8": {
-                "name": "12v_dc_output_power_switch"
-            },  # 12V DC output switch: Disabled (0) or Enabled (1)
-            "d9": {
-                "name": "display_mode"
-            },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
-            "dc": {
-                "name": "light_mode"
-            },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-            "dd": {
-                "name": "temp_unit_fahrenheit"
-            },  # Temperature unit: Celsius (0) or Fahrenheit (1)
-            "de": {"name": "display_switch"},  # Display switch: Off (0) or On (1)
-            "e5": {
-                "name": "backup_charge_switch"
-            },  # Backup charge switch: Off (0) or On (1)
+            "d8": {"name": "12v_dc_output_power_switch"},  # Disabled (0) or Enabled (1)
+            "d9": {"name": "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+            "dc": {"name": "light_mode"},  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+            "dd": {"name": "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
+            "de": {"name": "display_switch"},  # Off (0) or On (1)
+            "e5": {"name": "backup_charge_switch"},  # Off (0) or On (1)
             "f8": {
                 "bytes": {
                     "00": {
-                        "name": "12v_dc_output_mode",  # 12V DC mode: Normal (1), Smart (2) - auto-off below 3W
+                        "name": "12v_dc_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
                         "type": DeviceHexDataTypes.ui.value,
                     },
                     "01": {
-                        "name": "ac_output_mode",  # AC output mode: Normal (1), Smart (2) - auto-off when not charging and low power
+                        "name": "ac_output_mode",  # Normal (1), Smart (2) - auto-off when not charging and low power
                         "type": DeviceHexDataTypes.ui.value,
                     },
                 }
@@ -813,18 +862,34 @@ SOLIXMQTTMAP = {
             "fd": {"name": "exp_1_type"},  # Expansion battery type identifier
             "fe": {"name": "msg_timestamp"},  # Message timestamp
         },
-        "0830": {
-            # Interval: Irregular, triggered on app actions, no fixed interval
-            "topic": "param_info",
-            "a1": {
-                "name": "hw_version",
-                "type": DeviceHexDataTypes.str.value,
-            },
-            "a2": {
-                "name": "sw_version",
-                "type": DeviceHexDataTypes.str.value,
-            },
-        },
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": PPS_VERSIONS_0830,
+    },
+    # PPS F2000
+    "A1780": {
+        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "0057": CMD_REALTIME_TRIGGER,
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": A1780_0405,
+        # Interval: ??
+        "0408": A1780_0408,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": PPS_VERSIONS_0830,
+    },
+    # PPS F2000 Plus
+    "A1780P": {
+        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "0057": CMD_REALTIME_TRIGGER,
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": A1780_0405,
+        # Interval: ??
+        "0408": A1780_0408,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": PPS_VERSIONS_0830,
     },
     # PPS F3800
     "A1790": {
@@ -842,11 +907,16 @@ SOLIXMQTTMAP = {
         "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0079": CMD_PORT_MEMORY_SWITCH,  # Port Memory switch: Disabled (0) or Enabled (1)
+        # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1790_0405,
+        # Interval: ??
         "040a": A1790_040a,
+        # Interval: ??
         "0410": A1790_0410,
+        # Interval: ??
         "0804": A1790_0804,
-        "0830": A1790_0830,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": PPS_VERSIONS_0830,
     },
     # PPS F3800 Plus
     "A1790P": {
@@ -864,11 +934,16 @@ SOLIXMQTTMAP = {
         "0076": CMD_12V_DC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0079": CMD_PORT_MEMORY_SWITCH,  # Enabled (1), Disabled (0)
+        # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1790_0405,
+        # Interval: ??
         "040a": A1790_040a,
+        # Interval: ??
         "0410": A1790_0410,
+        # Interval: ??
         "0804": A1790_0804,
-        "0830": A1790_0830,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": PPS_VERSIONS_0830,
     },
     # Solarbank 1 E1600
     "A17C0": {
