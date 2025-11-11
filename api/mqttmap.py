@@ -326,6 +326,7 @@ A17C1_0405 = {
     "topic": "param_info",
     "a2": {"name": "device_sn"},
     "a3": {"name": "battery_soc"},
+    "a5": {"name": "error_code"},
     "a6": {"name": "sw_version", "values": 4},
     "a7": {"name": "sw_controller?", "values": 4},
     "a8": {"name": "sw_expansion", "values": 4},
@@ -341,16 +342,20 @@ A17C1_0405 = {
     "b4": {"name": "output_cutoff_data"},
     "b5": {"name": "lowpower_input_data"},
     "b6": {"name": "input_cutoff_data"},
+    "b7": {"name": "discharging_power", "factor": 0.01},
     "bc": {"name": "grid_to_home_power", "factor": 0.1},
     "bd": {"name": "pv_to_grid_power", "factor": 0.1},
     "c4": {"name": "home_demand", "factor": 0.1},
     "c2": {"name": "max_load"},
     "c6": {"name": "usage_mode"},
     "c7": {"name": "home_load_preset"},
+    "c8": {"name": "ac_socket_power", "factor": 0.1},
     "ca": {"name": "pv_1_power", "factor": 0.1},
     "cb": {"name": "pv_2_power", "factor": 0.1},
     "cc": {"name": "pv_3_power", "factor": 0.1},
     "cd": {"name": "pv_4_power", "factor": 0.1},
+    "d3": {"name": "output_power", "factor": 0.1},
+    "e0": {"name": "grid_status"}, # Grid OK (1), No grid (6), Grid connecting (3)
     "fb": {
         "bytes": {
             "00": [{"name": "grid_export_disabled", "mask": 0x01}],
@@ -359,10 +364,8 @@ A17C1_0405 = {
     "fe": {"name": "msg_timestamp"},
     # "ab": {"name": "photovoltaic_power"},
     # "ac": {"name": "battery_power_signed"},
-    # "ad": {"name": "output_power"},
     # "ae": {"name": "ac_output_power_signed?"},
     # "b2": {"name": "discharged_energy?"},
-    # "b9": {"name": "home_load_preset"},
     # "ba": {
     #     "bytes": {
     #         "00": [
@@ -458,7 +461,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "22": {
-                "name": "exp_1_soc_limit?",
+                "name": "exp_1_soh",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "27": {
@@ -500,7 +503,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "22": {
-                "name": "exp_2_soc_limit?",
+                "name": "exp_2_soh",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "27": {
@@ -542,7 +545,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "22": {
-                "name": "exp_3_soc_limit?",
+                "name": "exp_3_soh",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "27": {
@@ -584,7 +587,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "22": {
-                "name": "exp_4_soc_limit?",
+                "name": "exp_4_soh",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "27": {
@@ -626,7 +629,7 @@ A17C1_040a = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "22": {
-                "name": "exp_5_soc_limit?",
+                "name": "exp_5_soh",
                 "type": DeviceHexDataTypes.ui.value,
             },
             "27": {
@@ -745,10 +748,10 @@ A17C5_0408 = {
     "d3": {"name": "ac_output_power_?"},
     "d6": {"name": "timestamp_1?"},
     "dc": {"name": "max_load"},
-    "dd": {"name": "ac_input_limit?"},
+    "dd": {"name": "ac_input_limit"},
     "e0": {"name": "soc_min?"},
     "e1": {"name": "soc_max?"},
-    "e2": {"name": "pv_power_3rd_party?"},
+    "e2": {"name": "pv_power_3rd_party"},
     "e6": {"name": "pv_limit"},
     "e7": {"name": "ac_input_limit"},
     "cc": {"name": "temperature"},

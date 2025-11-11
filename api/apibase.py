@@ -535,9 +535,11 @@ class AnkerSolixBaseApi:
                                 "battery_power_signed",
                                 "battery_power_signed_total",
                                 "charging_power",
+                                "discharging_power",
                                 "ac_output_power_signed",
                                 "ac_output_power_signed_total",
                                 "ac_output_power_total",
+                                "ac_socket_power",
                                 "grid_power_signed",
                                 "output_power",
                                 "output_power_signed_total",
@@ -611,6 +613,7 @@ class AnkerSolixBaseApi:
                             in [
                                 # keys with value being saved unchanged
                                 "topics",
+                                "error_code",
                                 "charging_status",
                                 "usage_mode",
                                 "allow_export_switch",

@@ -1224,6 +1224,15 @@ class SmartmeterStatus(StrEnum):
     unknown = "unknown"
 
 
+class SolarbankGridStatus(StrEnum):
+    """Enumeration for Anker Solarbank grid status."""
+
+    connected = "1"  # normal grid state
+    connecting = "3"  # Grid detected, going into normal state
+    disconnected = "6"  # No grid available
+    unknown = "unknown"
+
+
 class SolixGridStatus(StrEnum):
     """Enumeration for Anker Solix grid status."""
 
