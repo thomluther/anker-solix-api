@@ -179,10 +179,11 @@ class AnkerSolixApiExport:
             listener.start()
 
             self._logger.info(
-                "Using AnkerSolixApiExport Version: %s, Date: %s, Export Services: %s",
+                "Using AnkerSolixApiExport Version: %s, Date: %s, Export Services: %s, MQTT Messages: %s",
                 VERSION,
                 datetime.now().strftime("%Y-%m-%d"),
                 str(self.export_services),
+                str(self.mqttdata),
             )
             # save existing api client delay and adjust request delay for export
             if (old_delay := self.client.requestDelay()) != self.request_delay:

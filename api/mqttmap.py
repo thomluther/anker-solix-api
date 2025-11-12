@@ -804,10 +804,9 @@ SOLIXMQTTMAP = {
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
-        # TODO: Validate and Update correct message type for temp unit switch command
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # TODO: Validate and Update correct message type
-        # TODO: Command available for Display timeout setting? 20, 30, 60, 300, 1800 seconds?
+        # TODO: Command available for Display timeout setting? 20, 30, 60, 300, 1800 seconds as valid options?
         "0057": CMD_REALTIME_TRIGGER,
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Smart (0)
