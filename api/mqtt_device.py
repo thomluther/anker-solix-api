@@ -10,12 +10,9 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, Any
 
-from .apitypes import SolixDefaults, SolixDeviceType
+from .apitypes import SolixDefaults
 from .mqtt import generate_mqtt_command
-from .mqtt_pps import SolixMqttDevicePps
-from .mqtt_solarbank import SolixMqttDeviceSolarbank
 from .mqttcmdmap import SolixMqttCommands
-from .mqttmap import SOLIXMQTTMAP
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi  # noqa: TC004
@@ -27,29 +24,6 @@ FEATURES = {
     SolixMqttCommands.realtime_trigger: MODELS,
 }
 
-
-class SolixMqttDeviceFactory:
-    """Define the class to create the appropriate MQTT device class based on device PN."""
-
-    def __init__(self) -> None:
-        """Initialize."""
-
-    def create(
-        self, api_instance: AnkerSolixApi, device_sn: str
-    ) -> SolixMqttDevice | None:
-        """Create the required MQTT device class instance."""
-        if isinstance(api_instance, AnkerSolixApi) and isinstance(device_sn, str):
-            dev = api_instance.devices.get(device_sn) or {}
-            if (pn := dev.get("device_pn")) and dev.get("mqtt_supported"):
-                category = dev.get("type")
-                # TODO: Enhance factory with additional classes as MQTT commands are described
-                if category in [SolixDeviceType.PPS.name] and pn in SOLIXMQTTMAP:
-                    return SolixMqttDevicePps(api_instance, device_sn)
-                if category in [SolixDeviceType.SOLARBANK.name] and pn in SOLIXMQTTMAP:
-                    return SolixMqttDeviceSolarbank(api_instance, device_sn)
-                # return default MQTT device supporting only the realtime trigger control
-                return SolixMqttDevice(api_instance, device_sn)
-        return None
 
 
 class SolixMqttDevice:
