@@ -56,8 +56,8 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             "temp_unit_control": lambda v: v in [0, 1],
             "display_mode_select": lambda v: v in [0, 1, 2, 3],
             "light_mode_select": lambda v: v in [0, 1, 2, 3, 4],
-            "dc_output_mode_select": lambda v: v in [1, 2],
-            "ac_output_mode_select": lambda v: v in [1, 2],
+            "dc_output_mode_select": lambda v: v in [0, 1],  # 0=Smart, 1=Normal
+            "ac_output_mode_select": lambda v: v in [0, 1],  # 0=Smart, 1=Normal
             "device_timeout_minutes": lambda v: 30 <= v <= 1440,
             "max_load": lambda v: 100 <= v <= 2000,
             "ac_charge_limit": lambda v: 100 <= v <= 800,
@@ -103,7 +103,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             )
             return False
         # Convert string mode to int
-        mode_map = {"normal": 1, "smart": 2}
+        mode_map = {"normal": 1, "smart": 0}
         original_mode = mode
         if isinstance(mode, str):
             if (mode := mode_map.get(mode.lower())) is None:
@@ -180,7 +180,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             )
             return False
         # Convert string mode to int
-        mode_map = {"normal": 1, "smart": 2}
+        mode_map = {"normal": 1, "smart": 0}
         original_mode = mode
         if isinstance(mode, str):
             if (mode := mode_map.get(mode.lower())) is None:
