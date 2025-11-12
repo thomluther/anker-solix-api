@@ -23,7 +23,6 @@ FEATURES = {
     "ac_output_control": MODELS,
     "dc_12v_output_control": MODELS,
     "display_control": MODELS,
-    "backup_charge_control": MODELS,
     "temp_unit_control": MODELS,
     "display_mode_select": MODELS,
     "light_mode_select": MODELS,
@@ -54,7 +53,6 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             "ac_output_control": lambda v: v in [0, 1],
             "dc_12v_output_control": lambda v: v in [0, 1],
             "display_control": lambda v: v in [0, 1],
-            "backup_charge_control": lambda v: v in [0, 1],
             "temp_unit_control": lambda v: v in [0, 1],
             "display_mode_select": lambda v: v in [0, 1, 2, 3],
             "light_mode_select": lambda v: v in [0, 1, 2, 3, 4],
@@ -299,48 +297,6 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             self._filedata.update(resp)
         return resp or False
 
-    async def set_backup_charge(
-        self,
-        enabled: bool,
-        toFile: bool = False,
-    ) -> bool | dict:
-        """Control C1000X backup charge mode via MQTT.
-
-        Args:
-            enabled: True to enable backup charge mode, False to disable
-            toFile: If True, return mock response (for testing compatibility)
-
-        Returns:
-            dict: Mock response if successful, False otherwise
-
-        Example:
-            await mydevice.set_backup_charge(enabled=True)
-        """
-        # response
-        resp = {}
-        # Validate command value
-        enabled = 1 if enabled else 0 if enabled is not None else None
-        if enabled is not None and not self.validate_command_value(
-            "backup_charge_control", enabled
-        ):
-            self._logger.error(
-                "Device %s %s control error - Invalid backup charge enabled value: %s",
-                self.pn,
-                self.sn,
-                enabled,
-            )
-            return False
-        # Send MQTT commands
-        if enabled is not None and await self._send_mqtt_command(
-            command="c1000x_backup_charge",
-            parameters={"enabled": enabled},
-            description=f"backup charge mode {'enabled' if enabled else 'disabled'}",
-            toFile=toFile,
-        ):
-            resp["backup_charge_switch"] = enabled
-        if toFile:
-            self._filedata.update(resp)
-        return resp or False
 
     async def set_temp_unit(
         self,
@@ -364,7 +320,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         # Validate command value
         fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
         if fahrenheit is not None and not self.validate_command_value(
-            "backup_charge_control", fahrenheit
+            "temp_unit_control", fahrenheit
         ):
             self._logger.error(
                 "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",

@@ -1053,20 +1053,6 @@ def generate_mqtt_command(  # noqa: C901
             mode_hex_map = {0: "a2020100", 1: "a2020101", 2: "a2020102", 3: "a2020103"}
             mode_hex = mode_hex_map.get(value, "a2020100")
             hexdata.update_field(DeviceHexDataField(hexbytes=mode_hex))
-        elif command == "c1000x_backup_charge":
-            # Backup charge switch: Message type 005x (TO BE VALIDATED ⚠️)
-            value = 1 if parameters.get("enabled", False) else 0
-            hexdata = DeviceHexData(
-                model="A1761",
-                msg_header=DeviceHexDataHeader(
-                    cmd_msg="005x"
-                ),  # TODO: Update message type
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            if value == 1:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # On
-            else:
-                hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))  # Off
         elif command == "c1000x_temp_unit":
             # Temperature unit: Message type 0050 (TO BE VALIDATED ⚠️)
             value = 1 if parameters.get("fahrenheit", False) else 0
