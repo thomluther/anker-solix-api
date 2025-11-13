@@ -380,7 +380,7 @@ class AnkerSolixMqttMonitor:
         CONSOLE.info(100 * "-")
         CONSOLE.info(f"{Color.YELLOW}MQTT Monitor key menu:{Color.OFF}")
         CONSOLE.info(100 * "-")
-        CONSOLE.info(f"[{Color.YELLOW}M{Color.OFF}]enu to show this [K]ey list")
+        CONSOLE.info(f"[{Color.YELLOW}K{Color.OFF}]ey list to show this [{Color.YELLOW}M{Color.OFF}]enu")
         CONSOLE.info(
             f"[{Color.YELLOW}U{Color.OFF}]nsubscribe all topics. This will stop receiving MQTT messages"
         )
