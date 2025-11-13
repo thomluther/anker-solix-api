@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
 from .mqtt_device import SolixMqttDevice
-from .mqttcmdmap import SolixMqttCommands
+from .mqttcmdmap import CMD_NAME, STATE_NAME, SolixMqttCommands
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
 
 # Define supported Models for this class
-MODELS = ["A17C0"]
+MODELS = {"A17C0"}
 # Define supported and validated controls per Model
 FEATURES = {
     SolixMqttCommands.realtime_trigger: MODELS,
@@ -67,11 +67,11 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         """
         # response
         resp = {}
+        ctrl1 = self.controls.get(SolixMqttCommands.temp_unit_switch) or {}
+        cmd1 = ctrl1.get(CMD_NAME, "")
         # Validate command value
         fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
-        if fahrenheit is not None and not self.validate_command_value(
-            SolixMqttCommands.temp_unit_switch, fahrenheit
-        ):
+        if fahrenheit is not None and not self.validate_command_value(cmd1, fahrenheit):
             self._logger.error(
                 "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",
                 self.pn,
@@ -80,13 +80,18 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             )
             return False
         # Send MQTT commands
-        if fahrenheit is not None and await self._send_mqtt_command(
-            command=SolixMqttCommands.temp_unit_switch,
-            parameters={"fahrenheit": fahrenheit},
-            description=f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
-            toFile=toFile,
+        if (
+            fahrenheit is not None
+            and cmd1
+            and await self._send_mqtt_command(
+                command=cmd1,
+                parameters={"fahrenheit": fahrenheit},
+                description=f"temperature unit set to {'Fahrenheit' if fahrenheit else 'Celsius'}",
+                toFile=toFile,
+            )
         ):
-            resp["temp_unit_fahrenheit"] = fahrenheit
+            if state_name := ctrl1.get(STATE_NAME):
+                resp[state_name] = fahrenheit
         if toFile:
             self._filedata.update(resp)
         return resp or False
@@ -110,15 +115,15 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         """
         # response
         resp = {}
+        ctrl1 = self.controls.get(SolixMqttCommands.sb_power_cutoff_select) or {}
+        cmd1 = ctrl1.get(CMD_NAME, "")
         # Validate command value
         limit = (
             int(limit)
             if str(limit).replace("-", "", 1).replace(".", "", 1).isdigit()
             else 10
         )
-        if limit is not None and not self.validate_command_value(
-            SolixMqttCommands.sb_power_cutoff_select, limit
-        ):
+        if limit is not None and not self.validate_command_value(cmd1, limit):
             self._logger.error(
                 "Device %s %s control error - Invalid temperature unit fahrenheit value: %s",
                 self.pn,
@@ -127,15 +132,22 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             )
             return False
         # Send MQTT commands
-        if limit is not None and await self._send_mqtt_command(
-            command=SolixMqttCommands.sb_power_cutoff_select,
-            parameters={"limit": limit},
-            description=f"Power cutoff set to {limit!s} %",
-            toFile=toFile,
+        if (
+            limit is not None
+            and cmd1
+            and await self._send_mqtt_command(
+                command=cmd1,
+                parameters={"limit": limit},
+                description=f"Power cutoff set to {limit!s} %",
+                toFile=toFile,
+            )
         ):
-            resp["output_cutoff_data"] = limit
-            resp["lowpower_input_data"] = 4 if limit == 5 else 5
-            resp["input_cutoff_data"] = limit
+            if state_name := ctrl1.get(STATE_NAME):
+                resp[state_name] = limit
+            else:
+                resp["output_cutoff_data"] = limit
+                resp["lowpower_input_data"] = 4 if limit == 5 else 5
+                resp["input_cutoff_data"] = limit
         if toFile:
             self._filedata.update(resp)
         return resp or False

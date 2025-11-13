@@ -300,6 +300,7 @@ class AnkerSolixBaseApi:
             # clear mqtt data from device cache to prevent stale mqtt data
             for dev in self.devices.values():
                 dev.pop("mqtt_data", None)
+                dev.pop("mqtt_connected", None)
 
     def _update_account(
         self,
@@ -326,12 +327,15 @@ class AnkerSolixBaseApi:
                     "server": self.apisession.server,
                 }
             )
-        # update extra details and always request counts
+        # update extra details and always request counts and mqtt connection state
         account_details.update(
             details
             | {
                 "requests_last_min": self.apisession.request_count.last_minute(),
                 "requests_last_hour": self.apisession.request_count.last_hour(),
+                "mqtt_connection": self.mqttsession.is_connected()
+                if self.mqttsession
+                else False,
             }
         )
         self.account = account_details
@@ -680,11 +684,13 @@ class AnkerSolixBaseApi:
                     ):
                         # calculate total expansions if expansions are available and no number in mqtt cache
                         if not mqtt.get("expansion_packs"):
-                            device_mqtt["expansion_packs"] = len([
-                                k
-                                for k in [f"exp_{i!s}_soc" for i in range(1, 6)]
-                                if device_mqtt.get(k)
-                            ])
+                            device_mqtt["expansion_packs"] = len(
+                                [
+                                    k
+                                    for k in [f"exp_{i!s}_soc" for i in range(1, 6)]
+                                    if device_mqtt.get(k)
+                                ]
+                            )
                         # calculate total soc if expansions are available and no total soc in mqtt cache
                         if not (tsoc := mqtt.get("battery_soc_total")):
                             # calculate total soc based on expansions

@@ -1,45 +1,56 @@
-"""MQTT device factory for creating appropriate device control instances."""
+"""Device factory for creating appropriate Anker Solix MQTT device control instances."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from .apitypes import SolixDeviceType
+from .mqtt_c1000x import SolixMqttDeviceC1000x, MODELS as C1000_MODELS
 from .mqtt_device import SolixMqttDevice
+from .mqtt_pps import SolixMqttDevicePps, MODELS as PPS_MODELS
+from .mqtt_solarbank import SolixMqttDeviceSolarbank, MODELS as SB_MODELS
 from .mqttmap import SOLIXMQTTMAP
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
 
 
-def create_mqtt_device(api_instance: "AnkerSolixApi", device_sn: str) -> SolixMqttDevice | None:
-    """Create the appropriate MQTT device control instance based on device type.
+class SolixMqttDeviceFactory:
+    """Define the class to create the appropriate MQTT device object based on device PN."""
 
-    Args:
-        api_instance: The API instance
-        device_sn: The device serial number
+    def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
+        """Initialize.
 
-    Returns:
-        Appropriate MQTT device instance or None if device not found
-    """
-    if device_data := api_instance.devices.get(device_sn):
-        if category := (device_data.get("type") or "").upper():
-            pn = device_data.get("device_pn") or ""
+        Args:
+            api_instance: The API instance
+            device_sn: The device serial number
+        """
+        self.api = api_instance
+        self.device_sn = device_sn
+        self.device_data = getattr(api_instance, "devices", {}).get(device_sn) or {}
 
-            # Use lazy imports to avoid circular dependencies
-            if category in [SolixDeviceType.PPS.name] and pn in SOLIXMQTTMAP:
-                if pn in ["A1761"]:  # C1000X
-                    from .mqtt_c1000x import SolixMqttDeviceC1000x
-                    return SolixMqttDeviceC1000x(api_instance, device_sn)
-                else:  # Other PPS devices
-                    from .mqtt_pps import SolixMqttDevicePps
-                    return SolixMqttDevicePps(api_instance, device_sn)
+    def create_device(self) -> SolixMqttDevice | None:
+        """Create the appropriate MQTT device control instance based on device type.
 
-            if category in [SolixDeviceType.SOLARBANK.name] and pn in SOLIXMQTTMAP:
-                from .mqtt_solarbank import SolixMqttDeviceSolarbank
-                return SolixMqttDeviceSolarbank(api_instance, device_sn)
+        Returns:
+            Appropriate MQTT device instance or None if device not found
+        """
+        if self.device_data and (category := self.device_data.get("type") or ""):
+            pn = self.device_data.get("device_pn") or ""
+
+            # TODO: Update factory when new device categories and criteria are implemented
+            if pn in SOLIXMQTTMAP:
+                if category in [SolixDeviceType.PPS.value]:
+                    if pn in C1000_MODELS:
+                        return SolixMqttDeviceC1000x(self.api, self.device_sn)
+                    # Other PPS devices
+                    if pn in PPS_MODELS:
+                        return SolixMqttDevicePps(self.api, self.device_sn)
+
+                if category in [SolixDeviceType.SOLARBANK.value] and pn in SB_MODELS:
+                    return SolixMqttDeviceSolarbank(self.api, self.device_sn)
 
             # return default MQTT device supporting only the realtime trigger control
-            return SolixMqttDevice(api_instance, device_sn)
+            return SolixMqttDevice(self.api, self.device_sn)
 
-    return None
+        return None

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from .api import AnkerSolixApi
 
 # Define supported Models for this class
-MODELS = ["A1790P", "A1790"]
+MODELS = {"A1790P", "A1790"}
 # Define supported and validated controls per Model
 FEATURES = {
     "realtime_trigger": MODELS,

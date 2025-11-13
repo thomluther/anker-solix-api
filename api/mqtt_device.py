@@ -13,41 +13,64 @@ from typing import TYPE_CHECKING, Any
 from .apitypes import SolixDefaults
 from .mqtt import generate_mqtt_command
 from .mqttcmdmap import SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 
 if TYPE_CHECKING:
-    from .api import AnkerSolixApi  # noqa: TC004
+    from .api import AnkerSolixApi
 
 # Define supported Models for this class
-MODELS = []
+MODELS = set()
 # Define supported and validated controls per Model
 FEATURES = {
     SolixMqttCommands.realtime_trigger: MODELS,
 }
 
 
-
 class SolixMqttDevice:
     """Define the base class to handle an Anker Solix MQTT device for controls."""
 
-    models: list = MODELS
+    models: set = MODELS
     features: dict = FEATURES
+    pn: str = ""
 
     def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
         """Initialize."""
         self.api: AnkerSolixApi = api_instance
-        self.sn: str = device_sn
-        self.pn: str = ""
+        self.sn: str = device_sn or ""
+        self.pn: str = self.pn or ""
         self.models = self.models or MODELS
         self.features = self.features or FEATURES
+        self.testdir: str = self.api.testDir()
         self.device: dict = {}
         self.mqttdata: dict = {}
-        self.testdir: str = self.api.testDir()
-        self._logger = api_instance.logger()
+        self.controls: dict = {}
         self._filedata: dict = {}
+        self._logger = api_instance.logger()
         # initialize device data
-        self.update_device(device=self.api.devices.get(self.sn))
+        self.update_device(device=self.api.devices.get(self.sn) or {})
         # register callback for Api
         self.api.register_device_callback(deviceSn=self.sn, func=self.update_device)
+        # create list of supported commands and options
+        self._setup_controls()
+
+    def _setup_controls(self) -> None:
+        """Define controls and options for the device."""
+        pn_map = SOLIXMQTTMAP.get(self.pn) or {}
+        for cmd, pns in self.features.items():
+            if not pns or self.pn in pns:
+                # get defined message type for command
+                msg, fields = (
+                    [(k, v) for k, v in pn_map.items() if v.get("cmd_name") == cmd][:1]
+                    or [("", {})]
+                )[0]
+                # use default message type for update trigger command if not specified
+                options = {
+                    "msg_type": msg
+                    or ("0057" if cmd == SolixMqttCommands.realtime_trigger else "")
+                }
+                # add all keys that are no byte fields
+                options.update({k: v for k, v in fields.items() if len(k) > 2})
+                self.controls[cmd] = options
 
     def update_device(self, device: dict) -> None:
         """Define callback for Api device updates."""
@@ -62,15 +85,26 @@ class SolixMqttDevice:
                     "Device %s %s is not in supported models %s for MQTT control",
                     self.pn,
                     self.sn,
-                    MODELS,
+                    self.models,
                 )
                 self.pn = ""
                 self.device = {}
                 self.mqttdata = {}
 
+    def is_connected(self) -> bool:
+        """Return actual MQTT connection state for device."""
+        return bool(self.api.mqttsession and self.api.mqttsession.is_connected())
+
+    def is_subscribed(self) -> bool:
+        """Return actual MQTT subscription state for device."""
+        return bool(
+            self.is_connected()
+            and {s for s in self.api.mqttsession.subscriptions if self.sn in s}
+        )
+
     def validate_command_value(self, command_id: str, value: Any) -> bool:
         """Validate command value ranges for device controls."""
-        # This has to be updated according to specifc device commands and rules
+        # This has to be updated according to specific device commands and rules
         validation_rules = {
             "realtime_trigger": lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
             <= v
@@ -110,7 +144,7 @@ class SolixMqttDevice:
         else:
             try:
                 # Ensure MQTT session is started and connected
-                if not self.api.mqttsession or not self.api.mqttsession.is_connected():
+                if not self.is_connected():
                     if not await self.api.startMqttSession():
                         self._logger.error(
                             "Failed to start MQTT session for device control"
@@ -158,7 +192,7 @@ class SolixMqttDevice:
             await mydevice.realtime_trigger(timeout=300)
         """
         # Validate command value
-        if not self.validate_command_value("realtime_trigger", timeout):
+        if not self.validate_command_value(SolixMqttCommands.realtime_trigger, timeout):
             self._logger.error(
                 "Device %s %s control error - Invalid realtime trigger timeout: %s",
                 self.pn,
@@ -168,7 +202,7 @@ class SolixMqttDevice:
             return False
         if not toFile:
             # Validate MQTT connection prior trigger
-            if not (self.api.mqttsession and self.api.mqttsession.is_connected()):
+            if not self.is_connected():
                 self._logger.error(
                     "Device %s %s control error - No MQTT connection active",
                     self.pn,

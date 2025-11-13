@@ -188,7 +188,10 @@ class AnkerSolixMqttMonitor:
                         f"\nStarting MQTT server connection for device {device_sn} (model {device_pn})..."
                     )
                     # Initialize the session
-                    if not ((mqtt_session := await self.api.startMqttSession()) and mqtt_session.is_connected()):
+                    if not (
+                        (mqtt_session := await self.api.startMqttSession())
+                        and mqtt_session.is_connected()
+                    ):
                         return False
                     CONSOLE.info(
                         f"Connected successfully to MQTT server {mqtt_session.host}:{mqtt_session.port}"
@@ -205,7 +208,9 @@ class AnkerSolixMqttMonitor:
                     ):
                         topics.add(f"{prefix}#")
                     # Command messages (app to device)
-                    if cmd_prefix := mqtt_session.get_topic_prefix(deviceDict=device_selected, publish=True):
+                    if cmd_prefix := mqtt_session.get_topic_prefix(
+                        deviceDict=device_selected, publish=True
+                    ):
                         topics.add(f"{cmd_prefix}#")
                     try:
                         activetopic = None
