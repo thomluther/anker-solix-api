@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from .mqtt_device import SolixMqttDevice
+from .mqttcmdmap import SolixMqttCommands
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -17,18 +18,20 @@ if TYPE_CHECKING:
 MODELS = {"A1790P", "A1790"}
 # Define supported and validated controls per Model
 FEATURES = {
-    "realtime_trigger": MODELS,
-    "ac_output_control": MODELS,
-    "dc_12v_output_control": MODELS,
-    "display_control": MODELS,
-    "backup_charge_control": MODELS,
-    "temp_unit_control": MODELS,
-    "display_mode_select": MODELS,
-    "light_mode_select": MODELS,
-    "dc_output_mode_select": MODELS,
-    "ac_output_mode_select": MODELS,
-    "device_timeout_minutes": MODELS,
-    "max_load": MODELS,
+    SolixMqttCommands.realtime_trigger: MODELS,
+    SolixMqttCommands.temp_unit_switch: MODELS,
+    SolixMqttCommands.device_max_load: MODELS,
+    SolixMqttCommands.device_timeout_minutes: MODELS,
+    SolixMqttCommands.ac_charge_switch: MODELS,
+    SolixMqttCommands.ac_charge_limit: MODELS,
+    SolixMqttCommands.ac_output_switch: MODELS,
+    SolixMqttCommands.ac_output_mode_select: MODELS,
+    SolixMqttCommands.dc_output_switch: MODELS,
+    SolixMqttCommands.dc_12v_output_mode_select: MODELS,
+    SolixMqttCommands.display_switch: MODELS,
+    SolixMqttCommands.display_mode_select: MODELS,
+    SolixMqttCommands.light_mode_select: MODELS,
+    SolixMqttCommands.port_memory_switch: MODELS,
 }
 
 

@@ -603,6 +603,11 @@ class AnkerSolixApiMonitor:
                         f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} "
                         f"{' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
                     )
+                if mdev := self.mqtt_devices.get(sn):
+                    CONSOLE.info(
+                        f"{'MQTT Device':<{col1}}: {cm}{('Connected' if mdev.is_connected() else 'Disconnected'):<{col2}}{co} "
+                        f"{'Subscription':<{col3}}: {cm}{('Active' if mdev.is_subscribed() else 'Inactive')}{co}"
+                    )
 
             if devtype == SolixDeviceType.COMBINER_BOX.value:
                 CONSOLE.info(

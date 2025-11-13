@@ -283,6 +283,8 @@ class AnkerSolixBaseApi:
         self.mqttsession.message_callback(
             func=message_callback if callable(message_callback) else self.mqtt_received
         )
+        # update mqtt connection in account cache
+        self._update_account()
         return self.mqttsession
 
     def stopMqttSession(self) -> None:
@@ -300,7 +302,8 @@ class AnkerSolixBaseApi:
             # clear mqtt data from device cache to prevent stale mqtt data
             for dev in self.devices.values():
                 dev.pop("mqtt_data", None)
-                dev.pop("mqtt_connected", None)
+            # update mqtt state in account cache
+            self._update_account({"mqtt_statistic": None})
 
     def _update_account(
         self,

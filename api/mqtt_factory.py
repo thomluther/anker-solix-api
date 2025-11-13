@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .apitypes import SolixDeviceType
-from .mqtt_c1000x import SolixMqttDeviceC1000x, MODELS as C1000_MODELS
+from .mqtt_c1000x import MODELS as C1000_MODELS, SolixMqttDeviceC1000x
 from .mqtt_device import SolixMqttDevice
-from .mqtt_pps import SolixMqttDevicePps, MODELS as PPS_MODELS
-from .mqtt_solarbank import SolixMqttDeviceSolarbank, MODELS as SB_MODELS
+from .mqtt_pps import MODELS as PPS_MODELS, SolixMqttDevicePps
+from .mqtt_solarbank import MODELS as SB_MODELS, SolixMqttDeviceSolarbank
 from .mqttmap import SOLIXMQTTMAP
 
 if TYPE_CHECKING:

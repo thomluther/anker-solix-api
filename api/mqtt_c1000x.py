@@ -299,7 +299,6 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             self._filedata.update(resp)
         return resp or False
 
-
     async def set_temp_unit(
         self,
         fahrenheit: bool,
@@ -446,47 +445,6 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         toFile: bool = False,
     ) -> dict | bool:
         """Set maximum AC input load (current limit).
-
-        Args:
-            max_watts: Maximum load in watts (100-2000)
-            toFile: If True, return mock response (for testing compatibility)
-
-        Returns:
-            dict: Response with max_load if successful, False otherwise
-
-        Example:
-            # Set 800W max load
-            result = await device.set_max_load(max_watts=800)
-        """
-        resp = {}
-        if max_watts is not None and not self.validate_command_value(
-            "max_load", max_watts
-        ):
-            self._logger.error(
-                "Device %s %s control error - Invalid max load value: %s",
-                self.pn,
-                self.sn,
-                max_watts,
-            )
-            return False
-        if max_watts is not None:
-            if toFile or await self._send_mqtt_command(
-                command="c1000x_max_load",
-                parameters={"max_watts": max_watts},
-                description=f"Max load set to {max_watts}W",
-                toFile=toFile,
-            ):
-                resp["max_load"] = max_watts
-                if toFile:
-                    self._filedata["max_load"] = max_watts
-        return resp or False
-
-    async def set_max_load(
-        self,
-        max_watts: int | None = None,
-        toFile: bool = False,
-    ) -> dict | bool:
-        """Set maximum AC output load.
 
         Args:
             max_watts: Maximum load in watts (100-2000)
