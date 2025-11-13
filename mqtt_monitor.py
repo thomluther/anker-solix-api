@@ -240,7 +240,7 @@ class AnkerSolixMqttMonitor:
                             # Check if a key was pressed
                             if k := await loop.run_in_executor(None, common.getkey):
                                 k = k.lower()
-                                if k == "m":
+                                if k in ["m", "k"]:
                                     self.print_menu()
                                 elif k == "u":
                                     CONSOLE.info(
@@ -380,7 +380,7 @@ class AnkerSolixMqttMonitor:
         CONSOLE.info(100 * "-")
         CONSOLE.info(f"{Color.YELLOW}MQTT Monitor key menu:{Color.OFF}")
         CONSOLE.info(100 * "-")
-        CONSOLE.info(f"[{Color.YELLOW}M{Color.OFF}]enu to show this key list")
+        CONSOLE.info(f"[{Color.YELLOW}M{Color.OFF}]enu to show this [K]ey list")
         CONSOLE.info(
             f"[{Color.YELLOW}U{Color.OFF}]nsubscribe all topics. This will stop receiving MQTT messages"
         )
