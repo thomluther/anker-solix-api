@@ -154,12 +154,18 @@ A1780_0405 = {
     "d0": {"name": "device_sn"},
     "d1": {"name": "max_load"},  # Maximum load setting (W)
     "d3": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes)
-    "d4": {"name": "display_timeout_seconds"},  # Display timeout: 20, 30, 60, 300, 1800 seconds
+    "d4": {
+        "name": "display_timeout_seconds"
+    },  # Display timeout: 20, 30, 60, 300, 1800 seconds
     "d7": {"name": "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d8": {"name": "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
-    "d9": {"name": "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "d9": {
+        "name": "display_mode"
+    },  # Brightness: Off (0), Low (1), Medium (2), High (3)
     "db": {"name": "energy_saving_mode"},  # Disabled (0) or Enabled (1)
-    "dc": {"name": "light_mode"},  # Off (0), Low (1), Medium (2), High (3), Blinking (4)
+    "dc": {
+        "name": "light_mode"
+    },  # Off (0), Low (1), Medium (2), High (3), Blinking (4)
     "dd": {"name": "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
     "de": {"name": "display_switch"},  # Off (0) or On (1)
     "e5": {"name": "backup_charge_switch"},  # Off (0) or On (1)
@@ -277,7 +283,7 @@ A1790_0410 = {
     "topic": "param_info",
     "a2": {
         "bytes": {
-            "0": {
+            "00": {
                 "name": "power_panel_sn?",
                 "length": 16,
                 "type": DeviceHexDataTypes.str.value,
@@ -286,7 +292,7 @@ A1790_0410 = {
     },
     "a3": {
         "bytes": {
-            "0": {
+            "00": {
                 "name": "pps_1_sn?",
                 "length": 16,
                 "type": DeviceHexDataTypes.str.value,
@@ -295,7 +301,7 @@ A1790_0410 = {
     },
     "a4": {
         "bytes": {
-            "0": {
+            "00": {
                 "name": "pps_2_sn?",
                 "length": 16,
                 "type": DeviceHexDataTypes.str.value,
@@ -355,7 +361,7 @@ A17C1_0405 = {
     "cc": {"name": "pv_3_power", "factor": 0.1},
     "cd": {"name": "pv_4_power", "factor": 0.1},
     "d3": {"name": "output_power", "factor": 0.1},
-    "e0": {"name": "grid_status"}, # Grid OK (1), No grid (6), Grid connecting (3)
+    "e0": {"name": "grid_status"},  # Grid OK (1), No grid (6), Grid connecting (3)
     "fb": {
         "bytes": {
             "00": [{"name": "grid_export_disabled", "mask": 0x01}],
@@ -435,7 +441,7 @@ A17C1_040a = {
     "a3": {"name": "lowest_soc?"},
     "a4": {
         "bytes": {
-            "0": {
+            "00": {
                 "name": "exp_1_controller_sn?",
                 "length": 17,
                 "type": DeviceHexDataTypes.str.value,
@@ -477,7 +483,7 @@ A17C1_040a = {
     },
     "a5": {
         "bytes": {
-            "0": {
+            "00": {
                 "name": "exp_2_controller_sn?",
                 "length": 17,
                 "type": DeviceHexDataTypes.str.value,
@@ -519,7 +525,7 @@ A17C1_040a = {
     },
     "a6": {
         "bytes": {
-            "0": {
+            "00": {
                 "name": "exp_3_controller_sn?",
                 "length": 17,
                 "type": DeviceHexDataTypes.str.value,
@@ -561,7 +567,7 @@ A17C1_040a = {
     },
     "a7": {
         "bytes": {
-            "0": {
+            "00": {
                 "name": "exp_4_controller_sn?",
                 "length": 17,
                 "type": DeviceHexDataTypes.str.value,
@@ -603,7 +609,7 @@ A17C1_040a = {
     },
     "a8": {
         "bytes": {
-            "0": {
+            "00": {
                 "name": "exp_5_controller_sn?",
                 "length": 17,
                 "type": DeviceHexDataTypes.str.value,
@@ -764,8 +770,159 @@ A17C5_040a = (
     }
 )
 
-A17C5_0500 = {
+DOCK_0420 = {
+    # multisystem message
+    "topic": "param_info",
+    "a2": {"name": "device_sn"},
+    "a3": {"name": "local_timestamp"},
+    "a4": {"name": "utc_timestamp"},
+    "a7": {"name": "battery_soc_total"},
+    "a8": {"name": "0420_unknown_1?"},
+    "a9": {"name": "0420_unknown_2?"},
+    "ab": {"name": "grid_power_signed?"},
+    "ac": {"name": "ac_output_power_signed_total?"},
+    "ae": {"name": "output_power_signed_total?"},
+    "af": {"name": "home_demand_total?"},
+    "b1": {"name": "battery_power_signed_total?"},
+    "b3": {
+        "bytes": {
+            "00": {
+                "name": "solarbank_1_sn",
+                "length": 0,  # First byte is byte count for type
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "22": {
+                "name": "solarbank_1_soc",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "43": {
+                "name": "solarbank_1_exp_packs",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "b4": {
+        "bytes": {
+            "00": {
+                "name": "solarbank_2_sn",
+                "length": 0,  # First byte is byte count for type
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "22": {
+                "name": "solarbank_2_soc",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "43": {
+                "name": "solarbank_2_exp_packs",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "b5": {
+        "bytes": {
+            "00": {
+                "name": "solarbank_3_sn",
+                "length": 0,  # First byte is byte count for type
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "22": {
+                "name": "solarbank_3_soc",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "43": {
+                "name": "solarbank_3_exp_packs",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "b6": {
+        "bytes": {
+            "00": {
+                "name": "solarbank_4_sn",
+                "length": 0,  # First byte is byte count for type
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "22": {
+                "name": "solarbank_4_soc",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "43": {
+                "name": "solarbank_4_exp_packs",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "c1": {"name": "main_device_sn?"},
+    "c2": {"name": "pv_power_total?"},
+}
+
+DOCK_0421 = {
+    # multisystem message
+    "topic": "state_info",
+    "a3": {"name": "pv_limit_solarbank_4"},
+    "a4": {"name": "pv_limit_solarbank_3"},
+    "a5": {"name": "pv_limit_solarbank_2"},
+    "a6": {"name": "pv_limit_solarbank_1"},
+    "a7": {"name": "battery_soc_total"},
+    "ac": {"name": "soc_max?"},
+    "ad": {"name": "max_load_legal?"},
+    "fc": {"name": "device_sn"},
+    "fd": {"name": "local_timestamp"},
+    "fe": {"name": "utc_timestamp"},
+}
+
+DOCK_0428 = {
+    # multisystem message
+    "topic": "state_info",
+    "a2": {"name": "device_sn"},
+    "a3": {"name": "local_timestamp"},
+    "a4": {"name": "utc_timestamp"},
+    "a5": {"name": "battery_soc_total"},
+    "a6": {"name": "0428_unknown_1?"},
+    "ac": {"name": "pv_power_total?"},
+    "b5": {"name": "battery_power_signed_total?"},
+    "bc": {"name": "battery_power_signed"},
+    "d9": {
+        "bytes": {
+            "00": {
+                "name": "solarbank_1_sn",
+                "length": 0,  # First byte is byte count for type
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "da": {
+        "bytes": {
+            "00": {
+                "name": "solarbank_2_sn",
+                "length": 0,  # First byte is byte count for type
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "db": {
+        "bytes": {
+            "00": {
+                "name": "solarbank_3_sn",
+                "length": 0,  # First byte is byte count for type
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "dc": {
+        "bytes": {
+            "00": {
+                "name": "solarbank_4_sn",
+                "length": 0,  # First byte is byte count for type
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+}
+
+DOCK_0500 = {
     # Only binary fields, format unknown
+    "topic": "state_info",
 }
 
 
@@ -840,12 +997,20 @@ SOLIXMQTTMAP = {
             "c5": {"name": "expansion_packs_b?"},
             "d0": {"name": "device_sn"},  # Device serial number
             "d1": {"name": "max_load"},  # Maximum load setting (W)
-            "d2": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes) #TODO: Options?
-            "d3": {"name": "display_timeout_seconds"},  # Options: 20, 30, 60, 300, 1800 seconds
+            "d2": {
+                "name": "device_timeout_minutes"
+            },  # Device auto-off timeout (minutes) #TODO: Options?
+            "d3": {
+                "name": "display_timeout_seconds"
+            },  # Options: 20, 30, 60, 300, 1800 seconds
             "d7": {"name": "expansion_packs_c?"},
             "d8": {"name": "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
-            "d9": {"name": "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
-            "dc": {"name": "light_mode"},  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+            "d9": {
+                "name": "display_mode"
+            },  # Brightness: Off (0), Low (1), Medium (2), High (3)
+            "dc": {
+                "name": "light_mode"
+            },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
             "dd": {"name": "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
             "de": {"name": "display_switch"},  # Off (0) or On (1)
             "e5": {"name": "backup_charge_switch"},  # Off (0) or On (1)
@@ -1070,127 +1235,17 @@ SOLIXMQTTMAP = {
         # Expansion data
         # Interval: ~3-5 seconds, but only with realtime trigger
         "040a": A17C5_040a,
-        # multisystem message
+        # multisystem messages
         # Interval: ~3-10 seconds, but only with realtime trigger
-        "0420": {
-            "topic": "state_info",
-            "a2": {"name": "device_sn"},
-            "a3": {"name": "local_timestamp"},
-            "a4": {"name": "utc_timestamp"},
-            "a7": {"name": "battery_soc_total"},
-            "a8": {"name": "parallel_devices?"},
-            "a9": {"name": "expansion_packs?"},
-            "ab": {"name": "grid_power_signed?"},
-            "ac": {"name": "ac_output_power_signed_total?"},
-            "ae": {"name": "output_power_signed_total?"},
-            "af": {"name": "home_demand_total?"},
-            "b1": {"name": "battery_power_signed_total?"},
-            "b3": {
-                "bytes": {
-                    "0": {
-                        "name": "parallel_1_sn",
-                        "length": 0,  # First byte is byte count for type
-                        "type": DeviceHexDataTypes.str.value,
-                    },
-                }
-            },
-            "b4": {
-                "bytes": {
-                    "0": {
-                        "name": "parallel_2_sn",
-                        "length": 0,  # First byte is byte count for type
-                        "type": DeviceHexDataTypes.str.value,
-                    },
-                }
-            },
-            "b5": {
-                "bytes": {
-                    "0": {
-                        "name": "parallel_3_sn",
-                        "length": 0,  # First byte is byte count for type
-                        "type": DeviceHexDataTypes.str.value,
-                    },
-                }
-            },
-            "b6": {
-                "bytes": {
-                    "0": {
-                        "name": "parallel_4_sn",
-                        "length": 0,  # First byte is byte count for type
-                        "type": DeviceHexDataTypes.str.value,
-                    },
-                }
-            },
-            "c1": {"name": "main_device_sn?"},
-            "c2": {"name": "pv_power_total?"},
-        },
-        # multisystem message
+        "0420": DOCK_0420,
         # Interval: ~300 seconds
-        "0421": {
-            "topic": "state_info",
-            "a3": {"name": "pv_limit_parallel_4?"},
-            "a4": {"name": "pv_limit_parallel_3?"},
-            "a5": {"name": "pv_limit_parallel_2?"},
-            "a6": {"name": "pv_limit_parallel_1?"},
-            "a7": {"name": "battery_soc_total"},
-            "ac": {"name": "soc_max?"},
-            "ad": {"name": "max_load_legal?"},
-            "fc": {"name": "device_sn"},
-            "fd": {"name": "local_timestamp"},
-            "fe": {"name": "utc_timestamp"},
-        },
-        # multisystem message
+        "0421": DOCK_0421,
         # Interval: ~300 seconds
-        "0428": {
-            "topic": "state_info",
-            "a2": {"name": "device_sn"},
-            "a3": {"name": "local_timestamp"},
-            "a4": {"name": "utc_timestamp"},
-            "a5": {"name": "battery_soc_total"},
-            "a6": {"name": "expansion_packs?"},
-            "ac": {"name": "pv_power_total?"},
-            "b5": {"name": "battery_power_signed_total?"},
-            "bc": {"name": "battery_power_signed"},
-            "d9": {
-                "bytes": {
-                    "0": {
-                        "name": "parallel_1_sn",
-                        "length": 0,  # First byte is byte count for type
-                        "type": DeviceHexDataTypes.str.value,
-                    },
-                }
-            },
-            "da": {
-                "bytes": {
-                    "0": {
-                        "name": "parallel_2_sn",
-                        "length": 0,  # First byte is byte count for type
-                        "type": DeviceHexDataTypes.str.value,
-                    },
-                }
-            },
-            "db": {
-                "bytes": {
-                    "0": {
-                        "name": "parallel_3_sn",
-                        "length": 0,  # First byte is byte count for type
-                        "type": DeviceHexDataTypes.str.value,
-                    },
-                }
-            },
-            "dc": {
-                "bytes": {
-                    "0": {
-                        "name": "parallel_4_sn",
-                        "length": 0,  # First byte is byte count for type
-                        "type": DeviceHexDataTypes.str.value,
-                    },
-                }
-            },
-        },
+        "0428": DOCK_0428,
         # Interval: ~300 seconds
-        "0500": A17C5_0500,
+        "0500": DOCK_0500,
     },
+    # Anker Solarbank Smartmeter
     "A17X7": {
         "0057": CMD_REALTIME_TRIGGER,
         "0405": {
@@ -1206,6 +1261,7 @@ SOLIXMQTTMAP = {
             # "ad": {"name": "pv_to_grid_power"},
         },
     },
+    # Shello Pro 3 EM
     "SHEMP3": {
         "0057": CMD_REALTIME_TRIGGER,
         "0405": {
@@ -1218,5 +1274,85 @@ SOLIXMQTTMAP = {
             "ab": {"name": "grid_export_energy", "factor": 0.00001},
             "fe": {"name": "msg_timestamp"},
         },
+    },
+    # Anker Power Dock
+    "AE100": {
+        "0057": CMD_REALTIME_TRIGGER,
+        "0405": {
+            # Interval: ~5 seconds, but only with realtime trigger
+            "topic": "param_info",
+            "a2": {"name": "device_sn"},
+            "a3": {"name": "sw_version", "values": 4},
+            "b3": {"name": "local_timestamp"},
+            "b6": {
+                "bytes": {
+                    "00": {
+                        "name": "solarbank_1_sn",
+                        "length": 0,  # First byte is byte count for type
+                        "type": DeviceHexDataTypes.str.value,
+                    },
+                    "19": {
+                        "name": "solarbank_1_soc",
+                        "type": DeviceHexDataTypes.ui.value,
+                    },
+                }
+            },
+            "b8": {
+                "bytes": {
+                    "00": {
+                        "name": "solarbank_2_sn",
+                        "length": 0,  # First byte is byte count for type
+                        "type": DeviceHexDataTypes.str.value,
+                    "19": {
+                        "name": "solarbank_2_soc",
+                        "type": DeviceHexDataTypes.ui.value,
+                    },
+                    },
+                }
+            },
+            "ba": {
+                "bytes": {
+                    "00": {
+                        "name": "solarbank_3_sn",
+                        "length": 0,  # First byte is byte count for type
+                        "type": DeviceHexDataTypes.str.value,
+                    "19": {
+                        "name": "solarbank_3_soc",
+                        "type": DeviceHexDataTypes.ui.value,
+                    },
+                    },
+                }
+            },
+            "bc": {
+                "bytes": {
+                    "00": {
+                        "name": "solarbank_4_sn",
+                        "length": 0,  # First byte is byte count for type
+                        "type": DeviceHexDataTypes.str.value,
+                    },
+                    "19": {
+                        "name": "solarbank_4_soc",
+                        "type": DeviceHexDataTypes.ui.value,
+                    },
+                }
+            },
+        },
+        "0407": {
+            # Interval: ~300 seconds
+            # Network message
+            "topic": "param_info",
+            "a2": {"name": "device_sn"},
+            "a3": {"name": "wifi_name"},
+            "a4": {"name": "wifi_signal"},
+        },
+        # multisystem messages
+        # Interval: ~3-10 seconds, but only with realtime trigger
+        "0420": DOCK_0420,
+        # Interval: ~300 seconds
+        "0421": DOCK_0421,
+        # Interval: ~300 seconds
+        "0428": DOCK_0428,
+        # Interval: ~300 seconds
+        "0500": DOCK_0500,
     },
 }

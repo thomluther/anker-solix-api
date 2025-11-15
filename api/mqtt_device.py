@@ -135,9 +135,9 @@ class SolixMqttDevice:
         if toFile:
             # print the decoded command
             self._logger.info(
-                "TESTMODE: Generated command for device %s %s %s:\n%s",
-                self.pn,
+                "TESTMODE: Generated command for MQTT device %s (%s) %s:\n%s",
                 self.sn,
+                self.pn,
                 description,
                 hexdata.decode(),
             )
@@ -157,21 +157,21 @@ class SolixMqttDevice:
                     mqtt_info.wait_for_publish(timeout=5)
                 if not mqtt_info.is_published():
                     self._logger.error(
-                        "Failed to publish MQTT command for device %s %s %s",
-                        self.pn,
+                        "Failed to publish MQTT command for device %s (%s) %s",
                         self.sn,
+                        self.pn,
                         description,
                     )
                     return False
             except (ValueError, RuntimeError) as err:
                 self._logger.error(
-                    "Error sending MQTT command to device %s %s: %s",
-                    self.pn,
+                    "Error sending MQTT command to device %s (%s): %s",
                     self.sn,
+                    self.pn,
                     err,
                 )
                 return False
-        self._logger.info("Device %s %s %s", self.pn, self.sn, description)
+        self._logger.info("MQTT device %s (%s) %s", self.sn, self.pn, description)
         return True
 
     def realtime_trigger(
@@ -194,9 +194,9 @@ class SolixMqttDevice:
         # Validate command value
         if not self.validate_command_value(SolixMqttCommands.realtime_trigger, timeout):
             self._logger.error(
-                "Device %s %s control error - Invalid realtime trigger timeout: %s",
-                self.pn,
+                "MQTT device %s (%s) control error - Invalid realtime trigger timeout: %s",
                 self.sn,
+                self.pn,
                 timeout,
             )
             return False
@@ -204,9 +204,9 @@ class SolixMqttDevice:
             # Validate MQTT connection prior trigger
             if not self.is_connected():
                 self._logger.error(
-                    "Device %s %s control error - No MQTT connection active",
-                    self.pn,
+                    "MQTT device %s (%s) control error - No active MQTT connection",
                     self.sn,
+                    self.pn,
                 )
                 return False
             msginfo = self.api.mqttsession.realtime_trigger(
@@ -216,9 +216,9 @@ class SolixMqttDevice:
                 msginfo.wait_for_publish(timeout=2)
             if not msginfo.is_published():
                 self._logger.error(
-                    "Error sending MQTT realtime trigger to device %s %s",
-                    self.pn,
+                    "Error sending MQTT realtime trigger to device %s (%s)",
                     self.sn,
+                    self.pn,
                 )
                 return False
         return True
@@ -227,13 +227,13 @@ class SolixMqttDevice:
         self,
         fromFile: bool = False,
     ) -> dict:
-        """Get comprehensive C1000X device status via MQTT data.
+        """Get actual MQTT device status.
 
         Args:
-            fromFile: If True, read from test file instead of using MQTT data
+            fromFile: If True, include mock status while testing from files
 
         Returns:
-            dict: Device status including all switch states, modes, and settings
+            dict: Device status with all extracted MQTT message fields from
                 Uses MQTT data cache for real-time values
 
         Example:
@@ -241,23 +241,18 @@ class SolixMqttDevice:
             print(f"AC Output: {status.get('switch_ac_output_power')}")
             print(f"Battery SOC: {status.get('battery_soc')}%")
         """
-        # Handle test mode
+        # Return accumulated MQTT data cache, handle test mode
+        data = {}
         if fromFile:
             # Update real data with modifications from testing
-            self._logger.info(
-                "Device %s %s status with optional MQTT test control changes",
-                self.pn,
-                self.sn,
-            )
-            return self.mqttdata | self._filedata
-
-        # Return accumulated MQTT data cache instead of API cache for device status
-        if self.mqttdata:
-            self._logger.info(
-                "Device %s %s status retrieved from MQTT data", self.pn, self.sn
-            )
+            data = self.mqttdata | self._filedata
         else:
-            self._logger.warning(
-                "No MQTT data available for device %s %s status", self.pn, self.sn
-            )
-        return self.mqttdata
+            data = self.mqttdata
+        self._logger.debug(
+            "MQTT device %s (%s) status%s:\n%s",
+            self.sn,
+            self.pn,
+            " with optional MQTT test control changes" if fromFile else "",
+            data,
+        )
+        return data

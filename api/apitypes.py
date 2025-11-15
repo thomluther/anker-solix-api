@@ -838,6 +838,7 @@ class ApiCategories:
     powerpanel_avg_power: str = "powerpanel_avg_power"
     hes_energy: str = "hes_energy"
     hes_avg_power: str = "hes_avg_power"
+    mqtt_devices: str = "mqtt_devices"
 
 
 @dataclass(frozen=True)
