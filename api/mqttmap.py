@@ -77,8 +77,8 @@ A1722_0405 = {
     "b8": {"name": "dc_charging_status"},  # None (0), Charging (1)
     "b9": {"name": "temperature"},  # In Celsius
     "ba": {"name": "charging_status"},  # None (0), Discharging (1), Charging (2) ???
-    "bb": {"name": "battery_soc?"},  # Battery SOC
-    "bc": {"name": "battery_soh?"},  # Battery Health?
+    "bb": {"name": "battery_soc"},  # Battery SOC (%)
+    "bc": {"name": "battery_soh"},  # Battery Health (%)
     "c1": {
         "name": "dc_output_power_switch"
     },  # DC output switch: Disabled (0) or Enabled (1)
@@ -127,7 +127,7 @@ A1728_0405 = {
 A1780_0405 = {
     # F2000(P) param info
     "topic": "param_info",
-    "a4": {"name": "remaining_time_hours?", "factor": 0.1},  # In hours
+    "a4": {"name": "remaining_time_hours", "factor": 0.1},  # In hours
     "a5": {"name": "ac_input_power"},  # AC charging power to battery
     "a6": {"name": "ac_output_power"},  # Individual AC outlet power
     "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
@@ -145,12 +145,12 @@ A1780_0405 = {
     "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
     "bd": {"name": "temperature"},  # Main device temperature (°C)
     "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
-    "c0": {"name": "expansion_packs_a?"},
+    "c0": {"name": "expansion_packs_a"},  # Expansion pack indicator A (1=present, 0=absent)
     "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
     "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
     "c3": {"name": "battery_soh"},  # Main battery state of health (%)
     "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
-    "c5": {"name": "expansion_packs_b?"},
+    "c5": {"name": "expansion_packs_b"},  # Expansion pack indicator B (1=present, 0=absent)
     "d0": {"name": "device_sn"},
     "d1": {"name": "max_load"},  # Maximum load setting (W)
     "d3": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes)
@@ -215,8 +215,8 @@ A1790_0405 = {
     "b1": {"name": "charging_power"},  # Total charging (AC + Solar)
     "b2": {"name": "output_power"},
     "b4": {"name": "discharging_power?"},
-    "b5": {"name": "sw_version?", "values": 1},  # Main firmware version
-    "ba": {"name": "sw_expansion?", "values": 1},  # Expansion firmware version
+    "b5": {"name": "sw_version", "values": 1},  # Main firmware version
+    "ba": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
     "bc": {
         "name": "ac_output_power_switch"
     },  # AC output switch: Disabled (0) or Enabled (1)
@@ -334,7 +334,7 @@ A17C1_0405 = {
     "a3": {"name": "battery_soc"},
     "a5": {"name": "error_code"},
     "a6": {"name": "sw_version", "values": 4},
-    "a7": {"name": "sw_controller?", "values": 4},
+    "a7": {"name": "sw_controller", "values": 4},  # Controller firmware version
     "a8": {"name": "sw_expansion", "values": 4},
     "a9": {"name": "temp_unit_fahrenheit"},
     "aa": {"name": "temperature"},
@@ -437,7 +437,7 @@ A17C1_0408 = {
 A17C1_040a = {
     # Solarbank 2 Expansion data
     "topic": "param_info",
-    "a2": {"name": "expansion_packs"},
+    "a2": {"name": "expansion_packs"},  # Primary field (may be 0 even with expansion - use indicator fields)
     "a3": {"name": "lowest_soc?"},
     "a4": {
         "bytes": {
@@ -660,7 +660,7 @@ A17C5_0405 = {
     "a5": {"name": "temperature"},
     "a6": {"name": "battery_soc_total"},
     "a7": {"name": "sw_version", "values": 4},
-    "a8": {"name": "sw_controller?", "values": 4},
+    "a8": {"name": "sw_controller", "values": 4},  # Controller firmware version
     "a9": {"name": "sw_expansion", "values": 4},
     "ab": {"name": "photovoltaic_power"},
     "ac": {"name": "battery_power_signed"},
@@ -972,9 +972,9 @@ SOLIXMQTTMAP = {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
             "a4": {
-                "name": "remaining_time_hours?",
+                "name": "remaining_time_hours",
                 "factor": 0.1,
-            },  # In Minutes? (value * factor)
+            },  # In hours (value * factor)
             "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
             "a6": {"name": "ac_output_power"},  # Individual AC outlet power
             "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
@@ -989,21 +989,21 @@ SOLIXMQTTMAP = {
             "bb": {"name": "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
             "bd": {"name": "temperature"},  # Main device temperature (°C)
             "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
-            "c0": {"name": "expansion_packs_a?"},
+            "c0": {"name": "expansion_packs_a"},  # Expansion pack indicator A (1=present, 0=absent)
             "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
             "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
             "c3": {"name": "battery_soh"},  # Main battery state of health (%)
             "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
-            "c5": {"name": "expansion_packs_b?"},
+            "c5": {"name": "expansion_packs_b"},  # Expansion pack indicator B (1=present, 0=absent)
             "d0": {"name": "device_sn"},  # Device serial number
             "d1": {"name": "max_load"},  # Maximum load setting (W)
             "d2": {
                 "name": "device_timeout_minutes"
-            },  # Device auto-off timeout (minutes) #TODO: Options?
+            },  # Device auto-off timeout (minutes) - range validated: 30-1440 minutes
             "d3": {
                 "name": "display_timeout_seconds"
             },  # Options: 20, 30, 60, 300, 1800 seconds
-            "d7": {"name": "expansion_packs_c?"},
+            "d7": {"name": "expansion_packs_c"},  # Expansion pack indicator C (device-specific usage)
             "d8": {"name": "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
             "d9": {
                 "name": "display_mode"

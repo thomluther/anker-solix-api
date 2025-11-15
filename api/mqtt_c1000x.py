@@ -520,3 +520,126 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
                 if toFile:
                     self._filedata["ultrafast_charging"] = enabled
         return resp or False
+
+    def has_expansion_pack(self) -> bool:
+        """Detect if the C1000X has an expansion pack installed.
+
+        Uses multiple detection methods based on real device analysis:
+        1. Primary indicator fields (expansion_packs_a, expansion_packs_b)
+        2. Expansion data presence (exp_1_soc, exp_1_type, etc.)
+        3. Fallback to primary expansion_packs field
+
+        Returns:
+            bool: True if expansion pack is detected, False otherwise
+
+        Example:
+            if device.has_expansion_pack():
+                print(f"Total battery SOC: {device.get_expansion_battery_soc()}%")
+        """
+        # Get current MQTT data
+        data = self.mqttdata
+
+        if not data:
+            self._logger.debug("No MQTT data available for expansion pack detection")
+            return False
+
+        # Method 1: Check indicator fields (most reliable based on real device data)
+        expansion_indicators = [
+            data.get('expansion_packs_a', 0),
+            data.get('expansion_packs_b', 0),
+            data.get('expansion_packs_c', 0)
+        ]
+
+        # If any indicator field shows expansion (value > 0)
+        if any(val and int(val or 0) > 0 for val in expansion_indicators if val is not None):
+            self._logger.debug(f"Expansion detected via indicator fields: {expansion_indicators}")
+            return True
+
+        # Method 2: Check for expansion-specific data presence
+        expansion_data_fields = [
+            data.get('exp_1_soc'),
+            data.get('exp_1_soh'),
+            data.get('exp_1_type'),
+            data.get('sw_expansion')
+        ]
+
+        # If we have meaningful expansion data (SOC > 0, type defined, etc.)
+        if (data.get('exp_1_soc') and int(data.get('exp_1_soc', 0)) > 0) or \
+           data.get('exp_1_type'):
+            self._logger.debug(f"Expansion detected via data presence: SOC={data.get('exp_1_soc')}, type={data.get('exp_1_type')}")
+            return True
+
+        # Method 3: Fallback to primary field
+        primary_expansion = data.get('expansion_packs', 0)
+        if primary_expansion and int(primary_expansion) > 0:
+            self._logger.debug(f"Expansion detected via primary field: {primary_expansion}")
+            return True
+
+        self._logger.debug("No expansion pack detected")
+        return False
+
+    def get_expansion_battery_soc(self) -> int | None:
+        """Get the expansion battery state of charge.
+
+        Returns:
+            int | None: Expansion battery SOC percentage, or None if no expansion
+        """
+        if not self.has_expansion_pack():
+            return None
+
+        exp_soc = self.mqttdata.get('exp_1_soc')
+        return int(exp_soc) if exp_soc is not None else None
+
+    def get_total_battery_soc(self) -> int | None:
+        """Get the combined battery state of charge (main + expansion).
+
+        For devices with expansion packs, this provides the total SOC.
+        For devices without expansion, returns the main battery SOC.
+
+        Returns:
+            int | None: Total battery SOC percentage
+        """
+        data = self.mqttdata
+
+        # Check if device provides battery_soc_total directly
+        if 'battery_soc_total' in data and data['battery_soc_total'] is not None:
+            return int(data['battery_soc_total'])
+
+        # Calculate from individual batteries if expansion present
+        if self.has_expansion_pack():
+            main_soc = data.get('battery_soc')
+            exp_soc = data.get('exp_1_soc')
+
+            if main_soc is not None and exp_soc is not None:
+                # Average SOC of both 1056Wh batteries (equal capacity)
+                return round((int(main_soc) + int(exp_soc)) / 2)
+
+        # Return main battery SOC for devices without expansion
+        main_soc = data.get('battery_soc')
+        return int(main_soc) if main_soc is not None else None
+
+    def get_expansion_info(self) -> dict:
+        """Get comprehensive expansion pack information.
+
+        Returns:
+            dict: Expansion pack details including detection method, SOC, health, type
+        """
+        data = self.mqttdata
+
+        return {
+            "has_expansion": self.has_expansion_pack(),
+            "detection_fields": {
+                "expansion_packs": data.get('expansion_packs', 0),
+                "expansion_packs_a": data.get('expansion_packs_a', 0),
+                "expansion_packs_b": data.get('expansion_packs_b', 0),
+                "expansion_packs_c": data.get('expansion_packs_c', 0)
+            },
+            "expansion_data": {
+                "soc": data.get('exp_1_soc'),
+                "soh": data.get('exp_1_soh'),
+                "type": data.get('exp_1_type'),
+                "temperature": data.get('exp_1_temperature'),
+                "firmware": data.get('sw_expansion')
+            },
+            "total_soc": self.get_total_battery_soc()
+        }
