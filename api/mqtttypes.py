@@ -668,3 +668,76 @@ class MqttDataStats:
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
         return asdict(self)
+
+
+@dataclass(kw_only=True)
+class MqttCmdValidator:
+    """Dataclass to specify and validate MQTT command options or values."""
+
+    min: float | int = 0
+    max: float | int = 0
+    step: float | int = 0
+    options: set[str, float, int] = field(default_factory=set)
+
+    def __post_init__(self) -> None:
+        """Validate init parms."""
+        if not isinstance(self.min, float | int):
+            raise TypeError(
+                f"Expected type float|int for min, got {type(self.min)}: {self.min!s}"
+            )
+        if not isinstance(self.max, float | int):
+            raise TypeError(
+                f"Expected type float|int for max, got {type(self.max)}: {self.max!s}"
+            )
+        if not isinstance(self.step, float | int):
+            raise TypeError(
+                f"Expected type float|int for step, got {type(self.step)}: {self.step!s}"
+            )
+        if self.options and isinstance(self.options, set):
+            # ignore step if options are provided
+            self.step = 0
+        elif self.options:
+            raise TypeError(
+                f"Expected type set() for options, got {type(self.options)}: {self.options!s}"
+            )
+        if self.min > self.max:
+            raise ValueError(
+                f"Expected max to be larger or equal to min, got (min: {self.min!s}, max: {self.max!s})"
+            )
+        if self.step > (self.max - self.min):
+            raise ValueError(
+                f"Expected step to be smaller or equal to delta max/min, got step: {self.step!s}"
+            )
+
+    def __str__(self) -> str:
+        """Print the class fields."""
+        return str(self.asdict())
+
+    def check(self, value: float | str) -> float | int | str:
+        """Verify given value and round to least decimals in class."""
+        if not isinstance(value, float | int | str):
+            raise TypeError(
+                f"Expected type float|int|str for value, got {type(value)}: {value!s}"
+            )
+        if self.options and value not in self.options:
+            raise ValueError(
+                f"Provided value is no valid option {self.options!s}, got: {value!s}"
+            )
+        if not isinstance(value, str):
+            # check numbers
+            if self.min < self.max and not self.min <= value <= self.max:
+                raise ValueError(
+                    f"Provided value is out of range ({self.min!s}-{self.max!s}), got: {value!s}"
+                )
+            # round value to step with same decimals
+            if self.step:
+                step_s = str(self.step)
+                value = round(
+                    self.step * round(value / self.step),
+                    len(step_s) - step_s.index(".") - 1 if "." in step_s else 0,
+                )
+        return value
+
+    def asdict(self) -> dict:
+        """Return a dictionary representation of the class fields."""
+        return asdict(self)

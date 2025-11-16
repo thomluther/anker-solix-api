@@ -135,8 +135,8 @@ A1780_0405 = {
     "a9": {"name": "usbc_3_power"},  # USB-C port 3 output power
     "aa": {"name": "usba_1_power"},  # USB-A port 1 output power
     "ab": {"name": "usba_2_power"},  # USB-A port 2 output power
-    "ac": {"name": "12v_1_power"},  # 12V port 1 output power
-    "ad": {"name": "12v_2_power"},  # 12V port 2 output power
+    "ac": {"name": "dc_12v_1_power"},  # 12V port 1 output power
+    "ad": {"name": "dc_12v_2_power"},  # 12V port 2 output power
     "ae": {"name": "dc_input_power"},  # DC input power (solar/car charging)
     "af": {"name": "ac_input_power"},  # AC input power (230V)
     "b0": {"name": "output_power_total"},  # Total output power

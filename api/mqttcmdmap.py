@@ -6,6 +6,10 @@ from .apitypes import DeviceHexDataTypes
 
 CMD_NAME = "cmd_name"
 STATE_NAME = "state_name"
+VALUE_MIN = "value_min"
+VALUE_MAX = "value_max"
+VALUE_STEP = "value_step"
+VALUE_OPTIONS="value_options"
 
 @dataclass(frozen=True)
 class SolixMqttCommands:

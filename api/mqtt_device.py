@@ -223,11 +223,44 @@ class SolixMqttDevice:
                 return False
         return True
 
+    def get_combined_cache(
+        self,
+        mqtt_unique: bool = False,
+        api_prio: bool = False,
+        fromFile: bool = False,
+    ) -> dict:
+        """Get copy of combined values from device actual Api and MQTT cache.
+
+        Args:
+            mqtt_unique: If True, provide only MQTT values not included in Api cache
+            api_prio: If True, duplicate values will have the Api cache value, default is MQTT cache value
+            fromFile: If True, include mock MQTT cache while testing from files
+
+        Returns:
+            dict: Combined Api and MQTT data cache
+
+        Example:
+            mqtt_unique = mydevice.get_combined_cache(mqtt_unique=True)
+        """
+        mqttdata = self.mqttdata | (self._filedata if fromFile else {})
+        if mqtt_unique:
+            # find duplicate keys and remove them from MQTT cache copy
+            dup = set(self.device.keys()) & (set(mqttdata.keys()))
+            for k in dup:
+                mqttdata.pop(k, None)
+            return mqttdata
+        if api_prio:
+            data = mqttdata | self.device
+        else:
+            data = self.device | mqttdata
+        data.pop("mqtt_data", None)
+        return data
+
     def get_status(
         self,
         fromFile: bool = False,
     ) -> dict:
-        """Get actual MQTT device status.
+        """Get actual MQTT device cache status.
 
         Args:
             fromFile: If True, include mock status while testing from files
@@ -237,22 +270,36 @@ class SolixMqttDevice:
                 Uses MQTT data cache for real-time values
 
         Example:
-            status = api.get_status()
+            status = mydevice.get_status()
             print(f"AC Output: {status.get('switch_ac_output_power')}")
             print(f"Battery SOC: {status.get('battery_soc')}%")
         """
+        # Return copy of accumulated MQTT data cache, handle test mode
+        return self.mqttdata | (self._filedata if fromFile else {})
+
+    def print_status(
+        self,
+        fromFile: bool = False,
+    ) -> dict:
+        """Print and return actual MQTT device status.
+
+        Args:
+            fromFile: If True, include mock status while testing from files
+
+        Returns:
+            dict: Device status with all extracted MQTT message fields from
+                Uses MQTT data cache for real-time values
+
+        Example:
+            mydevice.print_status()
+        """
         # Return accumulated MQTT data cache, handle test mode
-        data = {}
-        if fromFile:
-            # Update real data with modifications from testing
-            data = self.mqttdata | self._filedata
-        else:
-            data = self.mqttdata
-        self._logger.debug(
+        data = self.get_status(fromFile=fromFile)
+        self._logger.info(
             "MQTT device %s (%s) status%s:\n%s",
             self.sn,
             self.pn,
             " with optional MQTT test control changes" if fromFile else "",
-            data,
+            str(data),
         )
         return data
