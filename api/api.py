@@ -1081,7 +1081,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         return sn
 
     def clearCaches(self) -> None:
-        """Clear the api cache dictionaries except the account cache."""
+        """Clear the api cache dictionaries and close active MQTT client."""
         super().clearCaches()
         if self.powerpanelApi:
             self.powerpanelApi.clearCaches()
@@ -1704,8 +1704,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # drop same name device limits as those field may be used to control individual device settings
             self._update_dev(
                 {
-                    "alias_name": (self.devices.get(station_sn) or {}).get("alias") or "Power Dock",
-                    "is_passive": "wifi_online" not in (self.devices.get(station_sn) or {}),
+                    "alias_name": (self.devices.get(station_sn) or {}).get("alias")
+                    or "Power Dock",
+                    "is_passive": "wifi_online"
+                    not in (self.devices.get(station_sn) or {}),
                     "current_power": data.get("current_power"),
                     "all_power_limit": station.pop("power_limit", None)
                     or data.get("all_power_limit")

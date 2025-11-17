@@ -43,7 +43,7 @@ class AnkerSolixMqttMonitor:
     def __init__(self) -> None:
         """Initialize."""
         self.api: AnkerSolixApi | None = None
-        self.device_selected: str | None = None
+        self.device_selected: dict = {}
         self.found_topics: set = set()
         self.loop: asyncio.AbstractEventLoop
 
@@ -70,7 +70,7 @@ class AnkerSolixMqttMonitor:
                     # Login validation will be done during first API call
                     CONSOLE.info("Anker Cloud authentication: CACHED")
                 device_names: list | None = None
-                device_selected: dict = {}
+                self.device_selected: dict = {}
                 CONSOLE.info("Getting sites and device list...")
                 await self.api.update_sites()
                 await self.api.get_bind_devices()
@@ -108,7 +108,7 @@ class AnkerSolixMqttMonitor:
                     for d in devices
                 ]
                 if len(device_names) > 0:
-                    while not device_selected:
+                    while not self.device_selected:
                         CONSOLE.info("\nSelect which device to be monitored:")
                         for idx, devicename in enumerate(device_names, start=1):
                             CONSOLE.info(
@@ -122,7 +122,7 @@ class AnkerSolixMqttMonitor:
                         if selection.isdigit() and 1 <= int(selection) <= len(
                             device_names
                         ):
-                            device_selected = devices[int(selection) - 1]
+                            self.device_selected = devices[int(selection) - 1]
 
                     # ask whether dumping messages to file
                     response = input(
@@ -130,8 +130,8 @@ class AnkerSolixMqttMonitor:
                     )
                     if response := str(response).upper() in ["Y", "YES", "TRUE", 1]:
                         model = (
-                            device_selected.get("device_pn")
-                            or device_selected.get("product_code")
+                            self.device_selected.get("device_pn")
+                            or self.device_selected.get("product_code")
                             or ""
                         )
                         prefix = f"{model}_mqtt_dump"
@@ -178,10 +178,10 @@ class AnkerSolixMqttMonitor:
                         )
 
                     # Start the MQTT session for the selected device
-                    device_sn = device_selected.get("device_sn")
+                    device_sn = self.device_selected.get("device_sn")
                     device_pn = (
-                        device_selected.get("device_pn")
-                        or device_selected.get("product_code")
+                        self.device_selected.get("device_pn")
+                        or self.device_selected.get("product_code")
                         or ""
                     )
                     CONSOLE.info(
@@ -204,12 +204,12 @@ class AnkerSolixMqttMonitor:
                     # subscribe root Topic of selected device
                     topics = set()
                     if prefix := mqtt_session.get_topic_prefix(
-                        deviceDict=device_selected
+                        deviceDict=self.device_selected
                     ):
                         topics.add(f"{prefix}#")
                     # Command messages (app to device)
                     if cmd_prefix := mqtt_session.get_topic_prefix(
-                        deviceDict=device_selected, publish=True
+                        deviceDict=self.device_selected, publish=True
                     ):
                         topics.add(f"{cmd_prefix}#")
                     try:
@@ -301,6 +301,15 @@ class AnkerSolixMqttMonitor:
                                         )
                                         realtime = True
                                         rt_devices.add(device_sn)
+                                elif k == "d":
+                                    # save active message callback
+                                    cb = mqtt_session.message_callback()
+                                    mqtt_session.message_callback(None)
+                                    self.print_table()
+                                    input(
+                                        f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
+                                    )
+                                    mqtt_session.message_callback(cb)
                                 elif k == "v":
                                     if (
                                         mqtt_session.message_callback()
@@ -380,7 +389,9 @@ class AnkerSolixMqttMonitor:
         CONSOLE.info(100 * "-")
         CONSOLE.info(f"{Color.YELLOW}MQTT Monitor key menu:{Color.OFF}")
         CONSOLE.info(100 * "-")
-        CONSOLE.info(f"[{Color.YELLOW}K{Color.OFF}]ey list to show this [{Color.YELLOW}M{Color.OFF}]enu")
+        CONSOLE.info(
+            f"[{Color.YELLOW}K{Color.OFF}]ey list to show this [{Color.YELLOW}M{Color.OFF}]enu"
+        )
         CONSOLE.info(
             f"[{Color.YELLOW}U{Color.OFF}]nsubscribe all topics. This will stop receiving MQTT messages"
         )
@@ -396,6 +407,7 @@ class AnkerSolixMqttMonitor:
         CONSOLE.info(
             f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding"
         )
+        CONSOLE.info(f"[{Color.YELLOW}D{Color.OFF}]isplay snapshot of extracted values")
         CONSOLE.info(
             f"[{Color.RED}Q{Color.OFF}]uit, [{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop MQTT monitor"
         )
@@ -442,40 +454,18 @@ class AnkerSolixMqttMonitor:
             # no encoded data in message, dump object whatever it is
             CONSOLE.info(f"{timestamp}Device data:\n{json.dumps(data, indent=2)}")
 
-    def print_values(
-        self,
-        session: AnkerSolixMqttSession,
-        topic: str,
-        message: Any,
-        data: bytes,
-        model: str,
-        *args,
-        **kwargs,
-    ) -> None:
-        """Print the accumulated and refreshed values including last message timestamp."""
-        if topic:
-            self.found_topics.add(topic)
-        timestamp = ""
+    def print_table(self) -> None:
+        """Print the accumulated extracted values in a table."""
         col1 = 25
         col2 = 25
         col3 = 25
-        if isinstance(message, dict):
-            timestamp = datetime.fromtimestamp(
-                (message.get("head") or {}).get("timestamp") or 0
-            ).strftime("%Y-%m-%d %H:%M:%S")
-        common.clearscreen()
-        hd = DeviceHexData(model=model or "", hexbytes=data)
-        CONSOLE.info(
-            f"Realtime Trigger: {Color.GREEN + ' ON' if len(session.triggered_devices) else Color.RED + 'OFF'}{Color.OFF}, "
-            f"Active topic: {Color.GREEN}{str(session.subscriptions or '')[1:-1]}{Color.OFF}"
+        device_pn = (
+            self.device_selected.get("device_pn")
+            or self.device_selected.get("product_code")
+            or ""
         )
-        CONSOLE.info(f"{session.mqtt_stats!s}")
-        if message:
-            CONSOLE.info(
-                f"{timestamp}: Received message '{Color.YELLOW + hd.msg_header.msgtype.hex(':') + Color.OFF}' on topic: {Color.YELLOW + topic + Color.OFF}"
-            )
-        for sn, device in session.mqtt_data.items():
-            CONSOLE.info(f"{' ' + sn + ' (' + model + ') ':-^100}")
+        for sn, device in self.api.mqttsession.mqtt_data.items():
+            CONSOLE.info(f"{' ' + sn + ' (' + device_pn + ') ':-^100}")
             fields = []
             for key, value in device.items():
                 # convert timestamps to readable data and time for printout
@@ -495,7 +485,38 @@ class AnkerSolixMqttMonitor:
         for t in self.found_topics:
             CONSOLE.info(f"{t}")
         CONSOLE.info(f"{100 * '-'}\nReceived Messages:")
-        CONSOLE.info(f"{json.dumps(session.mqtt_stats.dev_messages)}")
+        CONSOLE.info(f"{json.dumps(self.api.mqttsession.mqtt_stats.dev_messages)}")
+
+    def print_values(
+        self,
+        session: AnkerSolixMqttSession,
+        topic: str,
+        message: Any,
+        data: bytes,
+        model: str,
+        *args,
+        **kwargs,
+    ) -> None:
+        """Print the accumulated and refreshed values including last message timestamp."""
+        if topic:
+            self.found_topics.add(topic)
+        timestamp = ""
+        if isinstance(message, dict):
+            timestamp = datetime.fromtimestamp(
+                (message.get("head") or {}).get("timestamp") or 0
+            ).strftime("%Y-%m-%d %H:%M:%S")
+        common.clearscreen()
+        hd = DeviceHexData(model=model or "", hexbytes=data)
+        CONSOLE.info(
+            f"Realtime Trigger: {Color.GREEN + ' ON' if len(session.triggered_devices) else Color.RED + 'OFF'}{Color.OFF}, "
+            f"Active topic: {Color.GREEN}{str(session.subscriptions or '')[1:-1]}{Color.OFF}"
+        )
+        CONSOLE.info(f"{session.mqtt_stats!s}")
+        if message:
+            CONSOLE.info(
+                f"{timestamp}: Received message '{Color.YELLOW + hd.msg_header.msgtype.hex(':') + Color.OFF}' on topic: {Color.YELLOW + topic + Color.OFF}"
+            )
+        self.print_table()
         if message:
             CONSOLE.info(f"{100 * '-'}\n{message}")
             if isinstance(data, bytes):

@@ -417,10 +417,13 @@ class AnkerSolixMqttSession:
         """Connect MQTT client, it will optionally being created if none configured yet."""
         if not (self.client or await self.create_client()):
             return None
-        # Use Non blocking connect with loop_start
-        self.client.connect_async(host=self.host, port=self.port, keepalive=keepalive)
-        # Start the loop to process network traffic and callbacks
-        self.client.loop_start()
+        if not self.client.is_connected():
+            # Stop any previous thread before starting new one
+            self.client.loop_stop()
+            # Use Non blocking connect with loop_start
+            self.client.connect_async(host=self.host, port=self.port, keepalive=keepalive)
+            # Start the loop to process network traffic and callbacks
+            self.client.loop_start()
         # Wait briefly for the client to establish the connection
         # Paho's connect_async is non-blocking; some servers are fast but we still
         # need to wait until client.is_connected() becomes True before returning.

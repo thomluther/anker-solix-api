@@ -22,7 +22,7 @@ from .apitypes import (
 from .mqtt import AnkerSolixMqttSession, MessageCallback
 from .session import AnkerSolixClientSession
 
-MqttUpdateCallback = Callable[[Any, Any], None]
+MqttUpdateCallback = Callable[[str], None]
 DeviceCacheCallback = Callable[[dict], None]
 
 
@@ -451,7 +451,6 @@ class AnkerSolixBaseApi:
         """Define callback for MQTT session to update device MQTT data in cache and trigger MQTT update callback for device if registered."""
         if valueupdate and deviceSn:
             new_values = self.update_device_mqtt(deviceSn=deviceSn)
-            # call mqtt update callback if registered
             if new_values and callable(self._mqtt_update_callback):
                 self._mqtt_update_callback(deviceSn)
 
@@ -496,10 +495,10 @@ class AnkerSolixBaseApi:
                                 "exp_3_sn",
                                 "exp_4_sn",
                                 "exp_5_sn",
-                                "parallel_1_sn",
-                                "parallel_2_sn",
-                                "parallel_3_sn",
-                                "parallel_4_sn",
+                                "solarbank_1_sn",
+                                "solarbank_2_sn",
+                                "solarbank_3_sn",
+                                "solarbank_4_sn",
                                 "hw_version",
                                 "sw_version",
                                 "sw_controller",
@@ -642,7 +641,6 @@ class AnkerSolixBaseApi:
                                 "port_memory_switch",
                                 "temp_unit_fahrenheit",
                                 "expansion_packs",
-                                "parallel_devices",
                                 "device_timeout_minutes",
                                 "remaining_time_hours",
                                 "msg_timestamp",
