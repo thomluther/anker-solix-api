@@ -323,6 +323,7 @@ Beside value highlighting, systems, devices, vehicles etc have their own highlig
 ----------------------------------------------------------------------------------------------------
 [K]ey list to show this menu
 [E]lectric Vehicle display toggle ON (default) or OFF
+[F]ilter toggle for device display
 [D]ebug actual Api cache
 [C]ustomize an Api cache entry
 [V]iew actual MQTT data cache and extracted device data
@@ -340,6 +341,7 @@ Toggle MQTT [S]ession OFF (default) or ON
 ----------------------------------------------------------------------------------------------------
 [K]ey list to show this menu
 [E]lectric Vehicle display toggle ON (default) or OFF
+[F]ilter toggle for device display
 [D]ebug actual Api cache
 [C]ustomize an Api cache entry
 [V]iew actual MQTT data cache and extracted device data
@@ -368,6 +370,7 @@ Keep in mind that credential prompts are only avoided if they are defined as env
 #### Main usage options
 - `--live-cloud` / `--live`: Skip interactive mode, use live cloud data directly
 - `--site-id`: Monitor specific site ID only instead of all sites and devices for account
+- `--device-id`: Filter output for specific device ID only
 - `--enable-mqtt` / `--mqtt`: Auto-start MQTT session for real-time device data
 - `--realtime` / `--rt`: Automatically trigger real-time MQTT data on startup
 - `--mqtt-display`: Show pure MQTT data instead of mixed API+MQTT display

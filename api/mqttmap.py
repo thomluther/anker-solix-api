@@ -51,11 +51,11 @@ PPS_VERSIONS_0830 = {
     # Various PPS device version param info
     "topic": "param_info",
     "a1": {
-        "name": "sw_version",
+        "name": "hw_version",
         "type": DeviceHexDataTypes.str.value,
     },
     "a2": {
-        "name": "hw_version",
+        "name": "sw_version",
         "type": DeviceHexDataTypes.str.value,
     },
 }
@@ -972,9 +972,9 @@ SOLIXMQTTMAP = {
             # Interval: ~3-5 seconds, but only with realtime trigger
             "topic": "param_info",
             "a4": {
-                "name": "remaining_time_hours?",
+                "name": "remaining_time_hours",
                 "factor": 0.1,
-            },  # In Minutes? (value * factor)
+            },  # In hours (value * factor)
             "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
             "a6": {"name": "ac_output_power"},  # Individual AC outlet power
             "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
@@ -989,7 +989,7 @@ SOLIXMQTTMAP = {
             "bb": {"name": "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
             "bd": {"name": "temperature"},  # Main device temperature (°C)
             "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
-            "c0": {"name": "expansion_packs_a?"},
+            "c0": {"name": "expansion_packs?"},  # Number of expansion batteries?
             "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
             "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
             "c3": {"name": "battery_soh"},  # Main battery state of health (%)
@@ -999,11 +999,10 @@ SOLIXMQTTMAP = {
             "d1": {"name": "max_load"},  # Maximum load setting (W)
             "d2": {
                 "name": "device_timeout_minutes"
-            },  # Device auto-off timeout (minutes) #TODO: Options?
+            },  # Device auto-off timeout (minutes), Range 30-1440 minutes
             "d3": {
                 "name": "display_timeout_seconds"
             },  # Options: 20, 30, 60, 300, 1800 seconds
-            "d7": {"name": "expansion_packs_c?"},
             "d8": {"name": "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
             "d9": {
                 "name": "display_mode"

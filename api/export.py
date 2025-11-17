@@ -1923,8 +1923,9 @@ class AnkerSolixApiExport:
             else:
                 self._logger.warning("MQTT session was cancelled.")
         finally:
-            self._logger.info("Stopping MQTT session...")
+            self._logger.info("Stopping MQTT connection...")
             self.api_power.stopMqttSession()
+            self._logger.info("MQTT stopped.")
 
     def dump_device_mqtt(
         self,

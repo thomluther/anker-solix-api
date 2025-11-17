@@ -349,6 +349,10 @@ async def poll_sites(  # noqa: C901
                     # Consider correction of totals for combined SB1/SB2 systems which reflect only SB2 totals, which likely also causes wrong energy statistics in the cloud
                     with contextlib.suppress(ValueError):
                         charge_calc = 0
+                        # newer outputs from multisystems show photovoltaic_power wrong, while there is a new "total" fields for PV channels
+                        # Use the new total if available
+                        if pv := (solarbank.get("pv_power") or {}).get("total"):
+                            solarbank["photovoltaic_power"] = pv
                         power_in = int(solarbank.get("photovoltaic_power") or 0)
                         power_out = int(solarbank.get("output_power") or 0)
                         soc = int(solarbank.get("battery_power") or 0)

@@ -100,6 +100,9 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument("--site-id", type=str, help="Monitor specific site ID only")
     parser.add_argument(
+        "--device-id", type=str, help="Filter output for specific device ID only"
+    )
+    parser.add_argument(
         "--no-vehicles",
         "--no-ev",
         action="store_true",
@@ -145,6 +148,8 @@ class AnkerSolixApiMonitor:
         self.use_file: bool = not args.live_cloud and INTERACTIVE
         self.api: AnkerSolixApi | None = None
         self.site_selected: str | None = args.site_id
+        self.device_names: list = []
+        self.device_filter: str | None = args.device_id
         self.energy_stats: bool = args.energy_stats
         self.refresh_interval: int = args.interval
         self.enable_mqtt: bool = args.enable_mqtt
@@ -182,6 +187,7 @@ class AnkerSolixApiMonitor:
             CONSOLE.info(
                 f"[{Color.YELLOW}E{Color.OFF}]lectric Vehicle display toggle ON (default) or OFF"
             )
+            CONSOLE.info(f"[{Color.YELLOW}F{Color.OFF}]ilter toggle for device display")
             CONSOLE.info(f"[{Color.YELLOW}D{Color.OFF}]ebug actual Api cache")
             CONSOLE.info(f"[{Color.YELLOW}C{Color.OFF}]ustomize an Api cache entry")
             CONSOLE.info(
@@ -226,14 +232,14 @@ class AnkerSolixApiMonitor:
                 f"s[{Color.YELLOW}I{Color.OFF}]te/A[{Color.YELLOW}L{Color.OFF}]l refresh, "
                 f"MQTT [{Color.YELLOW}S{Color.OFF}]ession ({Color.YELLOW}+{Color.OFF}/{Color.YELLOW}-{Color.OFF}), "
                 f"[{Color.YELLOW}M{Color.OFF}]qtt display, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls, "
-                f"[{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
+                f"[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
             )
         else:
             CONSOLE.info(
                 f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/[{Color.YELLOW}C{Color.OFF}]ustomize cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
                 f"MQTT [{Color.YELLOW}S{Color.OFF}]ession toggle, [{Color.YELLOW}R{Color.OFF}]eal time trigger, "
                 f"[{Color.YELLOW}M{Color.OFF}]qtt display toggle, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls toggle, "
-                f"[{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
+                f"[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
             )
         return ""
 
@@ -318,7 +324,10 @@ class AnkerSolixApiMonitor:
         col2 = 30
         col3 = 25
         for sn, dev in [
-            (sn, dev) for sn, dev in self.api.devices.items() if dev.get("mqtt_data")
+            (sn, dev)
+            for sn, dev in self.api.devices.items()
+            if dev.get("mqtt_data")
+            and (not self.device_filter or self.device_filter == sn)
         ]:
             CONSOLE.info(
                 f"{' ' + ((Color.YELLOW + 'UPDATED ' + datetime.now().strftime('%H:%M:%S --> ')) if sn == deviceSn else Color.MAG) + dev.get('alias', 'NoAlias') + ' - ' + dev.get('name', 'NoName') + ' (' + dev.get('device_pn', '') + ') ' + Color.OFF:-^109}"
@@ -390,6 +399,7 @@ class AnkerSolixApiMonitor:
             (s, d)
             for s, d in self.api.devices.items()
             if (not self.site_selected or d.get("site_id") == self.site_selected)
+            and (not self.device_filter or self.device_filter == s)
         ]:
             devtype = dev.get("type", "Unknown")
             admin = dev.get("is_admin", False)
@@ -682,7 +692,7 @@ class AnkerSolixApiMonitor:
                                 m3 = f"{m3:>4} °C"
                             CONSOLE.info(
                                 f"{'Exp. ' + str(i) + ' SN':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
-                                f"{'Exp. ' + str(i) + ' SOC/Temp':<{col3}}: {m2 and (c or cm)}{m2:>3} %{co} / {m3 and c}{m3}{co}"
+                                f"{'Exp. ' + str(i) + ' SOC/Temp':<{col3}}: {m2 and (c or cm)}{m2:>3} %{co} / {m3 and (c or cm)}{m3}{co}"
                             )
                         else:
                             break
@@ -1114,7 +1124,7 @@ class AnkerSolixApiMonitor:
                 if keys:
                     CONSOLE.info("-" * 80)
         # print optional energy details
-        if self.energy_stats:
+        if self.energy_stats and not self.device_filter:
             for site_id, site in [
                 (s, d)
                 for s, d in self.api.sites.items()
@@ -1631,6 +1641,45 @@ class AnkerSolixApiMonitor:
                         )
                         self.next_dev_refr = details_refresh
 
+                        # Generate device list for output filter toggle
+                        if not self.device_names:
+                            self.device_names = ["All"] + [
+                                (
+                                    ", ".join(
+                                        [
+                                            str(d.get("device_sn")),
+                                            str(d.get("name")),
+                                            f"Type: {d.get('device_pn')} - {d.get('type') or 'unknown'}",
+                                        ]
+                                    )
+                                )
+                                for d in self.api.devices.values()
+                            ]
+                        # Ask if output should be filtered to certain device
+                        if (
+                            self.interactive
+                            and self.device_filter is None
+                            and len(self.device_names) > 2
+                        ):
+                            CONSOLE.info(
+                                "Select which device should be filtered in output:"
+                            )
+                            for idx, devicename in enumerate(self.device_names):
+                                CONSOLE.info(
+                                    f"({Color.YELLOW}{idx}{Color.OFF}) {devicename}"
+                                )
+                            selection = input(
+                                f"Enter device number ({Color.YELLOW}0-{len(self.device_names) - 1}{Color.OFF}) or nothing for {Color.CYAN}All{Color.OFF}: "
+                            )
+                            if selection.isdigit() and 1 <= int(selection) < len(
+                                self.device_names
+                            ):
+                                self.device_filter = self.device_names[
+                                    int(selection)
+                                ].split(",")[0]
+                            else:
+                                self.device_filter = ""
+
                         # Auto-start MQTT session if enabled via command line
                         if (
                             self.enable_mqtt
@@ -1723,9 +1772,10 @@ class AnkerSolixApiMonitor:
                             self.next_dev_refr,
                         )
                         CONSOLE.info(
-                            "Sites: %s, Devices: %s",
+                            "Sites: %s, Devices: %s, Device Filter: %s",
                             len(self.api.sites),
                             len(self.api.devices),
+                            f"{Color.MAG}{self.device_filter!s}{Color.OFF}",
                         )
                         # print the data with MQTT mixin if MQTT session is active
                         self.print_api_data(mqtt_mixin=bool(self.api.mqttsession))
@@ -1790,11 +1840,14 @@ class AnkerSolixApiMonitor:
                                             last_time=datetime.now()
                                         )
                                         self.folderdict["folder"] = self.api.testDir()
+                                        self.device_filter = ""
+                                        self.device_names = []
                                         self.next_dev_refr = 0
                                         break_refresh = True
                                     else:
                                         break
                                 elif k == "n" and exampleslist and self.use_file:
+                                    self.device_filter = ""
                                     folderselection = (
                                         (folderselection + 1)
                                         if folderselection < len(exampleslist)
@@ -1806,9 +1859,12 @@ class AnkerSolixApiMonitor:
                                         last_time=datetime.now()
                                     )
                                     self.folderdict["folder"] = self.api.testDir()
+                                    self.device_filter = ""
+                                    self.device_names = []
                                     self.next_dev_refr = 0
                                     break_refresh = True
                                 elif k == "p" and exampleslist and self.use_file:
+                                    self.device_filter = ""
                                     folderselection = (
                                         (folderselection - 1)
                                         if folderselection > 1
@@ -1820,6 +1876,8 @@ class AnkerSolixApiMonitor:
                                         last_time=datetime.now()
                                     )
                                     self.folderdict["folder"] = self.api.testDir()
+                                    self.device_filter = ""
+                                    self.device_names = []
                                     self.next_dev_refr = 0
                                     break_refresh = True
                                 elif k == "i" and self.use_file:
@@ -2071,6 +2129,29 @@ class AnkerSolixApiMonitor:
                                         f"Hit [{Color.CYAN}Enter{Color.OFF}] to continue...\n"
                                     )
                                     break
+                                elif k == "f":
+                                    # toggle the filtered device sn
+                                    if self.device_names:
+                                        if not self.device_filter:
+                                            self.device_filter = "All"
+                                        sns = [d.split(",")[0] for d in self.device_names]
+                                        index = (
+                                            sns.index(self.device_filter)
+                                            if self.device_filter in sns
+                                            else -1
+                                        )
+                                        self.device_filter = self.device_names[
+                                            index + 1
+                                            if index + 1 < len(self.device_names)
+                                            else 0
+                                        ].split(",")[0]
+                                        CONSOLE.info(
+                                            f"\n{Color.MAG}Toggling device filter to {self.device_filter}...{Color.OFF}"
+                                        )
+                                        if self.device_filter == "All":
+                                            self.device_filter = ""
+                                        await asyncio.sleep(2)
+                                        break
                                 elif k == "v":
                                     # print all extracted MQTT values (MQTT session cache) and device data
                                     if self.api.mqttsession:
@@ -2175,6 +2256,10 @@ if __name__ == "__main__":
             if arg.site_id:
                 CONSOLE.info(
                     f"  Monitoring site: {Color.YELLOW}{arg.site_id}{Color.OFF}"
+                )
+            if arg.device_id:
+                CONSOLE.info(
+                    f"  Device filter: {Color.YELLOW}{arg.device_id}{Color.OFF}"
                 )
             CONSOLE.info(
                 f"  Electric vehicles: {Color.GREEN if not arg.no_vehicles else Color.RED}{'Enabled' if not arg.no_vehicles else 'Disabled'}{Color.OFF}"
