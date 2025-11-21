@@ -283,6 +283,9 @@ class AnkerSolixBaseApi:
         self.mqttsession.message_callback(
             func=message_callback if callable(message_callback) else self.mqtt_received
         )
+        # create the mqtt_data field if no existing yet for supported devices
+        for dev in [d for d in self.devices.values() if d.get("mqtt_supported")]:
+            dev["mqtt_data"] = dev.get("mqtt_data") or {}
         # update mqtt connection in account cache
         self._update_account()
         return self.mqttsession
@@ -566,6 +569,8 @@ class AnkerSolixBaseApi:
                                 "wifi_signal",
                                 "usbc_1_power",
                                 "usbc_2_power",
+                                "usbc_3_power",
+                                "usbc_4_power",
                                 "usba_1_power",
                                 "usba_2_power",
                                 "dc_input_power",

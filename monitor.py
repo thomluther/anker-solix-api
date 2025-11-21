@@ -1694,7 +1694,7 @@ class AnkerSolixApiMonitor:
                                     devs := [
                                         dev
                                         for dev in self.api.devices.values()
-                                        if dev.get("mqtt_described")
+                                        if dev.get("mqtt_supported")
                                     ]
                                 ):
                                     # generate MQTT device and track it
@@ -1954,7 +1954,7 @@ class AnkerSolixApiMonitor:
                                                 devs := [
                                                     dev
                                                     for dev in self.api.devices.values()
-                                                    if dev.get("mqtt_described")
+                                                    if dev.get("mqtt_supported")
                                                 ]
                                             ):
                                                 sn = dev.get("device_sn")
@@ -2134,7 +2134,9 @@ class AnkerSolixApiMonitor:
                                     if self.device_names:
                                         if not self.device_filter:
                                             self.device_filter = "All"
-                                        sns = [d.split(",")[0] for d in self.device_names]
+                                        sns = [
+                                            d.split(",")[0] for d in self.device_names
+                                        ]
                                         index = (
                                             sns.index(self.device_filter)
                                             if self.device_filter in sns

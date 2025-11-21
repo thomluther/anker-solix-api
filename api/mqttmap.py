@@ -127,7 +127,7 @@ A1728_0405 = {
 A1780_0405 = {
     # F2000(P) param info
     "topic": "param_info",
-    "a4": {"name": "remaining_time_hours?", "factor": 0.1},  # In hours
+    "a4": {"name": "remaining_time_hours", "factor": 0.1},  # In hours
     "a5": {"name": "ac_input_power"},  # AC charging power to battery
     "a6": {"name": "ac_output_power"},  # Individual AC outlet power
     "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
@@ -779,11 +779,12 @@ DOCK_0420 = {
     "a7": {"name": "battery_soc_total"},
     "a8": {"name": "0420_unknown_1?"},
     "a9": {"name": "0420_unknown_2?"},
-    "ab": {"name": "grid_power_signed?"},
-    "ac": {"name": "ac_output_power_signed_total?"},
-    "ae": {"name": "output_power_signed_total?"},
-    "af": {"name": "home_demand_total?"},
-    "b1": {"name": "battery_power_signed_total?"},
+    "ab": {"name": "grid_power_signed"},
+    "ac": {"name": "ac_output_power_signed_total"},
+    "ae": {"name": "output_power_signed_total"},
+    "af": {"name": "home_demand_total"},
+    "b0": {"name": "pv_power_total"},
+    "b1": {"name": "battery_power_signed_total"},
     "b3": {
         "bytes": {
             "00": {
@@ -853,7 +854,6 @@ DOCK_0420 = {
         }
     },
     "c1": {"name": "main_device_sn?"},
-    "c2": {"name": "pv_power_total?"},
 }
 
 DOCK_0421 = {
@@ -1123,7 +1123,7 @@ SOLIXMQTTMAP = {
             "topic": "param_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "battery_soc"},
-            "a4": {"name": "unknown_405_1?"},
+            "a4": {"name": "405_unknown_1?"},
             "a6": {"name": "sw_version", "values": 1},
             "a7": {"name": "sw_controller", "values": 1},
             "a8": {"name": "hw_version", "values": 1},
@@ -1131,7 +1131,7 @@ SOLIXMQTTMAP = {
             "aa": {"name": "temperature"},
             "ab": {"name": "photovoltaic_power"},
             "ac": {"name": "output_power"},
-            "ad": {"name": "unknown_405_2?"},
+            "ad": {"name": "charging_status?"},
             "ae": {
                 "bytes": {
                     "12": [{"name": "allow_export_switch", "mask": 0x04}],
@@ -1169,8 +1169,9 @@ SOLIXMQTTMAP = {
             "aa": {"name": "photovoltaic_power"},
             "ab": {"name": "charging_power"},
             "ac": {"name": "output_power"},
-            "ad": {"name": "unknown_408_3?"},
-            "af": {"name": "unknown_408_4?"},
+            "ad": {"name": "408_unknown_1?"},
+            "ae": {"name": "408_unknown_2?"},
+            "af": {"name": "408_unknown_3?"},
             "b0": {"name": "battery_soc"},
             "b1": {"name": "pv_yield", "factor": 0.0001},
             "b2": {"name": "charged_energy", "factor": 0.0001},
@@ -1282,6 +1283,8 @@ SOLIXMQTTMAP = {
             "topic": "param_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "sw_version", "values": 4},
+            "a5": {"name": "ac_output_power_total?"},
+            "a6": {"name": "ac_output_power_total_opposite?"},
             "b3": {"name": "local_timestamp"},
             "b6": {
                 "bytes": {

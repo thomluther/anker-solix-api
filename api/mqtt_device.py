@@ -253,7 +253,6 @@ class SolixMqttDevice:
             data = mqttdata | self.device
         else:
             data = self.device | mqttdata
-        data.pop("mqtt_data", None)
         return data
 
     def get_status(

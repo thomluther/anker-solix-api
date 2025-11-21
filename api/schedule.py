@@ -27,6 +27,7 @@ from .apitypes import (
     SolixPriceTypes,
     SolixTariffTypes,
 )
+from .helpers import get_enum_name
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -1507,15 +1508,10 @@ async def set_sb2_home_load(  # noqa: C901
         # default name if plan_name not provided or invalid
         getattr(
             SolarbankRatePlan,
-            next(
-                iter(
-                    [
-                        item.name
-                        for item in SolarbankUsageMode
-                        if item.value == usage_mode
-                    ]
-                ),
-                SolarbankUsageMode.manual.name,
+            get_enum_name(
+                SolarbankUsageMode,
+                usage_mode,
+                default=SolarbankUsageMode.manual.name,
             ),
             SolarbankRatePlan.manual,
         ),

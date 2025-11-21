@@ -239,15 +239,15 @@ CMD_SB_STATUS_CHECK = (
             "type": DeviceHexDataTypes.var.value,
         },
         "a8": {
-            "name": "unknown_1?",
+            "name": "status_check_unknown_1?",
             "type": DeviceHexDataTypes.ui.value,
         },
         "a9": {
-            "name": "unknown_2?",
+            "name": "status_check_unknown_2?",
             "type": DeviceHexDataTypes.ui.value,
         },
         "aa": {
-            "name": "unknown_3?",
+            "name": "status_check_unknown_3?",
             "type": DeviceHexDataTypes.ui.value,
         },
     }
@@ -302,7 +302,7 @@ CMD_SB_INVERTER_TYPE = CMD_COMMON | {
         "type": DeviceHexDataTypes.sile.value,
     },
     "a9": {
-        "name": "unknown_1?",  # May be 0 typically
+        "name": "set_inverter_unknown_1?",  # May be 0 typically
         "type": DeviceHexDataTypes.ui.value,
     },
     "aa": {

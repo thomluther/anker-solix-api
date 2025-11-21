@@ -1275,11 +1275,28 @@ class SolixNetworkStatus(StrEnum):
     unknown = "unknown"
 
 
+class SolixPpsOutputStatus(StrEnum):
+    """Enumeration for Anker Solix PPS output status."""
+
+    smart = "0"
+    normal = "1"
+    unknown = "unknown"
+
+
 class SolixPpsOutputMode(StrEnum):
     """Enumeration for Anker Solix PPS output modes."""
 
     normal = "1"
     smart = "2"
+    unknown = "unknown"
+
+
+class SolixPpsPortStatus(StrEnum):
+    """Enumeration for Anker Solix PPS port status."""
+
+    inactive = "0"
+    discharging = "1"
+    charging = "2"
     unknown = "unknown"
 
 

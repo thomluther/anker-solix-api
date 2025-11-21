@@ -1,7 +1,9 @@
 """Helper modules and classes for the Anker Power/Solix Cloud API."""
 
 from datetime import datetime, timedelta
+from enum import Enum
 import hashlib
+from typing import Any
 
 
 class RequestCounter:
@@ -103,3 +105,19 @@ def convertToKwh(val: str | float, unit: str) -> str | float | None:
         return str(result) if isinstance(val, str) else result
     except ValueError:
         return None
+
+def get_enum_name(
+    enum_class: Enum, value: Any, default: Any | None = None
+) -> Any | None:
+    """Get the name for an enum value safely with optional default or None."""
+    return next(
+        iter([item.name for item in enum_class if item.value == value]),
+        default or None,
+    )
+
+def get_enum_value(
+    enum_class: Enum, name: str, default: Any | None = None
+) -> Any | None:
+    """Get the value for an enum name safely with optional default or None."""
+    member:Enum = getattr(enum_class, name, None)
+    return member.value if member else default

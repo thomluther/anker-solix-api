@@ -34,8 +34,8 @@ from .apitypes import (
     SolixRoleStatus,
     SolixTariffTypes,
 )
+from .helpers import get_enum_name
 from .hesapi import AnkerSolixHesApi
-from .mqttmap import SOLIXMQTTMAP
 from .poller import (
     poll_device_details,
     poll_device_energy,
@@ -143,7 +143,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # Flag device for supported mqtt trigger if admin and device not passive
                         if device.get("is_admin") and not device.get("is_passive"):
                             device["mqtt_supported"] = True
-                            device["mqtt_described"] = bool(str(value) in SOLIXMQTTMAP)
+                            # update customizable setting whether MQTT values should overlay Api values upon cache merge
+                            device["mqtt_overlay"] = bool(
+                                device.get("mqtt_overlay") or False
+                            )
                         # check if capacity should be calculated
                         if not device.get("battery_capacity") and hasattr(
                             SolixDeviceCapacity, str(value)
@@ -258,6 +261,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         and value
                     ):
                         device[key] = str(value)
+                    elif key in ["mqtt_overlay"] and value is not None:
+                        # keys that are customized
+                        custom = (device.get("customized") or {}).get(key)
+                        device[key] = custom if custom is not None else value
                     elif (
                         key in ["bt_ble_id"] and value and not devData.get("bt_ble_mac")
                     ):
@@ -394,15 +401,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["charging_status"]:
                         device[key] = str(value)
                         # decode the charging status into a description
-                        description = next(
-                            iter(
-                                [
-                                    item.name
-                                    for item in SolarbankStatus
-                                    if item.value == str(value)
-                                ]
-                            ),
-                            SolarbankStatus.unknown.name,
+                        description = get_enum_name(
+                            SolarbankStatus, str(value), SolarbankStatus.unknown.name
                         )
                         # check if battery has bypass during charge (if output during charge)
                         # This key can be passed separately, make sure the other values are looked up in provided data first, then in device details
@@ -631,15 +631,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # get rate_plan_name depending on use usage mode_type
                             rate_plan_name = getattr(
                                 SolarbankRatePlan,
-                                next(
-                                    iter(
-                                        [
-                                            item.name
-                                            for item in SolarbankUsageMode
-                                            if item.value == mode_type
-                                        ]
-                                    ),
-                                    SolarbankUsageMode.manual.name,
+                                get_enum_name(
+                                    SolarbankUsageMode,
+                                    mode_type,
+                                    default=SolarbankUsageMode.manual.name,
                                 ),
                                 SolarbankRatePlan.manual,
                             )
