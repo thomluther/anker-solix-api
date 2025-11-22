@@ -771,13 +771,12 @@ class AnkerSolixApiMonitor:
                     )
                 if "grid_to_battery_power" in dev:
                     m1 = c and mqtt.get("grid_to_battery_power", "")
-                    m2 = c and mqtt.get("ac_output_power_signed", "")
                     CONSOLE.info(
                         f"{'Grid to Battery':<{col1}}: {m1 and c}{m1 or dev.get('grid_to_battery_power', '---'):>4} {unit:<{col2 - 5}}{co} "
-                        f"{'AC Input Power':<{col3}}: {m2 and c}{m2 or dev.get('other_input_power', '---'):>4} {unit}{co}"
+                        f"{'AC Input Power':<{col3}}: {dev.get('other_input_power', '---'):>4} {unit}{co}"
                     )
-                m1 = c and mqtt.get("charging_power", "")
-                m2 = c and mqtt.get("discharging_power", "")
+                m1 = c and mqtt.get("bat_charge_power", "")
+                m2 = c and mqtt.get("bat_discharge_power", "")
                 m3 = cm and mqtt.get("charged_energy", "")
                 m4 = cm and mqtt.get("discharged_energy", "")
                 CONSOLE.info(

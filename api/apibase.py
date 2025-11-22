@@ -543,8 +543,8 @@ class AnkerSolixBaseApi:
                                 "pv_4_power",
                                 "battery_power_signed",
                                 "battery_power_signed_total",
-                                "charging_power",
-                                "discharging_power",
+                                "bat_charge_power",
+                                "bat_discharge_power",
                                 "ac_output_power_signed",
                                 "ac_output_power_signed_total",
                                 "ac_output_power_total",
@@ -574,6 +574,7 @@ class AnkerSolixBaseApi:
                                 "usba_1_power",
                                 "usba_2_power",
                                 "dc_input_power",
+                                "ac_input_power",
                             ]
                             and str(value)
                             .replace("-", "", 1)

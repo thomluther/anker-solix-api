@@ -128,8 +128,8 @@ A1780_0405 = {
     # F2000(P) param info
     "topic": "param_info",
     "a4": {"name": "remaining_time_hours", "factor": 0.1},  # In hours
-    "a5": {"name": "ac_input_power"},  # AC charging power to battery
-    "a6": {"name": "ac_output_power"},  # Individual AC outlet power
+    "a5": {"name": "bat_charge_power"},  # AC charging power to battery
+    "a6": {"name": "ac_socket_power"},  # Individual AC outlet power
     "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
     "a8": {"name": "usbc_2_power"},  # USB-C port 2 output power
     "a9": {"name": "usbc_3_power"},  # USB-C port 3 output power
@@ -139,7 +139,7 @@ A1780_0405 = {
     "ad": {"name": "dc_12v_2_power"},  # 12V port 2 output power
     "ae": {"name": "dc_input_power"},  # DC input power (solar/car charging)
     "af": {"name": "ac_input_power"},  # AC input power (230V)
-    "b0": {"name": "output_power_total"},  # Total output power
+    "b0": {"name": "ac_output_power_total"},  # Total output power
     "b3": {"name": "sw_version", "values": 1},  # Main firmware version
     "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
     "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
@@ -212,9 +212,9 @@ A1790_0405 = {
     "ae": {"name": "photovoltaic_power"},  # Total solar input
     "af": {"name": "pv_1_power"},
     "b0": {"name": "pv_2_power"},
-    "b1": {"name": "charging_power"},  # Total charging (AC + Solar)
+    "b1": {"name": "bat_charge_power"},  # Total charging (AC + Solar)
     "b2": {"name": "output_power"},
-    "b4": {"name": "discharging_power?"},
+    "b4": {"name": "bat_discharge_power?"},
     "b5": {"name": "sw_version?", "values": 1},  # Main firmware version
     "ba": {"name": "sw_expansion?", "values": 1},  # Expansion firmware version
     "bc": {
@@ -341,14 +341,14 @@ A17C1_0405 = {
     "ab": {"name": "photovoltaic_power", "factor": 0.1},
     "ac": {"name": "ac_output_power", "factor": 0.1},
     "ad": {"name": "battery_soc_total"},
-    "b0": {"name": "charging_power", "factor": 0.01},
+    "b0": {"name": "bat_charge_power", "factor": 0.01},
     "b1": {"name": "pv_yield?", "factor": 0.0001},
     "b2": {"name": "charged_energy?", "factor": 0.00001},
     "b3": {"name": "home_consumption?", "factor": 0.0001},
     "b4": {"name": "output_cutoff_data"},
     "b5": {"name": "lowpower_input_data"},
     "b6": {"name": "input_cutoff_data"},
-    "b7": {"name": "discharging_power", "factor": 0.01},
+    "b7": {"name": "bat_discharge_power", "factor": 0.01},
     "bc": {"name": "grid_to_home_power", "factor": 0.1},
     "bd": {"name": "pv_to_grid_power", "factor": 0.1},
     "c4": {"name": "home_demand", "factor": 0.1},
@@ -703,7 +703,7 @@ A17C5_0405 = {
     "be": {"name": "max_load_legal"},
     "bf": {"name": "timestamp_backup_start"},
     "c0": {"name": "timestamp_backup_end"},
-    "c2": {"name": "charging_power?"},
+    "c2": {"name": "bat_charge_power?"},
     "c3": {"name": "photovoltaic_power?"},
     "c4": {"name": "grid_power_signed"},
     "c5": {"name": "home_demand"},
@@ -741,7 +741,7 @@ A17C5_0408 = {
     "b0": {"name": "pv_4_energy?"},
     "b1": {"name": "home_demand?"},
     "b2": {"name": "home_consumption"},
-    "b6": {"name": "battery_power?"},
+    "b6": {"name": "battery_power_signed?"},
     "b7": {"name": "charged_energy?"},
     "b8": {"name": "discharged_energy?"},
     "bd": {"name": "grid_power_signed?"},
@@ -1142,7 +1142,7 @@ SOLIXMQTTMAP = {
                     "15": [{"name": "priority_discharge_switch", "mask": 0x01}],
                 }
             },
-            "b0": {"name": "charging_power"},
+            "b0": {"name": "bat_charge_power"},
             "b1": {"name": "pv_yield", "factor": 0.0001},
             "b2": {"name": "charged_energy", "factor": 0.0001},
             "b3": {"name": "output_energy", "factor": 0.0001},
@@ -1167,7 +1167,7 @@ SOLIXMQTTMAP = {
             "a8": {"name": "charging_status"},
             "a9": {"name": "home_load_preset"},
             "aa": {"name": "photovoltaic_power"},
-            "ab": {"name": "charging_power"},
+            "ab": {"name": "bat_charge_power"},
             "ac": {"name": "output_power"},
             "ad": {"name": "408_unknown_1?"},
             "ae": {"name": "408_unknown_2?"},
