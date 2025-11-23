@@ -655,8 +655,7 @@ class AnkerSolixBaseApi:
                                 "usba_1_status",
                                 "usba_2_status",
                                 "usage_mode",
-                                "energy_saving_mode"
-                                "allow_export_switch",
+                                "energy_saving_modeallow_export_switch",
                                 "priority_discharge_switch",
                                 "grid_export_disabled",
                                 "display_mode",
@@ -706,7 +705,7 @@ class AnkerSolixBaseApi:
                         if (pv := device_mqtt.get("pv_yield")) and (
                             out := device_mqtt.get("output_energy")
                         ):
-                            device_mqtt["system_efficiency"] = (
+                            device_mqtt["device_efficiency"] = (
                                 f"{(float(out) / float(pv) * 100):.3f}"
                             )
                         if (charge := device_mqtt.get("charged_energy")) and (

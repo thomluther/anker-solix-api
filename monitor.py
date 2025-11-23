@@ -737,7 +737,9 @@ class AnkerSolixApiMonitor:
                     )
                 if "pv_power_limit" in dev:
                     m1 = c and mqtt.get("pv_limit", "")
-                    m2 = c and get_enum_name(SolixSwitchMode, mqtt.get("grid_export_disabled", ""),"")
+                    m2 = c and get_enum_name(
+                        SolixSwitchMode, mqtt.get("grid_export_disabled", ""), ""
+                    )
                     feat1 = dev.get("allow_grid_export")
                     CONSOLE.info(
                         f"{'Solar Limit':<{col1}}: {m1 and c}{m1 or dev.get('pv_power_limit', '----'):>4} {unit:<{col2 - 5}}{co} "
@@ -804,7 +806,7 @@ class AnkerSolixApiMonitor:
                     f"{'Battery Charge':<{col1}}: {m1 and c}{m1 or dev.get('bat_charge_power', '---'):>4} {unit}{m3 and (c or cm)}{(' (' + m3 + ' kWh)') if m3 else '':<{col2 - 6}}{co} "
                     f"{'Battery Dischrg':<{col3}}: {m2 and c}{m2 or dev.get('bat_discharge_power', '---'):>4} {unit}{m4 and (c or cm)}{(' (' + m4 + ' kWh)') if m4 else ''}{co}"
                 )
-                if m1 := cm and mqtt.get("system_efficiency", ""):
+                if m1 := cm and mqtt.get("device_efficiency", ""):
                     m1 = f"{float(m1):6.2f}"
                     if m2 := cm and mqtt.get("battery_efficiency", ""):
                         m2 = f"{float(m2):6.2f}"
@@ -1002,7 +1004,7 @@ class AnkerSolixApiMonitor:
                     f"{'Access Group':<{col3}}: {integrated.get('access_group')!s}"
                 )
 
-            elif devtype in [SolixDeviceType.PPS.value,SolixDeviceType.CHARGER.value]:
+            elif devtype in [SolixDeviceType.PPS.value, SolixDeviceType.CHARGER.value]:
                 m1 = cm and str(mqtt.get("last_update", ""))
                 m2 = cm and str(mqtt.get("light_mode", ""))
                 if m1 or m2:
@@ -1062,14 +1064,14 @@ class AnkerSolixApiMonitor:
                 m2 = cm and str(mqtt.get("exp_1_type", ""))
                 if str(m1) or m2:
                     CONSOLE.info(
-                        f"{'Backup charge':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2-3}}{co} "
+                        f"{'Backup charge':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2 - 3}}{co} "
                         f"{'Exp. Type':<{col3}}: {m2 and (c or cm)}{m2 or 'Unknown'}{co}"
                     )
                 m1 = cm and mqtt.get("port_memory_switch", "")
                 m2 = cm and mqtt.get("energy_saving_mode", "")
                 if str(m1) or str(m2):
                     CONSOLE.info(
-                        f"{'Port Memory':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2-3}}{co} "
+                        f"{'Port Memory':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2 - 3}}{co} "
                         f"{'Energy Saving':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m2) or '---').upper():>3}{co}"
                     )
                 energy = f"{dev.get('battery_energy', '----'):>4} Wh"
