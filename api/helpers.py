@@ -106,18 +106,17 @@ def convertToKwh(val: str | float, unit: str) -> str | float | None:
     except ValueError:
         return None
 
+
 def get_enum_name(
     enum_class: Enum, value: Any, default: Any | None = None
 ) -> Any | None:
     """Get the name for an enum value safely with optional default or None."""
-    return next(
-        iter([item.name for item in enum_class if item.value == value]),
-        default or None,
-    )
+    return enum_class(value).name if value in iter(enum_class) else (default or None)
+
 
 def get_enum_value(
     enum_class: Enum, name: str, default: Any | None = None
 ) -> Any | None:
     """Get the value for an enum name safely with optional default or None."""
-    member:Enum = getattr(enum_class, name, None)
+    member: Enum | None = getattr(enum_class, name, None)
     return member.value if member else default

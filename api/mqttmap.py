@@ -128,7 +128,7 @@ A1780_0405 = {
     # F2000(P) param info
     "topic": "param_info",
     "a4": {"name": "remaining_time_hours", "factor": 0.1},  # In hours
-    "a5": {"name": "bat_charge_power"},  # AC charging power to battery
+    "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
     "a6": {"name": "ac_socket_power"},  # Individual AC outlet power
     "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
     "a8": {"name": "usbc_2_power"},  # USB-C port 2 output power
@@ -153,7 +153,7 @@ A1780_0405 = {
     "c5": {"name": "expansion_packs_b?"},
     "d0": {"name": "device_sn"},
     "d1": {"name": "max_load"},  # Maximum load setting (W)
-    "d3": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes)
+    "d3": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
     "d4": {
         "name": "display_timeout_seconds"
     },  # Display timeout: 20, 30, 60, 300, 1800 seconds
@@ -751,7 +751,7 @@ A17C5_0408 = {
     "c8": {"name": "pv_2_power?"},
     "c9": {"name": "pv_3_power?"},
     "ca": {"name": "pv_4_power?"},
-    "d3": {"name": "ac_output_power_?"},
+    "d3": {"name": "ac_output_power?"},
     "d6": {"name": "timestamp_1?"},
     "dc": {"name": "max_load"},
     "dd": {"name": "ac_input_limit"},
@@ -797,7 +797,7 @@ DOCK_0420 = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "43": {
-                "name": "solarbank_1_exp_packs",
+                "name": "solarbank_1_exp_packs?",
                 "type": DeviceHexDataTypes.ui.value,
             },
         }
@@ -814,7 +814,7 @@ DOCK_0420 = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "43": {
-                "name": "solarbank_2_exp_packs",
+                "name": "solarbank_2_exp_packs?",
                 "type": DeviceHexDataTypes.ui.value,
             },
         }
@@ -831,7 +831,7 @@ DOCK_0420 = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "43": {
-                "name": "solarbank_3_exp_packs",
+                "name": "solarbank_3_exp_packs?",
                 "type": DeviceHexDataTypes.ui.value,
             },
         }
@@ -848,7 +848,7 @@ DOCK_0420 = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "43": {
-                "name": "solarbank_4_exp_packs",
+                "name": "solarbank_4_exp_packs?",
                 "type": DeviceHexDataTypes.ui.value,
             },
         }
@@ -865,7 +865,7 @@ DOCK_0421 = {
     "a6": {"name": "pv_limit_solarbank_1"},
     "a7": {"name": "battery_soc_total"},
     "ac": {"name": "soc_max?"},
-    "ad": {"name": "max_load_legal?"},
+    "ad": {"name": "max_load"},
     "fc": {"name": "device_sn"},
     "fd": {"name": "local_timestamp"},
     "fe": {"name": "utc_timestamp"},
@@ -879,8 +879,8 @@ DOCK_0428 = {
     "a4": {"name": "utc_timestamp"},
     "a5": {"name": "battery_soc_total"},
     "a6": {"name": "0428_unknown_1?"},
-    "ac": {"name": "pv_power_total?"},
-    "b5": {"name": "battery_power_signed_total?"},
+    "ac": {"name": "pv_power_total"},
+    "b5": {"name": "battery_power_signed_total"},
     "bc": {"name": "battery_power_signed"},
     "d9": {
         "bytes": {
@@ -954,16 +954,16 @@ SOLIXMQTTMAP = {
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
-        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Add supported values or options/range?
+        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range with steps?
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-        "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
+        "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/steps/options?
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
-        "0052": CMD_DISPLAY_SWITCH,  # TODO: Validate and Update correct message type
-        # TODO: Command available for Display timeout setting? 20, 30, 60, 300, 1800 seconds as valid options?
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        # TODO: Command available for Display timeout setting? 20, 30, 60, 300, 1800 seconds
         "0057": CMD_REALTIME_TRIGGER,
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Smart (0)
@@ -999,7 +999,7 @@ SOLIXMQTTMAP = {
             "d1": {"name": "max_load"},  # Maximum load setting (W)
             "d2": {
                 "name": "device_timeout_minutes"
-            },  # Device auto-off timeout (minutes), Range 30-1440 minutes
+            },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
             "d3": {
                 "name": "display_timeout_seconds"
             },  # Options: 20, 30, 60, 300, 1800 seconds
@@ -1059,16 +1059,15 @@ SOLIXMQTTMAP = {
     },
     # PPS F3800
     "A1790": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
-        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Add supported values or options/range?
+        "0044": CMD_DEVICE_MAX_LOAD,  # 200-1800 W, Step: 100 W
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-        "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
-        # TODO: Command available for Display timeout setting? Which options are available?
+        # TODO: Command available for Display timeout setting? # Options: 20, 30, 60, 300, 1800 seconds
         "0057": CMD_REALTIME_TRIGGER,
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
@@ -1086,16 +1085,15 @@ SOLIXMQTTMAP = {
     },
     # PPS F3800 Plus
     "A1790P": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
-        "0045": CMD_DEVICE_TIMEOUT_MIN,  # TODO: Add supported values or options/range?
+        "0044": CMD_DEVICE_MAX_LOAD,  # 200-1800 W, Step: 100 W
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-        "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/options?
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
-        # TODO: Command available for Display timeout setting? Which options are available?
+        # TODO: Command available for Display timeout setting? # Options: 20, 30, 60, 300, 1800 seconds
         "0057": CMD_REALTIME_TRIGGER,
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
@@ -1283,8 +1281,8 @@ SOLIXMQTTMAP = {
             "topic": "param_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "sw_version", "values": 4},
-            "a5": {"name": "ac_output_power_total?"},
-            "a6": {"name": "ac_output_power_total_opposite?"},
+            "a5": {"name": "ac_output_power_total"},
+            "a6": {"name": "battery_power_signed_total"},
             "b3": {"name": "local_timestamp"},
             "b6": {
                 "bytes": {
@@ -1299,6 +1297,7 @@ SOLIXMQTTMAP = {
                     },
                 }
             },
+            "b7": {"name": "solarbank_1_battery_power_signed"},
             "b8": {
                 "bytes": {
                     "00": {
@@ -1312,6 +1311,7 @@ SOLIXMQTTMAP = {
                     },
                 }
             },
+            "b9": {"name": "solarbank_2_battery_power_signed"},
             "ba": {
                 "bytes": {
                     "00": {
@@ -1325,6 +1325,7 @@ SOLIXMQTTMAP = {
                     },
                 }
             },
+            "bb": {"name": "solarbank_3_battery_power_signed"},
             "bc": {
                 "bytes": {
                     "00": {
@@ -1338,6 +1339,7 @@ SOLIXMQTTMAP = {
                     },
                 }
             },
+            "bd": {"name": "solarbank_4_battery_power_signed"},
         },
         "0407": {
             # Interval: ~300 seconds

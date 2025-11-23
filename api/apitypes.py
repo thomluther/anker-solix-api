@@ -1275,6 +1275,14 @@ class SolixNetworkStatus(StrEnum):
     unknown = "unknown"
 
 
+class SolixSwitchMode(IntEnum):
+    """Enumeration for generic Anker Solix switch modes."""
+
+    off = 0
+    on = 1
+    unknown = -1
+
+
 class SolixPpsOutputStatus(StrEnum):
     """Enumeration for Anker Solix PPS output status."""
 
