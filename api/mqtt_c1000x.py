@@ -33,6 +33,7 @@ FEATURES = {
     SolixMqttCommands.dc_12v_output_mode_select: MODELS,
     SolixMqttCommands.display_switch: MODELS,
     SolixMqttCommands.display_mode_select: MODELS,
+    SolixMqttCommands.display_timeout_seconds: MODELS,
     SolixMqttCommands.light_mode_select: MODELS,
 }
 
@@ -60,7 +61,9 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             "light_mode_select": lambda v: v in [0, 1, 2, 3, 4],
             "dc_output_mode_select": lambda v: v in [0, 1],  # 0=Smart, 1=Normal
             "ac_output_mode_select": lambda v: v in [0, 1],  # 0=Smart, 1=Normal
-            "device_timeout_minutes": lambda v: 30 <= v <= 1440,
+            "device_timeout_minutes": lambda v: v
+            in [0, 30, 60, 120, 240, 360, 720, 1440],
+            "display_timeout_seconds": lambda v: v in [20, 30, 60, 300, 1800],
             "max_load": lambda v: 100 <= v <= 2000,
             "ac_charge_limit": lambda v: 100 <= v <= 800,
             "ultrafast_charging": lambda v: v in [0, 1],
@@ -226,6 +229,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         self,
         enabled: bool | None = None,
         mode: int | str | None = None,
+        timeout_seconds: int | None = None,
         toFile: bool = False,
     ) -> bool | dict:
         """Control C1000X display settings via MQTT.
@@ -234,6 +238,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             enabled: True to turn display on, False to turn off
             mode: Display mode - 0=Off, 1=Low, 2=Medium, 3=High
                 Can also be string: "off", "low", "medium", "high"
+            timeout_seconds: Seconds before display goes off again
             toFile: If True, return mock response (for testing compatibility)
 
         Returns:
@@ -243,6 +248,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             await mydevice.set_display(enabled=True)
             await mydevice.set_display(mode=2)  # Medium
             await mydevice.set_display(mode="high")
+            await mydevice.set_display(timeout_seconds=20) # 20 seconds timeout
         """
         # response
         resp = {}
@@ -280,6 +286,16 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
                 mode,
             )
             return False
+        if timeout_seconds is not None and not self.validate_command_value(
+            "display_timeout_seconds", timeout_seconds
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid timeout value: %s",
+                self.pn,
+                self.sn,
+                timeout_seconds,
+            )
+            return False
         # Send MQTT commands
         if enabled is not None and await self._send_mqtt_command(
             command="c1000x_display",
@@ -295,6 +311,16 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
             toFile=toFile,
         ):
             resp["display_mode"] = mode
+        if timeout_seconds is not None:
+            if toFile or await self._send_mqtt_command(
+                command="c1000x_display_timeout",
+                parameters={"timeout": timeout_seconds},
+                description=f"Display timeout set to {timeout_seconds} seconds",
+                toFile=toFile,
+            ):
+                resp["display_timeout_seconds"] = timeout_seconds
+                if toFile:
+                    self._filedata["display_timeout_seconds"] = timeout_seconds
         if toFile:
             self._filedata.update(resp)
         return resp or False
@@ -430,7 +456,7 @@ class SolixMqttDeviceC1000x(SolixMqttDevice):
         if timeout_minutes is not None:
             if toFile or await self._send_mqtt_command(
                 command="c1000x_device_timeout",
-                parameters={"timeout_minutes": timeout_minutes},
+                parameters={"timeout": timeout_minutes},
                 description=f"Device timeout set to {timeout_minutes} minutes",
                 toFile=toFile,
             ):

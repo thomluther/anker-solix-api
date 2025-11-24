@@ -12,6 +12,7 @@ from .mqttcmdmap import (
     CMD_DEVICE_TIMEOUT_MIN,
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
+    CMD_DISPLAY_TIMEOUT_SEC,
     CMD_LIGHT_MODE,
     CMD_PORT_MEMORY_SWITCH,
     CMD_REALTIME_TRIGGER,
@@ -153,7 +154,9 @@ A1780_0405 = {
     "c5": {"name": "expansion_packs_b?"},
     "d0": {"name": "device_sn"},
     "d1": {"name": "max_load"},  # Maximum load setting (W)
-    "d3": {"name": "device_timeout_minutes"},  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+    "d3": {
+        "name": "device_timeout_minutes"
+    },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
     "d4": {
         "name": "display_timeout_seconds"
     },  # Display timeout: 20, 30, 60, 300, 1800 seconds
@@ -956,6 +959,7 @@ SOLIXMQTTMAP = {
     "A1761": {
         "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range with steps?
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
@@ -963,7 +967,6 @@ SOLIXMQTTMAP = {
         "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/steps/options?
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
-        # TODO: Command available for Display timeout setting? 20, 30, 60, 300, 1800 seconds
         "0057": CMD_REALTIME_TRIGGER,
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Smart (0)
@@ -1059,15 +1062,15 @@ SOLIXMQTTMAP = {
     },
     # PPS F3800
     "A1790": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # 200-1800 W, Step: 100 W
+        "0044": CMD_DEVICE_MAX_LOAD,  # Range: 200-1800 W, Step: 100 W
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
-        # TODO: Command available for Display timeout setting? # Options: 20, 30, 60, 300, 1800 seconds
         "0057": CMD_REALTIME_TRIGGER,
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
@@ -1082,18 +1085,20 @@ SOLIXMQTTMAP = {
         "0804": A1790_0804,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": PPS_VERSIONS_0830,
+        # Interval: ??
+        "0840": A1790_0405,
     },
     # PPS F3800 Plus
     "A1790P": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # 200-1800 W, Step: 100 W
+        "0044": CMD_DEVICE_MAX_LOAD,  # Range: 200-1800 W, Step: 100 W
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
-        # TODO: Command available for Display timeout setting? # Options: 20, 30, 60, 300, 1800 seconds
         "0057": CMD_REALTIME_TRIGGER,
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
@@ -1108,6 +1113,8 @@ SOLIXMQTTMAP = {
         "0804": A1790_0804,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": PPS_VERSIONS_0830,
+        # Interval: ??
+        "0840": A1790_0405,
     },
     # Solarbank 1 E1600
     "A17C0": {
@@ -1304,10 +1311,10 @@ SOLIXMQTTMAP = {
                         "name": "solarbank_2_sn",
                         "length": 0,  # First byte is byte count for type
                         "type": DeviceHexDataTypes.str.value,
-                    "19": {
-                        "name": "solarbank_2_soc",
-                        "type": DeviceHexDataTypes.ui.value,
-                    },
+                        "19": {
+                            "name": "solarbank_2_soc",
+                            "type": DeviceHexDataTypes.ui.value,
+                        },
                     },
                 }
             },
@@ -1318,10 +1325,10 @@ SOLIXMQTTMAP = {
                         "name": "solarbank_3_sn",
                         "length": 0,  # First byte is byte count for type
                         "type": DeviceHexDataTypes.str.value,
-                    "19": {
-                        "name": "solarbank_3_soc",
-                        "type": DeviceHexDataTypes.ui.value,
-                    },
+                        "19": {
+                            "name": "solarbank_3_soc",
+                            "type": DeviceHexDataTypes.ui.value,
+                        },
                     },
                 }
             },

@@ -32,6 +32,7 @@ FEATURES = {
     SolixMqttCommands.dc_12v_output_mode_select: MODELS,
     SolixMqttCommands.display_switch: MODELS,
     SolixMqttCommands.display_mode_select: MODELS,
+    SolixMqttCommands.display_timeout_seconds: MODELS,
     SolixMqttCommands.light_mode_select: MODELS,
     SolixMqttCommands.port_memory_switch: {"A1790", "A1790P"},
 }
@@ -63,7 +64,10 @@ class SolixMqttDevicePps(SolixMqttDevice):
             SolixMqttCommands.light_mode_select: lambda v: v in [0, 1, 2, 3, 4],
             SolixMqttCommands.dc_12v_output_mode_select: lambda v: v in [0, 1],
             SolixMqttCommands.ac_output_mode_select: lambda v: v in [0, 1],
-            SolixMqttCommands.device_timeout_minutes: lambda v: 30 <= v <= 1440,
+            SolixMqttCommands.device_timeout_minutes: lambda v: v
+            in [0, 30, 60, 120, 240, 360, 720, 1440],
+            SolixMqttCommands.display_timeout_seconds: lambda v: v
+            in [20, 30, 60, 300, 1800],
             SolixMqttCommands.device_max_load: lambda v: 100 <= v <= 2000,
             SolixMqttCommands.ac_charge_limit: lambda v: 100 <= v <= 800,
             SolixMqttCommands.ac_fast_charge_switch: lambda v: v in [0, 1],
@@ -251,6 +255,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         self,
         enabled: bool | None = None,
         mode: int | str | None = None,
+        timeout_seconds: int | None = None,
         toFile: bool = False,
     ) -> bool | dict:
         """Control display settings via MQTT.
@@ -259,6 +264,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
             enabled: True to turn display on, False to turn off
             mode: Display mode - 0=Off, 1=Low, 2=Medium, 3=High
                 Can also be string: "off", "low", "medium", "high"
+            timeout_seconds: Seconds before display goes off again
             toFile: If True, return mock response (for testing compatibility)
 
         Returns:
@@ -268,6 +274,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
             await mydevice.set_display(enabled=True)
             await mydevice.set_display(mode=2)  # Medium
             await mydevice.set_display(mode="high")
+            await mydevice.set_display(timeout_seconds=20)
         """
         # response
         resp = {}
@@ -275,6 +282,8 @@ class SolixMqttDevicePps(SolixMqttDevice):
         cmd1 = ctrl1.get(CMD_NAME, "")
         ctrl2 = self.controls.get(SolixMqttCommands.display_mode_select) or {}
         cmd2 = ctrl2.get(CMD_NAME, "")
+        ctrl3 = self.controls.get(SolixMqttCommands.display_timeout_seconds) or {}
+        cmd3 = ctrl3.get(CMD_NAME, "")
         # Validate command value
         enabled = 1 if enabled else 0 if enabled is not None else None
         if enabled is not None and not self.validate_command_value(cmd1, enabled):
@@ -305,6 +314,18 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 mode,
             )
             return False
+        # Validate timeout value
+        if timeout_seconds is not None and not self.validate_command_value(
+            cmd3, timeout_seconds
+        ):
+            self._logger.error(
+                "Device %s %s control error - Invalid timeout value: %s",
+                self.pn,
+                self.sn,
+                timeout_seconds,
+            )
+            return False
+
         # Send MQTT commands
         if (
             enabled is not None
@@ -325,6 +346,18 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 command=cmd2,
                 parameters={"mode": mode},
                 description=f"Display mode set to {original_mode if isinstance(original_mode, str) else mode}",
+                toFile=toFile,
+            )
+        ):
+            if state_name := ctrl2.get(STATE_NAME):
+                resp[state_name] = mode
+        if (
+            timeout_seconds is not None
+            and cmd3
+            and await self._send_mqtt_command(
+                command=cmd3,
+                parameters={"timeout": timeout_seconds},
+                description=f"Display timeout set to {timeout_seconds} seconds",
                 toFile=toFile,
             )
         ):
@@ -529,7 +562,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
             and cmd1
             and await self._send_mqtt_command(
                 command=cmd1,
-                parameters={"timeout_minutes": timeout_minutes},
+                parameters={"timeout": timeout_minutes},
                 description=f"Device timeout set to {timeout_minutes} minutes",
                 toFile=toFile,
             )

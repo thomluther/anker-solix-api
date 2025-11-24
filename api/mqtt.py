@@ -287,7 +287,9 @@ class AnkerSolixMqttSession:
         return topic
 
     def get_command_data(
-        self, command: str = SolixMqttCommands.realtime_trigger, parameters: dict | None = None
+        self,
+        command: str = SolixMqttCommands.realtime_trigger,
+        parameters: dict | None = None,
     ) -> str | None:
         """Compose the hex data for MQTT publish payload to Anker Solix devices."""
         if hexdata := generate_mqtt_command(command=command, parameters=parameters):
@@ -335,7 +337,7 @@ class AnkerSolixMqttSession:
                     "account_id": self.mqtt_info.get("user_id"),
                     "device_sn": sn,
                     # data field in payload must be b64 encoded
-                    "data": b64encode(hexbytes or b'').decode("utf-8"),
+                    "data": b64encode(hexbytes or b"").decode("utf-8"),
                 },
                 separators=(",", ":"),
             ),
@@ -421,7 +423,9 @@ class AnkerSolixMqttSession:
             # Stop any previous thread before starting new one
             self.client.loop_stop()
             # Use Non blocking connect with loop_start
-            self.client.connect_async(host=self.host, port=self.port, keepalive=keepalive)
+            self.client.connect_async(
+                host=self.host, port=self.port, keepalive=keepalive
+            )
             # Start the loop to process network traffic and callbacks
             self.client.loop_start()
         # Wait briefly for the client to establish the connection
@@ -950,18 +954,18 @@ def generate_mqtt_command(  # noqa: C901
         )
         hexdata.add_timestamp_field()
     elif command == SolixMqttCommands.temp_unit_switch:
-            # Temperature unit: Value 0/1 (0=Celsius, 1=Fahrenheit) (VALIDATED SB1 ✅)
-            value = 1 if parameters.get("fahrenheit") else 0
-            hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0050"))
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a2"),
-                    f_type=DeviceHexDataTypes.ui.value,
-                    f_value=value.to_bytes(length=1, byteorder="little"),
-                )
+        # Temperature unit: Value 0/1 (0=Celsius, 1=Fahrenheit) (VALIDATED SB1 ✅)
+        value = 1 if parameters.get("fahrenheit") else 0
+        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0050"))
+        hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
+        hexdata.update_field(
+            DeviceHexDataField(
+                f_name=bytes.fromhex("a2"),
+                f_type=DeviceHexDataTypes.ui.value,
+                f_value=value.to_bytes(length=1, byteorder="little"),
             )
-            hexdata.add_timestamp_field()
+        )
+        hexdata.add_timestamp_field()
     elif command == SolixMqttCommands.sb_power_cutoff_select:
         # Valid option 5 or 10 in % (VALIDATED SB1 ⚠️ Changed on device, but not in App! App needs additional change via Api)
         value = 5 if str(parameters.get("limit")) == "5" else 10
@@ -1095,20 +1099,6 @@ def generate_mqtt_command(  # noqa: C901
                 hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))  # Normal
             else:
                 hexdata.update_field(DeviceHexDataField(hexbytes="a2020100"))  # Smart
-        elif command == "c1000x_device_timeout":
-            # Device timeout: Message type 0045
-            timeout_minutes = int(parameters.get("timeout_minutes", 720))
-            hexdata = DeviceHexData(
-                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0045")
-            )
-            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-            hexdata.update_field(
-                DeviceHexDataField(
-                    f_name=bytes.fromhex("a2"),
-                    f_type=DeviceHexDataTypes.sile.value,
-                    f_value=timeout_minutes.to_bytes(length=2, byteorder="little"),
-                )
-            )
         elif command == "c1000x_max_load":
             # Max load: Message type 0044
             max_watts = int(parameters.get("max_watts", 1000))
@@ -1121,6 +1111,34 @@ def generate_mqtt_command(  # noqa: C901
                     f_name=bytes.fromhex("a2"),
                     f_type=DeviceHexDataTypes.sile.value,
                     f_value=max_watts.to_bytes(length=2, byteorder="little"),
+                )
+            )
+        elif command == "c1000x_device_timeout":
+            # Device timeout in minutes: Message type 0045
+            timeout = int(parameters.get("timeout", 720))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0045")
+            )
+            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
+            hexdata.update_field(
+                DeviceHexDataField(
+                    f_name=bytes.fromhex("a2"),
+                    f_type=DeviceHexDataTypes.sile.value,
+                    f_value=timeout.to_bytes(length=2, byteorder="little"),
+                )
+            )
+        elif command == "c1000x_display_timeout":
+            # Device timeout in seconds: Message type 0046
+            timeout = int(parameters.get("timeout", 20))
+            hexdata = DeviceHexData(
+                model="A1761", msg_header=DeviceHexDataHeader(cmd_msg="0046")
+            )
+            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
+            hexdata.update_field(
+                DeviceHexDataField(
+                    f_name=bytes.fromhex("a2"),
+                    f_type=DeviceHexDataTypes.sile.value,
+                    f_value=timeout.to_bytes(length=2, byteorder="little"),
                 )
             )
         elif command == "c1000x_ultrafast_toggle":

@@ -9,7 +9,8 @@ STATE_NAME = "state_name"
 VALUE_MIN = "value_min"
 VALUE_MAX = "value_max"
 VALUE_STEP = "value_step"
-VALUE_OPTIONS="value_options"
+VALUE_OPTIONS = "value_options"
+
 
 @dataclass(frozen=True)
 class SolixMqttCommands:
@@ -27,6 +28,7 @@ class SolixMqttCommands:
     dc_12v_output_mode_select: str = "dc_12v_output_mode_select"
     display_switch: str = "display_switch"
     display_mode_select: str = "display_mode_select"
+    display_timeout_seconds: str = "display_timeout_seconds"
     light_mode_select: str = "light_mode_select"
     port_memory_switch: str = "port_memory_switch"
     ac_charge_switch: str = "ac_charge_switch"
@@ -195,6 +197,16 @@ CMD_DISPLAY_MODE = CMD_COMMON | {
     "a2": {
         "name": "set_display_mode",  # Off (0), Low (1), Medium (2), High (3)
         "type": DeviceHexDataTypes.ui.value,
+    },
+}
+
+CMD_DISPLAY_TIMEOUT_SEC = CMD_COMMON | {
+    # Command: Set display timeout in seconds
+    CMD_NAME: SolixMqttCommands.display_timeout_seconds,
+    STATE_NAME: "display_timeout_seconds",
+    "a2": {
+        "name": "set_display_timeout_sec",  # supported value in seconds
+        "type": DeviceHexDataTypes.sile.value,
     },
 }
 
