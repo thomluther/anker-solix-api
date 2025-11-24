@@ -731,7 +731,7 @@ class MqttCmdValidator:
                 )
             # round value to step with same decimals
             if self.step:
-                step_s = str(self.step)
+                step_s = f"{self.step:.10f}".rstrip("0").rstrip(".")
                 value = round(
                     self.step * round(value / self.step),
                     len(step_s) - step_s.index(".") - 1 if "." in step_s else 0,
