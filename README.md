@@ -210,7 +210,8 @@ Device type | Description
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No individual device setting supported)**
-`pps` | Anker Solix Portable Power Stations stand alone devices:<br>- A1761: SOLIX C1000X Portable Power Station **(MQTT monitoring and control)**
+`pps` | Anker Solix Portable Power Stations stand alone devices:<br>- A1761: C1000X Portable Power Station **(MQTT monitoring and experimental control)**<br>- A1780(P): F2000(P) Portable Power Station **(partial MQTT monitoring)**<br>- A1790(P): F3800(P) Portable Power Station **(partial MQTT monitoring)**
+`charger` | Anker Solix power charger devices:<br>- A1722: C300 AC Charger **(partial MQTT monitoring)**<br>- A1726/A1728: C300(X) DC Charger **(partial MQTT monitoring)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(only basic monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(only basic monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the announced Anker Solix V1 EV Charger.
@@ -223,12 +224,17 @@ Device type | Description
 # MQTT client
 
 This is a rather new implementation in the library. It provides data classes to structure the byte data as received in MQTT or Bluetooth messages. The modules also contains a data mapping for the byte fields as known so far. This mapping descriptions in `mqttmap.py` and `mqttcmdmap.py` must be enhanced for each device model, constellation and message type that is provided, to allow MQTT data decoding, extraction and usage.
+Devices publish 3 different type of messages typically:
+- Message 0405 and optional other 04xx messages while triggered for real time data (typically in 3-5 second intervals)
+- Message 08xx at regular intervals of 30-500 seconds (typically as long as device is awake)
+- Other messages like 07xx at irregular intervals, probably upon changes like message for Wifi signal strength
+Once you decode and describe messages, you need to document their interval as well. All message types with meaningful data fields should be described. If only 0405 message for a device is described, no data can be extracted by the MQTT client if the real time trigger is not active. Therefore standard messages should be described as well and their interval should be known.
 
 > [!IMPORTANT]
 > At this point there is limited integration of MQTT data to the Api cache since the propriatary byte data must be described first for various devices.
 This is where YOU can contribute as device owner, see discussion [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222).
 
-Following is a code snipped how you can utilize the library for easy byte data structuring and see decoding options of your received byte data packages from MQTT or BT clients. You can use this in the client example above.
+Following is a code snipped how you can utilize the library for easy byte data structuring and to see decoding options of your received byte data packages from MQTT or BT clients. You can use this in the client example above.
 
 ```python
 # required additional imports
@@ -248,7 +254,8 @@ from api import mqtttypes
       CONSOLE.info(data.decode())
 ```
 
-The most convenient way to monitor and decode your device MQTT data however is the [mqtt_monitor.py](#mqtt_monitorpy) tool.
+The most convenient way to monitor and decode MQTT messages or commands of your device is the [mqtt_monitor.py](#mqtt_monitorpy) tool. It allows to also to dump all the monitor output to a file for later review and interpretation in case the live view is too fast, especially with the real time trigger active.
+In order to decode MQTT commands, you need to execute them in the App while the mqtt_monitor is active. Then you can easily find the command messages and how the settings/values are encoded into bytes. For each command the valid and supported options, ranges or value steps must be documented in the mapping description before the controls for a particular device can be implemented into the library.
 
 
 # AnkerSolixApi Tools
