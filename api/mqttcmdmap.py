@@ -26,9 +26,11 @@ class SolixMqttCommands:
     ac_output_mode_select: str = "ac_output_mode_select"
     dc_output_switch: str = "dc_output_switch"
     dc_12v_output_mode_select: str = "dc_12v_output_mode_select"
+    dc_output_timeout_seconds: str = "dc_output_timeout_seconds"
     display_switch: str = "display_switch"
     display_mode_select: str = "display_mode_select"
     display_timeout_seconds: str = "display_timeout_seconds"
+    light_switch: str = "light_switch"
     light_mode_select: str = "light_mode_select"
     port_memory_switch: str = "port_memory_switch"
     ac_charge_switch: str = "ac_charge_switch"
@@ -166,6 +168,26 @@ CMD_DC_12V_OUTPUT_MODE = CMD_COMMON | {
     STATE_NAME: "dc_12v_output_mode",
     "a2": {
         "name": "set_dc_12v_output_mode",  # Normal (1), Smart (0)
+        "type": DeviceHexDataTypes.ui.value,
+    },
+}
+
+CMD_DC_OUTPUT_TIMEOUT_SEC = CMD_COMMON | {
+    # Command: PPS DC output timeout setting
+    CMD_NAME: SolixMqttCommands.dc_12v_output_mode_select,
+    STATE_NAME: "dc_output_timeout_seconds",
+    "a2": {
+        "name": "set_dc_output_timeout_seconds",  # Always On (0), 3600
+        "type": DeviceHexDataTypes.sfle.value,
+    },
+}
+
+CMD_LIGHT_SWITCH = CMD_COMMON | {
+    # Command: PPS LED light switch setting
+    CMD_NAME: SolixMqttCommands.light_switch,
+    STATE_NAME: "light_switch",
+    "a2": {
+        "name": "set_light_switch",  # Off (0), On (1)
         "type": DeviceHexDataTypes.ui.value,
     },
 }

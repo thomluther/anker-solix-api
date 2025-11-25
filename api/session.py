@@ -14,6 +14,7 @@ from pathlib import Path
 from random import randbytes, randrange
 import tempfile
 from types import SimpleNamespace
+from typing import Any
 
 import aiofiles
 import aiofiles.os
@@ -166,7 +167,9 @@ class AnkerSolixClientSession:
             )
         else:
             self._testdir = str(subfolder)
-            self._logger.info("Set api %s test folder to: %s", self.nickname, self._testdir)
+            self._logger.info(
+                "Set api %s test folder to: %s", self.nickname, self._testdir
+            )
         return self._testdir
 
     def logLevel(self, level: int | None = None) -> int:
@@ -898,6 +901,10 @@ class AnkerSolixClientSession:
         return (await self.request("post", API_ENDPOINTS["get_mqtt_info"])).get(
             "data"
         ) or {}
+
+    def get_login_info(self, key: str) -> Any | None:
+        """Get a certain key from authenticated client login info."""
+        return self._login_response.get(key)
 
 
 class AnkerEncryptionHandler:

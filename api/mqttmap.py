@@ -8,12 +8,14 @@ from .mqttcmdmap import (
     CMD_AC_OUTPUT_SWITCH,
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
+    CMD_DC_OUTPUT_TIMEOUT_SEC,
     CMD_DEVICE_MAX_LOAD,
     CMD_DEVICE_TIMEOUT_MIN,
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
     CMD_DISPLAY_TIMEOUT_SEC,
     CMD_LIGHT_MODE,
+    CMD_LIGHT_SWITCH,
     CMD_PORT_MEMORY_SWITCH,
     CMD_REALTIME_TRIGGER,
     CMD_SB_INVERTER_TYPE,
@@ -100,10 +102,12 @@ A1728_0405 = {
     "a9": {"name": "usba_2_power"},  # USB-A right output power
     "ab": {"name": "photovoltaic_power"},  # Total solar input
     "ac": {"name": "dc_input_power?"},  # DC input power (solar/car charging)?
+    "b5": {"name": "temperature"},  # In Celsius
     "b6": {
         "name": "dc_charging_status"
     },  # TODO: Define possible states: Inactive (0), Charging (x), Discharging (x), Both (x)
     "b7": {"name": "battery_soc"},  # Battery SOC
+    "b8": {"name": "battery_soh"},  # Battery health
     "b9": {
         "name": "usbc_1_status"
     },  # USB-C left status: Inactive (0), Discharging (1), Charging (2)
@@ -122,7 +126,11 @@ A1728_0405 = {
     "be": {
         "name": "usba_2_status"
     },  # USB-A right status: Inactive (0), Discharging (1), Charging (2)
+    "bf": {"name": "light_switch"}, # Off (0), On (1)
     "c3": {"name": "device_sn"},
+    "c8": {
+        "name": "display_mode"
+    },  # Brightness: Off (0), Low (1), Medium (2), High (3)
 }
 
 A1780_0405 = {
@@ -933,6 +941,8 @@ DOCK_0500 = {
 SOLIXMQTTMAP = {
     # Power Charger C300 AC
     "A1722": {
+        "004b": CMD_LIGHT_SWITCH,  # Light switch: Disabled (0) or Enabled (1)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1722_0405,
@@ -941,6 +951,9 @@ SOLIXMQTTMAP = {
     },
     # Power Charger C300 DC
     "A1726": {
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Disabled/always on (0), 3600 sec
+        "004b": CMD_LIGHT_SWITCH,  # Light switch: Disabled (0) or Enabled (1)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1728_0405,
@@ -949,6 +962,9 @@ SOLIXMQTTMAP = {
     },
     # Power Charger C300X DC
     "A1728": {
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Disabled/always on (0), 3600 sec
+        "004b": CMD_LIGHT_SWITCH,  # Light switch: Disabled (0) or Enabled (1)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1728_0405,

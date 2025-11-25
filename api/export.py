@@ -73,6 +73,7 @@ class AnkerSolixApiExport:
         self.request_delay: float | None = None
         self._randomdata: dict = {}
         self._loop: asyncio.AbstractEventLoop
+        self._mqtt_msg_types: set = set()
 
         # initialize logger for object
         if logger:
@@ -1837,9 +1838,11 @@ class AnkerSolixApiExport:
                 if dev.get("is_admin") and not dev.get("is_passive")
             ]:
                 self._logger.info("Starting MQTT session...")
-                if await self.api_power.startMqttSession(
-                    message_callback=self.dump_device_mqtt
-                ):
+                if (
+                    mqttsession := await self.api_power.startMqttSession(
+                        message_callback=self.dump_device_mqtt
+                    )
+                ) and mqttsession.is_connected():
                     self._logger.info(
                         "MQTT session connected, subscribing eligible devices and waiting 70 seconds for messages..."
                     )
@@ -1860,20 +1863,20 @@ class AnkerSolixApiExport:
                     # wait at least first minute for messages without trigger
                     await asyncio.sleep(70)
                     # Ensure MQTT client is still connected
-                    if not self.api_power.mqttsession.is_connected():
+                    if not mqttsession.is_connected():
                         self._logger.info(
                             "MQTT session not connected, trying reconnection..."
                         )
-                        await self.api_power.startMqttSession(
+                        mqttsession = await self.api_power.startMqttSession(
                             message_callback=self.dump_device_mqtt
                         )
                     # Cycle through devices and publish trigger for each applicable device
-                    if self.api_power.mqttsession.is_connected():
+                    if mqttsession.is_connected():
                         self._logger.info(
-                            "Triggering MQTT real time data for 60 seconds and waiting for messages..."
+                            "Triggering MQTT Real Time data for 60 seconds and waiting for messages..."
                         )
                         for dev in mqttdevices:
-                            resp = self.api_power.mqttsession.realtime_trigger(
+                            resp = mqttsession.realtime_trigger(
                                 deviceDict=dev,
                                 timeout=60,
                             )
@@ -1882,19 +1885,19 @@ class AnkerSolixApiExport:
                             sn = dev.get("device_sn")
                             if resp.is_published():
                                 self._logger.info(
-                                    "Published MQTT real rime trigger message for device %s",
+                                    "Published MQTT Real Time trigger message for device %s",
                                     self._randomize(sn, "device_sn"),
                                 )
-                                self.api_power.mqttsession.triggered_devices.add(sn)
+                                mqttsession.triggered_devices.add(sn)
                             else:
                                 self._logger.warning(
                                     "Failed to publish Real Time trigger message for device %s",
                                     self._randomize(sn, "device_sn"),
                                 )
-                                self.api_power.mqttsession.triggered_devices.discard(sn)
+                                mqttsession.triggered_devices.discard(sn)
                     # wait for the RT trigger to timeout
                     await asyncio.sleep(60)
-                    self.api_power.mqttsession.triggered_devices.clear()
+                    mqttsession.triggered_devices.clear()
                     # wait another 3 minutes to get all standard messages in 5 minute interval
                     for _ in range(3):
                         self._logger.info(
@@ -1903,7 +1906,7 @@ class AnkerSolixApiExport:
                         await asyncio.sleep(60)
                 else:
                     self._logger.warning(
-                        "MQTT session start failed, skipping MQTT data export"
+                        "MQTT session start or connection failed, skipping MQTT data export"
                     )
             else:
                 self._logger.warning(
@@ -1985,6 +1988,14 @@ class AnkerSolixApiExport:
             msgstr = json.dumps(message).replace(device_sn, randsn)
             # save the message
             filename = f"{API_FILEPREFIXES['mqtt_message']}_{randsn}_{msgtype}.json"
+            # print info for first message type per device
+            if filename not in self._mqtt_msg_types:
+                self._mqtt_msg_types.add(filename)
+                self._logger.info(
+                    "Received new MQTT message type '%s' from device %s",
+                    msgtype,
+                    self._randomize(device_sn, "device_sn"),
+                )
             # wait for the save and protect from task cancelation
             savetask = asyncio.run_coroutine_threadsafe(
                 coro=self.api_power.mqttsession.saveToFile(
