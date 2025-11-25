@@ -941,7 +941,8 @@ DOCK_0500 = {
 SOLIXMQTTMAP = {
     # Power Charger C300 AC
     "A1722": {
-        "004b": CMD_LIGHT_SWITCH,  # Light switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
@@ -951,8 +952,9 @@ SOLIXMQTTMAP = {
     },
     # Power Charger C300 DC
     "A1726": {
-        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Disabled/always on (0), 3600 sec
-        "004b": CMD_LIGHT_SWITCH,  # Light switch: Disabled (0) or Enabled (1)
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Custom Range 0-10800 seconds
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
@@ -962,8 +964,9 @@ SOLIXMQTTMAP = {
     },
     # Power Charger C300X DC
     "A1728": {
-        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Disabled/always on (0), 3600 sec
-        "004b": CMD_LIGHT_SWITCH,  # Light switch: Disabled (0) or Enabled (1)
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Custom Range 0-10800 seconds
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,
         # Interval: ~3-5 seconds, but only with realtime trigger
@@ -979,7 +982,7 @@ SOLIXMQTTMAP = {
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
-        "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/steps/options?
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)

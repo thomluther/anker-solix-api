@@ -177,8 +177,8 @@ CMD_DC_OUTPUT_TIMEOUT_SEC = CMD_COMMON | {
     CMD_NAME: SolixMqttCommands.dc_12v_output_mode_select,
     STATE_NAME: "dc_output_timeout_seconds",
     "a2": {
-        "name": "set_dc_output_timeout_seconds",  # Always On (0), 3600
-        "type": DeviceHexDataTypes.sfle.value,
+        "name": "set_dc_output_timeout_seconds",  # Timeout seconds, custom range: 0-10800
+        "type": DeviceHexDataTypes.var.value,
     },
 }
 
