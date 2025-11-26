@@ -120,3 +120,11 @@ def get_enum_value(
     """Get the value for an enum name safely with optional default or None."""
     member: Enum | None = getattr(enum_class, name, None)
     return member.value if member is not None else default
+
+
+def round_by_factor(value: float, factor: float) -> int | float:
+    """Round the given value by the precision of the factor."""
+    # ensure precise float string, cut trailing 0 and ., reverse string and find position of ., use 0 if not found (-1)
+    decimals = max(0, f"{factor:.15f}".rstrip("0").rstrip(".")[::-1].find("."))
+    # ensure to round to integer if decimals is 0
+    return round(value, decimals or None)

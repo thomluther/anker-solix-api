@@ -28,6 +28,7 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
     SolarbankLightMode,
     SolarbankUsageMode,
     SolixDeviceType,
+    SolixPpsChargingStatus,
     SolixPpsDisplayMode,
     SolixPpsOutputMode,
     SolixPpsPortStatus,
@@ -1006,32 +1007,40 @@ class AnkerSolixApiMonitor:
 
             elif devtype in [SolixDeviceType.PPS.value, SolixDeviceType.CHARGER.value]:
                 m1 = cm and str(mqtt.get("last_update", ""))
-                m2 = cm and str(mqtt.get("light_mode", ""))
-                if m1 or m2:
+                m2 = cm and mqtt.get("remaining_time_hours", "")
+                if m1 or str(m2):
                     CONSOLE.info(
                         f"{'Last Update':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
+                        f"{'Time Remaining':<{col1}}: {str(m2) and (c or cm)}"
+                        f"{(timedelta(hours=m2) if str(m2) else '--:--')!s}{co}"
+                    )
+                m1 = cm and mqtt.get("light_switch", "")
+                m2 = cm and str(mqtt.get("light_mode", ""))
+                if str(m1) or m2:
+                    CONSOLE.info(
+                        f"{'Light Switch':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2 - 3}}{co} "
                         f"{'Light Mode':<{col1}}: {m2 and (c or cm)}"
-                        f"{([item.name for item in SolixPpsDisplayMode if item.value == m2] or ['unknown'])[0].capitalize() + ' (' + m2 + ')':<{col2 - 6}}{co} "
+                        f"{get_enum_name(SolixPpsDisplayMode, m2, 'unknown' if m2 else '----').capitalize() + ' (' + (m2 or '-') + ')':<{col2 - 6}}{co} "
                     )
                 m1 = cm and mqtt.get("display_switch", "")
                 m2 = cm and str(mqtt.get("display_timeout_seconds", ""))
-                if str(m1) or m2:
-                    m3 = cm and str(mqtt.get("display_mode", ""))
+                m3 = cm and str(mqtt.get("display_mode", ""))
+                if str(m1) or m2 or m3:
                     CONSOLE.info(
                         f"{'Display Ctrl':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} / "
-                        f"{get_enum_name(SolixPpsDisplayMode, m3, 'unknown').capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
-                        f"{'Display Timeout':<{col3}}: {m2 and (c or cm)}{(m2 or '---'):>4} Sec.{co}"
+                        f"{get_enum_name(SolixPpsDisplayMode, m3, 'unknown' if m3 else '----').capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
+                        f"{'Display Timeout':<{col3}}: {m2 and (c or cm)}{(m2 or '----'):>4} Sec.{co}"
                     )
                 m1 = cm and mqtt.get("ac_output_power_switch", "")
                 m2 = cm and mqtt.get("dc_output_power_switch", "")
-                if m1 or m2:
-                    m3 = cm and str(mqtt.get("ac_output_mode", ""))
-                    m4 = cm and str(mqtt.get("dc_12v_output_mode", ""))
+                m3 = cm and str(mqtt.get("ac_output_mode", ""))
+                m4 = cm and str(mqtt.get("dc_12v_output_mode", ""))
+                if str(m1) or str(m2) or m3 or m4:
                     CONSOLE.info(
                         f"{'AC Out Ctrl':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} / "
-                        f"{get_enum_name(SolixPpsOutputMode, m3, 'unknown').capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
+                        f"{get_enum_name(SolixPpsOutputMode, m3, 'unknown').capitalize() + ' (' + (m3 or '-') + ')':<{col2 - 6}}{co} "
                         f"{'DC Out Ctrl':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3} / "
-                        f"{get_enum_name(SolixPpsOutputMode, m4, 'unknown').capitalize() + ' (' + m4 + ')'}{co}"
+                        f"{get_enum_name(SolixPpsOutputMode, m4, 'unknown').capitalize() + ' (' + (m4 or '-') + ')'}{co}"
                     )
 
                 if m1 := cm and mqtt.get("battery_soc", ""):
@@ -1087,12 +1096,33 @@ class AnkerSolixApiMonitor:
                         f"{'Max. Load':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'Device Timeout':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} Min.{co}"
                     )
-                m1 = cm and mqtt.get("ac_input_power", "")
+                m1 = cm and mqtt.get("photovoltaic_power", "")
                 m2 = cm and mqtt.get("dc_input_power", "")
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'AC Input Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Solar Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'DC Input Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
+                    )
+                m1 = cm and mqtt.get("dc_input_power_total", "")
+                m2 = cm and str(mqtt.get("charging_status", ""))
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'DC In Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Charging Status':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixPpsChargingStatus, m2, 'unknown' if m2 else '----').capitalize() + ' (' + (m2 or '-') + ')'}{co}"
+                    )
+                m1 = cm and mqtt.get("output_power_total", "")
+                m2 = cm and str(mqtt.get("dc_output_timeout_seconds", ""))
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'DC Out Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'DC Out Timeout':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} Sec.{co}"
+                    )
+                m1 = cm and mqtt.get("ac_input_power", "")
+                m2 = cm and str(mqtt.get("", ""))
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'AC Input Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        #f"{'':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} Sec.{co}"
                     )
                 m1 = cm and mqtt.get("grid_to_battery_power", "")
                 m2 = cm and mqtt.get("ac_socket_power", "")
@@ -1110,9 +1140,9 @@ class AnkerSolixApiMonitor:
                     )
                 if m1 := cm and mqtt.get("usbc_1_power", ""):
                     m2 = cm and mqtt.get("usbc_2_power", "")
-                    if m3 := cm and mqtt.get("usbc_1_status", ""):
+                    if m3 := cm and str(mqtt.get("usbc_1_status", "")):
                         m3 = f" ({get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
-                    if m4 := cm and mqtt.get("usbc_2_status", ""):
+                    if m4 := cm and str(mqtt.get("usbc_2_status", "")):
                         m4 = f" ({get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
                     CONSOLE.info(
                         f"{'USB-C 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3:<{col2 - 6}}{co} "
@@ -1120,9 +1150,9 @@ class AnkerSolixApiMonitor:
                     )
                 if m1 := cm and mqtt.get("usbc_3_power", ""):
                     m2 = cm and mqtt.get("usbc_4_power", "")
-                    if m3 := cm and mqtt.get("usbc_3_status", ""):
+                    if m3 := cm and str(mqtt.get("usbc_3_status", "")):
                         m3 = f" ({get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
-                    if m4 := cm and mqtt.get("usbc_4_status", ""):
+                    if m4 := cm and str(mqtt.get("usbc_4_status", "")):
                         m4 = f" ({get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
                     CONSOLE.info(
                         f"{'USB-C 3 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3:<{col2 - 6}}{co} "
@@ -1130,9 +1160,9 @@ class AnkerSolixApiMonitor:
                     )
                 if m1 := cm and mqtt.get("usba_1_power", ""):
                     m2 = cm and mqtt.get("usba_2_power", "")
-                    if m3 := cm and mqtt.get("usba_1_status", ""):
+                    if m3 := cm and str(mqtt.get("usba_1_status", "")):
                         m3 = f" ({get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
-                    if m4 := cm and mqtt.get("usba_2_status", ""):
+                    if m4 := cm and str(mqtt.get("usba_2_status", "")):
                         m4 = f" ({get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
                     CONSOLE.info(
                         f"{'USB-A 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3:<{col2 - 6}}{co} "
@@ -1140,9 +1170,9 @@ class AnkerSolixApiMonitor:
                     )
                 if m1 := cm and mqtt.get("dc_12v_1_power", ""):
                     m2 = cm and mqtt.get("dc_12v_2_power", "")
-                    if m3 := cm and mqtt.get("dc_12v_1_status", ""):
+                    if m3 := cm and str(mqtt.get("dc_12v_1_status", "")):
                         m3 = f" ({get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
-                    if m4 := cm and mqtt.get("dc_12v_2_status", ""):
+                    if m4 := cm and str(mqtt.get("dc_12v_2_status", "")):
                         m4 = f" ({get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
                     CONSOLE.info(
                         f"{'DC 12V 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3:<{col2 - 6}}{co} "

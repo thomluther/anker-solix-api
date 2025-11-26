@@ -6,6 +6,7 @@ import struct
 from typing import Any
 
 from .apitypes import Color, DeviceHexDataTypes, SolixDeviceCategory
+from .helpers import round_by_factor
 from .mqttmap import SOLIXMQTTMAP
 
 
@@ -288,20 +289,23 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.ui.value:
                 # 1 byte fix, unsigned int (Base type)
                 if "name" in fieldmap:
-                    values[fieldmap.get("name")] = int(
-                        int.from_bytes(hexdata) * float(fieldmap.get("factor", 1))
+                    factor = fieldmap.get("factor", 1)
+                    values[fieldmap.get("name")] = round_by_factor(
+                        int.from_bytes(hexdata) * factor, factor
                     )
             case DeviceHexDataTypes.sile.value:
                 # 2 bytes fix, signed int LE (Base type)
                 if name := fieldmap.get("name", ""):
                     value = int(
                         int.from_bytes(hexdata, byteorder="little", signed=True)
-                        * float(fieldmap.get("factor", 1))
                     )
                     # check if value stands for software version and convert to version number
                     if "version" in name or "sw_" in name:
                         # convert int to string for version numbering
                         value = ".".join(str(value))
+                    else:
+                        factor = fieldmap.get("factor", 1)
+                        value = round_by_factor(value * factor, factor)
                     values[name] = value
             case DeviceHexDataTypes.var.value:
                 # var is always 4 bytes, but could be 1-4 * int, 1-2 * signed int LE or 4 Byte signed int LE
@@ -309,33 +313,28 @@ class DeviceHexDataField:
                 # If a float factor is specified, value will be rounded to factor digits
                 if name := fieldmap.get("name", ""):
                     factor = fieldmap.get("factor", 1)
-                    digits = str(factor)
-                    digits = max(
-                        0,
-                        int(str(digits).split("e-")[1])
-                        if "e-" in digits
-                        else digits[::-1].find("."),
-                    )
                     if (count := int(fieldmap.get("values", 0))) == 1:
-                        value = round(int.from_bytes(hexdata[0:1]) * factor, digits)
+                        value = round_by_factor(
+                            int.from_bytes(hexdata[0:1]) * factor, factor
+                        )
                     elif count == 2:
-                        value = round(
+                        value = round_by_factor(
                             int.from_bytes(
                                 hexdata[0:2], byteorder="little", signed=True
                             )
                             * factor,
-                            digits,
+                            factor,
                         )
                     elif count == 4:
-                        value = [round(int(b) * factor, digits) for b in hexdata]
+                        value = [
+                            round_by_factor(int(b) * factor, factor) for b in hexdata
+                        ]
                     else:
-                        value = round(
+                        value = round_by_factor(
                             int.from_bytes(hexdata, byteorder="little", signed=True)
                             * factor,
-                            digits,
+                            factor,
                         )
-                        if isinstance(factor, int):
-                            value = int(value)
                     if "version" in name or "sw_" in name:
                         # convert int to string for version numbering
                         if isinstance(value, list):
@@ -731,11 +730,11 @@ class MqttCmdValidator:
                 )
             # round value to step with same decimals
             if self.step:
-                step_s = f"{self.step:.10f}".rstrip("0").rstrip(".")
-                value = round(
+                value = round_by_factor(
                     self.step * round(value / self.step),
-                    len(step_s) - step_s.index(".") - 1 if "." in step_s else 0,
+                    self.step,
                 )
+
         return value
 
     def asdict(self) -> dict:

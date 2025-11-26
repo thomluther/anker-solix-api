@@ -711,7 +711,7 @@ class SolixParmType(Enum):
 
 
 class SolarbankPowerMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank 1 Power setting modes."""
+    """Int Enumeration for Anker Solix Solarbank 1 Power setting modes."""
 
     unknown = 0
     normal = 1
@@ -719,7 +719,7 @@ class SolarbankPowerMode(IntEnum):
 
 
 class SolarbankDischargePriorityMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank 1 Discharge priority setting modes."""
+    """Int Enumeration for Anker Solix Solarbank 1 Discharge priority setting modes."""
 
     unknown = -1
     off = 0
@@ -727,7 +727,7 @@ class SolarbankDischargePriorityMode(IntEnum):
 
 
 class SolarbankAiemsStatus(IntEnum):
-    """Enumeration for Anker Solix Solarbank Anker Intelligence status."""
+    """Int Enumeration for Anker Solix Solarbank Anker Intelligence status."""
 
     unknown = 0
     untrained = 3
@@ -736,7 +736,7 @@ class SolarbankAiemsStatus(IntEnum):
 
 
 class SolarbankAiemsRuntimeStatus(IntEnum):
-    """Enumeration for Anker Solix Solarbank Anker Intelligence runtime status.
+    """Int Enumeration for Anker Solix Solarbank Anker Intelligence runtime status.
 
     Following combinations of ai_ems status abd ai_ems runtime information were seen:
     - left_time > 0 with runtime status 0 => learning phase status 4 without runtime failure
@@ -751,7 +751,7 @@ class SolarbankAiemsRuntimeStatus(IntEnum):
 
 
 class SolixTariffTypes(IntEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
+    """Int Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
     UNKNOWN = 0  # Pseudo type to reflect no known tariff defined
     PEAK = 1  # maximize PV and Battery usage, no AC charge
@@ -763,7 +763,7 @@ class SolixTariffTypes(IntEnum):
 
 
 class SolixPriceTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
+    """Str Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Tariff Types."""
 
     UNKNOWN = "unknown"
     FIXED = "fixed"
@@ -772,7 +772,7 @@ class SolixPriceTypes(StrEnum):
 
 
 class SolixDayTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Day Types."""
+    """Str Enumeration for Anker Solix Solarbank 2 AC / 3 Use Time Day Types."""
 
     WEEKDAY = "weekday"
     WEEKEND = "weekend"
@@ -780,7 +780,7 @@ class SolixDayTypes(StrEnum):
 
 
 class SolarbankUsageMode(IntEnum):
-    """Enumeration for Anker Solix Solarbank 2/3 Power Usage modes."""
+    """Int Enumeration for Anker Solix Solarbank 2/3 Power Usage modes."""
 
     unknown = 0  # AC output based on measured smart meter power
     smartmeter = 1  # AC output based on measured smart meter power
@@ -879,7 +879,9 @@ class SolixDeviceCapacity:
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
     A1780: int = 2048  # SOLIX F2000 Portable Power Station (PowerHouse 767)
     A1780_1: int = 2048  # Expansion Battery for F2000
-    A1780P: int = 2048  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767) with WIFI
+    A1780P: int = (
+        2048  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767) with WIFI
+    )
     A1781: int = 2560  # SOLIX F2600 Portable Power Station
     A1782: int = 3072  # SOLIX F3000 Portable Power Station with Smart Meter support
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
@@ -1175,7 +1177,7 @@ class SolixDefaults:
 
 
 class SolixDeviceStatus(StrEnum):
-    """Enumeration for Anker Solix Device status."""
+    """Str Enumeration for Anker Solix Device status."""
 
     # The device status code seems to be used for cloud connection status.
     offline = "0"
@@ -1184,7 +1186,7 @@ class SolixDeviceStatus(StrEnum):
 
 
 class SolarbankStatus(StrEnum):
-    """Enumeration for Anker Solix Solarbank status."""
+    """Str Enumeration for Anker Solix Solarbank status."""
 
     detection = "0"  # Rare for SB1, frequent for SB2 especially in combination with Smartmeter in the morning
     protection_charge = "03"  # For SB2 only when there is charge while output below demand in detection mode
@@ -1207,7 +1209,7 @@ class SolarbankStatus(StrEnum):
 
 
 class SolarbankLightMode(StrEnum):
-    """Enumeration for Anker Solix Solarbank light modes."""
+    """Str Enumeration for Anker Solix Solarbank light modes."""
 
     normal = "0"
     mood = "1"
@@ -1215,15 +1217,16 @@ class SolarbankLightMode(StrEnum):
 
 
 class SolarbankParallelTypes(StrEnum):
-    """Enumeration for Anker Solix Solarbank parallel types."""
+    """Str Enumeration for Anker Solix Solarbank parallel types."""
 
     single = "single"
     cascaded = "cascaded"  # For SB1 only if SB1 is attached to SB2 in single system
     ae100 = "ae100"  # Solarbank power dock in use
+    ae100v2 = "ae100v2"
 
 
 class SmartmeterStatus(StrEnum):
-    """Enumeration for Anker Solix Smartmeter status."""
+    """Str Enumeration for Anker Solix Smartmeter status."""
 
     # TODO(#106) Update Smartmeter grid status description once known
     ok = "0"  # normal grid state when smart meter is measuring
@@ -1231,7 +1234,7 @@ class SmartmeterStatus(StrEnum):
 
 
 class PowerdockStatus(StrEnum):
-    """Enumeration for Anker Solix Power Dock status."""
+    """Str Enumeration for Anker Solix Power Dock status."""
 
     # TODO(#MS) Update status description once known
     ok = "0"  # normal power dock state
@@ -1239,7 +1242,7 @@ class PowerdockStatus(StrEnum):
 
 
 class SolarbankGridStatus(StrEnum):
-    """Enumeration for Anker Solarbank grid status."""
+    """Str Enumeration for Anker Solarbank grid status."""
 
     connected = "1"  # normal grid state
     connecting = "3"  # Grid detected, going into normal state
@@ -1248,7 +1251,7 @@ class SolarbankGridStatus(StrEnum):
 
 
 class SolixGridStatus(StrEnum):
-    """Enumeration for Anker Solix grid status."""
+    """Str Enumeration for Anker Solix grid status."""
 
     # TODO(X1) Update grid status description once known
     ok = "0"  # normal grid state when hes pcu grid status is ok
@@ -1256,7 +1259,7 @@ class SolixGridStatus(StrEnum):
 
 
 class SolixRoleStatus(StrEnum):
-    """Enumeration for Anker Solix role status of devices."""
+    """Str Enumeration for Anker Solix role status of devices."""
 
     # The device role status codes as used for HES devices
     # TODO(X1): The proper description of those codes has to be confirmed
@@ -1266,7 +1269,7 @@ class SolixRoleStatus(StrEnum):
 
 
 class SolixNetworkStatus(StrEnum):
-    """Enumeration for Anker Solix HES network status."""
+    """Str Enumeration for Anker Solix HES network status."""
 
     # TODO(X1): The proper description of those codes has to be confirmed
     wifi = "1"  # to be confirmed
@@ -1276,7 +1279,7 @@ class SolixNetworkStatus(StrEnum):
 
 
 class SolixSwitchMode(IntEnum):
-    """Enumeration for generic Anker Solix switch modes."""
+    """Int Enumeration for generic Anker Solix switch modes."""
 
     off = 0
     on = 1
@@ -1284,7 +1287,7 @@ class SolixSwitchMode(IntEnum):
 
 
 class SolixPpsOutputStatus(StrEnum):
-    """Enumeration for Anker Solix PPS output status."""
+    """Str Enumeration for Anker Solix PPS output status."""
 
     smart = "0"
     normal = "1"
@@ -1292,15 +1295,25 @@ class SolixPpsOutputStatus(StrEnum):
 
 
 class SolixPpsOutputMode(StrEnum):
-    """Enumeration for Anker Solix PPS output modes."""
+    """Str Enumeration for Anker Solix PPS output modes."""
 
     normal = "1"
     smart = "2"
     unknown = "unknown"
 
 
+class SolixPpsChargingStatus(StrEnum):
+    """Str Enumeration for Anker Solix PPS charging status."""
+
+    inactive = "0"
+    solar = "1"
+    input_power = "2"  # could be AC or DC input depending on device
+    both = "3"
+    unknown = "unknown"
+
+
 class SolixPpsPortStatus(StrEnum):
-    """Enumeration for Anker Solix PPS port status."""
+    """Str Enumeration for Anker Solix PPS port status."""
 
     inactive = "0"
     discharging = "1"
@@ -1309,7 +1322,7 @@ class SolixPpsPortStatus(StrEnum):
 
 
 class SolixPpsDisplayMode(StrEnum):
-    """Enumeration for Anker Solix PPS display and light modes."""
+    """Str Enumeration for Anker Solix PPS display and light modes."""
 
     off = "0"
     low = "1"
@@ -1499,7 +1512,7 @@ class SolixVehicle:
 
 
 class Color(StrEnum):
-    """Define ASCII colors."""
+    """Str Enumeration defining ASCII colors."""
 
     BLACK = "\033[30m"
     RED = "\033[31m"

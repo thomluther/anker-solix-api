@@ -88,6 +88,7 @@ A1722_0405 = {
     "cf": {
         "name": "display_mode"
     },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+    "fe": {"name": "msg_timestamp"},  # Message timestamp
 }
 
 A1728_0405 = {
@@ -100,12 +101,14 @@ A1728_0405 = {
     "a7": {"name": "usbc_4_power"},  # USB-C solar output power
     "a8": {"name": "usba_1_power"},  # USB-A left output power
     "a9": {"name": "usba_2_power"},  # USB-A right output power
-    "ab": {"name": "photovoltaic_power"},  # Total solar input
-    "ac": {"name": "dc_input_power?"},  # DC input power (solar/car charging)?
+    "aa": {"name": "dc_input_power?"},  # DC input power 12V car charging?
+    "ab": {"name": "photovoltaic_power"},  # Solar input
+    "ac": {"name": "dc_input_power_total?"},  # DC input power (solar + car charging)?
+    "ad": {"name": "output_power_total?"},  # Total DC output power for all ports?
     "b5": {"name": "temperature"},  # In Celsius
     "b6": {
-        "name": "dc_charging_status"
-    },  # TODO: Define possible states: Inactive (0), Charging (x), Discharging (x), Both (x)
+        "name": "charging_status",  # Publishes the raw integer value (0-3): Inactive (0), Solar (1), DC Input (2), Both (3)
+    },
     "b7": {"name": "battery_soc"},  # Battery SOC
     "b8": {"name": "battery_soh"},  # Battery health
     "b9": {
@@ -127,10 +130,14 @@ A1728_0405 = {
         "name": "usba_2_status"
     },  # USB-A right status: Inactive (0), Discharging (1), Charging (2)
     "bf": {"name": "light_switch"}, # Off (0), On (1)
-    "c3": {"name": "device_sn"},
+    "c4": {"name": "dc_output_timeout_seconds?"}, # Timeout seconds, custom range: 0-10800???
+    "c5": {
+        "name": "display_timeout_seconds?"
+    },  # Display timeout: 20, 30, 60, 300, 1800 seconds???
     "c8": {
         "name": "display_mode"
     },  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "fe": {"name": "msg_timestamp"},  # Message timestamp
 }
 
 A1780_0405 = {
@@ -232,20 +239,7 @@ A1790_0405 = {
         "name": "ac_output_power_switch"
     },  # AC output switch: Disabled (0) or Enabled (1)
     "bd": {
-        "name": "charging_status",  # Publishes the raw integer value (0-3)
-        # TODO: Define merged status names for each status value to avoid split field name per bit (they belong to charging_status value)
-        "bytes": {
-            "00": [  # Parse Byte 0 of the value
-                {
-                    "name": "solar_active",
-                    "mask": 0x01,
-                },  # Bit 0 (Mask 0b01) - Solar voltage is present
-                {
-                    "name": "ac_charge_active",
-                    "mask": 0x02,
-                },  # Bit 1 (Mask 0b10) - AC charging is active
-            ]
-        },
+        "name": "charging_status",  # Publishes the raw integer value (0-3): Inactive (0), Solar (1), AC Input (2), Both (3)
     },
     "be": {"name": "temperature"},  # In Celsius
     "bf": {"name": "display_status"},  # Asleep (0), Manual Off (1), On (2)
