@@ -71,9 +71,9 @@ A1722_0405 = {
     "a8": {"name": "usbc_2_power"},  # USB-C port 2 output power
     "a9": {"name": "usbc_3_power"},  # USB-C port 3 output power
     "aa": {"name": "usba_1_power"},  # USB-A port 1 output power
-    "ac": {"name": "dc_input_power"},  # DC input power (solar/car charging)
-    "ad": {"name": "ac_input_power"},  # Total Input in W (int)
-    "ae": {"name": "ac_output_power"},  # Total Output in W (int)
+    "ac": {"name": "dc_input_power_total"},  # DC input power (solar/car charging)
+    "ad": {"name": "ac_input_power_total"},  # Total AC Input in W (int)
+    "ae": {"name": "ac_output_power_total"},  # Total AOutput in W (int)
     "b7": {
         "name": "ac_output_power_switch"
     },  # AC output switch: Disabled (0) or Enabled (1)
