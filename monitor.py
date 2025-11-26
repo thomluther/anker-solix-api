@@ -170,6 +170,7 @@ class AnkerSolixApiMonitor:
         self.folderdict: dict = {}
         self.delayed_sn_refresh: set = set()
         self.loop: asyncio.AbstractEventLoop
+        self.print_task = None
 
     def get_subfolders(self, folder: str | Path) -> list:
         """Get the full pathname of all subfolder for given folder as list."""
@@ -314,14 +315,14 @@ class AnkerSolixApiMonitor:
         if not (self.showMqttDevice and self.api.mqttsession):
             # Api data display active while message received, delay print to consolidate multiple messages
             if (
-                self.delayed_sn_refresh
+                (self.print_task and not self.print_task.done())
                 or (self.next_refr - datetime.now().astimezone()).total_seconds() <= 2
             ):
                 # add sn and skip refresh if delayed refresh still active
                 self.delayed_sn_refresh.add(deviceSn)
                 return
             self.delayed_sn_refresh.add(deviceSn)
-            self.loop.create_task(self.print_api_data_delayed(delay=1))
+            self.print_task = self.loop.create_task(self.print_api_data_delayed(delay=1))
             return
         common.clearscreen()
         col1 = 25
@@ -378,6 +379,8 @@ class AnkerSolixApiMonitor:
         CONSOLE.info(
             f"'Received Messages : {json.dumps(self.api.mqttsession.mqtt_stats.dev_messages)}"
         )
+        # clear any delayed refresh and print key options
+        self.delayed_sn_refresh.clear()
         self.get_menu_options()
 
     async def print_api_data_delayed(
@@ -2000,6 +2003,7 @@ class AnkerSolixApiMonitor:
                                         self.folderdict["speed"] = round(
                                             min(16, 2 * speed), 2
                                         )
+                                        await asyncio.sleep(1)
                                         break
                                     CONSOLE.info(
                                         f"{Color.RED}\nMax MQTT message speed reached!{Color.OFF}"
@@ -2016,6 +2020,7 @@ class AnkerSolixApiMonitor:
                                         self.folderdict["speed"] = round(
                                             max(0.25, speed / 2), 2
                                         )
+                                        await asyncio.sleep(1)
                                         break
                                     CONSOLE.info(
                                         f"{Color.RED}\nMin MQTT message speed reached!{Color.OFF}"
