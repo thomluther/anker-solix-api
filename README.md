@@ -205,11 +205,11 @@ Device type | Description
 -- | --
 `account` | Anker Solix user account used for the configured hub entry. It collects all common entities belonging to the account or api connection.
 `system` | Anker Solix 'Power System' as defined in the Anker app. It collects all entities belonging to the defined system and is referred as 'site' in the cloud api.
-`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1)<br>- A17C1: Solarbank 2 E1600 Pro<br>- A17C3: Solarbank 2 E1600 Plus<br>- A17C2: Solarbank 2 E1600 AC<br>- A17C5: Solarbank 3 E2700
-`combiner_box` | Anker Solix (passive) combiner box configured in the system:<br>- AE100: Power Dock for Solarbank Multisystems
+`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1) **(includes MQTT monitoring)**<br>- A17C1: Solarbank 2 E1600 Pro **(includes partial MQTT monitoring)**<br>- A17C3: Solarbank 2 E1600 Plus **(includes partial MQTT monitoring)**<br>- A17C2: Solarbank 2 E1600 AC **(includes partial MQTT monitoring)**<br>- A17C5: Solarbank 3 E2700 **(includes partial MQTT monitoring)**
+`combiner_box` | Anker Solix (passive) combiner box configured in the system:<br>- AE100: Power Dock for Solarbank Multisystems **(includes partial MQTT monitoring)**
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
-`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter
-`smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No individual device settings supported)**
+`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(includes partial MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(includes partial MQTT monitoring)**
+`smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No device settings supported)**
 `pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722: C300 AC Portable Power Station **(partial MQTT monitoring)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(partial MQTT monitoring)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring and experimental control)**<br>- A1780(P): F2000(P) Portable Power Station **(partial MQTT monitoring)**<br>- A1790(P): F3800(P) Portable Power Station **(partial MQTT monitoring)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(only basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(only basic Api monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module

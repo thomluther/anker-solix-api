@@ -566,6 +566,7 @@ class AnkerSolixMqttSession:
         self.client = None
         self.subscriptions = set()
         self.triggered_devices = set()
+        self._message_callback = None
         for filename in self._temp_cert_files:
             # remove file if existing
             if Path(filename).is_file():

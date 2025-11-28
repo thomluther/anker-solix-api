@@ -56,13 +56,17 @@ class AnkerSolixApiExport:
     ) -> None:
         """Initialize."""
 
-        # get the api client session from passed object
+        # get the api client and optional mqtt session from passed object
         if isinstance(client, api.AnkerSolixApi):
             self.client = client.apisession
+            mqttsession = client.mqttsession
         else:
             self.client = client
+            mqttsession = None
         # create new api instance with client session
         self.api_power = api.AnkerSolixApi(apisession=self.client)
+        # Add existing mqtt session to new api instance
+        self.api_power.mqttsession = mqttsession
         self.export_path: str | None = None
         self.export_folder: str | None = None
         self.export_services: set | None = None
@@ -74,6 +78,7 @@ class AnkerSolixApiExport:
         self._randomdata: dict = {}
         self._loop: asyncio.AbstractEventLoop
         self._mqtt_msg_types: set = set()
+        self._old_callback: Callable | None = None
 
         # initialize logger for object
         if logger:
@@ -1830,6 +1835,7 @@ class AnkerSolixApiExport:
     async def export_mqtt_data(self) -> None:
         """Start MQTT session and dump received messages."""
 
+        mqttsession = None
         try:
             # get all owned devices that may support MQTT messages
             if mqttdevices := [
@@ -1837,12 +1843,19 @@ class AnkerSolixApiExport:
                 for dev in self.api_power.devices.values()
                 if dev.get("is_admin") and not dev.get("is_passive")
             ]:
-                self._logger.info("Starting MQTT session...")
-                if (
-                    mqttsession := await self.api_power.startMqttSession(
+                # reuse existing MQTT client or start new one
+                if mqttsession := self.api_power.mqttsession:
+                    self._logger.info(
+                        "Using existing MQTT session and intercepting message callback for export..."
+                    )
+                    self._old_callback = mqttsession.message_callback()
+                    mqttsession.message_callback(func=self.dump_device_mqtt)
+                else:
+                    self._logger.info("Starting MQTT session...")
+                    mqttsession = await self.api_power.startMqttSession(
                         message_callback=self.dump_device_mqtt
                     )
-                ) and mqttsession.is_connected():
+                if mqttsession and mqttsession.is_connected():
                     self._logger.info(
                         "MQTT session connected, subscribing eligible devices and waiting 70 seconds for messages..."
                     )
@@ -1926,9 +1939,16 @@ class AnkerSolixApiExport:
             else:
                 self._logger.warning("MQTT session was cancelled.")
         finally:
-            self._logger.info("Stopping MQTT connection...")
-            self.api_power.stopMqttSession()
-            self._logger.info("MQTT stopped.")
+            if mqttsession and self._old_callback:
+                self._logger.info("MQTT message export fininished.")
+                mqttsession.message_callback(func=self._old_callback)
+                self._logger.info(
+                    "Switched MQTT session message callback back to original."
+                )
+            else:
+                self._logger.info("Stopping MQTT connection...")
+                self.api_power.stopMqttSession()
+                self._logger.info("MQTT message export fininished.")
 
     def dump_device_mqtt(
         self,
@@ -1943,6 +1963,11 @@ class AnkerSolixApiExport:
     ) -> None:
         """Randomized known message content and save the messages to files."""
 
+        # forward message to original message callback if existing
+        if callable(self._old_callback):
+            self._old_callback(
+                session, topic, message, data, model, device_sn, *args, **kwargs
+            )
         if isinstance(message, dict) and model and device_sn:
             # extract message type from hex data for message grouping per file
             msgtype = "other"

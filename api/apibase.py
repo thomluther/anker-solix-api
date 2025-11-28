@@ -279,11 +279,11 @@ class AnkerSolixBaseApi:
                 self.mqttsession.host,
                 self.mqttsession.port,
             )
-        # register message callback to extract device MQTT data into device Api cache if not custom callback provided
+        # register message callback to extract device MQTT data into device Api cache if no custom callback provided and none exists yet
         self.mqttsession.message_callback(
-            func=message_callback if callable(message_callback) else self.mqtt_received
+            func=message_callback if callable(message_callback) else (self.mqttsession.message_callback() or self.mqtt_received)
         )
-        # create the mqtt_data field if no existing yet for supported devices
+        # create the mqtt_data field if not existing yet for supported devices
         for dev in [d for d in self.devices.values() if d.get("mqtt_supported")]:
             dev["mqtt_data"] = dev.get("mqtt_data") or {}
         # update mqtt connection in account cache
