@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import ssl
 import tempfile
+from random import randint
 from typing import Any
 
 import aiofiles
@@ -458,7 +459,7 @@ class AnkerSolixMqttSession:
             # Create client instance
             self.client = mqtt.Client(
                 callback_api_version=CallbackAPIVersion.VERSION2,
-                client_id=self.mqtt_info.get("thing_name"),
+                client_id=f"{self.mqtt_info.get("thing_name")}_{randint(1,10000):05}",
                 clean_session=True,
             )
             # Set userdata for client
