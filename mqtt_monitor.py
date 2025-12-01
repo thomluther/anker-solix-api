@@ -431,7 +431,7 @@ class AnkerSolixMqttMonitor:
             f"[{Color.YELLOW}O{Color.OFF}]ne real time trigger for device (timeout 60 seconds)"
         )
         CONSOLE.info(
-            f"[{Color.YELLOW}I{Color.OFF}]ndividual status request for device"
+            f"[{Color.YELLOW}I{Color.OFF}]mmediate status request for device"
         )
         CONSOLE.info(
             f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding"

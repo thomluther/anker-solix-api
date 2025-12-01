@@ -225,7 +225,7 @@ class AnkerSolixApiMonitor:
                     f"[{Color.YELLOW}R{Color.OFF}]eal time MQTT data trigger (Timeout 1 min). Only possible if MQTT session is ON"
                 )
                 CONSOLE.info(
-                    f"[{Color.YELLOW}O{Color.OFF}]ne time status request. Only possible if MQTT session is ON and supported by device"
+                    f"[{Color.YELLOW}I{Color.OFF}]mmediate status request. Only possible if MQTT session is ON"
                 )
             CONSOLE.info(
                 f"[{Color.YELLOW}M{Color.OFF}]qtt device or Api device (default) display toggle"
@@ -246,7 +246,7 @@ class AnkerSolixApiMonitor:
         else:
             CONSOLE.info(
                 f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/[{Color.YELLOW}C{Color.OFF}]ustomize cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
-                f"MQTT [{Color.YELLOW}S{Color.OFF}]ession toggle, [{Color.YELLOW}R{Color.OFF}]eal time trigger, [{Color.YELLOW}O{Color.OFF}]ne MQTT status, "
+                f"MQTT [{Color.YELLOW}S{Color.OFF}]ession toggle, [{Color.YELLOW}R{Color.OFF}]eal time trigger, [{Color.YELLOW}I{Color.OFF}]mmediate status, "
                 f"[{Color.YELLOW}M{Color.OFF}]qtt display toggle, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls toggle, "
                 f"[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
             )
@@ -1906,67 +1906,44 @@ class AnkerSolixApiMonitor:
                                     # print key menu
                                     self.get_menu_options(details=True)
                                     break
-                                if k == "o":
-                                    if self.use_file and exampleslist:
+                                if k == "o" and self.use_file and exampleslist:
+                                    CONSOLE.info(
+                                        "Select the input source for the monitor:"
+                                    )
+                                    for idx, filename in enumerate(
+                                        exampleslist, start=1
+                                    ):
                                         CONSOLE.info(
-                                            "Select the input source for the monitor:"
+                                            f"({Color.YELLOW}{idx}{Color.OFF}) {filename}"
                                         )
-                                        for idx, filename in enumerate(
-                                            exampleslist, start=1
-                                        ):
-                                            CONSOLE.info(
-                                                f"({Color.YELLOW}{idx}{Color.OFF}) {filename}"
-                                            )
-                                        CONSOLE.info(f"({Color.RED}C{Color.OFF}) Cancel")
-                                        while True:
-                                            selection = input(
-                                                f"Enter source file number ({Color.YELLOW}1-{len(exampleslist)}{Color.OFF}) or [{Color.RED}C{Color.OFF}]ancel: "
-                                            )
-                                            if selection.upper() in ["C", "CANCEL"]:
-                                                selection = None
-                                                break
-                                            if selection.isdigit() and 1 <= int(
-                                                selection
-                                            ) <= len(exampleslist):
-                                                folderselection = int(selection)
-                                                break
-                                        if selection:
-                                            self.api.testDir(
-                                                exampleslist[folderselection - 1]
-                                            )
-                                            self.api.clearCaches()
-                                            self.api.request_count.recycle(
-                                                last_time=datetime.now()
-                                            )
-                                            self.folderdict["folder"] = self.api.testDir()
-                                            self.device_filter = ""
-                                            self.device_names = []
-                                            self.next_dev_refr = 0
-                                            break_refresh = True
-                                        else:
+                                    CONSOLE.info(f"({Color.RED}C{Color.OFF}) Cancel")
+                                    while True:
+                                        selection = input(
+                                            f"Enter source file number ({Color.YELLOW}1-{len(exampleslist)}{Color.OFF}) or [{Color.RED}C{Color.OFF}]ancel: "
+                                        )
+                                        if selection.upper() in ["C", "CANCEL"]:
+                                            selection = None
                                             break
-                                    elif self.api.mqttsession:
-                                        # Cycle through devices and publish trigger for each applicable device
-                                        if self.api.mqttsession.is_connected():
-                                            if self.mqtt_devices:
-                                                CONSOLE.info(
-                                                    f"{Color.CYAN}\nSending MQTT status requests for devices...{Color.OFF}"
-                                                )
-                                                for mdev in self.mqtt_devices.values():
-                                                    await mdev.status_request()
-                                                await asyncio.sleep(1)
-                                            else:
-                                                CONSOLE.info(
-                                                    f"{Color.YELLOW}\nNo eligible MQTT devices found!{Color.OFF}"
-                                                )
-                                        else:
-                                            CONSOLE.info(
-                                                f"{Color.RED}\nMQTT status request requires connected MQTT session...{Color.OFF}"
-                                            )
-                                    else:
-                                        CONSOLE.info(
-                                            f"{Color.RED}\nMQTT status request requires active MQTT session...{Color.OFF}"
+                                        if selection.isdigit() and 1 <= int(
+                                            selection
+                                        ) <= len(exampleslist):
+                                            folderselection = int(selection)
+                                            break
+                                    if selection:
+                                        self.api.testDir(
+                                            exampleslist[folderselection - 1]
                                         )
+                                        self.api.clearCaches()
+                                        self.api.request_count.recycle(
+                                            last_time=datetime.now()
+                                        )
+                                        self.folderdict["folder"] = self.api.testDir()
+                                        self.device_filter = ""
+                                        self.device_names = []
+                                        self.next_dev_refr = 0
+                                        break_refresh = True
+                                    else:
+                                        break
                                 elif k == "n" and exampleslist and self.use_file:
                                     self.device_filter = ""
                                     folderselection = (
@@ -2001,13 +1978,36 @@ class AnkerSolixApiMonitor:
                                     self.device_names = []
                                     self.next_dev_refr = 0
                                     break_refresh = True
-                                elif k == "i" and self.use_file:
-                                    CONSOLE.info(
-                                        f"{Color.YELLOW}\nRefreshing sites...{Color.OFF}"
-                                    )
-                                    # set device details refresh to future to reload only site info
-                                    self.next_dev_refr += 1
-                                    break_refresh = True
+                                elif k == "i":
+                                    if self.use_file:
+                                        CONSOLE.info(
+                                            f"{Color.YELLOW}\nRefreshing sites...{Color.OFF}"
+                                        )
+                                        # set device details refresh to future to reload only site info
+                                        self.next_dev_refr += 1
+                                        break_refresh = True
+                                    elif self.api.mqttsession:
+                                        # Cycle through devices and publish immediate status request for each applicable device
+                                        if self.api.mqttsession.is_connected():
+                                            if self.mqtt_devices:
+                                                CONSOLE.info(
+                                                    f"{Color.CYAN}\nSending MQTT status requests for devices...{Color.OFF}"
+                                                )
+                                                for mdev in self.mqtt_devices.values():
+                                                    await mdev.status_request()
+                                                await asyncio.sleep(1)
+                                            else:
+                                                CONSOLE.info(
+                                                    f"{Color.YELLOW}\nNo eligible MQTT devices found!{Color.OFF}"
+                                                )
+                                        else:
+                                            CONSOLE.info(
+                                                f"{Color.RED}\nMQTT status request requires connected MQTT session...{Color.OFF}"
+                                            )
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nMQTT status request requires active MQTT session...{Color.OFF}"
+                                        )
                                 elif k == "l" and self.use_file:
                                     CONSOLE.info(
                                         f"{Color.YELLOW}\nRefreshing all details...{Color.OFF}"
