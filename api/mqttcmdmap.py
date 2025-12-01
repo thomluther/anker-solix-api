@@ -16,6 +16,7 @@ VALUE_OPTIONS = "value_options"
 class SolixMqttCommands:
     """Dataclass for used Anker Solix MQTT command names."""
 
+    status_request: str = "status_request"
     realtime_trigger: str = "realtime_trigger"
     temp_unit_switch: str = "temp_unit_switch"
     device_max_load: str = "device_max_load"
@@ -57,6 +58,11 @@ CMD_COMMON = {
         "name": "msg_timestamp",
         "type": DeviceHexDataTypes.var.value,
     },
+}
+
+CMD_STATUS_REQUEST = CMD_COMMON | {
+    # Command: Device status request
+    CMD_NAME: SolixMqttCommands.status_request,
 }
 
 CMD_REALTIME_TRIGGER = CMD_COMMON | {

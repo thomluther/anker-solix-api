@@ -157,7 +157,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl2.get(STATE_NAME):
+            if toFile and (state_name := ctrl2.get(STATE_NAME)):
                 # convert smart mode 0 to state value 2
                 resp[state_name] = mode or 2
         if toFile:
@@ -234,7 +234,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = enabled
         if (
             mode is not None
@@ -246,7 +246,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl2.get(STATE_NAME):
+            if toFile and (state_name := ctrl2.get(STATE_NAME)):
                 # convert smart mode 0 to state value 2
                 resp[state_name] = mode or 2
         if toFile:
@@ -340,7 +340,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = enabled
         if (
             mode is not None
@@ -352,7 +352,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl2.get(STATE_NAME):
+            if toFile and (state_name := ctrl2.get(STATE_NAME)):
                 resp[state_name] = mode
         if (
             timeout_seconds is not None
@@ -364,7 +364,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl2.get(STATE_NAME):
+            if toFile and (state_name := ctrl2.get(STATE_NAME)):
                 resp[state_name] = mode
         if toFile:
             self._filedata.update(resp)
@@ -413,7 +413,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = enabled
         if toFile:
             self._filedata.update(resp)
@@ -462,7 +462,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = fahrenheit
         if toFile:
             self._filedata.update(resp)
@@ -524,7 +524,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = mode
         if toFile:
             self._filedata.update(resp)
@@ -574,7 +574,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = timeout_minutes
         if toFile:
             self._filedata.update(resp)
@@ -622,7 +622,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = max_watts
         if toFile:
             self._filedata.update(resp)
@@ -670,7 +670,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = max_watts
         if toFile:
             self._filedata.update(resp)
@@ -720,7 +720,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = enabled
         if toFile:
             self._filedata.update(resp)
@@ -770,7 +770,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
                 toFile=toFile,
             )
         ):
-            if state_name := ctrl1.get(STATE_NAME):
+            if toFile and (state_name := ctrl1.get(STATE_NAME)):
                 resp[state_name] = enabled
         if toFile:
             self._filedata.update(resp)

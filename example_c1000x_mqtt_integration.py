@@ -173,7 +173,7 @@ async def main():
         CONSOLE.info("\n3. Monitoring device for 30 seconds...")
 
         # Enable real-time data trigger if needed
-        if controller.mqttdevice.realtime_trigger(timeout=300):
+        if await controller.mqttdevice.realtime_trigger(timeout=300):
             CONSOLE.info("Real-time data trigger sent")
         else:
             CONSOLE.info("Could not trigger real-time data")

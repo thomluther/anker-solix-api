@@ -125,7 +125,7 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                 # FORCE immediate data collection via update trigger if connected
                 if mqtt_session.is_connected():
                     CONSOLE.info("Forcing immediate device data update...")
-                    if mqttdevice.realtime_trigger(timeout=60):
+                    if await mqttdevice.realtime_trigger(timeout=60):
                         CONSOLE.info("✓ Update trigger published successfully")
                     else:
                         CONSOLE.info("✗ Failed to send update trigger")

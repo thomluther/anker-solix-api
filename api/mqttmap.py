@@ -20,6 +20,7 @@ from .mqttcmdmap import (
     CMD_SB_INVERTER_TYPE,
     CMD_SB_POWER_CUTOFF,
     CMD_SB_STATUS_CHECK,
+    CMD_STATUS_REQUEST,
     CMD_TEMP_UNIT,
 )
 
@@ -138,6 +139,62 @@ A1728_0405 = {
     "c8": {
         "name": "display_mode"
     },  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "fe": {"name": "msg_timestamp"},  # Message timestamp
+}
+
+A1761_0405 = {
+    # PPS C1000(X) parm info
+    "topic": "param_info",
+    "a4": {"name": "remaining_time_hours", "factor": 0.1},  # In hours (value * factor)
+    "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
+    "a6": {"name": "ac_output_power"},  # Individual AC outlet power
+    "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
+    "a8": {"name": "usbc_2_power"},  # USB-C port 2 output power
+    "a9": {"name": "usba_1_power"},  # USB-A port 1 output power
+    "aa": {"name": "usba_2_power"},  # USB-A port 2 output power
+    "ae": {"name": "dc_input_power"},  # DC input power (solar/car charging)
+    "b0": {"name": "ac_output_power_total"},  # Total AC output power
+    "b3": {"name": "sw_version", "values": 1},  # Main firmware version
+    "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
+    "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
+    "bb": {"name": "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "bd": {"name": "temperature"},  # Main device temperature (°C)
+    "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
+    "c0": {"name": "expansion_packs?"},  # Number of expansion batteries?
+    "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
+    "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
+    "c3": {"name": "battery_soh"},  # Main battery state of health (%)
+    "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
+    "c5": {"name": "expansion_packs_b?"},
+    "d0": {"name": "device_sn"},  # Device serial number
+    "d1": {"name": "max_load"},  # Maximum load setting (W)
+    "d2": {
+        "name": "device_timeout_minutes"
+    },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+    "d3": {"name": "display_timeout_seconds"},  # Options: 20, 30, 60, 300, 1800 seconds
+    "d8": {"name": "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "d9": {
+        "name": "display_mode"
+    },  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "dc": {
+        "name": "light_mode"
+    },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+    "dd": {"name": "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
+    "de": {"name": "display_switch"},  # Off (0) or On (1)
+    "e5": {"name": "backup_charge_switch"},  # Off (0) or On (1)
+    "f8": {
+        "bytes": {
+            "00": {
+                "name": "dc_12v_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                "name": "ac_output_mode",  # Normal (1), Smart (2) - auto-off when not charging and low power
+                "type": DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "fd": {"name": "exp_1_type"},  # Expansion battery type identifier
     "fe": {"name": "msg_timestamp"},  # Message timestamp
 }
 
@@ -939,7 +996,7 @@ SOLIXMQTTMAP = {
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1722_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -951,7 +1008,7 @@ SOLIXMQTTMAP = {
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1728_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -963,7 +1020,7 @@ SOLIXMQTTMAP = {
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1728_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -981,70 +1038,20 @@ SOLIXMQTTMAP = {
         "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/steps/options?
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Smart (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Smart (0)
-        "0405": {
-            # Interval: ~3-5 seconds, but only with realtime trigger
-            "topic": "param_info",
-            "a4": {
-                "name": "remaining_time_hours",
-                "factor": 0.1,
-            },  # In hours (value * factor)
-            "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
-            "a6": {"name": "ac_output_power"},  # Individual AC outlet power
-            "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
-            "a8": {"name": "usbc_2_power"},  # USB-C port 2 output power
-            "a9": {"name": "usba_1_power"},  # USB-A port 1 output power
-            "aa": {"name": "usba_2_power"},  # USB-A port 2 output power
-            "ae": {"name": "dc_input_power"},  # DC input power (solar/car charging)
-            "b0": {"name": "ac_output_power_total"},  # Total AC output power
-            "b3": {"name": "sw_version", "values": 1},  # Main firmware version
-            "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
-            "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
-            "bb": {"name": "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
-            "bd": {"name": "temperature"},  # Main device temperature (°C)
-            "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
-            "c0": {"name": "expansion_packs?"},  # Number of expansion batteries?
-            "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
-            "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
-            "c3": {"name": "battery_soh"},  # Main battery state of health (%)
-            "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
-            "c5": {"name": "expansion_packs_b?"},
-            "d0": {"name": "device_sn"},  # Device serial number
-            "d1": {"name": "max_load"},  # Maximum load setting (W)
-            "d2": {
-                "name": "device_timeout_minutes"
-            },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
-            "d3": {
-                "name": "display_timeout_seconds"
-            },  # Options: 20, 30, 60, 300, 1800 seconds
-            "d8": {"name": "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
-            "d9": {
-                "name": "display_mode"
-            },  # Brightness: Off (0), Low (1), Medium (2), High (3)
-            "dc": {
-                "name": "light_mode"
-            },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-            "dd": {"name": "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
-            "de": {"name": "display_switch"},  # Off (0) or On (1)
-            "e5": {"name": "backup_charge_switch"},  # Off (0) or On (1)
-            "f8": {
-                "bytes": {
-                    "00": {
-                        "name": "dc_12v_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
-                        "type": DeviceHexDataTypes.ui.value,
-                    },
-                    "01": {
-                        "name": "ac_output_mode",  # Normal (1), Smart (2) - auto-off when not charging and low power
-                        "type": DeviceHexDataTypes.ui.value,
-                    },
-                }
-            },
-            "fd": {"name": "exp_1_type"},  # Expansion battery type identifier
-            "fe": {"name": "msg_timestamp"},  # Message timestamp
-        },
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": A1761_0405,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": PPS_VERSIONS_0830,
+    },
+    # PPS C1000 Gen 2
+    "A1763": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": A1761_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": PPS_VERSIONS_0830,
     },
@@ -1053,7 +1060,7 @@ SOLIXMQTTMAP = {
         "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1780_0405,
         # Interval: ??
@@ -1066,7 +1073,7 @@ SOLIXMQTTMAP = {
         "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1780_0405,
         # Interval: ??
@@ -1085,7 +1092,7 @@ SOLIXMQTTMAP = {
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0079": CMD_PORT_MEMORY_SWITCH,  # Port Memory switch: Disabled (0) or Enabled (1)
@@ -1113,7 +1120,7 @@ SOLIXMQTTMAP = {
         "004f": CMD_LIGHT_MODE,  # LEF mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (1), Off (0)
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Off (0)
         "0079": CMD_PORT_MEMORY_SWITCH,  # Enabled (1), Disabled (0)
@@ -1132,13 +1139,14 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 1 E1600
     "A17C0": {
+        "0040": CMD_STATUS_REQUEST,  # Device status request (one time status messages 0405 etc)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0056": CMD_SB_STATUS_CHECK,  # Complex command with multiple parms
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # Works only in certain states for status messages 0405 etc
         "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
         "0068": CMD_SB_INVERTER_TYPE,  # Complex command with multiple parms
         "0405": {
-            # Interval: ~3-5 seconds, but only with realtime trigger
+            # Interval: ~5 seconds with realtime trigger, or immediately with status request
             "topic": "param_info",
             "a2": {"name": "device_sn"},
             "a3": {"name": "battery_soc"},
@@ -1205,8 +1213,9 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 2 E1600 Pro
     "A17C1": {
-        "0057": CMD_REALTIME_TRIGGER,
-        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0040": CMD_STATUS_REQUEST,  # Device status request (one time status messages 0405 etc)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": A17C1_0405,
         # Interval: varies, probably upon change
         "0407": A17C0_0407,
@@ -1218,8 +1227,9 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 2 E1600 AC
     "A17C2": {
-        "0057": CMD_REALTIME_TRIGGER,
-        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0040": CMD_STATUS_REQUEST,  # Device status request (one time status messages 0405 etc)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": A17C5_0405,
         # Interval: varies, probably upon change
         "0407": A17C0_0407,
@@ -1231,8 +1241,9 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 2 E1600 Plus
     "A17C3": {
-        "0057": CMD_REALTIME_TRIGGER,
-        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0040": CMD_STATUS_REQUEST,  # Device status request (one time status messages 0405 etc)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": A17C1_0405,
         # Interval: varies, probably upon change
         "0407": A17C0_0407,
@@ -1244,8 +1255,9 @@ SOLIXMQTTMAP = {
     },
     # Solarbank 3 E2700 Pro
     "A17C5": {
-        "0057": CMD_REALTIME_TRIGGER,
-        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0040": CMD_STATUS_REQUEST,  # Device status request (one time status messages 0405 etc)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": A17C5_0405,
         # Interval: varies, probably upon change
         "0407": A17C0_0407,
@@ -1266,7 +1278,7 @@ SOLIXMQTTMAP = {
     },
     # Anker Solarbank Smartmeter
     "A17X7": {
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             "topic": "param_info",
@@ -1282,7 +1294,7 @@ SOLIXMQTTMAP = {
     },
     # Shello Pro 3 EM
     "SHEMP3": {
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             "topic": "param_info",
@@ -1296,7 +1308,7 @@ SOLIXMQTTMAP = {
     },
     # Anker Power Dock
     "AE100": {
-        "0057": CMD_REALTIME_TRIGGER,
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             "topic": "param_info",

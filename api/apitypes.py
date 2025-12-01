@@ -874,6 +874,7 @@ class SolixDeviceCapacity:
     A1760: int = 1024  # Anker PowerHouse 555 Portable Power Station
     A1761: int = 1056  # SOLIX C1000(X) Portable Power Station
     A1762: int = 1056  # SOLIX Portable Power Station 1000
+    A1763: int = 1024  # SOLIX C1000 Gen 2 Portable Power Station
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
@@ -972,6 +973,7 @@ class SolixDeviceCategory:
     )  # Anker PowerHouse 555 Portable Power Station
     A1761: str = SolixDeviceType.PPS.value  # SOLIX C1000(X) Portable Power Station
     A1762: str = SolixDeviceType.PPS.value  # SOLIX Portable Power Station 1000
+    A1763: str = SolixDeviceType.PPS.value  # SOLIX C1000 Gen 2 Portable Power Station
     A1770: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 757 Portable Power Station

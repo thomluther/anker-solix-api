@@ -244,7 +244,7 @@ class AnkerSolixMqttMonitor:
                                     self.print_menu()
                                 elif k == "u":
                                     CONSOLE.info(
-                                        f"{Color.RED}Unsubscribing all topics...{Color.OFF}"
+                                        f"{Color.RED}\nUnsubscribing all topics...{Color.OFF}"
                                     )
                                     topics.clear()
                                     activetopic = None
@@ -263,7 +263,7 @@ class AnkerSolixMqttMonitor:
                                         )
                                 elif k == "s":
                                     CONSOLE.info(
-                                        f"{Color.GREEN}Subscribing root topics...{Color.OFF}"
+                                        f"{Color.GREEN}\nSubscribing root topics...{Color.OFF}"
                                     )
                                     topics.clear()
                                     activetopic = None
@@ -280,30 +280,50 @@ class AnkerSolixMqttMonitor:
                                             index + 1 if index + 1 < len(tl) else 0
                                         ]
                                         CONSOLE.info(
-                                            f"{Color.YELLOW}Toggling subscription to topic {activetopic}...{Color.OFF}"
+                                            f"{Color.YELLOW}\nToggling subscription to topic {activetopic}...{Color.OFF}"
                                         )
                                         topics.clear()
                                         topics.add(f"{activetopic}")
                                     else:
                                         CONSOLE.info(
-                                            f"{Color.RED}No topics received yet for toggling!{Color.OFF}"
+                                            f"{Color.RED}\nNo topics received yet for toggling!{Color.OFF}"
                                         )
                                 elif k == "r":
                                     if realtime:
                                         CONSOLE.info(
-                                            f"{Color.RED}Disabling real time data trigger, messages will reduce after max. 60 seconds...{Color.OFF}"
+                                            f"{Color.RED}\nDisabling real time data trigger, messages will reduce after max. 60 seconds...{Color.OFF}"
                                         )
                                         realtime = False
                                         rt_devices.discard(device_sn)
                                     else:
                                         CONSOLE.info(
-                                            f"{Color.GREEN}Enabling real time data trigger, message frequency should increase shortly...{Color.OFF}"
+                                            f"{Color.GREEN}\nEnabling real time data trigger, message frequency should increase shortly...{Color.OFF}"
                                         )
                                         realtime = True
                                         rt_devices.add(device_sn)
+                                elif k == "o":
+                                    # individual real time trigger request
+                                    if mqtt_session.realtime_trigger(
+                                        deviceDict=self.device_selected,
+                                        timeout=60,
+                                        wait_for_publish=2,
+                                    ).is_published():
+                                        CONSOLE.info(
+                                            f"{Color.CYAN}\nPublished one time real time trigger request, message frequency should appear shortly...{Color.OFF}"
+                                        )
+                                elif k == "i":
+                                    # individual status request
+                                    if mqtt_session.status_request(
+                                        deviceDict=self.device_selected,
+                                        wait_for_publish=2,
+                                    ).is_published():
+                                        CONSOLE.info(
+                                            f"{Color.CYAN}\nPublished status request, message 0405 should appear shortly...{Color.OFF}"
+                                        )
                                 elif k == "d":
-                                    # save active message callback
+                                    # save active message callback for later restore
                                     cb = mqtt_session.message_callback()
+                                    # Clear message callback to prevent scrolling during display
                                     mqtt_session.message_callback(None)
                                     self.print_table()
                                     input(
@@ -316,21 +336,24 @@ class AnkerSolixMqttMonitor:
                                         == self.print_message
                                     ):
                                         CONSOLE.info(
-                                            f"{Color.YELLOW}Switching to Values view for next message...{Color.OFF}"
+                                            f"{Color.YELLOW}\nSwitching to Values view...{Color.OFF}"
                                         )
                                         mqtt_session.message_callback(
                                             func=self.print_values
                                         )
+                                        await asyncio.sleep(1)
+                                        common.clearscreen()
+                                        self.print_table()
                                     else:
                                         CONSOLE.info(
-                                            f"{Color.YELLOW}Switching to Messages view for next message...{Color.OFF}"
+                                            f"{Color.YELLOW}\nSwitching to Messages view for next message...{Color.OFF}"
                                         )
                                         mqtt_session.message_callback(
                                             func=self.print_message
                                         )
                                 elif k in ["esc", "q"]:
                                     CONSOLE.info(
-                                        f"{Color.RED}Stopping monitor...{Color.OFF}"
+                                        f"{Color.RED}\nStopping monitor...{Color.OFF}"
                                     )
                                     break
                                 await asyncio.sleep(0.5)
@@ -402,7 +425,13 @@ class AnkerSolixMqttMonitor:
             f"[{Color.YELLOW}T{Color.OFF}]oggle subscribed topic. If only one topic identified from root topic, toggling is not possible"
         )
         CONSOLE.info(
-            f"[{Color.YELLOW}R{Color.OFF}]eal time data trigger toggle OFF (Default) or ON"
+            f"[{Color.YELLOW}R{Color.OFF}]eal time data trigger loop OFF (Default) or ON for continuous status messages"
+        )
+        CONSOLE.info(
+            f"[{Color.YELLOW}O{Color.OFF}]ne real time trigger for device (timeout 60 seconds)"
+        )
+        CONSOLE.info(
+            f"[{Color.YELLOW}I{Color.OFF}]ndividual status request for device"
         )
         CONSOLE.info(
             f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding"

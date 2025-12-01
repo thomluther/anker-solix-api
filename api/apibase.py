@@ -259,20 +259,19 @@ class AnkerSolixBaseApi:
         # Initialize the session if required
         if not self.mqttsession:
             self.mqttsession = AnkerSolixMqttSession(apisession=self.apisession)
-        if not fromFile:
-            # (Re)Connect the MQTT client
+        # (Re)Connect the MQTT client
+        if not fromFile and not self.mqttsession.is_connected():
+            await self.mqttsession.connect_client_async()
             if not self.mqttsession.is_connected():
-                await self.mqttsession.connect_client_async()
-                if not self.mqttsession.is_connected():
-                    self._logger.error(
-                        "Api %s failed connecting to MQTT server %s:%s",
-                        self.apisession.nickname,
-                        self.mqttsession.host,
-                        self.mqttsession.port,
-                    )
-                    self.mqttsession.cleanup()
-                    self.mqttsession = None
-                    return self.mqttsession
+                self._logger.error(
+                    "Api %s failed connecting to MQTT server %s:%s",
+                    self.apisession.nickname,
+                    self.mqttsession.host,
+                    self.mqttsession.port,
+                )
+                self.mqttsession.cleanup()
+                self.mqttsession = None
+                return self.mqttsession
             self._logger.debug(
                 "Api %s connected successfully to MQTT server %s:%s",
                 self.apisession.nickname,
@@ -281,7 +280,9 @@ class AnkerSolixBaseApi:
             )
         # register message callback to extract device MQTT data into device Api cache if no custom callback provided and none exists yet
         self.mqttsession.message_callback(
-            func=message_callback if callable(message_callback) else (self.mqttsession.message_callback() or self.mqtt_received)
+            func=message_callback
+            if callable(message_callback)
+            else (self.mqttsession.message_callback() or self.mqtt_received)
         )
         # create the mqtt_data field if not existing yet for supported devices
         for dev in [d for d in self.devices.values() if d.get("mqtt_supported")]:

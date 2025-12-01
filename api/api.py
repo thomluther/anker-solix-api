@@ -36,6 +36,8 @@ from .apitypes import (
 )
 from .helpers import get_enum_name
 from .hesapi import AnkerSolixHesApi
+from .mqttcmdmap import CMD_NAME, SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 from .poller import (
     poll_device_details,
     poll_device_energy,
@@ -147,6 +149,18 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device["mqtt_overlay"] = bool(
                                 device.get("mqtt_overlay") or False
                             )
+                            # check once if device supports status requests from description
+                            if "mqtt_status_request" not in device:
+                                device["mqtt_status_request"] = bool(
+                                    [
+                                        cmd
+                                        for cmd in SOLIXMQTTMAP.get(
+                                            str(value), {}
+                                        ).values()
+                                        if cmd.get(CMD_NAME)
+                                        == SolixMqttCommands.status_request
+                                    ]
+                                )
                         # check if capacity should be calculated
                         if not device.get("battery_capacity") and hasattr(
                             SolixDeviceCapacity, str(value)
