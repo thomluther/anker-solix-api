@@ -7,6 +7,7 @@ from typing import Any
 
 from .apitypes import Color, DeviceHexDataTypes, SolixDeviceCategory
 from .helpers import round_by_factor
+from .mqttcmdmap import COMMAND_LIST
 from .mqttmap import SOLIXMQTTMAP
 
 
@@ -281,11 +282,18 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.str.value:
                 # various number of bytes, string (Base type), use only printable part
                 if "name" in fieldmap:
-                    values[fieldmap.get("name")] = "".join(
-                        c
-                        for c in hexdata.decode(errors="ignore").strip()
-                        if c.isprintable()
-                    )
+                    if "timestamp" in fieldmap.get("name"):
+                        # convert ms string into timestamp value of seconds
+                        values[fieldmap.get("name")] = convert_timestamp(
+                            hexdata, ms=True
+                        )
+                    else:
+                        # convert bytes to string
+                        values[fieldmap.get("name")] = "".join(
+                            c
+                            for c in hexdata.decode(errors="ignore").strip()
+                            if c.isprintable()
+                        )
             case DeviceHexDataTypes.ui.value:
                 # 1 byte fix, unsigned int (Base type)
                 if "name" in fieldmap:
@@ -525,6 +533,14 @@ class DeviceHexData:
                     if self.model in SOLIXMQTTMAP
                     else {}
                 )
+                if cmd_list := fieldmap.get(COMMAND_LIST):
+                    # extract the maps from all nested commands, they should not have duplicate field names
+                    fieldmap = {
+                        k: v
+                        for key, value in fieldmap.items()
+                        if key in cmd_list
+                        for k, v in value.items()
+                    }
                 for f in self.msg_fields.values():
                     name = (
                         (fld := fieldmap.get(f.f_name.hex()) or {}).get("name")
@@ -533,11 +549,10 @@ class DeviceHexData:
                     )
                     factor = fld.get("factor") or None
                     if (
-                        f.f_length == 5
-                        and isinstance(name, str)
+                        isinstance(name, str)
                         and "timestamp" in str(name)
                     ):
-                        name = f"{name} ({datetime.fromtimestamp(int.from_bytes(f.f_value, byteorder='little', signed=True)).strftime('%Y-%m-%d %H:%M:%S')})"
+                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
                     s += f"\n{f.decode().rstrip()}{(Color.CYAN + ' --> ' + str(name) + ('' if factor is None else ' (factor ' + str(factor) + ')') + Color.OFF) if name else ''}"
                 s += f"\n{80 * '-'}"
         else:
@@ -554,6 +569,14 @@ class DeviceHexData:
         fieldmap = (SOLIXMQTTMAP.get(self.model) or {}).get(
             self.msg_header.msgtype.hex()
         ) or {}
+        if cmd_list := fieldmap.get(COMMAND_LIST):
+            # extract the maps from all nested commands, they should not have duplicate field names
+            fieldmap = {
+                k: v
+                for key, value in fieldmap.items()
+                if key in cmd_list
+                for k, v in value.items()
+            }
         for key, item in fieldmap.items():
             if key in self.msg_fields:
                 values.update(self.msg_fields[key].values(fieldmap=item))
@@ -577,13 +600,24 @@ class DeviceHexData:
             self._update_hexbytes()
 
     def add_timestamp_field(self, fieldname: str | bytes = "fe") -> None:
-        """Add or update a timestamp field as maybe required to publish command data."""
+        """Add or update a timestamp field in seconds as maybe required to publish command data."""
         if isinstance(fieldname, str):
             fieldname = bytes.fromhex(fieldname)
         datafield = DeviceHexDataField(
             f_name=fieldname,
             f_type=DeviceHexDataTypes.var.value,
-            f_value=int(datetime.now().timestamp()).to_bytes(4, byteorder="little"),
+            f_value=convert_timestamp(datetime.now().timestamp()),
+        )
+        self.update_field(datafield=datafield)
+
+    def add_timestamp_ms_field(self, fieldname: str | bytes = "fd") -> None:
+        """Add or update a timestamp field as ms string as maybe required to publish command data."""
+        if isinstance(fieldname, str):
+            fieldname = bytes.fromhex(fieldname)
+        datafield = DeviceHexDataField(
+            f_name=fieldname,
+            f_type=DeviceHexDataTypes.str.value,
+            f_value=convert_timestamp(datetime.now().timestamp(), ms=True),
         )
         self.update_field(datafield=datafield)
 
@@ -740,3 +774,29 @@ class MqttCmdValidator:
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
         return asdict(self)
+
+
+def convert_timestamp(
+    value: float | bytes | bytearray, ms: bool = False
+) -> float | bytes | None:
+    """Convert the input value between bytes and float value according to the formats used in MQTT messages."""
+    # traditional timestamp format with field type var with 4 bytes little endian representing the timestamp in seconds
+    # new format is timestamp in milliseconds as string formatted field
+    if isinstance(value, float | int):
+        # convert to bytes
+        if ms:
+            # convert timestamp to ms and strin prior encoding
+            return str(int(value * 1000)).encode()
+        # encode timestamp as little endian integer
+        return int(value).to_bytes(4, byteorder="little")
+    if isinstance(value, bytes | bytearray):
+        # convert to float timestamp in seconds
+        if ms or len(value) > 4:
+            msec = "".join(
+                c for c in value.decode(errors="ignore").strip() if c.isprintable()
+            )
+            if msec.replace(".", "", 1).isdigit():
+                return float(msec) / 1000
+        else:
+            return float(int.from_bytes(value, byteorder="little", signed=True))
+    return None

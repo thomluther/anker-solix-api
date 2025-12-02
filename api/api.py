@@ -36,7 +36,7 @@ from .apitypes import (
 )
 from .helpers import get_enum_name
 from .hesapi import AnkerSolixHesApi
-from .mqttcmdmap import CMD_NAME, SolixMqttCommands
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
 from .poller import (
     poll_device_details,
@@ -157,8 +157,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         for cmd in SOLIXMQTTMAP.get(
                                             str(value), {}
                                         ).values()
-                                        if cmd.get(CMD_NAME)
-                                        == SolixMqttCommands.status_request
+                                        if SolixMqttCommands.status_request
+                                        in [
+                                            cmd.get(COMMAND_NAME),
+                                            *cmd.get(COMMAND_LIST, []),
+                                        ]
                                     ]
                                 )
                         # check if capacity should be calculated
@@ -1052,11 +1055,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # NOTE: Expansions for SB2 + 3 can have mixed capacity, which cannot be identified
                         device["battery_capacity"] = f"{size * (1 + exp):.0f}"
                     cap = device.get("battery_capacity")
-                    # get total SOC, prefer Api value if provided
+                    # get total SOC, prefer value depending on overlay
                     soc = (
-                        device.get("battery_soc", "")
-                        or mqtt.get("battery_soc_total", "")
-                        or mqtt.get("battery_soc", "")
+                        (mqtt.get("battery_soc", "") or device.get("battery_soc", ""))
+                        if device.get("mqtt_overlay")
+                        else (
+                            device.get("battery_soc", "") or mqtt.get("battery_soc", "")
+                        )
                     )
                     # Calculate remaining energy in Wh and add values
                     if cap and soc and str(cap).isdigit() and str(soc).isdigit():

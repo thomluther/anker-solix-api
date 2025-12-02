@@ -6,6 +6,7 @@ from .mqttcmdmap import (
     CMD_AC_FAST_CHARGE_SWITCH,
     CMD_AC_OUTPUT_MODE,
     CMD_AC_OUTPUT_SWITCH,
+    CMD_COMMON_V2,
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
     CMD_DC_OUTPUT_TIMEOUT_SEC,
@@ -20,8 +21,12 @@ from .mqttcmdmap import (
     CMD_SB_INVERTER_TYPE,
     CMD_SB_POWER_CUTOFF,
     CMD_SB_STATUS_CHECK,
+    CMD_SOC_LIMITS_V2,
     CMD_STATUS_REQUEST,
     CMD_TEMP_UNIT,
+    COMMAND_LIST,
+    STATE_NAME,
+    SolixMqttCommands,
 )
 
 # SOLIXMQTTMAP descriptions:
@@ -161,7 +166,7 @@ A1761_0405 = {
     "bd": {"name": "temperature"},  # Main device temperature (°C)
     "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
     "c0": {"name": "expansion_packs?"},  # Number of expansion batteries?
-    "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
+    "c1": {"name": "main_battery_soc"},  # Main battery state of charge (%)
     "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
     "c3": {"name": "battery_soh"},  # Main battery state of health (%)
     "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
@@ -198,6 +203,170 @@ A1761_0405 = {
     "fe": {"name": "msg_timestamp"},  # Message timestamp
 }
 
+A1763_0421 = {
+    "a2": {
+        "bytes": {
+            "01": {
+                "name": "device_sn",
+                "length": 0,
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "20": {
+                "name": "device_pn",
+                "length": 0,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a3": {
+        "bytes": {
+            "04": {
+                "name": "ac_input_limit",  # Max AC charge: 100-1200 W, step: 100
+                "length": 2,
+                "type": DeviceHexDataTypes.sile.value,
+            },
+            "08": {
+                "name": "ac_input_power_total?",
+                "length": 2,
+                "type": DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "a5": {
+        "bytes": {
+            "00": {
+                "name": "temperature",
+                "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                "name": "battery_soc",
+                "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                "name": "battery_soh?",
+                "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "a7": {
+        "bytes": {
+            "00": {
+                "name": "ac_output_switch?",  # TODO: Off (0), On (1)?
+                "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                "name": "dc_output_switch?",  # TODO: Off (0), On (1)?
+                "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "a8": {
+        "bytes": {
+            "00": {
+                "name": "usba_1_status?",  # TODO: USB-A 1 status: Inactive (0), Discharging (1), Charging (2)?
+                "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                "name": "usba_1_power?",
+                "length": 2,
+                "type": DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "aa": {
+        "bytes": {
+            "00": {
+                "name": "usbc_1_status?",  # TODO: USB-C 1 status: Inactive (0), Discharging (1), Charging (2)?
+                "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                "name": "usbc_1_power?",
+                "length": 2,
+                "type": DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "ab": {
+        "bytes": {
+            "00": {
+                "name": "usbc_2_status?",  # TODO: USB-C 2 status: Inactive (0), Discharging (1), Charging (2)?
+                "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                "name": "usbc_2_power?",
+                "length": 2,
+                "type": DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "ac": {
+        "bytes": {
+            "00": {
+                "name": "usbc_3_status?",  # TODO: USB-C 3 status: Inactive (0), Discharging (1), Charging (2)?
+                "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                "name": "usbc_3_power?",
+                "length": 2,
+                "type": DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "ae": {
+        "bytes": {
+            "00": {
+                "name": "ac_output_mode?",  # Normal (1), Smart (0) ? - auto-off when not charging and low power
+                "type": DeviceHexDataTypes.ui.value,
+                "length": 1,
+            },
+            "01": {
+                "name": "ac_output_power_total?",
+                "type": DeviceHexDataTypes.sile.value,
+                "length": 2,
+            },
+        }
+    },
+    "b2": {
+        "bytes": {
+            "00": {
+                "name": "dc_12v_output_mode?",  # TODO: Normal (1), Smart (0) ?
+                "type": DeviceHexDataTypes.ui.value,
+                "length": 1,
+            },
+            "01": {
+                "name": "dc_output_power_total?",
+                "type": DeviceHexDataTypes.sile.value,
+                "length": 2,
+            },
+        }
+    },
+    "d9": {
+        "bytes": {
+            "02": {
+                "name": "soc_min",  # TODO: Range: 5-xx, step: 1?
+                "type": DeviceHexDataTypes.ui.value,
+                "length": 1,
+            },
+            "03": {
+                "name": "soc_max",  # TODO: Range: xx-100, step: 1?
+                "type": DeviceHexDataTypes.ui.value,
+                "length": 1,
+            },
+        }
+    },
+    "fd": {"name": "utc_timestamp"},
+    "fe": {"name": "msg_timestamp"},
+}
+
 A1780_0405 = {
     # F2000(P) param info
     "topic": "param_info",
@@ -220,7 +389,7 @@ A1780_0405 = {
     "bd": {"name": "temperature"},  # Main device temperature (°C)
     "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
     "c0": {"name": "expansion_packs_a?"},
-    "c1": {"name": "battery_soc"},  # Main battery state of charge (%)
+    "c1": {"name": "main_battery_soc"},  # Main battery state of charge (%)
     "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
     "c3": {"name": "battery_soh"},  # Main battery state of health (%)
     "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
@@ -269,7 +438,7 @@ A1780_0408 = {
     "a5": {"name": "utc_timestamp?"},
     "a6": {"name": "discharged_energy?", "factor": 0.001},  # in kWh
     "a7": {"name": "charged_energy?", "factor": 0.001},  # in kWh
-    "ac": {"name": "battery_soc"},  # in %
+    "ac": {"name": "main_battery_soc"},  # in %
 }
 
 A1790_0405 = {
@@ -284,7 +453,7 @@ A1790_0405 = {
     "aa": {"name": "usba_1_power?"},
     "ab": {"name": "usba_2_power?"},
     "ac": {"name": "dc_12v_output_power_switch?"},
-    "ad": {"name": "battery_soc_total"},
+    "ad": {"name": "main_battery_soc"},  # Main battery SOC?
     "ae": {"name": "photovoltaic_power"},  # Total solar input
     "af": {"name": "pv_1_power"},
     "b0": {"name": "pv_2_power"},
@@ -301,7 +470,7 @@ A1790_0405 = {
     },
     "be": {"name": "temperature"},  # In Celsius
     "bf": {"name": "display_status"},  # Asleep (0), Manual Off (1), On (2)
-    "c0": {"name": "battery_soc_total_dup?"},  # Duplicate of ad?
+    "c0": {"name": "battery_soc"},  # Total SOC of main + Exp batteries?
     "c1": {
         "name": "max_soc"
     },  # User Setting (Max SoC %) TODO: What is the command to define SOC max limit?
@@ -394,7 +563,7 @@ A17C1_0405 = {
     # Solarbank 2 param info
     "topic": "param_info",
     "a2": {"name": "device_sn"},
-    "a3": {"name": "battery_soc"},
+    "a3": {"name": "main_battery_soc"},  # controller battery only
     "a5": {"name": "error_code"},
     "a6": {"name": "sw_version", "values": 4},
     "a7": {"name": "sw_controller?", "values": 4},
@@ -403,7 +572,7 @@ A17C1_0405 = {
     "aa": {"name": "temperature"},
     "ab": {"name": "photovoltaic_power", "factor": 0.1},
     "ac": {"name": "ac_output_power", "factor": 0.1},
-    "ad": {"name": "battery_soc_total"},
+    "ad": {"name": "battery_soc"},  # controller + expansions avg
     "b0": {"name": "bat_charge_power", "factor": 0.01},
     "b1": {"name": "pv_yield?", "factor": 0.0001},
     "b2": {"name": "charged_energy?", "factor": 0.00001},
@@ -719,9 +888,9 @@ A17C5_0405 = {
     # Solarbank 3 param info
     "topic": "param_info",
     "a2": {"name": "device_sn"},
-    "a3": {"name": "battery_soc"},
+    "a3": {"name": "main_battery_soc"},
     "a5": {"name": "temperature"},
-    "a6": {"name": "battery_soc_total"},
+    "a6": {"name": "battery_soc"},
     "a7": {"name": "sw_version", "values": 4},
     "a8": {"name": "sw_controller?", "values": 4},
     "a9": {"name": "sw_expansion", "values": 4},
@@ -839,7 +1008,7 @@ DOCK_0420 = {
     "a2": {"name": "device_sn"},
     "a3": {"name": "local_timestamp"},
     "a4": {"name": "utc_timestamp"},
-    "a7": {"name": "battery_soc_total"},
+    "a7": {"name": "battery_soc_total"},  # Average SOC of all solarbanks
     "a8": {"name": "0420_unknown_1?"},
     "a9": {"name": "0420_unknown_2?"},
     "ab": {"name": "grid_power_signed"},
@@ -926,7 +1095,7 @@ DOCK_0421 = {
     "a4": {"name": "pv_limit_solarbank_3"},
     "a5": {"name": "pv_limit_solarbank_2"},
     "a6": {"name": "pv_limit_solarbank_1"},
-    "a7": {"name": "battery_soc_total"},
+    "a7": {"name": "battery_soc_total"},  # Average SOC of all solarbanks
     "ac": {"name": "soc_max?"},
     "ad": {"name": "max_load"},
     "fc": {"name": "device_sn"},
@@ -940,7 +1109,7 @@ DOCK_0428 = {
     "a2": {"name": "device_sn"},
     "a3": {"name": "local_timestamp"},
     "a4": {"name": "utc_timestamp"},
-    "a5": {"name": "battery_soc_total"},
+    "a5": {"name": "battery_soc_total"},  # Average SOC of all solarbanks
     "a6": {"name": "0428_unknown_1?"},
     "ac": {"name": "pv_power_total"},
     "b5": {"name": "battery_power_signed_total"},
@@ -1050,8 +1219,108 @@ SOLIXMQTTMAP = {
     # PPS C1000 Gen 2
     "A1763": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0101": {
+            # AC command group
+            COMMAND_LIST: [
+                SolixMqttCommands.ac_output_switch,
+                SolixMqttCommands.ac_charge_limit,
+                SolixMqttCommands.ac_output_mode_select,
+            ],
+            SolixMqttCommands.ac_output_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    "name": "set_ac_output_switch",  # Disable (0) | Enable (1)
+                    "type": DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_output_power_switch",
+                },
+            },
+            SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2
+            | {
+                "a4": {
+                    "name": "set_ac_input_limit",  # in W; min: 100, max: 1200, step: 100
+                    "type": DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "ac_input_limit",
+                },
+            },
+            SolixMqttCommands.ac_output_mode_select: CMD_COMMON_V2
+            | {
+                "a6": {
+                    "name": "set_ac_output_mode",  # TODO: Normal (1 or 0), Smart (0 or 1)
+                    "type": DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_output_mode",
+                },
+            },
+        },
+        "0102": {
+            # DC command group
+            COMMAND_LIST: [
+                SolixMqttCommands.dc_output_switch,
+                SolixMqttCommands.dc_12v_output_mode_select,
+            ],
+            SolixMqttCommands.dc_output_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    "name": "set_dc_output_switch",  # Disable (0) | Enable (1)
+                    "type": DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "dc_output_power_switch",
+                },
+            },
+            SolixMqttCommands.dc_12v_output_mode_select: CMD_COMMON_V2
+            | {
+                "a4": {
+                    "name": "set_dc_12v_output_mode",  # TODO: Normal (1), Smart (0) or vice versa?
+                    "type": DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "dc_output_power_switch",
+                },
+            },
+        },
+        "0103": {
+            # Other command group
+            COMMAND_LIST: [
+                SolixMqttCommands.display_switch,
+                SolixMqttCommands.display_mode_select,
+                SolixMqttCommands.device_timeout_minutes,
+                SolixMqttCommands.soc_limits,
+            ],
+            SolixMqttCommands.display_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    "name": "set_display_switch",  # Off (0), On (1)
+                    "type": DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "display_switch",
+                },
+            },
+            SolixMqttCommands.display_mode_select: CMD_COMMON_V2
+            | {
+                "a3": {
+                    "name": "set_display_mode",  # Off (0), Low (1), Medium (2), High (3)
+                    "type": DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "display_mode",
+                },
+            },
+            SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
+            | {
+                "a6": {
+                    "name": "set_device_timeout_min",  # 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+                    "type": DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "device_timeout_minutes",
+                },
+            },
+            SolixMqttCommands.soc_limits: CMD_SOC_LIMITS_V2,  # TODO: max_soc: xx-100 %, step:??, min_soc: 05-xx %, step:??,
+        },
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": A1761_0405,
+        # Interval: ~300 seconds
+        "0889": {
+            "a4": {"name": "0889_unknown_1?"},
+            "a5": {"name": "0889_unknown_2?"},
+            "a6": {"name": "0889_unknown_3?"},
+            "fd": {"name": "0880_timestamp?"},
+        },
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0421": A1763_0421,
+        # Interval: Irregular, maybe on changes or as response to App status request? Same content as 0421
+        "0900": A1763_0421,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": PPS_VERSIONS_0830,
     },

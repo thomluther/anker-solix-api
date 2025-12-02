@@ -19,7 +19,7 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
-from .mqttcmdmap import CMD_NAME, SolixMqttCommands
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import (
     DeviceHexData,
@@ -690,8 +690,11 @@ class AnkerSolixMqttSession:
                                 if [
                                     msg
                                     for msg in SOLIXMQTTMAP.get(pn, {}).values()
-                                    if msg.get(CMD_NAME)
-                                    == SolixMqttCommands.status_request
+                                    if SolixMqttCommands.status_request
+                                    in [
+                                        msg.get(COMMAND_NAME),
+                                        *msg.get(COMMAND_LIST, []),
+                                    ]
                                 ]:
                                     request_devices.add(sn)
                     subscribed_topics = topics.copy()

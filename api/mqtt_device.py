@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
 from .mqtt import generate_mqtt_command
-from .mqttcmdmap import SolixMqttCommands
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
 
 if TYPE_CHECKING:
@@ -60,7 +60,15 @@ class SolixMqttDevice:
             if not pns or self.pn in pns:
                 # get defined message type for command
                 msg, fields = (
-                    [(k, v) for k, v in pn_map.items() if v.get("cmd_name") == cmd][:1]
+                    [
+                        (k, v)
+                        for k, v in pn_map.items()
+                        if cmd
+                        in [
+                            v.get(COMMAND_NAME),
+                            *v.get(COMMAND_LIST, []),
+                        ]
+                    ][:1]
                     or [("", {})]
                 )[0]
                 # use default message type for update trigger command if not specified

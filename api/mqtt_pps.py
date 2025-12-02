@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
 from .mqtt_device import SolixMqttDevice
-from .mqttcmdmap import CMD_NAME, STATE_NAME, SolixMqttCommands
+from .mqttcmdmap import COMMAND_NAME, STATE_NAME, SolixMqttCommands
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -101,9 +101,9 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.ac_output_switch) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         ctrl2 = self.controls.get(SolixMqttCommands.ac_output_mode_select) or {}
-        cmd2 = ctrl2.get(CMD_NAME, "")
+        cmd2 = ctrl2.get(COMMAND_NAME, "")
         # Validate command values
         enabled = 1 if enabled else 0 if enabled is not None else None
         if enabled is not None and not self.validate_command_value(cmd1, enabled):
@@ -190,9 +190,9 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.dc_output_switch) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         ctrl2 = self.controls.get(SolixMqttCommands.dc_12v_output_mode_select) or {}
-        cmd2 = ctrl1.get(CMD_NAME, "")
+        cmd2 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         enabled = 1 if enabled else 0 if enabled is not None else None
         if enabled is not None and not self.validate_command_value(cmd1, enabled):
@@ -282,11 +282,11 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.display_switch) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         ctrl2 = self.controls.get(SolixMqttCommands.display_mode_select) or {}
-        cmd2 = ctrl2.get(CMD_NAME, "")
+        cmd2 = ctrl2.get(COMMAND_NAME, "")
         ctrl3 = self.controls.get(SolixMqttCommands.display_timeout_seconds) or {}
-        cmd3 = ctrl3.get(CMD_NAME, "")
+        cmd3 = ctrl3.get(COMMAND_NAME, "")
         # Validate command value
         enabled = 1 if enabled else 0 if enabled is not None else None
         if enabled is not None and not self.validate_command_value(cmd1, enabled):
@@ -391,7 +391,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.ac_charge_switch) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         enabled = 1 if enabled else 0 if enabled is not None else None
         if enabled is not None and not self.validate_command_value(cmd1, enabled):
@@ -440,7 +440,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.temp_unit_switch) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
         if fahrenheit is not None and not self.validate_command_value(cmd1, fahrenheit):
@@ -491,7 +491,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.light_mode_select) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Convert string mode to int
         mode_map = {"off": 0, "low": 1, "medium": 2, "high": 3, "blinking": 4}
         original_mode = mode
@@ -552,7 +552,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.device_timeout_minutes) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         if timeout_minutes is not None and not self.validate_command_value(
             cmd1, timeout_minutes
@@ -602,7 +602,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.device_max_load) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         if max_watts is not None and not self.validate_command_value(cmd1, max_watts):
             self._logger.error(
@@ -650,7 +650,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.ac_charge_limit) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         if max_watts is not None and not self.validate_command_value(cmd1, max_watts):
             self._logger.error(
@@ -698,7 +698,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.ac_fast_charge_switch) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         if enabled is not None and not self.validate_command_value(
             cmd1, 1 if enabled else 0
@@ -748,7 +748,7 @@ class SolixMqttDevicePps(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.port_memory_switch) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         if enabled is not None and not self.validate_command_value(
             cmd1, 1 if enabled else 0

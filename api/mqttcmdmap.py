@@ -4,7 +4,8 @@ from dataclasses import asdict, dataclass
 
 from .apitypes import DeviceHexDataTypes
 
-CMD_NAME = "cmd_name"
+COMMAND_NAME = "command_name"
+COMMAND_LIST = "command_list"
 STATE_NAME = "state_name"
 VALUE_MIN = "value_min"
 VALUE_MAX = "value_max"
@@ -21,9 +22,10 @@ class SolixMqttCommands:
     temp_unit_switch: str = "temp_unit_switch"
     device_max_load: str = "device_max_load"
     device_timeout_minutes: str = "device_timeout_minutes"
+    ac_charge_switch: str = "ac_charge_switch"
+    ac_fast_charge_switch: str = "ac_fast_charge_switch"
     ac_charge_limit: str = "ac_charge_limit"
     ac_output_switch: str = "ac_output_switch"
-    ac_fast_charge_switch: str = "ac_fast_charge_switch"
     ac_output_mode_select: str = "ac_output_mode_select"
     dc_output_switch: str = "dc_output_switch"
     dc_12v_output_mode_select: str = "dc_12v_output_mode_select"
@@ -34,7 +36,7 @@ class SolixMqttCommands:
     light_switch: str = "light_switch"
     light_mode_select: str = "light_mode_select"
     port_memory_switch: str = "port_memory_switch"
-    ac_charge_switch: str = "ac_charge_switch"
+    soc_limits: str = "soc_limits"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
     sb_inverter_type_select: str = "sb_inverter_type_select"
@@ -50,24 +52,44 @@ class SolixMqttCommands:
 # Those command message maps should be reused in the overall mqttmap
 # At a later stage, these command maps may be enhanced to compose the hex command message automatically from the description
 
-CMD_COMMON = {
-    # Common command pattern seen in most of the commands
-    "topic": "req",
-    "a1": {"name": "pattern_22"},
+TIMESTAMP_FD = {
+    # newer format using str type for timestamp value in ms
+    "fd": {
+        "name": "msg_timestamp",
+        "type": DeviceHexDataTypes.str.value,
+    },
+}
+
+TIMESTAMP_FE = {
+    # classical format using 4 bytes for timestamp value in sec
     "fe": {
         "name": "msg_timestamp",
         "type": DeviceHexDataTypes.var.value,
     },
 }
 
+CMD_COMMON = {
+    # Common command pattern seen in most of the commands
+    # TODO: Compare across all described commands if used only for cmd message types 00xx
+    "topic": "req",
+    "a1": {"name": "pattern_22"},
+} | TIMESTAMP_FE
+
+CMD_COMMON_V2 = {
+    # Common command pattern V2 seen in most of the commands for newer devices with timestamp in ms
+    # TODO: Compare across all described commands if used only for cmd message types 01xx
+    "topic": "req",
+    "a1": {"name": "pattern_22"},
+} | TIMESTAMP_FD
+
 CMD_STATUS_REQUEST = CMD_COMMON | {
     # Command: Device status request
-    CMD_NAME: SolixMqttCommands.status_request,
+    COMMAND_NAME: SolixMqttCommands.status_request,
 }
 
 CMD_REALTIME_TRIGGER = CMD_COMMON | {
     # Command: Real time data message trigger
-    CMD_NAME: SolixMqttCommands.realtime_trigger,
+    COMMAND_NAME: SolixMqttCommands.realtime_trigger,
     "a2": {
         "name": "set_realtime_trigger",  # Disable (0) | Enable (1)
         "type": DeviceHexDataTypes.ui.value,
@@ -80,171 +102,189 @@ CMD_REALTIME_TRIGGER = CMD_COMMON | {
 
 CMD_TEMP_UNIT = CMD_COMMON | {
     # Command: Set temperature unit
-    CMD_NAME: SolixMqttCommands.temp_unit_switch,
-    STATE_NAME: "temp_unit_fahrenheit",
+    COMMAND_NAME: SolixMqttCommands.temp_unit_switch,
     "a2": {
         "name": "set_temp_unit_fahrenheit",  # Celcius (0) | Fahrenheit (1)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "temp_unit_fahrenheit",
     },
 }
 
 CMD_DEVICE_MAX_LOAD = CMD_COMMON | {
     # Command: Set device max home load in Watt
-    CMD_NAME: SolixMqttCommands.device_max_load,
-    STATE_NAME: "max_load",
+    COMMAND_NAME: SolixMqttCommands.device_max_load,
     "a2": {
         "name": "set_device_max_load",  # supported value in Watt
         "type": DeviceHexDataTypes.sile.value,
+        STATE_NAME: "max_load",
     },
 }
 
 CMD_DEVICE_TIMEOUT_MIN = CMD_COMMON | {
     # Command: Set device timeout in minutes
-    CMD_NAME: SolixMqttCommands.device_timeout_minutes,
-    STATE_NAME: "device_timeout_minutes",
+    COMMAND_NAME: SolixMqttCommands.device_timeout_minutes,
     "a2": {
-        "name": "set_device_timeout_min",  # supported value in minutes
+        "name": "set_device_timeout_min",  # 0 (Never), 30, 60, 120, 240, 360, 720, 1440
         "type": DeviceHexDataTypes.sile.value,
+        STATE_NAME: "device_timeout_minutes",
     },
 }
 
 CMD_AC_CHARGE_SWITCH = CMD_COMMON | {
     # Command: Enable AC backup charge
-    CMD_NAME: SolixMqttCommands.ac_charge_switch,
-    STATE_NAME: "backup_charge_switch",
+    COMMAND_NAME: SolixMqttCommands.ac_charge_switch,
     "a2": {
         "name": "set_ac_charge_switch",  # Disable (0) | Enable (1)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "backup_charge_switch",
     },
 }
 
 CMD_AC_CHARGE_LIMIT = CMD_COMMON | {
     # Command: Set AC backup charge limit
-    CMD_NAME: SolixMqttCommands.ac_charge_limit,
-    STATE_NAME: "ac_charge_limit",
+    COMMAND_NAME: SolixMqttCommands.ac_charge_limit,
     "a2": {
-        "name": "set_ac_charge_limit",  # supported Watt value
-        "type": DeviceHexDataTypes.ui.value,
+        "name": "set_ac_input_limit",  # supported Watt value
+        "type": DeviceHexDataTypes.sile.value,
+        STATE_NAME: "ac_input_limit",
     },
 }
 
 CMD_AC_OUTPUT_SWITCH = CMD_COMMON | {
     # Command: PPS AC output switch setting
-    CMD_NAME: SolixMqttCommands.ac_output_switch,
-    STATE_NAME: "ac_output_power_switch",
+    COMMAND_NAME: SolixMqttCommands.ac_output_switch,
     "a2": {
         "name": "set_ac_output_switch",  # Disable (0) | Enable (1)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "ac_output_power_switch",
     },
 }
 
 CMD_AC_FAST_CHARGE_SWITCH = CMD_COMMON | {
     # Command: PPS AC (ultra)fast charge switch setting
-    CMD_NAME: SolixMqttCommands.ac_fast_charge_switch,
-    STATE_NAME: "fast_charge_switch",
+    COMMAND_NAME: SolixMqttCommands.ac_fast_charge_switch,
     "a2": {
         "name": "set_ac_fast_charge_switch",  # Disable (0) | Enable (1)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "fast_charge_switch",
     },
 }
 
 CMD_AC_OUTPUT_MODE = CMD_COMMON | {
     # Command: PPS AC output mode setting
-    CMD_NAME: SolixMqttCommands.ac_output_mode_select,
-    STATE_NAME: "ac_output_mode",
+    COMMAND_NAME: SolixMqttCommands.ac_output_mode_select,
     "a2": {
         "name": "set_ac_output_mode",  # Normal (1), Smart (0)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "ac_output_mode",
     },
 }
 
 CMD_DC_OUTPUT_SWITCH = CMD_COMMON | {
     # Command: PPS DC output switch setting
-    CMD_NAME: SolixMqttCommands.dc_output_switch,
-    STATE_NAME: "dc_output_power_switch",
+    COMMAND_NAME: SolixMqttCommands.dc_output_switch,
     "a2": {
         "name": "set_dc_output_switch",  # Disable (0) | Enable (1)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "dc_output_power_switch",
     },
 }
 
 CMD_DC_12V_OUTPUT_MODE = CMD_COMMON | {
     # Command: PPS 12V DC output mode setting
-    CMD_NAME: SolixMqttCommands.dc_12v_output_mode_select,
-    STATE_NAME: "dc_12v_output_mode",
+    COMMAND_NAME: SolixMqttCommands.dc_12v_output_mode_select,
     "a2": {
         "name": "set_dc_12v_output_mode",  # Normal (1), Smart (0)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "dc_output_power_switch",
     },
 }
 
-CMD_DC_OUTPUT_TIMEOUT_SEC = CMD_COMMON | {
-    # Command: PPS DC output timeout setting
-    CMD_NAME: SolixMqttCommands.dc_12v_output_mode_select,
-    STATE_NAME: "dc_output_timeout_seconds",
-    "a2": {
-        "name": "set_dc_output_timeout_seconds",  # Timeout seconds, custom range: 0-10800
-        "type": DeviceHexDataTypes.var.value,
-    },
-}
+CMD_DC_OUTPUT_TIMEOUT_SEC = (
+    CMD_COMMON
+    | {
+        # Command: PPS DC output timeout setting
+        COMMAND_NAME: SolixMqttCommands.dc_12v_output_mode_select,
+        "a2": {
+            "name": "set_dc_output_timeout_seconds",  # Timeout seconds, custom range: 0-10800
+            "type": DeviceHexDataTypes.var.value,
+            STATE_NAME: "dc_output_timeout_seconds",
+        },
+    }
+)
 
 CMD_LIGHT_SWITCH = CMD_COMMON | {
     # Command: PPS LED light switch setting
-    CMD_NAME: SolixMqttCommands.light_switch,
-    STATE_NAME: "light_switch",
+    COMMAND_NAME: SolixMqttCommands.light_switch,
     "a2": {
         "name": "set_light_switch",  # Off (0), On (1)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "light_switch",
     },
 }
 
 CMD_LIGHT_MODE = CMD_COMMON | {
     # Command: PPS light mode setting
-    CMD_NAME: SolixMqttCommands.light_mode_select,
-    STATE_NAME: "light_mode",
+    COMMAND_NAME: SolixMqttCommands.light_mode_select,
     "a2": {
         "name": "set_light_mode",  # Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "light_mode",
     },
 }
 
 CMD_DISPLAY_SWITCH = CMD_COMMON | {
     # Command: PPS display switch setting
-    CMD_NAME: SolixMqttCommands.display_switch,
-    STATE_NAME: "display_switch",
+    COMMAND_NAME: SolixMqttCommands.display_switch,
     "a2": {
         "name": "set_display_switch",  # Off (0), On (1)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "display_switch",
     },
 }
 
 CMD_DISPLAY_MODE = CMD_COMMON | {
     # Command: PPS display mode setting
-    CMD_NAME: SolixMqttCommands.display_mode_select,
-    STATE_NAME: "display_mode",
+    COMMAND_NAME: SolixMqttCommands.display_mode_select,
     "a2": {
         "name": "set_display_mode",  # Off (0), Low (1), Medium (2), High (3)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "display_mode",
     },
 }
 
 CMD_DISPLAY_TIMEOUT_SEC = CMD_COMMON | {
     # Command: Set display timeout in seconds
-    CMD_NAME: SolixMqttCommands.display_timeout_seconds,
-    STATE_NAME: "display_timeout_seconds",
+    COMMAND_NAME: SolixMqttCommands.display_timeout_seconds,
     "a2": {
         "name": "set_display_timeout_sec",  # supported value in seconds
         "type": DeviceHexDataTypes.sile.value,
+        STATE_NAME: "display_timeout_seconds",
     },
 }
 
 CMD_PORT_MEMORY_SWITCH = CMD_COMMON | {
     # Command: PPS port memory switch setting
-    CMD_NAME: SolixMqttCommands.port_memory_switch,
-    STATE_NAME: "port_memory_switch",
+    COMMAND_NAME: SolixMqttCommands.port_memory_switch,
     "a2": {
         "name": "set_port_memory_switch",  # Off (0), On (1)
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "port_memory_switch",
+    },
+}
+
+CMD_SOC_LIMITS_V2 = CMD_COMMON_V2 | {
+    # Command: PPS soc limit settings
+    COMMAND_NAME: SolixMqttCommands.soc_limits,
+    "aa": {
+        "name": "set_max_soc",  # TODO: max_soc: xx-100 %, step: 1 ??
+        "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "max_soc",
+    },
+    "ab": {
+        "name": "set_min_soc",  # TODO: min_soc: 05-xx %, step: 1 ??,
+        "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "min_soc",
     },
 }
 
@@ -252,7 +292,7 @@ CMD_SB_STATUS_CHECK = (
     CMD_COMMON
     | {
         # Command: Solarbank 1 Status check request?
-        CMD_NAME: SolixMqttCommands.sb_status_check,
+        COMMAND_NAME: SolixMqttCommands.sb_status_check,
         "a2": {
             "name": "device_sn",
             "type": DeviceHexDataTypes.str.value,
@@ -295,36 +335,27 @@ CMD_SB_STATUS_CHECK = (
 
 CMD_SB_POWER_CUTOFF = CMD_COMMON | {
     # Command: Solarbank Set Power cutoff
-    CMD_NAME: SolixMqttCommands.sb_power_cutoff_select,
+    COMMAND_NAME: SolixMqttCommands.sb_power_cutoff_select,
     "a2": {
         "name": "set_output_cutoff_data",  # 10 | 5 %
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "output_cutoff_data",
     },
     "a3": {
         "name": "set_lowpower_input_data",  # 5 | 4 %
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "lowpower_input_data",
     },
     "a4": {
         "name": "set_input_cutoff_data",  # 10 | 5 %
         "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "input_cutoff_data",
     },
 }
 
-CMD_SB_INVERTER_TYPE = CMD_COMMON | {
+CMD_SB_INVERTER_TYPE = CMD_SB_POWER_CUTOFF | {
     # Command: Solarbank 1 set Inverter Type and limits
-    CMD_NAME: SolixMqttCommands.sb_inverter_type_select,
-    "a2": {
-        "name": "output_cutoff_data",  # 10 | 5 %
-        "type": DeviceHexDataTypes.ui.value,
-    },
-    "a3": {
-        "name": "lowpower_input_data",  # 5 | 4 %
-        "type": DeviceHexDataTypes.ui.value,
-    },
-    "a4": {
-        "name": "input_cutoff_data",  # 10 | 5 %
-        "type": DeviceHexDataTypes.ui.value,
-    },
+    COMMAND_NAME: SolixMqttCommands.sb_inverter_type_select,
     "a5": {
         "name": "set_inverter_brand",  # Hex bytes of brand name, length varies
         "type": DeviceHexDataTypes.bin.value,
@@ -346,19 +377,19 @@ CMD_SB_INVERTER_TYPE = CMD_COMMON | {
         "type": DeviceHexDataTypes.ui.value,
     },
     "aa": {
-        "name": "ch_1_min_what?",  # 500 or other, supported values unknown
+        "name": "set_ch_1_min_what?",  # 500 or other, supported values unknown
         "type": DeviceHexDataTypes.var.value,
     },
     "ab": {
-        "name": "ch_1_max_what?",  # 10000 or other, supported values unknown
+        "name": "set_ch_1_max_what?",  # 10000 or other, supported values unknown
         "type": DeviceHexDataTypes.var.value,
     },
     "ac": {
-        "name": "ch_2_min_what?",  # 500 or other, supported values unknown
+        "name": "set_ch_2_min_what?",  # 500 or other, supported values unknown
         "type": DeviceHexDataTypes.var.value,
     },
     "ad": {
-        "name": "ch_2_max_what?",  # 10000 or other, supported values unknown
+        "name": "set_ch_2_max_what?",  # 10000 or other, supported values unknown
         "type": DeviceHexDataTypes.var.value,
     },
 }

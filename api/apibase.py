@@ -533,6 +533,7 @@ class AnkerSolixBaseApi:
                                 # keys with value that should be saved as int string
                                 "battery_soc",
                                 "battery_soc_total",
+                                "main_battery_soc",
                                 "exp_1_soc",
                                 "exp_2_soc",
                                 "exp_3_soc",
@@ -602,6 +603,7 @@ class AnkerSolixBaseApi:
                                 "usbc_4_power",
                                 "usba_1_power",
                                 "usba_2_power",
+                                "soc_max",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -667,7 +669,8 @@ class AnkerSolixBaseApi:
                                 "usba_1_status",
                                 "usba_2_status",
                                 "usage_mode",
-                                "energy_saving_modeallow_export_switch",
+                                "energy_saving_mode",
+                                "allow_export_switch",
                                 "priority_discharge_switch",
                                 "grid_export_disabled",
                                 "display_mode",
@@ -732,7 +735,6 @@ class AnkerSolixBaseApi:
                     # trigger device cache update for cap calculation with total or main device soc updates
                     if (
                         calc_capacity
-                        and not device.get("battery_soc")
                         and (cap := device.get("battery_capacity"))
                     ):
                         # calculate total expansions if expansions are available and no number in mqtt cache
@@ -744,21 +746,22 @@ class AnkerSolixBaseApi:
                                     if device_mqtt.get(k)
                                 ]
                             )
-                        # calculate total soc if expansions are available and no total soc in mqtt cache
-                        if not (tsoc := mqtt.get("battery_soc_total")):
-                            # calculate total soc based on expansions
+                        # calculate device overall soc if expansions are available and no overall soc in mqtt cache
+                        if not (tsoc := mqtt.get("battery_soc")):
+                            # calculate overall soc based on expansions
                             if soclist := [
                                 float(device_mqtt.get(k))
                                 for k in (
-                                    ["battery_soc"]
+                                    ["main_battery_soc"]
                                     + [f"exp_{i!s}_soc" for i in range(1, 6)]
                                 )
                                 if device_mqtt.get(k)
                             ]:
                                 tsoc = round(sum(soclist) / len(soclist))
-                                device_mqtt["battery_soc_total"] = f"{float(tsoc):.0f}"
-                        # trigger with old capacity since this will cause capacity recalculation
-                        if tsoc:
+                                device_mqtt["battery_soc"] = f"{float(tsoc):.0f}"
+                        # trigger capacity calculation if no Api SOC available or MQTT overlay
+                        if tsoc and (not device.get("battery_soc") or  device.get("mqtt_overlay")):
+                            # trigger with old capacity since this will cause capacity recalculation
                             self._update_dev({"device_sn": sn, "battery_capacity": cap})
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))

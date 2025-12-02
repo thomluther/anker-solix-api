@@ -40,7 +40,7 @@ from .apitypes import (
     SolixVehicle,
 )
 from .mqtt import AnkerSolixMqttSession
-from .mqttcmdmap import CMD_NAME, SolixMqttCommands
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
@@ -1881,7 +1881,11 @@ class AnkerSolixApiExport:
                             if [
                                 msg
                                 for msg in SOLIXMQTTMAP.get(pn, {}).values()
-                                if msg.get(CMD_NAME) == SolixMqttCommands.status_request
+                                if SolixMqttCommands.status_request
+                                in [
+                                    msg.get(COMMAND_NAME),
+                                    *msg.get(COMMAND_LIST, []),
+                                ]
                             ]:
                                 request_devices.add(sn)
                     # wait at least first minute for messages without trigger

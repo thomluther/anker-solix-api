@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
 from .mqtt_device import SolixMqttDevice
-from .mqttcmdmap import CMD_NAME, STATE_NAME, SolixMqttCommands
+from .mqttcmdmap import COMMAND_NAME, STATE_NAME, SolixMqttCommands
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -71,7 +71,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.temp_unit_switch) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         fahrenheit = 1 if fahrenheit else 0 if fahrenheit is not None else None
         if fahrenheit is not None and not self.validate_command_value(cmd1, fahrenheit):
@@ -120,7 +120,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         # response
         resp = {}
         ctrl1 = self.controls.get(SolixMqttCommands.sb_power_cutoff_select) or {}
-        cmd1 = ctrl1.get(CMD_NAME, "")
+        cmd1 = ctrl1.get(COMMAND_NAME, "")
         # Validate command value
         limit = (
             int(limit)
