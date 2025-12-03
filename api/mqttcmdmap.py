@@ -196,7 +196,7 @@ CMD_DC_12V_OUTPUT_MODE = CMD_COMMON | {
     "a2": {
         "name": "set_dc_12v_output_mode",  # Normal (1), Smart (0)
         "type": DeviceHexDataTypes.ui.value,
-        STATE_NAME: "dc_output_power_switch",
+        STATE_NAME: "dc_12v_output_mode",
     },
 }
 

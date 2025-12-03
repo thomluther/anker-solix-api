@@ -42,8 +42,10 @@ from .mqttcmdmap import (
 #   Each named setting must describe a "mask" integer to indicate which bit(s) are relevant for the named setting, e.g. mask 0x64 => 0100 0000
 # Field format 0x05 is 4 bytes, signed float LE (Base type), "factor" can be specified optionally for value conversion
 # Field format 0x06 can be many bytes, mix of Str and Byte values
-#   The mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type" with a DeviceHexDataTypes base type vor value conversion.
-#   The "length" with int for byte count can be specified (default is 1 Byte), where Length of 0 indicates that first byte contains variable field length
+#   The mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type",
+#   with a DeviceHexDataTypes base type for value conversion (ui=1, sile=2, sfle=4 bytes).
+#   The optional "length" with int for byte count can be specified (default is 0 if no base type used),
+#   where Length of 0 indicates that first byte contains variable field length, e.g. for str type
 #   "factor" can be specified optionally for value conversion
 # "factor" usage example: e.g. int field value -123456 with factor -0.001 will convert the value to float 123.456 (maintaining factor's precision)
 # Timestamp values should contain "timestamp" in name to allow decoder methods to convert value to human readable format
@@ -208,12 +210,10 @@ A1763_0421 = {
         "bytes": {
             "01": {
                 "name": "device_sn",
-                "length": 0,
                 "type": DeviceHexDataTypes.str.value,
             },
             "20": {
                 "name": "device_pn",
-                "length": 0,
                 "type": DeviceHexDataTypes.str.value,
             },
         }
@@ -222,12 +222,10 @@ A1763_0421 = {
         "bytes": {
             "04": {
                 "name": "ac_input_limit",  # Max AC charge: 100-1200 W, step: 100
-                "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
             "08": {
                 "name": "ac_input_power_total?",
-                "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
         }
@@ -236,31 +234,34 @@ A1763_0421 = {
         "bytes": {
             "00": {
                 "name": "temperature",
-                "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "02": {
                 "name": "battery_soc",
-                "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "03": {
                 "name": "battery_soh",
-                "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
+        }
+    },
+    "a6": {
+        "bytes": {
+            "00": {
+                "name": "output_power_total",  # OUTPUT POWER TOTAL
+                "type": DeviceHexDataTypes.sile.value,
+            }
         }
     },
     "a7": {
         "bytes": {
             "00": {
                 "name": "ac_output_mode",  # TODO: Normal (1), Smart (0) ? - auto-off when not charging and low power
-                "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "03": {
                 "name": "dc_output_mode",  # TODO: Normal (1), Smart (0) ?
-                "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
         }
@@ -268,13 +269,11 @@ A1763_0421 = {
     "a8": {
         "bytes": {
             "00": {
-                "name": "dc_input_switch",  # USB-A 1 status: Inactive (0), Discharging (1), Charging (2)
-                "length": 1,
+                "name": "dc_input_power_switch",  # Off (0), On (1)
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
                 "name": "dc_input_power_total",  # DC input power (solar + car charging)
-                "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
         }
@@ -283,12 +282,10 @@ A1763_0421 = {
         "bytes": {
             "00": {
                 "name": "usbc_1_status",  # USB-C 1 status: Inactive (0), Discharging (1), Charging (2)
-                "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
                 "name": "usbc_1_power",
-                "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
         }
@@ -297,12 +294,10 @@ A1763_0421 = {
         "bytes": {
             "00": {
                 "name": "usbc_2_status",  # USB-C 2 status: Inactive (0), Discharging (1), Charging (2)
-                "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
                 "name": "usbc_2_power",
-                "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
         }
@@ -311,12 +306,10 @@ A1763_0421 = {
         "bytes": {
             "00": {
                 "name": "usbc_3_status",  # USB-C 3 status: Inactive (0), Discharging (1), Charging (2)
-                "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
                 "name": "usbc_3_power",
-                "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
         }
@@ -325,12 +318,10 @@ A1763_0421 = {
         "bytes": {
             "00": {
                 "name": "usba_1_status",  # USB-A 1 status: Inactive (0), Discharging (1), Charging (2)
-                "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
                 "name": "usba_1_power",
-                "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
         }
@@ -340,12 +331,10 @@ A1763_0421 = {
             "00": {
                 "name": "dc_12v_output_switch",  # Off (0), On (1)
                 "type": DeviceHexDataTypes.ui.value,
-                "length": 1,
             },
             "01": {
-                "name": "dc_output_power_total",
+                "name": "dc_output_power_total",  # Total Watt DC
                 "type": DeviceHexDataTypes.sile.value,
-                "length": 2,
             },
         }
     },
@@ -354,12 +343,10 @@ A1763_0421 = {
             "02": {
                 "name": "soc_min",  # TODO: Range: 5-xx, step: 1?
                 "type": DeviceHexDataTypes.ui.value,
-                "length": 1,
             },
             "03": {
                 "name": "soc_max",  # TODO: Range: xx-100, step: 1?
                 "type": DeviceHexDataTypes.ui.value,
-                "length": 1,
             },
         }
     },
@@ -575,19 +562,22 @@ A17C1_0405 = {
     "ad": {"name": "battery_soc"},  # controller + expansions avg
     "b0": {"name": "bat_charge_power", "factor": 0.01},
     "b1": {"name": "pv_yield?", "factor": 0.0001},
-    "b2": {"name": "charged_energy?", "factor": 0.00001},
     "b3": {"name": "home_consumption?", "factor": 0.0001},
+    "b2": {"name": "charged_energy?", "factor": 0.00001},
     "b4": {"name": "output_cutoff_data"},
     "b5": {"name": "lowpower_input_data"},
     "b6": {"name": "input_cutoff_data"},
     "b7": {"name": "bat_discharge_power", "factor": 0.01},
     "bc": {"name": "grid_to_home_power", "factor": 0.1},
     "bd": {"name": "pv_to_grid_power", "factor": 0.1},
-    "c4": {"name": "home_demand", "factor": 0.1},
+    "be": {"name": "grid_import_energy", "factor": 0.0001},
+    "bf": {"name": "grid_export_energy", "factor": 0.0001},
     "c2": {"name": "max_load"},
+    "c4": {"name": "home_demand", "factor": 0.1},
     "c6": {"name": "usage_mode"},
     "c7": {"name": "home_load_preset"},
     "c8": {"name": "ac_socket_power", "factor": 0.1},
+    "c9": {"name": "ac_input_power?", "factor": 0.1},
     "ca": {"name": "pv_1_power", "factor": 0.1},
     "cb": {"name": "pv_2_power", "factor": 0.1},
     "cc": {"name": "pv_3_power", "factor": 0.1},
@@ -643,6 +633,12 @@ A17C1_0408 = {
     "b6": {"name": "temperature"},
     "b7": {"name": "usage_mode?"},
     "b8": {"name": "home_load_preset"},
+    "bb": {"name": "ac_input_power?"},
+    "c0": {"name": "discharge_power?"},
+    "c1": {"name": "ac_output_power?", "factor": 0.1},
+    "c3": {"name": "grid_import_energy", "factor": 0.0001},
+    "c4": {"name": "grid_export_energy", "factor": 0.0001},
+    "c8": {"name": "home_demand", "factor": 0.1},
     "ce": {"name": "pv_1_power"},
     "cf": {"name": "pv_2_power"},
     "d0": {"name": "pv_3_power"},
@@ -1021,7 +1017,6 @@ DOCK_0420 = {
         "bytes": {
             "00": {
                 "name": "solarbank_1_sn",
-                "length": 0,  # First byte is byte count for type
                 "type": DeviceHexDataTypes.str.value,
             },
             "22": {
@@ -1038,7 +1033,6 @@ DOCK_0420 = {
         "bytes": {
             "00": {
                 "name": "solarbank_2_sn",
-                "length": 0,  # First byte is byte count for type
                 "type": DeviceHexDataTypes.str.value,
             },
             "22": {
@@ -1055,7 +1049,6 @@ DOCK_0420 = {
         "bytes": {
             "00": {
                 "name": "solarbank_3_sn",
-                "length": 0,  # First byte is byte count for type
                 "type": DeviceHexDataTypes.str.value,
             },
             "22": {
@@ -1072,7 +1065,6 @@ DOCK_0420 = {
         "bytes": {
             "00": {
                 "name": "solarbank_4_sn",
-                "length": 0,  # First byte is byte count for type
                 "type": DeviceHexDataTypes.str.value,
             },
             "22": {
@@ -1118,7 +1110,6 @@ DOCK_0428 = {
         "bytes": {
             "00": {
                 "name": "solarbank_1_sn",
-                "length": 0,  # First byte is byte count for type
                 "type": DeviceHexDataTypes.str.value,
             },
         }
@@ -1127,7 +1118,6 @@ DOCK_0428 = {
         "bytes": {
             "00": {
                 "name": "solarbank_2_sn",
-                "length": 0,  # First byte is byte count for type
                 "type": DeviceHexDataTypes.str.value,
             },
         }
@@ -1136,7 +1126,6 @@ DOCK_0428 = {
         "bytes": {
             "00": {
                 "name": "solarbank_3_sn",
-                "length": 0,  # First byte is byte count for type
                 "type": DeviceHexDataTypes.str.value,
             },
         }
@@ -1145,7 +1134,6 @@ DOCK_0428 = {
         "bytes": {
             "00": {
                 "name": "solarbank_4_sn",
-                "length": 0,  # First byte is byte count for type
                 "type": DeviceHexDataTypes.str.value,
             },
         }
@@ -1270,7 +1258,7 @@ SOLIXMQTTMAP = {
                 "a4": {
                     "name": "set_dc_12v_output_mode",  # TODO: Normal (1), Smart (0) or vice versa?
                     "type": DeviceHexDataTypes.ui.value,
-                    STATE_NAME: "dc_output_power_switch",
+                    STATE_NAME: "dc_12v_output_mode",
                 },
             },
         },
@@ -1590,7 +1578,6 @@ SOLIXMQTTMAP = {
                 "bytes": {
                     "00": {
                         "name": "solarbank_1_sn",
-                        "length": 0,  # First byte is byte count for type
                         "type": DeviceHexDataTypes.str.value,
                     },
                     "19": {
@@ -1604,7 +1591,6 @@ SOLIXMQTTMAP = {
                 "bytes": {
                     "00": {
                         "name": "solarbank_2_sn",
-                        "length": 0,  # First byte is byte count for type
                         "type": DeviceHexDataTypes.str.value,
                         "19": {
                             "name": "solarbank_2_soc",
@@ -1618,7 +1604,6 @@ SOLIXMQTTMAP = {
                 "bytes": {
                     "00": {
                         "name": "solarbank_3_sn",
-                        "length": 0,  # First byte is byte count for type
                         "type": DeviceHexDataTypes.str.value,
                         "19": {
                             "name": "solarbank_3_soc",
@@ -1632,7 +1617,6 @@ SOLIXMQTTMAP = {
                 "bytes": {
                     "00": {
                         "name": "solarbank_4_sn",
-                        "length": 0,  # First byte is byte count for type
                         "type": DeviceHexDataTypes.str.value,
                     },
                     "19": {

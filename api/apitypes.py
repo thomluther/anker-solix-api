@@ -1542,7 +1542,9 @@ class DeviceHexDataTypes(Enum):
     bin = bytes.fromhex("04")
     sfle = bytes.fromhex("05")  # 4 bytes, signed float LE (Base type)
     # 06 can be many bytes, mix of Str and Byte values
-    # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type" with a DeviceHexDataTypes base type vor value conversion.
-    # The "length" with int for byte count can be specified (default is 1 Byte), where Length of 0 indicates that first byte contains variable field length
+    # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type",
+    # with a DeviceHexDataTypes base type for value conversion (ui=1, sile=2, sfle=4 bytes).
+    # The optional "length" with int for byte count can be specified (default is 0 if no base type used),
+    # where Length of 0 indicates that first byte contains variable field length, e.g. for str type
     strb = bytes.fromhex("06")
     unk = bytes.fromhex("FF")  # unkonwn marker

@@ -396,13 +396,23 @@ class DeviceHexDataField:
                     )
             case DeviceHexDataTypes.strb.value:
                 # 06 can be many bytes, mix of Str and Byte values
-                # mapping must specify start byte position string ("0"-"len-1") for fields
-                # field description needs "type" with a DeviceHexDataTypes base type vor value conversion.
-                # The "length" with int for byte count can be specified (default is 1 Byte),
-                # where Length of 0 indicates that first byte contains variable field length
+                # mapping must specify start byte string ("00"-"len-1") for fields, field description needs "type",
+                # with a DeviceHexDataTypes base type for value conversion (ui=1, sile=2, sfle=4 bytes).
+                # The optional "length" with int for byte count can be specified (default is 0 if no base type used),
+                # where Length of 0 indicates that first byte contains variable field length, e.g. for str type
+                # "factor" can be specified optionally for value conversion
                 for key, bytemap in (fieldmap.get("bytes", {}) or fieldmap).items():
                     pos = int(key)
-                    if (length := bytemap.get("length", 1)) == 0:
+                    ftype = bytemap.get("type", DeviceHexDataTypes.unk.value)
+                    length = bytemap.get("length", 0)
+                    # set default length based on fixed types
+                    if ftype == DeviceHexDataTypes.ui.value:
+                        length = 1
+                    elif ftype == DeviceHexDataTypes.sile.value:
+                        length = 2
+                    elif ftype == DeviceHexDataTypes.sfle.value:
+                        length = 4
+                    if length == 0:
                         # first byte is length of bytes following for field
                         length = int.from_bytes(self.f_value[pos : pos + 1])
                         values.update(
