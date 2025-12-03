@@ -245,7 +245,7 @@ A1763_0421 = {
                 "type": DeviceHexDataTypes.ui.value,
             },
             "03": {
-                "name": "battery_soh?",
+                "name": "battery_soh",
                 "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
@@ -254,12 +254,12 @@ A1763_0421 = {
     "a7": {
         "bytes": {
             "00": {
-                "name": "ac_output_switch?",  # TODO: Off (0), On (1)?
+                "name": "ac_output_mode",  # TODO: Normal (1), Smart (0) ? - auto-off when not charging and low power
                 "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "03": {
-                "name": "dc_output_switch?",  # TODO: Off (0), On (1)?
+                "name": "dc_output_mode",  # TODO: Normal (1), Smart (0) ?
                 "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
@@ -268,12 +268,12 @@ A1763_0421 = {
     "a8": {
         "bytes": {
             "00": {
-                "name": "usba_1_status?",  # TODO: USB-A 1 status: Inactive (0), Discharging (1), Charging (2)?
+                "name": "dc_input_switch",  # USB-A 1 status: Inactive (0), Discharging (1), Charging (2)
                 "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
-                "name": "usba_1_power?",
+                "name": "dc_input_power_total",  # DC input power (solar + car charging)
                 "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
@@ -282,12 +282,12 @@ A1763_0421 = {
     "aa": {
         "bytes": {
             "00": {
-                "name": "usbc_1_status?",  # TODO: USB-C 1 status: Inactive (0), Discharging (1), Charging (2)?
+                "name": "usbc_1_status",  # USB-C 1 status: Inactive (0), Discharging (1), Charging (2)
                 "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
-                "name": "usbc_1_power?",
+                "name": "usbc_1_power",
                 "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
@@ -296,12 +296,12 @@ A1763_0421 = {
     "ab": {
         "bytes": {
             "00": {
-                "name": "usbc_2_status?",  # TODO: USB-C 2 status: Inactive (0), Discharging (1), Charging (2)?
+                "name": "usbc_2_status",  # USB-C 2 status: Inactive (0), Discharging (1), Charging (2)
                 "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
-                "name": "usbc_2_power?",
+                "name": "usbc_2_power",
                 "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
@@ -310,12 +310,12 @@ A1763_0421 = {
     "ac": {
         "bytes": {
             "00": {
-                "name": "usbc_3_status?",  # TODO: USB-C 3 status: Inactive (0), Discharging (1), Charging (2)?
+                "name": "usbc_3_status",  # USB-C 3 status: Inactive (0), Discharging (1), Charging (2)
                 "length": 1,
                 "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
-                "name": "usbc_3_power?",
+                "name": "usbc_3_power",
                 "length": 2,
                 "type": DeviceHexDataTypes.sile.value,
             },
@@ -324,26 +324,26 @@ A1763_0421 = {
     "ae": {
         "bytes": {
             "00": {
-                "name": "ac_output_mode?",  # Normal (1), Smart (0) ? - auto-off when not charging and low power
-                "type": DeviceHexDataTypes.ui.value,
+                "name": "usba_1_status",  # USB-A 1 status: Inactive (0), Discharging (1), Charging (2)
                 "length": 1,
+                "type": DeviceHexDataTypes.ui.value,
             },
             "01": {
-                "name": "ac_output_power_total?",
-                "type": DeviceHexDataTypes.sile.value,
+                "name": "usba_1_power",
                 "length": 2,
+                "type": DeviceHexDataTypes.sile.value,
             },
         }
     },
     "b2": {
         "bytes": {
             "00": {
-                "name": "dc_12v_output_mode?",  # TODO: Normal (1), Smart (0) ?
+                "name": "dc_12v_output_switch",  # Off (0), On (1)
                 "type": DeviceHexDataTypes.ui.value,
                 "length": 1,
             },
             "01": {
-                "name": "dc_output_power_total?",
+                "name": "dc_output_power_total",
                 "type": DeviceHexDataTypes.sile.value,
                 "length": 2,
             },

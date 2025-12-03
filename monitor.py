@@ -718,8 +718,9 @@ class AnkerSolixApiMonitor:
                         f"{'Exp. Batteries':<{col1}}: {m1 and c}{m1 or dev.get('sub_package_num', '-'):>4} {'Pcs':<{col2 - 5}}{co} "
                         f"{'AC Socket':<{col3}}: {dev.get('ac_power', '---'):>4} {unit}"
                     )
-                    if m1 := cm and mqtt.get("device_sn", ""):
-                        m2 = cm and mqtt.get("main_battery_soc", "")
+                    m1 = cm and mqtt.get("device_sn", "")
+                    m2 = cm and mqtt.get("main_battery_soc", "")
+                    if m1 or m2:
                         m3 = cm and mqtt.get("temperature", "")
                         if m3 and mqtt.get("temp_unit_fahrenheit"):
                             m3 = f"{float(m3) * 9 / 5 + 32:>4} °F"
@@ -730,8 +731,9 @@ class AnkerSolixApiMonitor:
                             f"{'Main SOC/Temp':<{col3}}: {m2 and (c or cm)}{m2:>3} %{co} / {m3 and (c or cm)}{m3}{co}"
                         )
                     for i in range(1, 6):
-                        if m1 := cm and mqtt.get(f"exp_{i}_sn", ""):
-                            m2 = cm and mqtt.get(f"exp_{i}_soc", "")
+                        m1 = cm and mqtt.get(f"exp_{i}_sn", "")
+                        m2 = cm and mqtt.get(f"exp_{i}_soc", "")
+                        if m1 or m2:
                             m3 = cm and mqtt.get(f"exp_{i}_temperature", "")
                             if m3 and mqtt.get("temp_unit_fahrenheit"):
                                 m3 = f"{float(m3) * 9 / 5 + 32:>4} °F"
