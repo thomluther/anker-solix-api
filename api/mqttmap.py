@@ -248,11 +248,19 @@ A1763_0421 = {
     },
     "a6": {
         "bytes": {
-            "00": {
-                "name": "output_power_total",  # OUTPUT POWER TOTAL
+            "05": {
+                "name": "output_power_total_1?",  # OUTPUT POWER TOTAL
+                "type": DeviceHexDataTypes.sile.value,
+            },
+            "06": {
+                "name": "output_power_total_2?",  # OUTPUT POWER TOTAL
+                "type": DeviceHexDataTypes.sile.value,
+            },
+            "07": {
+                "name": "output_power_total_3?",  # OUTPUT POWER TOTAL
                 "type": DeviceHexDataTypes.sile.value,
             }
-        }
+        },
     },
     "a7": {
         "bytes": {
@@ -666,7 +674,7 @@ A17C1_040a = {
     # Solarbank 2 Expansion data
     "topic": "param_info",
     "a2": {"name": "expansion_packs"},
-    "a3": {"name": "lowest_soc?"},
+    "a3": {"name": "main_battery_soc"}, # main battery SOC
     "a4": {
         "bytes": {
             "00": {
