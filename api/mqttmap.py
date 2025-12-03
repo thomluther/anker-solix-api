@@ -248,16 +248,12 @@ A1763_0421 = {
     },
     "a6": {
         "bytes": {
-            "05": {
-                "name": "output_power_total_1?",  # OUTPUT POWER TOTAL
-                "type": DeviceHexDataTypes.sile.value,
-            },
             "06": {
-                "name": "output_power_total_2?",  # OUTPUT POWER TOTAL
+                "name": "output_power_total_a?",  # OUTPUT POWER TOTAL
                 "type": DeviceHexDataTypes.sile.value,
             },
             "07": {
-                "name": "output_power_total_3?",  # OUTPUT POWER TOTAL
+                "name": "output_power_total_b?",  # OUTPUT POWER TOTAL
                 "type": DeviceHexDataTypes.sile.value,
             }
         },
