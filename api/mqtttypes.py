@@ -391,7 +391,7 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
                 if len(hexdata) == 4 and (name := fieldmap.get("name", "")):
-                    values[name] = struct.unpack("<f", self.f_value)[0] * float(
+                    values[name] = struct.unpack("<f", hexdata)[0] * float(
                         fieldmap.get("factor", 1)
                     )
             case DeviceHexDataTypes.strb.value:

@@ -11,6 +11,7 @@ VALUE_MIN = "value_min"
 VALUE_MAX = "value_max"
 VALUE_STEP = "value_step"
 VALUE_OPTIONS = "value_options"
+VALUE_DEFAULT = "value_default"
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,9 @@ class SolixMqttCommands:
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
     sb_inverter_type_select: str = "sb_inverter_type_select"
+    sb_max_load: str = "sb_max_load"
+    sb_ac_input_limit: str = "sb_ac_input_limit"
+    sb_disable_grid_export_switch: str = "sb_disable_grid_export_switch"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -391,5 +395,57 @@ CMD_SB_INVERTER_TYPE = CMD_SB_POWER_CUTOFF | {
     "ad": {
         "name": "set_ch_2_max_what?",  # 10000 or other, supported values unknown
         "type": DeviceHexDataTypes.var.value,
+    },
+}
+
+CMD_SB_MAX_LOAD = (
+    CMD_COMMON
+    | {
+        # Command: Solarbank Set max load
+        COMMAND_NAME: SolixMqttCommands.sb_max_load,
+        "a2": {
+            "name": "set_max_load",  # AC output limit in W, various options, different per model
+            "type": DeviceHexDataTypes.sile.value,
+            STATE_NAME: "max_load",
+        },
+        "a3": {
+            "name": "set_max_load_a3",  # Unknown, 0 observed
+            "type": DeviceHexDataTypes.sile.value,
+            VALUE_DEFAULT: 0,
+        },
+        "a4": {
+            "name": "set_max_load_a4",  # Unknown, 0 observed
+            "type": DeviceHexDataTypes.sile.value,
+            VALUE_DEFAULT: 0,
+        },
+    }
+)
+
+CMD_SB_DISABLE_GRID_EXPORT_SWITCH = CMD_COMMON | {
+    # Command: Solarbank disable grid export on PV surplus
+    COMMAND_NAME: SolixMqttCommands.sb_disable_grid_export_switch,
+    "a5": {
+        "name": "set_disable_grid_export_a5",  # Unknown, 0 observed
+        "type": DeviceHexDataTypes.sile.value,
+        VALUE_DEFAULT: 0,
+    },
+    "a6": {
+        "name": "set_disable_grid_export_switch",  # Allow export (0), disable export (1)
+        "type": DeviceHexDataTypes.sile.value,
+        STATE_NAME: "grid_export_disabled",
+        VALUE_OPTIONS: [0, 1],
+    },
+}
+
+CMD_SB_AC_INPUT_LIMIT = CMD_COMMON | {
+    # Command: Solarbank Set max AC input limit (AC charge)
+    COMMAND_NAME: SolixMqttCommands.sb_ac_input_limit,
+    "a8": {
+        "name": "set_ac_input_limit",  # 0 - 1200 W, step: 100
+        "type": DeviceHexDataTypes.sile.value,
+        STATE_NAME: "ac_input_limit",
+        VALUE_MIN: 0,
+        VALUE_MAX: 1200,
+        VALUE_STEP: 100,
     },
 }

@@ -18,7 +18,10 @@ from .mqttcmdmap import (
     CMD_LIGHT_MODE,
     CMD_PORT_MEMORY_SWITCH,
     CMD_REALTIME_TRIGGER,
+    CMD_SB_AC_INPUT_LIMIT,
+    CMD_SB_DISABLE_GRID_EXPORT_SWITCH,
     CMD_SB_INVERTER_TYPE,
+    CMD_SB_MAX_LOAD,
     CMD_SB_POWER_CUTOFF,
     CMD_SB_STATUS_CHECK,
     CMD_SOC_LIMITS_V2,
@@ -27,6 +30,10 @@ from .mqttcmdmap import (
     COMMAND_LIST,
     STATE_NAME,
     SolixMqttCommands,
+    VALUE_MAX,
+    VALUE_MIN,
+    VALUE_OPTIONS,
+    VALUE_STEP,
 )
 
 # SOLIXMQTTMAP descriptions:
@@ -221,12 +228,24 @@ A1763_0421 = {
     "a3": {
         "bytes": {
             "04": {
+                "name": "ac_input_limit_max",  # Max supported limit
+                "type": DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "a4": {
+        "bytes": {
+            "04": {
                 "name": "ac_input_limit",  # Max AC charge: 100-1200 W, step: 100
                 "type": DeviceHexDataTypes.sile.value,
             },
-            "08": {
-                "name": "ac_input_power_total?",
-                "type": DeviceHexDataTypes.sile.value,
+            "20": {
+                "name": "ac_fast_charge_switch",  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "22": {
+                "name": "port_memory_switch",  # Output Port Memory switch: Disabled (0) or Enabled (1)
+                "type": DeviceHexDataTypes.ui.value,
             },
         }
     },
@@ -248,25 +267,29 @@ A1763_0421 = {
     },
     "a6": {
         "bytes": {
-            "06": {
-                "name": "output_power_total_a?",  # OUTPUT POWER TOTAL
+            "00": {
+                "name": "output_power_total",  # Output power total
                 "type": DeviceHexDataTypes.sile.value,
             },
-            "07": {
-                "name": "output_power_total_b?",  # OUTPUT POWER TOTAL
+            "02": {
+                "name": "ac_input_power",  # Input power total charge
                 "type": DeviceHexDataTypes.sile.value,
-            }
+            },
         },
     },
     "a7": {
         "bytes": {
             "00": {
-                "name": "ac_output_mode",  # TODO: Normal (1), Smart (0) ? - auto-off when not charging and low power
+                "name": "ac_output_power_switch",  # Off (0), On (1)
                 "type": DeviceHexDataTypes.ui.value,
             },
-            "03": {
-                "name": "dc_output_mode",  # TODO: Normal (1), Smart (0) ?
-                "type": DeviceHexDataTypes.ui.value,
+            "01": {
+                "name": "ac_output_power",  # AC Ausgangsleistung
+                "type": DeviceHexDataTypes.sile.value,
+            },
+            "04": {
+                "name": "ac_input_power_a7",  # Duplicate of a6
+                "type": DeviceHexDataTypes.sile.value,
             },
         }
     },
@@ -351,6 +374,18 @@ A1763_0421 = {
             "03": {
                 "name": "soc_max",  # TODO: Range: xx-100, step: 1?
                 "type": DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "da": {
+        "bytes": {
+            "12": {
+                "name": "unknown_2",
+                "type": DeviceHexDataTypes.sile.value,
+            },
+            "14": {
+                "name": "unknown_3",
+                "type": DeviceHexDataTypes.sile.value,
             },
         }
     },
@@ -670,7 +705,7 @@ A17C1_040a = {
     # Solarbank 2 Expansion data
     "topic": "param_info",
     "a2": {"name": "expansion_packs"},
-    "a3": {"name": "main_battery_soc"}, # main battery SOC
+    "a3": {"name": "main_battery_soc"},  # main battery SOC
     "a4": {
         "bytes": {
             "00": {
@@ -901,7 +936,8 @@ A17C5_0405 = {
     "b0": {"name": "pv_yield?"},
     "b1": {"name": "charged_energy?"},
     "b2": {"name": "discharged_energy?"},
-    "b3": {"name": "energy_4?"},
+    "b3": {"name": "grid_import_energy"},
+    "b4": {"name": "grid_export_energy"},
     "b5": {"name": "output_cutoff_controller?"},
     "b6": {"name": "output_cutoff_exp_1?"},
     "b7": {"name": "output_cutoff_exp_2?"},
@@ -1518,6 +1554,23 @@ SOLIXMQTTMAP = {
     "A17C5": {
         "0040": CMD_STATUS_REQUEST,  # Device status request (one time status messages 0405 etc)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0080": {
+            # command group
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_max_load,
+                SolixMqttCommands.sb_disable_grid_export_switch,
+                SolixMqttCommands.sb_ac_input_limit,
+            ],
+            SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD
+            | {
+                "a2": {
+                    **CMD_SB_MAX_LOAD["a2"],
+                    VALUE_OPTIONS: [350, 600, 800, 1000, 1200],
+                }
+            },
+            SolixMqttCommands.sb_disable_grid_export_switch: CMD_SB_DISABLE_GRID_EXPORT_SWITCH,
+            SolixMqttCommands.sb_ac_input_limit: CMD_SB_AC_INPUT_LIMIT,
+        },
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": A17C5_0405,
         # Interval: varies, probably upon change
