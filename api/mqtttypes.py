@@ -17,7 +17,7 @@ class DeviceHexDataHeader:
 
     Message header structure (9-10 Bytes):
     FF 09    | 2 Bytes fixed message prefix for Anker Solix message
-    XX XX    | 2 Bytes message length (including prefix), little endian format
+    XX XX    | 2 Bytes message length (including prefix), little endian format. Note: Length contains the XOR checksum byte at the end
     XX XX XX | 3 Bytes pattern that seem identical across all messages (supposed `03 00/01 0f` for send/receive)
     XX XX    | 2 Bytes pattern for type of message, e.g. `04 05` on telemetry packets and `04 08` for others, depends on device model, to be figured out
     XX       | 1 optional Byte, seems increment for certain messages, fix for others or not used
@@ -49,10 +49,9 @@ class DeviceHexDataHeader:
                 self.msglength = int.from_bytes(hexbytes[2:4], byteorder="little")
                 self.pattern = hexbytes[4:7]
                 self.msgtype = hexbytes[7:9]
-            if len(hexbytes) >= 10 and hexbytes[9:10] not in [
-                bytearray.fromhex("a0"),
-                bytearray.fromhex("a1"),
-            ]:
+            if len(hexbytes) >= 10 and hexbytes[9:10] not in bytearray.fromhex(
+                "a0a1a2a3a4a5a6a7a8a9"
+            ):
                 self.increment = hexbytes[9:10]
             else:
                 self.increment = b""
@@ -469,6 +468,7 @@ class DeviceHexData:
         XX     | 1 Byte data length (bytes following until end of field)
         XX ... | 1-xx Bytes data, where first Byte in data typically indicates the value type of the data (if data length is > 2)
     e.g. ff09 3b00 03010f 0407 | a1 01 32 | a2 11 00 415a5636....
+    Last byte is XOR checksum across the full message. Checksum byte is included in header message length
     """
 
     hexbytes: bytearray = field(default_factory=bytearray)
@@ -476,6 +476,7 @@ class DeviceHexData:
     length: int = 0
     msg_header: DeviceHexDataHeader = field(default_factory=DeviceHexDataHeader)
     msg_fields: dict[str, DeviceHexDataField] = field(default_factory=dict)
+    checksum: bytearray = field(default_factory=bytearray)
 
     def __post_init__(self) -> None:
         """Post init the dataclass to decode the bytes into fields."""
@@ -486,6 +487,7 @@ class DeviceHexData:
             self.hexbytes = bytearray(self.hexbytes)
         if self.hexbytes:
             self.length = len(self.hexbytes)
+            self.checksum = self.hexbytes[-1:]
             self.msg_header = DeviceHexDataHeader(hexbytes=self.hexbytes[0:idx])
             self.msg_fields = {}
             idx = len(self.msg_header)
@@ -506,18 +508,33 @@ class DeviceHexData:
         """Print the fields and hex bytes with separator."""
         return f"model:{self.model}, header:{{{self.msg_header!s}}}, hexbytes:{self.hexbytes.hex()}"
 
+    def _get_xor_checksum(self, hexbytes: bytearray | None = None) -> bytearray:
+        """Generate the XOR checksum byte across provided bytearray or actual hexdata."""
+        if not (hexbytes or self.hexbytes):
+            return bytearray()
+        checksum = 0
+        for b in hexbytes or self.hexbytes:
+            checksum ^= b
+        return bytearray(checksum.to_bytes())
+
     def _update_hexbytes(self) -> None:
-        # init length and hexbytes
+        # init length and hexbytes and checksum
         self.length = len(self.msg_header)
+        if self.length:
+            # Add checksum byte to length
+            self.length += 1
         self.hexbytes = bytearray()
         for f in (self.msg_fields or {}).values():
             self.length += len(f)
             self.hexbytes += bytes.fromhex(f.hex())
+        # update message length in header including checksum byte
         if self.length:
-            # update message length in header
             self.msg_header.msglength = self.length
-        # generate hexbytes
+        # generate complete hexbytes foe checksum calculation
         self.hexbytes = bytearray(bytes.fromhex(self.msg_header.hex()) + self.hexbytes)
+        # generate XOR checksum and append to hexbytes
+        self.checksum = self._get_xor_checksum()
+        self.hexbytes += self.checksum
 
     def hex(self, sep: str = "") -> str:
         """Print the hex bytes with optional separator."""
@@ -535,7 +552,13 @@ class DeviceHexData:
                 if self.model
                 else ""
             )
-            s = f"{pn + ' Header ':-^98}\n{self.msg_header.decode()}\n{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
+            checksum = self._get_xor_checksum().hex()
+            s = (
+                f"{pn + ' Header ':-^98}\n{self.msg_header.decode()}\n"
+                f"-> {Color.CYAN + self.checksum.hex() + Color.OFF} <-: XOR Checksum Byte (last message byte), Crosscheck: "
+                f"{checksum} => {(Color.GREEN + 'OK') if checksum == '00' else (Color.RED + 'FAILURE')}{Color.OFF}\n"
+                f"{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
+            )
             if self.msg_fields:
                 s += f"\n{'Fld':<3} {'Len':<3} {'Typ':<5} {'uIntLe/var':>15} {'sIntLe':>15} {'floatLe':>15} {'dblLe/4int':>15}"
                 fieldmap = (
@@ -558,10 +581,7 @@ class DeviceHexData:
                         or ""
                     )
                     factor = fld.get("factor") or None
-                    if (
-                        isinstance(name, str)
-                        and "timestamp" in str(name)
-                    ):
+                    if isinstance(name, str) and "timestamp" in str(name):
                         name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
                     s += f"\n{f.decode().rstrip()}{(Color.CYAN + ' --> ' + str(name) + ('' if factor is None else ' (factor ' + str(factor) + ')') + Color.OFF) if name else ''}"
                 s += f"\n{80 * '-'}"

@@ -539,7 +539,6 @@ class AnkerSolixBaseApi:
                                 "exp_3_soc",
                                 "exp_4_soc",
                                 "exp_5_soc",
-                                "min_soc",
                                 "max_soc",
                                 "solarbank_1_soc",
                                 "solarbank_2_soc",
@@ -603,7 +602,6 @@ class AnkerSolixBaseApi:
                                 "usbc_4_power",
                                 "usba_1_power",
                                 "usba_2_power",
-                                "soc_max",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -686,6 +684,7 @@ class AnkerSolixBaseApi:
                                 "ac_output_mode",
                                 "dc_12v_output_mode",
                                 "backup_charge_switch",
+                                "ac_fast_charge_switch",
                                 "port_memory_switch",
                                 "temp_unit_fahrenheit",
                                 "expansion_packs",
@@ -695,6 +694,7 @@ class AnkerSolixBaseApi:
                                 "solarbank_4_exp_packs",
                                 "device_timeout_minutes",
                                 "dc_output_timeout_seconds",
+                                "ac_output_timeout_seconds",
                                 "remaining_time_hours",
                                 "msg_timestamp",
                                 "local_timestamp",
@@ -709,7 +709,7 @@ class AnkerSolixBaseApi:
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
                             )
-                        elif key in ["output_cutoff_data", "soc_min"]:
+                        elif key in ["output_cutoff_data", "min_soc"]:
                             device_mqtt["power_cutoff"] = str(value)
                         elif key in ["last_message"]:
                             device_mqtt["last_update"] = str(value)
@@ -733,10 +733,7 @@ class AnkerSolixBaseApi:
                             )
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
-                    if (
-                        calc_capacity
-                        and (cap := device.get("battery_capacity"))
-                    ):
+                    if calc_capacity and (cap := device.get("battery_capacity")):
                         # calculate total expansions if expansions are available and no number in mqtt cache
                         if not mqtt.get("expansion_packs"):
                             device_mqtt["expansion_packs"] = len(
@@ -760,7 +757,9 @@ class AnkerSolixBaseApi:
                                 tsoc = round(sum(soclist) / len(soclist))
                                 device_mqtt["battery_soc"] = f"{float(tsoc):.0f}"
                         # trigger capacity calculation if no Api SOC available or MQTT overlay
-                        if tsoc and (not device.get("battery_soc") or  device.get("mqtt_overlay")):
+                        if tsoc and (
+                            not device.get("battery_soc") or device.get("mqtt_overlay")
+                        ):
                             # trigger with old capacity since this will cause capacity recalculation
                             self._update_dev({"device_sn": sn, "battery_capacity": cap})
                     # update marker should also indicate increase in extracted keys

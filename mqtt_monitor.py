@@ -7,6 +7,7 @@ can dump the output to a file. The tool will display a usage menu before monitor
 it reacts on key press for the menu options. The menu can be displayed again with 'm'.
 """
 
+import argparse
 import asyncio
 from datetime import datetime
 from functools import partial
@@ -37,15 +38,63 @@ CONSOLE: logging.Logger = common.CONSOLE
 INLINE: logging.Logger = common.INLINE
 
 
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Anker Solix MQTT Monitor - Monitor MQTT messages and commands of Anker Solix devices in real-time"
+    )
+    parser.add_argument(
+        "--device-sn", "--dev", type=str, help="Define device SN to be monitored"
+    )
+    parser.add_argument(
+        "--realtime",
+        "--rt",
+        action="store_true",
+        help="Enable real-time MQTT trigger on startup",
+    )
+    parser.add_argument(
+        "--value-display",
+        "--vd",
+        action="store_true",
+        help="Initially show MQTT value display instead of MQTT messages display",
+    )
+    parser.add_argument(
+        "--filedump",
+        "--fd",
+        action="store_true",
+        help="Enable console dump into file",
+    )
+    parser.add_argument(
+        "--dump-prefix",
+        "--dp",
+        type=str,
+        default="",
+        help="Define dump filename prefix",
+    )
+    args = parser.parse_args()
+    # Validate argument combinations
+    if args.dump_prefix and not args.filedump:
+        parser.error("--dump-suffix requires -filedump to be specified")
+    return args
+
+
 class AnkerSolixMqttMonitor:
     """Define the class for the monitor."""
 
-    def __init__(self) -> None:
+    def __init__(self, args: argparse.Namespace | None = None) -> None:
         """Initialize."""
+        # Parse command line arguments if not provided
+        if not isinstance(args, argparse.Namespace):
+            args = parse_arguments()
         self.api: AnkerSolixApi | None = None
         self.device_selected: dict = {}
+        self.device_sn: str | None = args.device_sn
         self.found_topics: set = set()
         self.loop: asyncio.AbstractEventLoop
+        self.filedump: bool = args.filedump
+        self.realtime_trigger: bool = args.realtime
+        self.value_display: bool = args.value_display
+        self.fileprefix: str | None = args.dump_prefix
 
     async def main(self) -> None:  # noqa: C901
         """Run Main routine to start the monitor in a loop."""
@@ -106,8 +155,21 @@ class AnkerSolixMqttMonitor:
                         )
                     )
                     for d in devices
+                    if (not self.device_sn or d.get("device_sn") == self.device_sn)
                 ]
-                if len(device_names) > 0:
+                if self.device_sn:
+                    if device_names:
+                        # specified device found
+                        self.device_selected = self.api.devices.get(self.device_sn)
+                        CONSOLE.info(
+                            f"Monitoring device: ({Color.YELLOW}{device_names[0]}{Color.OFF})"
+                        )
+                    else:
+                        CONSOLE.info(
+                            f"Specified device {Color.CYAN}{self.device_sn}{Color.OFF} not found for account {Color.YELLOW}{self.api.apisession.email}{Color.OFF}"
+                        )
+                        return False
+                elif len(device_names) > 0:
                     while not self.device_selected:
                         CONSOLE.info("\nSelect which device to be monitored:")
                         for idx, devicename in enumerate(device_names, start=1):
@@ -123,266 +185,278 @@ class AnkerSolixMqttMonitor:
                             device_names
                         ):
                             self.device_selected = devices[int(selection) - 1]
+                else:
+                    CONSOLE.info("No owned Anker Solix devices found for your account.")
+                    return False
 
+                if not self.device_sn:
                     # ask whether dumping messages to file
                     response = input(
                         f"Do you want to dump MQTT message decoding also to file? ({Color.YELLOW}Y{Color.OFF}/{Color.CYAN}N{Color.OFF}): "
                     )
-                    if response := str(response).upper() in ["Y", "YES", "TRUE", 1]:
-                        model = (
-                            self.device_selected.get("device_pn")
-                            or self.device_selected.get("product_code")
-                            or ""
-                        )
-                        prefix = f"{model}_mqtt_dump"
-                        response = input(
-                            f"Filename prefix for export ({Color.CYAN}{prefix}{Color.OFF}): "
-                        )
-                        filename = f"{response or prefix}_{datetime.now().strftime('%Y-%m-%d__%H_%M_%S')}.txt"
-                        # Ensure dump folder exists
-                        dumpfolder = (Path(__file__).parent / "mqttdumps").resolve()
-                        if not (
-                            os.access(dumpfolder.parent, os.W_OK)
-                            or os.access(dumpfolder, os.W_OK)
-                        ):
-                            dumpfolder = Path(tempfile.gettempdir()) / "mqttdumps"
-                        Path(dumpfolder).mkdir(parents=True, exist_ok=True)
-                        # create a queue for async file logging with CONSOLE logger
-                        que = queue.Queue()
-                        # add a handler that dumps at INFO level, independent of other logger handler setting
-                        qh = logging.handlers.QueueHandler(que)
-                        qh.setFormatter(
-                            logging.Formatter(
-                                fmt="%(asctime)s %(levelname)s: %(message)s",
-                                datefmt="%H:%M:%S",
-                            )
-                        )
-                        qh.setLevel(logging.INFO)
-                        # Replace color escape sequences for file logging
-                        qh.addFilter(ReplaceFilter())
-                        # create file handler for async file logging from the queue
-                        fh = await self.loop.run_in_executor(
-                            None,
-                            partial(
-                                logging.FileHandler,
-                                filename=Path(
-                                    dumpfolder / filename,
-                                ),
-                                encoding="utf-8",
-                            ),
-                        )
-                        # create a listener for messages on the queue and log them to the file handler
-                        listener = logging.handlers.QueueListener(que, fh)
-                        CONSOLE.info(
-                            f"\nMQTT message dumping to file: {Color.CYAN}{Path.resolve(Path(dumpfolder / filename))}{Color.OFF}"
-                        )
-
-                    # Start the MQTT session for the selected device
-                    device_sn = self.device_selected.get("device_sn")
-                    device_pn = (
+                    self.filedump = bool(
+                        str(response).upper() in ["Y", "YES", "TRUE", 1]
+                    )
+                if self.filedump:
+                    model = (
                         self.device_selected.get("device_pn")
                         or self.device_selected.get("product_code")
                         or ""
                     )
-                    CONSOLE.info(
-                        f"\nStarting MQTT server connection for device {device_sn} (model {device_pn})..."
-                    )
-                    # Initialize the session
+                    prefix = f"{model}_mqtt_dump"
+                    if not (self.fileprefix or self.device_sn):
+                        self.fileprefix = input(
+                            f"Filename prefix for export ({Color.CYAN}{prefix}{Color.OFF}): "
+                        )
+                    filename = f"{self.fileprefix or prefix}_{datetime.now().strftime('%Y-%m-%d__%H_%M_%S')}.txt"
+                    # Ensure dump folder exists
+                    dumpfolder = (Path(__file__).parent / "mqttdumps").resolve()
                     if not (
-                        (mqtt_session := await self.api.startMqttSession())
-                        and mqtt_session.is_connected()
+                        os.access(dumpfolder.parent, os.W_OK)
+                        or os.access(dumpfolder, os.W_OK)
                     ):
-                        return False
-                    CONSOLE.info(
-                        f"Connected successfully to MQTT server {mqtt_session.host}:{mqtt_session.port}"
+                        dumpfolder = Path(tempfile.gettempdir()) / "mqttdumps"
+                    Path(dumpfolder).mkdir(parents=True, exist_ok=True)
+                    # create a queue for async file logging with CONSOLE logger
+                    que = queue.Queue()
+                    # add a handler that dumps at INFO level, independent of other logger handler setting
+                    qh = logging.handlers.QueueHandler(que)
+                    qh.setFormatter(
+                        logging.Formatter(
+                            fmt="%(asctime)s %(levelname)s: %(message)s",
+                            datefmt="%H:%M:%S",
+                        )
                     )
-                    if listener:
-                        # add queue handler to CONSOLE for output logging to file
-                        CONSOLE.addHandler(qh)
-                        # start the listener
-                        listener.start()
-                    # subscribe root Topic of selected device
-                    topics = set()
-                    if prefix := mqtt_session.get_topic_prefix(
-                        deviceDict=self.device_selected
-                    ):
-                        topics.add(f"{prefix}#")
-                    # Command messages (app to device)
-                    if cmd_prefix := mqtt_session.get_topic_prefix(
-                        deviceDict=self.device_selected, publish=True
-                    ):
-                        topics.add(f"{cmd_prefix}#")
-                    try:
-                        activetopic = None
-                        realtime = False
-                        rt_devices = set()
-                        # print the menu before starting
-                        self.print_menu()
-                        CONSOLE.info(
-                            f"Starting MQTT message listener, real time data trigger is: {Color.GREEN + 'ON' if realtime else Color.RED + 'OFF'}{Color.OFF}"
-                        )
-                        # Start the background poller with subscriptions and update trigger
-                        poller_task = self.loop.create_task(
-                            mqtt_session.message_poller(
-                                topics=topics,
-                                trigger_devices=rt_devices,
-                                msg_callback=self.print_message,
-                                timeout=60,
-                            )
-                        )
-                        # Start the wait progress printer in background
-                        progress_task = self.loop.create_task(
-                            self.print_wait_progress()
-                        )
-                        # get running loop to run blocking code
-                        loop = asyncio.get_running_loop()
-                        while True:
-                            # Check if a key was pressed
-                            if k := await loop.run_in_executor(None, common.getkey):
-                                k = k.lower()
-                                if k in ["m", "k"]:
-                                    self.print_menu()
-                                elif k == "u":
-                                    CONSOLE.info(
-                                        f"{Color.RED}\nUnsubscribing all topics...{Color.OFF}"
-                                    )
-                                    topics.clear()
-                                    activetopic = None
-                                    if (
-                                        mqtt_session.message_callback()
-                                        == self.print_values
-                                    ):
-                                        # clear last message from screen and show active subscription
-                                        await asyncio.sleep(6)
-                                        self.print_values(
-                                            session=mqtt_session,
-                                            topic="",
-                                            message=None,
-                                            data=None,
-                                            model=device_pn,
-                                        )
-                                elif k == "s":
-                                    CONSOLE.info(
-                                        f"{Color.GREEN}\nSubscribing root topics...{Color.OFF}"
-                                    )
-                                    topics.clear()
-                                    activetopic = None
-                                    topics.add(f"{prefix}#")
-                                    topics.add(f"{cmd_prefix}#")
-                                elif k == "t":
-                                    if tl := list(self.found_topics):
-                                        index = (
-                                            tl.index(activetopic)
-                                            if activetopic in tl
-                                            else -1
-                                        )
-                                        activetopic = tl[
-                                            index + 1 if index + 1 < len(tl) else 0
-                                        ]
-                                        CONSOLE.info(
-                                            f"{Color.YELLOW}\nToggling subscription to topic {activetopic}...{Color.OFF}"
-                                        )
-                                        topics.clear()
-                                        topics.add(f"{activetopic}")
-                                    else:
-                                        CONSOLE.info(
-                                            f"{Color.RED}\nNo topics received yet for toggling!{Color.OFF}"
-                                        )
-                                elif k == "r":
-                                    if realtime:
-                                        CONSOLE.info(
-                                            f"{Color.RED}\nDisabling real time data trigger, messages will reduce after max. 60 seconds...{Color.OFF}"
-                                        )
-                                        realtime = False
-                                        rt_devices.discard(device_sn)
-                                    else:
-                                        CONSOLE.info(
-                                            f"{Color.GREEN}\nEnabling real time data trigger, message frequency should increase shortly...{Color.OFF}"
-                                        )
-                                        realtime = True
-                                        rt_devices.add(device_sn)
-                                elif k == "o":
-                                    # individual real time trigger request
-                                    if mqtt_session.realtime_trigger(
-                                        deviceDict=self.device_selected,
-                                        timeout=60,
-                                        wait_for_publish=2,
-                                    ).is_published():
-                                        CONSOLE.info(
-                                            f"{Color.CYAN}\nPublished one time real time trigger request, message frequency should appear shortly...{Color.OFF}"
-                                        )
-                                elif k == "i":
-                                    # individual status request
-                                    if mqtt_session.status_request(
-                                        deviceDict=self.device_selected,
-                                        wait_for_publish=2,
-                                    ).is_published():
-                                        CONSOLE.info(
-                                            f"{Color.CYAN}\nPublished status request, message 0405 should appear shortly...{Color.OFF}"
-                                        )
-                                elif k == "d":
-                                    # save active message callback for later restore
-                                    cb = mqtt_session.message_callback()
-                                    # Clear message callback to prevent scrolling during display
-                                    mqtt_session.message_callback(None)
-                                    self.print_table()
-                                    input(
-                                        f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
-                                    )
-                                    mqtt_session.message_callback(cb)
-                                elif k == "v":
-                                    if (
-                                        mqtt_session.message_callback()
-                                        == self.print_message
-                                    ):
-                                        CONSOLE.info(
-                                            f"{Color.YELLOW}\nSwitching to Values view...{Color.OFF}"
-                                        )
-                                        mqtt_session.message_callback(
-                                            func=self.print_values
-                                        )
-                                        await asyncio.sleep(1)
-                                        common.clearscreen()
-                                        self.print_table()
-                                    else:
-                                        CONSOLE.info(
-                                            f"{Color.YELLOW}\nSwitching to Messages view for next message...{Color.OFF}"
-                                        )
-                                        mqtt_session.message_callback(
-                                            func=self.print_message
-                                        )
-                                elif k in ["esc", "q"]:
-                                    CONSOLE.info(
-                                        f"{Color.RED}\nStopping monitor...{Color.OFF}"
-                                    )
-                                    break
-                                await asyncio.sleep(0.5)
-                    finally:
-                        # Cancel the started tasks
-                        poller_task.cancel()
-                        progress_task.cancel()
-                        # Wait for the tasks to finish cancellation
-                        try:
-                            await poller_task
-                        except asyncio.CancelledError:
-                            CONSOLE.info("MQTT client poller task cancelled.")
-                        try:
-                            await progress_task
-                        except asyncio.CancelledError:
-                            CONSOLE.info("Progress printer was cancelled.")
-                        if self.api.mqttsession:
-                            self.api.mqttsession.cleanup()
-                        # ensure the queue listener is closed
-                        if listener:
-                            listener.stop()
-                            # remove queue file handler again before zipping folder
-                            CONSOLE.removeHandler(qh)
+                    qh.setLevel(logging.INFO)
+                    # Replace color escape sequences for file logging
+                    qh.addFilter(ReplaceFilter())
+                    # create file handler for async file logging from the queue
+                    fh = await self.loop.run_in_executor(
+                        None,
+                        partial(
+                            logging.FileHandler,
+                            filename=Path(
+                                dumpfolder / filename,
+                            ),
+                            encoding="utf-8",
+                        ),
+                    )
+                    # create a listener for messages on the queue and log them to the file handler
+                    listener = logging.handlers.QueueListener(que, fh)
+                    CONSOLE.info(
+                        f"\nMQTT message dumping to file: {Color.CYAN}{Path.resolve(Path(dumpfolder / filename))}{Color.OFF}"
+                    )
+
+                # Start the MQTT session for the selected device
+                device_sn = self.device_selected.get("device_sn")
+                device_pn = (
+                    self.device_selected.get("device_pn")
+                    or self.device_selected.get("product_code")
+                    or ""
+                )
+                CONSOLE.info(
+                    f"\nStarting MQTT server connection for device {device_sn} (model {device_pn})..."
+                )
+                # Initialize the session
+                if not (
+                    (mqtt_session := await self.api.startMqttSession())
+                    and mqtt_session.is_connected()
+                ):
+                    return False
+                CONSOLE.info(
+                    f"Connected successfully to MQTT server {mqtt_session.host}:{mqtt_session.port}"
+                )
+                if listener:
+                    # add queue handler to CONSOLE for output logging to file
+                    CONSOLE.addHandler(qh)
+                    # start the listener
+                    listener.start()
+                # subscribe root Topic of selected device
+                topics = set()
+                if prefix := mqtt_session.get_topic_prefix(
+                    deviceDict=self.device_selected
+                ):
+                    topics.add(f"{prefix}#")
+                # Command messages (app to device)
+                if cmd_prefix := mqtt_session.get_topic_prefix(
+                    deviceDict=self.device_selected, publish=True
+                ):
+                    topics.add(f"{cmd_prefix}#")
+                try:
+                    activetopic = None
+                    realtime = self.realtime_trigger
+                    rt_devices = set()
+                    if self.device_sn:
+                        # start realtime trigger if defined
+                        if self.realtime_trigger:
+                            rt_devices.add(device_sn)
+                        if self.value_display:
                             CONSOLE.info(
-                                "\nMQTT dump file completed: %s",
-                                Path.resolve(Path(dumpfolder / filename)),
+                                f"{Color.YELLOW}Starting with Values view...{Color.OFF}"
                             )
-                else:
-                    CONSOLE.info("No owned Anker Solix devices found for your account.")
+                    else:
+                        # print the menu before starting if interactive
+                        self.print_menu()
+                    CONSOLE.info(
+                        f"Starting MQTT message listener, real time data trigger is: {Color.GREEN + 'ON' if realtime else Color.RED + 'OFF'}{Color.OFF}"
+                    )
+                    # Start the background poller with subscriptions and update trigger
+                    poller_task = self.loop.create_task(
+                        mqtt_session.message_poller(
+                            topics=topics,
+                            trigger_devices=rt_devices,
+                            msg_callback=self.print_values
+                            if self.value_display
+                            else self.print_message,
+                            timeout=60,
+                        )
+                    )
+                    # Start the wait progress printer in background
+                    progress_task = self.loop.create_task(self.print_wait_progress())
+                    # get running loop to run blocking code
+                    loop = asyncio.get_running_loop()
+                    while True:
+                        # Check if a key was pressed
+                        if k := await loop.run_in_executor(None, common.getkey):
+                            k = k.lower()
+                            if k in ["m", "k"]:
+                                self.print_menu()
+                            elif k == "u":
+                                CONSOLE.info(
+                                    f"{Color.RED}\nUnsubscribing all topics...{Color.OFF}"
+                                )
+                                topics.clear()
+                                activetopic = None
+                                if mqtt_session.message_callback() == self.print_values:
+                                    # clear last message from screen and show active subscription
+                                    await asyncio.sleep(6)
+                                    self.print_values(
+                                        session=mqtt_session,
+                                        topic="",
+                                        message=None,
+                                        data=None,
+                                        model=device_pn,
+                                    )
+                            elif k == "s":
+                                CONSOLE.info(
+                                    f"{Color.GREEN}\nSubscribing root topics...{Color.OFF}"
+                                )
+                                topics.clear()
+                                activetopic = None
+                                topics.add(f"{prefix}#")
+                                topics.add(f"{cmd_prefix}#")
+                            elif k == "t":
+                                if tl := list(self.found_topics):
+                                    index = (
+                                        tl.index(activetopic)
+                                        if activetopic in tl
+                                        else -1
+                                    )
+                                    activetopic = tl[
+                                        index + 1 if index + 1 < len(tl) else 0
+                                    ]
+                                    CONSOLE.info(
+                                        f"{Color.YELLOW}\nToggling subscription to topic {activetopic}...{Color.OFF}"
+                                    )
+                                    topics.clear()
+                                    topics.add(f"{activetopic}")
+                                else:
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nNo topics received yet for toggling!{Color.OFF}"
+                                    )
+                            elif k == "r":
+                                if realtime:
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nDisabling real time data trigger, messages will reduce after max. 60 seconds...{Color.OFF}"
+                                    )
+                                    realtime = False
+                                    rt_devices.discard(device_sn)
+                                else:
+                                    CONSOLE.info(
+                                        f"{Color.GREEN}\nEnabling real time data trigger, message frequency should increase shortly...{Color.OFF}"
+                                    )
+                                    realtime = True
+                                    rt_devices.add(device_sn)
+                            elif k == "o":
+                                # individual real time trigger request
+                                if mqtt_session.realtime_trigger(
+                                    deviceDict=self.device_selected,
+                                    timeout=60,
+                                    wait_for_publish=2,
+                                ).is_published():
+                                    CONSOLE.info(
+                                        f"{Color.CYAN}\nPublished one time real time trigger request, message frequency should appear shortly...{Color.OFF}"
+                                    )
+                            elif k == "i":
+                                # individual status request
+                                if mqtt_session.status_request(
+                                    deviceDict=self.device_selected,
+                                    wait_for_publish=2,
+                                ).is_published():
+                                    CONSOLE.info(
+                                        f"{Color.CYAN}\nPublished status request, message 0405 should appear shortly...{Color.OFF}"
+                                    )
+                            elif k == "d":
+                                # save active message callback for later restore
+                                cb = mqtt_session.message_callback()
+                                # Clear message callback to prevent scrolling during display
+                                mqtt_session.message_callback(None)
+                                self.print_table()
+                                input(
+                                    f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
+                                )
+                                mqtt_session.message_callback(cb)
+                            elif k == "v":
+                                if (
+                                    mqtt_session.message_callback()
+                                    == self.print_message
+                                ):
+                                    CONSOLE.info(
+                                        f"{Color.YELLOW}\nSwitching to Values view...{Color.OFF}"
+                                    )
+                                    mqtt_session.message_callback(
+                                        func=self.print_values
+                                    )
+                                    await asyncio.sleep(1)
+                                    common.clearscreen()
+                                    self.print_table()
+                                else:
+                                    CONSOLE.info(
+                                        f"{Color.YELLOW}\nSwitching to Messages view for next message...{Color.OFF}"
+                                    )
+                                    mqtt_session.message_callback(
+                                        func=self.print_message
+                                    )
+                            elif k in ["esc", "q"]:
+                                CONSOLE.info(
+                                    f"{Color.RED}\nStopping monitor...{Color.OFF}"
+                                )
+                                break
+                            await asyncio.sleep(0.5)
+                finally:
+                    # Cancel the started tasks
+                    poller_task.cancel()
+                    progress_task.cancel()
+                    # Wait for the tasks to finish cancellation
+                    try:
+                        await poller_task
+                    except asyncio.CancelledError:
+                        CONSOLE.info("MQTT client poller task cancelled.")
+                    try:
+                        await progress_task
+                    except asyncio.CancelledError:
+                        CONSOLE.info("Progress printer was cancelled.")
+                    if self.api.mqttsession:
+                        self.api.mqttsession.cleanup()
+                    # ensure the queue listener is closed
+                    if listener:
+                        listener.stop()
+                        # remove queue file handler again before zipping folder
+                        CONSOLE.removeHandler(qh)
+                        CONSOLE.info(
+                            "\nMQTT dump file completed: %s",
+                            Path.resolve(Path(dumpfolder / filename)),
+                        )
                 return True
 
         except (
@@ -430,9 +504,7 @@ class AnkerSolixMqttMonitor:
         CONSOLE.info(
             f"[{Color.YELLOW}O{Color.OFF}]ne real time trigger for device (timeout 60 seconds)"
         )
-        CONSOLE.info(
-            f"[{Color.YELLOW}I{Color.OFF}]mmediate status request for device"
-        )
+        CONSOLE.info(f"[{Color.YELLOW}I{Color.OFF}]mmediate status request for device")
         CONSOLE.info(
             f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding"
         )
@@ -576,7 +648,27 @@ class ReplaceFilter(logging.Filter):
 # run async main
 if __name__ == "__main__":
     try:
-        if not asyncio.run(AnkerSolixMqttMonitor().main(), debug=False):
+        # Parse command line arguments
+        arg: argparse.Namespace = parse_arguments()
+        # Print configuration when in non-interactive mode
+        if arg.device_sn:
+            CONSOLE.info("Configuration:")
+            CONSOLE.info(f"  Device SN: {Color.CYAN}{arg.device_sn}{Color.OFF}")
+            CONSOLE.info(
+                f"  Monitor view: {(Color.GREEN + 'Values') if arg.value_display else (Color.CYAN + 'Messages')}{Color.OFF}"
+            )
+            CONSOLE.info(
+                f"  Real-time trigger: {(Color.GREEN + 'Enabled') if arg.realtime else (Color.RED + 'Disabled')}{Color.OFF}"
+            )
+            CONSOLE.info(
+                f"  Filedump: {(Color.GREEN + 'Enabled') if arg.filedump else (Color.RED + 'Disabled')}{Color.OFF}"
+            )
+            if arg.dump_prefix:
+                CONSOLE.info(
+                    f"  Dump Prefix: {Color.YELLOW}{arg.dump_prefix}{Color.OFF}"
+                )
+            CONSOLE.info("")
+        if not asyncio.run(AnkerSolixMqttMonitor(arg).main(), debug=False):
             CONSOLE.warning("\nAborted!")
     except KeyboardInterrupt:
         CONSOLE.warning("\nAborted!")

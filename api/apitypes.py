@@ -1299,8 +1299,9 @@ class SolixPpsOutputStatus(StrEnum):
 class SolixPpsOutputMode(StrEnum):
     """Str Enumeration for Anker Solix PPS output modes."""
 
+    smart_0 = "0"
     normal = "1"
-    smart = "2"
+    smart_2 = "2"
     unknown = "unknown"
 
 
