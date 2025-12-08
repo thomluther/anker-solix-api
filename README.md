@@ -378,18 +378,19 @@ Keep in mind that credential prompts are only avoided if they are defined as env
 Optionally you can define those variables in an .env file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
 #### Main usage options
-- `--live-cloud` / `--live`: Skip interactive mode, use live cloud data directly
+- `--help` / `-h`: Get usage information
+- `--live-cloud` / `-live`: Skip interactive mode, use live cloud data directly
 - `--site-id`: Monitor specific site ID only instead of all sites and devices for account
-- `--device-id`: Filter output for specific device ID only
-- `--enable-mqtt` / `--mqtt`: Auto-start MQTT session for real-time device data
-- `--realtime` / `--rt`: Automatically trigger real-time MQTT data on startup
-- `--mqtt-display`: Show pure MQTT data instead of mixed API+MQTT display
+- `--device-id`, `-dev`: Filter output for specific device ID only
+- `--enable-mqtt` / `-mqtt`: Enable MQTT session after startup for real-time device data
+- `--realtime-trigger` / `-rt`: Enable real-time MQTT trigger after startup (requires --enable-mqtt)
+- `--mqtt-display`: Initially show pure MQTT data display instead of mixed API + MQTT display (requires --enable-mqtt)
 
 #### Configuration Options
 - `--interval` / `-i`: Modify default refresh interval (5-600 seconds, default: 30)
 - `--endpoint-limit`: Modify default API endpoint limit for request throttling (default: 10)
-- `--energy-stats` / `--energy`: Include daily site energy statistics, only shown with API display
-- `--no-vehicles` / `--no-ev`: Disable electric vehicle display for API display
+- `--energy-stats` / `-energy`: Include daily site energy statistics, only shown with API display
+- `--no-vehicles` / `-no-ev`: Disable electric vehicle display for API display
 
 #### Debug & Logging
 - `--api-calls`: Show API call statistics and details
@@ -400,16 +401,16 @@ Optionally you can define those variables in an .env file, which is defining the
 
 ```bash
 # Quick monitoring with MQTT and real-time data
-python monitor.py --live --mqtt --rt
+python monitor.py -live -mqtt -rt
 
 # Energy monitoring with custom interval
-python monitor.py --live --energy-stats --interval 60
+python monitor.py -live --energy-stats --interval 60
 
 # Monitor specific site with pure MQTT display
-python monitor.py --live --mqtt --mqtt-display --site-id ABC123
+python monitor.py -live -mqtt --mqtt-display --site-id ABC123
 
 # Debug mode with HTTP logging
-python monitor.py --live --mqtt --debug-http
+python monitor.py -live -mqtt --debug-http
 ```
 </details>
 
@@ -468,23 +469,24 @@ Optionally you can define those variables in an .env file, which is defining the
 
 #### Main usage options
 - `--help` / `-h`: Get usage information
-- `--device-sn`, `--dev` DEVICE_SN: Define device SN to be monitored
-- `--filedump` / `--fd`: Enable console dump into file
-- `--dump-prefix` / `--dp` DUMP_PREFIX:  Define dump filename prefix
+- `--device-sn`, `-dev` DEVICE_SN: Define device SN to be monitored (required to use monitor without prompting)
+- `--filedump` / `-fd`: Enable console dump into file
+- `--dump-prefix` / `-dp` DUMP_PREFIX: Define dump filename prefix
+- `--runtime` / `-r` MINUTES: Optional runtime in minutes [1-60] (default: Until cancelled)
 
 #### Configuration Options
-- `--realtime` / `--rt`: Enable MQTT real-time data trigger at startup
-- `--status-request` / `--sr`: Issue immediate MQTT status request after startup
-- `--value-display` / `--vd`: Initially show MQTT value display instead of MQTT messages display
+- `--realtime-trigger` / `-rt`: Enable MQTT real-time data trigger at startup
+- `--status-request` / `-sr`: Issue immediate MQTT status request after startup
+- `--value-display` / `-vd`: Initially show MQTT value display instead of MQTT messages display
 
 #### Command line argument usage examples
 
 ```bash
-# start MQTT monitoring with dump into file while running realtime trigger
-python mqtt_monitor.py --dev 1234567890123456 --fd --rt
+# start MQTT monitoring for 10 minutes with dump into file while running realtime trigger
+python mqtt_monitor.py -dev 1234567890123456 -rt 10 -fd
 
 # start MQTT monitoring with dump into file using customer prefex and initial status request
-python mqtt_monitor.py --dev 1234567890123456 --fd --dp cmd.device_timeout --sr
+python mqtt_monitor.py -dev 1234567890123456 -fd -dp cmd.device_timeout -sr
 ```
 </details>
 

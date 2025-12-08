@@ -9,7 +9,7 @@ it reacts on key press for the menu options. The menu can be displayed again wit
 
 import argparse
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import partial
 import json
 import logging
@@ -44,38 +44,47 @@ def parse_arguments() -> argparse.Namespace:
         description="Anker Solix MQTT Monitor - Monitor MQTT messages and commands of Anker Solix devices in real-time"
     )
     parser.add_argument(
-        "--device-sn", "--dev", type=str, help="Define device SN to be monitored"
+        "--device-sn", "-dev", type=str, help="Define device SN to be monitored"
     )
     parser.add_argument(
-        "--realtime",
-        "--rt",
+        "--realtime-trigger",
+        "-rt",
         action="store_true",
         help="Enable MQTT real-time data trigger at startup",
     )
     parser.add_argument(
         "--status-request",
-        "--sr",
+        "-sr",
         action="store_true",
         help="Issue immediate MQTT status request after startup",
     )
     parser.add_argument(
         "--value-display",
-        "--vd",
+        "-vd",
         action="store_true",
         help="Initially show MQTT value display instead of MQTT messages display",
     )
     parser.add_argument(
         "--filedump",
-        "--fd",
+        "-fd",
         action="store_true",
         help="Enable console dump into file",
     )
     parser.add_argument(
         "--dump-prefix",
-        "--dp",
+        "-dp",
         type=str,
         default="",
         help="Define dump filename prefix",
+    )
+    parser.add_argument(
+        "--runtime",
+        "-r",
+        type=int,
+        default=0,
+        choices=range(1, 60),
+        metavar="[1-60]",
+        help="Optional runtime in minutes (default: Until cancelled)",
     )
     args = parser.parse_args()
     # Validate argument combinations
@@ -98,10 +107,13 @@ class AnkerSolixMqttMonitor:
         self.found_topics: set = set()
         self.loop: asyncio.AbstractEventLoop
         self.filedump: bool = args.filedump
-        self.realtime_trigger: bool = args.realtime
+        self.realtime_trigger: bool = args.realtime_trigger
         self.status_request: bool = args.status_request
         self.value_display: bool = args.value_display
         self.fileprefix: str | None = args.dump_prefix
+        self.endtime: datetime | None = (
+            (datetime.now() + timedelta(minutes=args.runtime)) if args.runtime else None
+        )
 
     async def main(self) -> None:  # noqa: C901
         """Run Main routine to start the monitor in a loop."""
@@ -196,7 +208,7 @@ class AnkerSolixMqttMonitor:
                     CONSOLE.info("No owned Anker Solix devices found for your account.")
                     return False
 
-                if not self.device_sn:
+                if not (self.device_sn or self.filedump):
                     # ask whether dumping messages to file
                     response = input(
                         f"Do you want to dump MQTT message decoding also to file? ({Color.YELLOW}Y{Color.OFF}/{Color.CYAN}N{Color.OFF}): "
@@ -331,7 +343,7 @@ class AnkerSolixMqttMonitor:
                             wait_for_publish=2,
                         ).is_published():
                             CONSOLE.info(
-                               f"{Color.CYAN}\nPublished immediate status request, status message(s) should appear shortly...{Color.OFF}"
+                                f"{Color.CYAN}\nPublished immediate status request, status message(s) should appear shortly...{Color.OFF}"
                             )
                     while True:
                         # Check if a key was pressed
@@ -451,6 +463,12 @@ class AnkerSolixMqttMonitor:
                                 )
                                 break
                             await asyncio.sleep(0.5)
+                        # check if runtime is over
+                        if self.endtime and datetime.now() > self.endtime:
+                            CONSOLE.info(
+                                f"{Color.RED}\nRuntime exceeded, stopping monitor...{Color.OFF}"
+                            )
+                            break
                 finally:
                     # Cancel the started tasks
                     poller_task.cancel()
@@ -472,8 +490,10 @@ class AnkerSolixMqttMonitor:
                         # remove queue file handler again before zipping folder
                         CONSOLE.removeHandler(qh)
                         CONSOLE.info(
-                            "\nMQTT dump file completed: %s",
+                            "\nMQTT dump file completed: %s%s%s",
+                            Color.CYAN,
                             Path.resolve(Path(dumpfolder / filename)),
+                            Color.OFF,
                         )
                 return True
 
@@ -676,7 +696,7 @@ if __name__ == "__main__":
                 f"  Monitor view: {(Color.GREEN + 'Values') if arg.value_display else (Color.CYAN + 'Messages')}{Color.OFF}"
             )
             CONSOLE.info(
-                f"  Real-time trigger: {(Color.GREEN + 'Enabled') if arg.realtime else (Color.RED + 'Disabled')}{Color.OFF}"
+                f"  Real-time trigger: {(Color.GREEN + 'Enabled') if arg.realtime_trigger else (Color.RED + 'Disabled')}{Color.OFF}"
             )
             CONSOLE.info(
                 f"  Status request: {(Color.GREEN + 'Enabled') if arg.status_request else (Color.RED + 'Disabled')}{Color.OFF}"
@@ -688,6 +708,9 @@ if __name__ == "__main__":
                 CONSOLE.info(
                     f"  Dump Prefix: {Color.YELLOW}{arg.dump_prefix}{Color.OFF}"
                 )
+            CONSOLE.info(
+                f"  Runtime: {(Color.YELLOW + str(arg.runtime) + ' minutes') if arg.runtime else (Color.CYAN + 'Until cancelled')}{Color.OFF}"
+            )
             CONSOLE.info("")
         if not asyncio.run(AnkerSolixMqttMonitor(arg).main(), debug=False):
             CONSOLE.warning("\nAborted!")

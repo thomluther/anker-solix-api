@@ -558,7 +558,7 @@ CMD_SB_LIGHT_SWITCH = CMD_COMMON | {
     "a3": {
         "name": "set_light_mode",  # use actual state of switch
         "type": DeviceHexDataTypes.ui.value,
-        VALUE_STATE: "light_mode",
+        VALUE_STATE: "light_mode",  # use this actual state as value
         VALUE_DEFAULT: 0,
     },
 }
@@ -569,7 +569,7 @@ CMD_SB_LIGHT_MODE = CMD_COMMON | {
     "a2": {
         "name": "set_light_off_switch",  # use actual state of switch
         "type": DeviceHexDataTypes.ui.value,
-        VALUE_STATE: "light_off_switch",
+        VALUE_STATE: "light_off_switch",  # use this actual state as value
         VALUE_DEFAULT: 0,
     },
     "a3": {
@@ -584,10 +584,10 @@ CMD_SB_DEVICE_TIMEOUT = CMD_COMMON | {
     # Command: Solarbank device timeout
     COMMAND_NAME: SolixMqttCommands.sb_device_timeout,
     "a2": {
-        "name": "set_device_timeout_30min",  # 0 - 1200 W, step: 100
+        "name": "set_device_timeout_30min",  # (0 - 48) * 30 min
         "type": DeviceHexDataTypes.ui.value,
         STATE_NAME: "device_timeout_minutes",
-        VALUE_OPTIONS: [],
+        VALUE_OPTIONS: [0, 30, 60, 120, 240, 360, 720, 1440],  # in minutes as state
         VALUE_DIVIDER: 30,
     },
 }

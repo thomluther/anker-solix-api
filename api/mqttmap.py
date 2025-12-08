@@ -981,7 +981,7 @@ _A17C5_0405 = {
     "b2": {"name": "discharged_energy?"},
     "b3": {"name": "grid_import_energy"},
     "b4": {"name": "grid_export_energy"},
-    "b5": {"name": "soc_min"}, # TODO: Does this toggle with the setting?
+    "b5": {"name": "soc_min"},  # TODO: Does this toggle with the setting?
     "b6": {"name": "output_cutoff_exp_1?"},
     "b7": {"name": "output_cutoff_exp_2?"},
     "b8": {"name": "usage_mode"},
@@ -1023,7 +1023,10 @@ _A17C5_0405 = {
     "c8": {"name": "pv_3_power"},
     "c9": {"name": "pv_4_power"},
     "cb": {"name": "expansion_packs?"},
-    "d4": {"name": "device_timeout_minutes", "factor": 30},
+    "d4": {
+        "name": "device_timeout_minutes",
+        "factor": 30,
+    },  # timeout in 30 min chunks: 0, 30, 60, 120, 240, 360, 720, 1440 minutes
     "d5": {"name": "pv_limit"},
     "d6": {"name": "ac_input_limit"},
     "fb": {
@@ -1696,7 +1699,7 @@ SOLIXMQTTMAP = {
             SolixMqttCommands.sb_pv_limit_select: CMD_SB_PV_LIMIT,  # 2000 W or 3600 W
             SolixMqttCommands.sb_ac_input_limit: CMD_SB_AC_INPUT_LIMIT,  # 0 - 1200 W, step: 100
         },
-        "009a": CMD_SB_DEVICE_TIMEOUT,  # TODO: Valid options
+        "009a": CMD_SB_DEVICE_TIMEOUT,  # timeout in 30 min chunks: 0, 30, 60, 120, 240, 360, 720, 1440 minutes
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": _A17C5_0405,
         # Interval: varies, probably upon change

@@ -66,24 +66,25 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--live-cloud",
-        "--live",
+        "-live",
         action="store_true",
         help="Use live cloud data (default: interactive mode asks for input source)",
     )
     parser.add_argument(
         "--enable-mqtt",
-        "--mqtt",
+        "-mqtt",
         action="store_true",
-        help="Enable MQTT session on startup for real-time device data",
+        help="Enable MQTT session after startup for real-time device data",
     )
     parser.add_argument(
-        "--realtime",
-        "--rt",
+        "--realtime-trigger",
+        "-rt",
         action="store_true",
-        help="Enable real-time MQTT trigger on startup (requires --enable-mqtt)",
+        help="Enable real-time MQTT trigger after startup (requires --enable-mqtt)",
     )
     parser.add_argument(
         "--mqtt-display",
+        "-md",
         action="store_true",
         help="Initially show pure MQTT data display instead of mixed API + MQTT display (requires --enable-mqtt)",
     )
@@ -98,17 +99,20 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--energy-stats",
-        "--energy",
+        "-energy",
         action="store_true",
         help="Include daily site energy statistics on API display",
     )
     parser.add_argument("--site-id", type=str, help="Monitor specific site ID only")
     parser.add_argument(
-        "--device-id", type=str, help="Filter output for specific device ID only"
+        "--device-id",
+        "-dev",
+        type=str,
+        help="Filter output for specific device ID only",
     )
     parser.add_argument(
         "--no-vehicles",
-        "--no-ev",
+        "-no-ev",
         action="store_true",
         help="Disable electric vehicles on API display",
     )
@@ -130,7 +134,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     args = parser.parse_args()
     # Validate argument combinations
-    if args.realtime and not args.enable_mqtt:
+    if args.realtime_trigger and not args.enable_mqtt:
         parser.error("--realtime requires --enable-mqtt to be specified")
     if args.mqtt_display and not args.enable_mqtt:
         parser.error("--mqtt-display requires --enable-mqtt to be specified")
@@ -157,7 +161,7 @@ class AnkerSolixApiMonitor:
         self.energy_stats: bool = args.energy_stats
         self.refresh_interval: int = args.interval
         self.enable_mqtt: bool = args.enable_mqtt
-        self.enable_realtime: bool = args.realtime
+        self.enable_realtime: bool = args.realtime_trigger
         self.endpoint_limit: int = args.endpoint_limit
         self.debug_http: bool = args.debug_http
         # Set MQTT display mode from command line
@@ -1176,7 +1180,7 @@ class AnkerSolixApiMonitor:
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'AC Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                        f"{'AC Out Tot/Off':<{col3}}: {(m2 or m4 )and (c or cm)}{m2 or '----':>4} {unit} / {m4 or '-:--:--'}{co}"
+                        f"{'AC Out Tot/Off':<{col3}}: {(m2 or m4) and (c or cm)}{m2 or '----':>4} {unit} / {m4 or '-:--:--'}{co}"
                     )
                 if m1 := cm and mqtt.get("usbc_1_power", ""):
                     m2 = cm and mqtt.get("usbc_2_power", "")
@@ -2386,22 +2390,22 @@ if __name__ == "__main__":
 
         # Print configuration when in non-interactive mode
         if arg.live_cloud:
-            CONSOLE.info("Configuration:")
+            CONSOLE.info("Launch settings:")
             CONSOLE.info(f"  Live cloud mode: {Color.GREEN}Enabled{Color.OFF}")
             CONSOLE.info(
-                f"  MQTT session: {Color.GREEN if arg.enable_mqtt else Color.RED}{'Enabled' if arg.enable_mqtt else 'Disabled'}{Color.OFF}"
+                f"  MQTT session: {(Color.GREEN + 'Enabled') if arg.enable_mqtt else (Color.RED + 'Disabled')}{Color.OFF}"
             )
             CONSOLE.info(
-                f"  MQTT display mode: {Color.GREEN if arg.mqtt_display else Color.CYAN}{'Pure MQTT' if arg.mqtt_display else 'Mixed API+MQTT'}{Color.OFF}"
+                f"  MQTT display mode: {(Color.GREEN + 'Pure MQTT') if arg.mqtt_display else (Color.CYAN + 'Mixed API+MQTT')}{Color.OFF}"
             )
             CONSOLE.info(
-                f"  Real-time trigger: {Color.GREEN if arg.realtime else Color.RED}{'Enabled' if arg.realtime else 'Disabled'}{Color.OFF}"
+                f"  Real-time trigger: {(Color.GREEN + 'Enabled') if arg.realtime_trigger else (Color.RED + 'Disabled')}{Color.OFF}"
             )
             CONSOLE.info(
                 f"  Refresh interval: {Color.CYAN}{arg.interval}{Color.OFF} seconds"
             )
             CONSOLE.info(
-                f"  Energy statistics: {Color.GREEN if arg.energy_stats else Color.RED}{'Enabled' if arg.energy_stats else 'Disabled'}{Color.OFF}"
+                f"  Energy statistics: {(Color.GREEN + 'Enabled') if arg.energy_stats else (Color.RED + 'Disabled')}{Color.OFF}"
             )
             if arg.site_id:
                 CONSOLE.info(
@@ -2412,16 +2416,16 @@ if __name__ == "__main__":
                     f"  Device filter: {Color.YELLOW}{arg.device_id}{Color.OFF}"
                 )
             CONSOLE.info(
-                f"  Electric vehicles: {Color.GREEN if not arg.no_vehicles else Color.RED}{'Enabled' if not arg.no_vehicles else 'Disabled'}{Color.OFF}"
+                f"  Electric vehicles: {(Color.GREEN + 'Enabled') if arg.no_vehicles else (Color.RED + 'Disabled')}{Color.OFF}"
             )
             CONSOLE.info(
-                f"  API call statistics: {Color.GREEN if arg.api_calls else Color.RED}{'Enabled' if arg.api_calls else 'Disabled'}{Color.OFF}"
+                f"  API call statistics: {(Color.GREEN + 'Enabled') if arg.api_calls else (Color.RED + 'Disabled')}{Color.OFF}"
             )
             CONSOLE.info(
-                f"  HTTP debug logging: {Color.GREEN if arg.debug_http else Color.RED}{'Enabled' if arg.debug_http else 'Disabled'}{Color.OFF}"
+                f"  HTTP debug logging: {(Color.GREEN + 'Enabled') if arg.debug_http else (Color.RED + 'Disabled')}{Color.OFF}"
             )
             CONSOLE.info(
-                f"  Endpoint limit: {Color.CYAN}{arg.endpoint_limit if arg.endpoint_limit > 0 else 'Disabled'}{Color.OFF}"
+                f"  Endpoint limit: {(Color.CYAN + str(arg.endpoint_limit)) if arg.endpoint_limit else (Color.RED + 'Disabled')}{Color.OFF}"
             )
             CONSOLE.info("")
 
