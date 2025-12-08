@@ -210,7 +210,7 @@ Device type | Description
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(includes partial MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(includes partial MQTT monitoring)**
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No device settings supported)**
-`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722: C300 AC Portable Power Station **(partial MQTT monitoring)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(partial MQTT monitoring)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring and experimental control)**<br>- A1780(P): F2000(P) Portable Power Station **(partial MQTT monitoring)**<br>- A1790(P): F3800(P) Portable Power Station **(partial MQTT monitoring)**
+`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722: C300 AC Portable Power Station **(partial MQTT monitoring)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(partial MQTT monitoring)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring and experimental control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(partial MQTT monitoring)**<br>- A1780(P): F2000(P) Portable Power Station **(partial MQTT monitoring)**<br>- A1790(P): F3800(P) Portable Power Station **(partial MQTT monitoring)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(only basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(only basic Api monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the announced Anker Solix V1 EV Charger.
@@ -338,6 +338,7 @@ Beside value highlighting, systems, devices, vehicles etc have their own highlig
 [A]pi call display toggle OFF (default) or ON
 Toggle MQTT [S]ession OFF (default) or ON
 [R]eal time MQTT data trigger (Timeout 1 min). Only possible if MQTT session is ON
+[I]mmediate status request. Only possible if MQTT session is ON
 [M]qtt device or Api device (default) display toggle
 [Q]uit, [ESC] or [CTRL-C] to stop monitor
 ----------------------------------------------------------------------------------------------------
@@ -374,6 +375,7 @@ Keep in mind that credential prompts are only avoided if they are defined as env
   - ANKERPASSWORD=<password>
   - ANKERCOUNTRY=<country_id>
 
+Optionally you can define those variables in an .env file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
 #### Main usage options
 - `--live-cloud` / `--live`: Skip interactive mode, use live cloud data directly
@@ -440,15 +442,58 @@ The tool also utilizes the built in real time data trigger, which can trigger fr
 [U]nsubscribe all topics. This will stop receiving MQTT messages
 [S]ubscribe root topic. This will subscribe root only
 [T]oggle subscribed topic. If only one topic identified from root topic, toggling is not possible
-[R]eal time data trigger toggle OFF (Default) or ON
+[R]eal time data trigger loop OFF (Default) or ON for continuous status messages
+[O]ne real time trigger for device (timeout 60 seconds)
+[I]mmediate status request for device
 [V]iew value extraction refresh screen or MQTT message decoding
+[D]isplay snapshot of extracted values
 [Q]uit, [ESC] or [CTRL-C] to stop MQTT monitor
 ----------------------------------------------------------------------------------------------------
+```
+
+### Command line options for mqtt_monitor tool
+
+Command line arguments allow making the mqtt_monitor tool more suitable for automation and non-interactive usage.
+For example you can use it for automated start with dump file and realtime trigger enabled, if you want to track
+a certain control change via the mobile app. The dump file can then later be grepped for corresponding command
+messages and differences in the status messages before and after the command.
+To analyze the dump files, you can modify and use the `grep_mqtt_cmd.py`utility.
+
+Keep in mind that credential prompts are only avoided if they are defined as environment variables:
+  - ANKERUSER=<username>
+  - ANKERPASSWORD=<password>
+  - ANKERCOUNTRY=<country_id>
+
+Optionally you can define those variables in an .env file, which is defining them at runtime, see [test_api.py](#test_apipy).
+
+#### Main usage options
+- `--help` / `-h`: Get usage information
+- `--device-sn`, `--dev` DEVICE_SN: Define device SN to be monitored
+- `--filedump` / `--fd`: Enable console dump into file
+- `--dump-prefix` / `--dp` DUMP_PREFIX:  Define dump filename prefix
+
+#### Configuration Options
+- `--realtime` / `--rt`: Enable MQTT real-time data trigger at startup
+- `--status-request` / `--sr`: Issue immediate MQTT status request after startup
+- `--value-display` / `--vd`: Initially show MQTT value display instead of MQTT messages display
+
+#### Command line argument usage examples
+
+```bash
+# start MQTT monitoring with dump into file while running realtime trigger
+python mqtt_monitor.py --dev 1234567890123456 --fd --rt
+
+# start MQTT monitoring with dump into file using customer prefex and initial status request
+python mqtt_monitor.py --dev 1234567890123456 --fd --dp cmd.device_timeout --sr
 ```
 </details>
 
 > [!TIP]
 > For byte value decoding and possible field descriptions, you should monitor your app in parallel. See discussion [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222) for MQTT details and general data decoding instructions.
+
+> [!NOTE]
+> The mobile app will always trigger realtime data from your device with a default timeout of 5 minutes. So you don't have to enable real time trigger in the monitor as well in case you use the app in parallel, e.g. to dump control messages for the changes you apply through the app.
+
 
 ## energy_csv.py
 

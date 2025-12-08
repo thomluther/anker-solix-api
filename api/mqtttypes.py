@@ -506,7 +506,7 @@ class DeviceHexData:
 
     def __str__(self) -> str:
         """Print the fields and hex bytes with separator."""
-        return f"model:{self.model}, header:{{{self.msg_header!s}}}, hexbytes:{self.hexbytes.hex()}"
+        return f"model:{self.model}, header:{{{self.msg_header!s}}}, hexbytes:{self.hexbytes.hex()}, checksum:{self.checksum.hex()}"
 
     def _get_xor_checksum(self, hexbytes: bytearray | None = None) -> bytearray:
         """Generate the XOR checksum byte across provided bytearray or actual hexdata."""
@@ -518,21 +518,20 @@ class DeviceHexData:
         return bytearray(checksum.to_bytes())
 
     def _update_hexbytes(self) -> None:
-        # init length and hexbytes and checksum
+        # init length and hexbytes
         self.length = len(self.msg_header)
-        if self.length:
-            # Add checksum byte to length
-            self.length += 1
         self.hexbytes = bytearray()
         for f in (self.msg_fields or {}).values():
             self.length += len(f)
             self.hexbytes += bytes.fromhex(f.hex())
         # update message length in header including checksum byte
         if self.length:
+            # Add checksum byte to length
+            self.length += 1
             self.msg_header.msglength = self.length
-        # generate complete hexbytes foe checksum calculation
+        # generate complete hexbytes for checksum calculation
         self.hexbytes = bytearray(bytes.fromhex(self.msg_header.hex()) + self.hexbytes)
-        # generate XOR checksum and append to hexbytes
+        # generate XOR checksum byte and append to hexbytes
         self.checksum = self._get_xor_checksum()
         self.hexbytes += self.checksum
 
@@ -596,9 +595,9 @@ class DeviceHexData:
     def values(self) -> dict:
         """Return a dictionary with extracted values based on defined field mappings."""
         values = {}
-        fieldmap = (SOLIXMQTTMAP.get(self.model) or {}).get(
-            self.msg_header.msgtype.hex()
-        ) or {}
+        fieldmap = SOLIXMQTTMAP.get(self.model, {}).get(
+            self.msg_header.msgtype.hex(), {}
+        )
         if cmd_list := fieldmap.get(COMMAND_LIST):
             # extract the maps from all nested commands, they should not have duplicate field names
             fieldmap = {

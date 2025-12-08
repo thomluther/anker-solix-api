@@ -50,7 +50,13 @@ def parse_arguments() -> argparse.Namespace:
         "--realtime",
         "--rt",
         action="store_true",
-        help="Enable real-time MQTT trigger on startup",
+        help="Enable MQTT real-time data trigger at startup",
+    )
+    parser.add_argument(
+        "--status-request",
+        "--sr",
+        action="store_true",
+        help="Issue immediate MQTT status request after startup",
     )
     parser.add_argument(
         "--value-display",
@@ -93,6 +99,7 @@ class AnkerSolixMqttMonitor:
         self.loop: asyncio.AbstractEventLoop
         self.filedump: bool = args.filedump
         self.realtime_trigger: bool = args.realtime
+        self.status_request: bool = args.status_request
         self.value_display: bool = args.value_display
         self.fileprefix: str | None = args.dump_prefix
 
@@ -315,6 +322,17 @@ class AnkerSolixMqttMonitor:
                     progress_task = self.loop.create_task(self.print_wait_progress())
                     # get running loop to run blocking code
                     loop = asyncio.get_running_loop()
+                    # individual status request at startup
+                    if self.status_request and self.device_sn:
+                        # delay to wait for subscription to complete for receiving the message
+                        await asyncio.sleep(2)
+                        if mqtt_session.status_request(
+                            deviceDict=self.device_selected,
+                            wait_for_publish=2,
+                        ).is_published():
+                            CONSOLE.info(
+                               f"{Color.CYAN}\nPublished immediate status request, status message(s) should appear shortly...{Color.OFF}"
+                            )
                     while True:
                         # Check if a key was pressed
                         if k := await loop.run_in_executor(None, common.getkey):
@@ -394,7 +412,7 @@ class AnkerSolixMqttMonitor:
                                     wait_for_publish=2,
                                 ).is_published():
                                     CONSOLE.info(
-                                        f"{Color.CYAN}\nPublished status request, message 0405 should appear shortly...{Color.OFF}"
+                                        f"{Color.CYAN}\nPublished status request, status message(s) should appear shortly...{Color.OFF}"
                                     )
                             elif k == "d":
                                 # save active message callback for later restore
@@ -652,13 +670,16 @@ if __name__ == "__main__":
         arg: argparse.Namespace = parse_arguments()
         # Print configuration when in non-interactive mode
         if arg.device_sn:
-            CONSOLE.info("Configuration:")
+            CONSOLE.info("Launch settings:")
             CONSOLE.info(f"  Device SN: {Color.CYAN}{arg.device_sn}{Color.OFF}")
             CONSOLE.info(
                 f"  Monitor view: {(Color.GREEN + 'Values') if arg.value_display else (Color.CYAN + 'Messages')}{Color.OFF}"
             )
             CONSOLE.info(
                 f"  Real-time trigger: {(Color.GREEN + 'Enabled') if arg.realtime else (Color.RED + 'Disabled')}{Color.OFF}"
+            )
+            CONSOLE.info(
+                f"  Status request: {(Color.GREEN + 'Enabled') if arg.status_request else (Color.RED + 'Disabled')}{Color.OFF}"
             )
             CONSOLE.info(
                 f"  Filedump: {(Color.GREEN + 'Enabled') if arg.filedump else (Color.RED + 'Disabled')}{Color.OFF}"

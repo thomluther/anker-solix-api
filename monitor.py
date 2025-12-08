@@ -41,7 +41,6 @@ from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
 from api.helpers import get_enum_name  # pylint: disable=no-name-in-module
 from api.mqtt_device import SolixMqttDevice  # pylint: disable=no-name-in-module
 from api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
-from api.mqttcmdmap import SolixMqttCommands  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
