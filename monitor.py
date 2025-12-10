@@ -31,6 +31,7 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
     SolixPpsChargingStatus,
     SolixPpsDisplayMode,
     SolixPpsOutputMode,
+    SolixPpsOutputModeV2,
     SolixPpsPortStatus,
     SolixPriceProvider,
     SolixPriceTypes,
@@ -183,6 +184,18 @@ class AnkerSolixApiMonitor:
         if folder.is_dir():
             return [f.resolve() for f in folder.iterdir() if f.is_dir()]
         return []
+
+    def generate_mqtt_devices(self) -> None:
+        """Generate the MQTT devices for current Api devices."""
+        self.mqtt_devices = {}
+        if self.api.mqttsession:
+            for dev in [
+                dev for dev in self.api.devices.values() if dev.get("mqtt_supported")
+            ]:
+                # generate MQTT device and track it
+                sn = dev.get("device_sn")
+                if mdev := SolixMqttDeviceFactory(self.api, sn).create_device():
+                    self.mqtt_devices[sn] = mdev
 
     def get_menu_options(self, details: bool = False) -> str:
         """Print the key menu and return the input."""
@@ -422,6 +435,7 @@ class AnkerSolixApiMonitor:
             site = self.api.sites.get(siteid) or {}
             customized = dev.get("customized") or {}
             mqtt = dev.get("mqtt_data") or {}
+            mdev = self.mqtt_devices.get(sn)
             # color for updated or mixin MQTT value
             c = (
                 Color.YELLOW
@@ -621,7 +635,7 @@ class AnkerSolixApiMonitor:
                         f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} "
                         f"{' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
                     )
-                if mdev := self.mqtt_devices.get(sn):
+                if mdev:
                     CONSOLE.info(
                         f"{'MQTT Device':<{col1}}: {cm}{('Connected' if mdev.is_connected() else 'Disconnected'):<{col2}}{co} "
                         f"{'Subscription':<{col3}}: {cm}{('Active' if mdev.is_subscribed() else 'Inactive')}{co}"
@@ -1060,11 +1074,13 @@ class AnkerSolixApiMonitor:
                 m3 = cm and str(mqtt.get("ac_output_mode", ""))
                 m4 = cm and str(mqtt.get("dc_12v_output_mode", ""))
                 if str(m1) or str(m2) or m3 or m4:
+                    # V2 PPS have different smart mode states than V1
+                    v2 = mdev.pn in ["A1763"]
                     CONSOLE.info(
                         f"{'AC Out Ctrl':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} / "
-                        f"{get_enum_name(SolixPpsOutputMode, m3, 'unknown').capitalize().split('_')[0] + ' (' + (m3 or '-') + ')':<{col2 - 6}}{co} "
+                        f"{get_enum_name(SolixPpsOutputModeV2 if v2 else SolixPpsOutputMode, m3, 'unknown').capitalize().split('_')[0] + ' (' + (m3 or '-') + ')':<{col2 - 6}}{co} "
                         f"{'DC Out Ctrl':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3} / "
-                        f"{get_enum_name(SolixPpsOutputMode, m4, 'unknown').capitalize().split('_')[0] + ' (' + (m4 or '-') + ')'}{co}"
+                        f"{get_enum_name(SolixPpsOutputModeV2 if v2 else SolixPpsOutputMode, m4, 'unknown').capitalize().split('_')[0] + ' (' + (m4 or '-') + ')'}{co}"
                     )
                 if m1 := cm and (mqtt.get("battery_soc", "")):
                     m2 = cm and mqtt.get("power_cutoff", "")
@@ -1782,45 +1798,6 @@ class AnkerSolixApiMonitor:
                         )
                         self.next_dev_refr = details_refresh
 
-                        # Generate device list for output filter toggle
-                        if not self.device_names:
-                            self.device_names = ["All"] + [
-                                (
-                                    ", ".join(
-                                        [
-                                            str(d.get("device_sn")),
-                                            str(d.get("name")),
-                                            f"Type: {d.get('device_pn')} - {d.get('type') or 'unknown'}",
-                                        ]
-                                    )
-                                )
-                                for d in self.api.devices.values()
-                            ]
-                        # Ask if output should be filtered to certain device
-                        if (
-                            self.interactive
-                            and self.device_filter is None
-                            and len(self.device_names) > 2
-                        ):
-                            CONSOLE.info(
-                                "Select which device should be filtered in output:"
-                            )
-                            for idx, devicename in enumerate(self.device_names):
-                                CONSOLE.info(
-                                    f"({Color.YELLOW}{idx}{Color.OFF}) {devicename}"
-                                )
-                            selection = input(
-                                f"Enter device number ({Color.YELLOW}0-{len(self.device_names) - 1}{Color.OFF}) or nothing for {Color.CYAN}All{Color.OFF}: "
-                            )
-                            if selection.isdigit() and 1 <= int(selection) < len(
-                                self.device_names
-                            ):
-                                self.device_filter = self.device_names[
-                                    int(selection)
-                                ].split(",")[0]
-                            else:
-                                self.device_filter = ""
-
                         # Auto-start MQTT session if enabled via command line
                         if (
                             self.enable_mqtt
@@ -1831,19 +1808,13 @@ class AnkerSolixApiMonitor:
                             if mqttsession := await self.api.startMqttSession(
                                 fromFile=self.use_file
                             ):
-                                for dev in (
-                                    devs := [
-                                        dev
-                                        for dev in self.api.devices.values()
-                                        if dev.get("mqtt_supported")
-                                    ]
-                                ):
-                                    # generate MQTT device and track it
-                                    sn = dev.get("device_sn")
-                                    if mdev := SolixMqttDeviceFactory(
-                                        self.api, sn
-                                    ).create_device():
-                                        self.mqtt_devices[sn] = mdev
+                                # generate actual MQTT devices and track them in class
+                                self.generate_mqtt_devices()
+                                devs = [
+                                    dev
+                                    for dev in self.api.devices.values()
+                                    if dev.get("mqtt_supported")
+                                ]
                                 if mqttsession.is_connected():
                                     CONSOLE.info(
                                         f"{Color.GREEN}MQTT session connected{Color.OFF}, subscribing eligible devices..."
@@ -1892,6 +1863,45 @@ class AnkerSolixApiMonitor:
                                 CONSOLE.info(
                                     f"{Color.RED}Failed to start MQTT session!{Color.OFF}"
                                 )
+                        # Generate device list for output filter toggle
+                        if not self.device_names:
+                            self.device_names = ["All"] + [
+                                (
+                                    ", ".join(
+                                        [
+                                            str(d.get("device_sn")),
+                                            str(d.get("name")),
+                                            f"Type: {d.get('device_pn')} - {d.get('type') or 'unknown'}",
+                                        ]
+                                    )
+                                )
+                                for d in self.api.devices.values()
+                            ]
+                        # Ask if output should be filtered to certain device
+                        if (
+                            self.interactive
+                            and self.device_filter is None
+                            and len(self.device_names) > 2
+                        ):
+                            CONSOLE.info(
+                                "Select which device should be filtered in output:"
+                            )
+                            for idx, devicename in enumerate(self.device_names):
+                                CONSOLE.info(
+                                    f"({Color.YELLOW}{idx}{Color.OFF}) {devicename}"
+                                )
+                            selection = input(
+                                f"Enter device number ({Color.YELLOW}0-{len(self.device_names) - 1}{Color.OFF}) or nothing for {Color.CYAN}All{Color.OFF}: "
+                            )
+                            if selection.isdigit() and 1 <= int(selection) < len(
+                                self.device_names
+                            ):
+                                self.device_filter = self.device_names[
+                                    int(selection)
+                                ].split(",")[0]
+                            else:
+                                self.device_filter = ""
+
                     if self.showMqttDevice:
                         self.print_device_mqtt(deviceSn=None)
                     else:
@@ -1942,34 +1952,59 @@ class AnkerSolixApiMonitor:
                                     # print key menu
                                     self.get_menu_options(details=True)
                                     break
-                                if k == "o" and self.use_file and exampleslist:
-                                    CONSOLE.info(
-                                        "Select the input source for the monitor:"
-                                    )
-                                    for idx, filename in enumerate(
-                                        exampleslist, start=1
-                                    ):
+                                if (
+                                    k in ["o", "p", "n"]
+                                    and self.use_file
+                                    and exampleslist
+                                ):
+                                    selection = None
+                                    if k == "o":
+                                        # query other folder
                                         CONSOLE.info(
-                                            f"({Color.YELLOW}{idx}{Color.OFF}) {filename}"
+                                            "Select the input source for the monitor:"
                                         )
-                                    CONSOLE.info(f"({Color.RED}C{Color.OFF}) Cancel")
-                                    while True:
-                                        selection = input(
-                                            f"Enter source file number ({Color.YELLOW}1-{len(exampleslist)}{Color.OFF}) or [{Color.RED}C{Color.OFF}]ancel: "
+                                        for idx, filename in enumerate(
+                                            exampleslist, start=1
+                                        ):
+                                            CONSOLE.info(
+                                                f"({Color.YELLOW}{idx}{Color.OFF}) {filename}"
+                                            )
+                                        CONSOLE.info(
+                                            f"({Color.RED}C{Color.OFF}) Cancel"
                                         )
-                                        if selection.upper() in ["C", "CANCEL"]:
-                                            selection = None
-                                            break
-                                        if selection.isdigit() and 1 <= int(
-                                            selection
-                                        ) <= len(exampleslist):
-                                            folderselection = int(selection)
-                                            break
+                                        while True:
+                                            selection = input(
+                                                f"Enter source file number ({Color.YELLOW}1-{len(exampleslist)}{Color.OFF}) or [{Color.RED}C{Color.OFF}]ancel: "
+                                            )
+                                            if selection.upper() in ["C", "CANCEL"]:
+                                                selection = None
+                                                break
+                                            if selection.isdigit() and 1 <= int(
+                                                selection
+                                            ) <= len(exampleslist):
+                                                break
+                                    elif k == "n":
+                                        # next folder
+                                        selection = (
+                                            (folderselection + 1)
+                                            if folderselection < len(exampleslist)
+                                            else 1
+                                        )
+                                    elif k == "p":
+                                        # previous folder
+                                        selection = (
+                                            (folderselection - 1)
+                                            if folderselection > 1
+                                            else len(exampleslist)
+                                        )
                                     if selection:
                                         self.api.testDir(
-                                            exampleslist[folderselection - 1]
+                                            exampleslist[int(selection) - 1]
                                         )
                                         self.api.clearCaches()
+                                        # cancel file poller task
+                                        if mqtt_task:
+                                            mqtt_task.cancel()
                                         self.api.request_count.recycle(
                                             last_time=datetime.now()
                                         )
@@ -1980,40 +2015,6 @@ class AnkerSolixApiMonitor:
                                         break_refresh = True
                                     else:
                                         break
-                                elif k == "n" and exampleslist and self.use_file:
-                                    self.device_filter = ""
-                                    folderselection = (
-                                        (folderselection + 1)
-                                        if folderselection < len(exampleslist)
-                                        else 1
-                                    )
-                                    self.api.testDir(exampleslist[folderselection - 1])
-                                    self.api.clearCaches()
-                                    self.api.request_count.recycle(
-                                        last_time=datetime.now()
-                                    )
-                                    self.folderdict["folder"] = self.api.testDir()
-                                    self.device_filter = ""
-                                    self.device_names = []
-                                    self.next_dev_refr = 0
-                                    break_refresh = True
-                                elif k == "p" and exampleslist and self.use_file:
-                                    self.device_filter = ""
-                                    folderselection = (
-                                        (folderselection - 1)
-                                        if folderselection > 1
-                                        else len(exampleslist)
-                                    )
-                                    self.api.testDir(exampleslist[folderselection - 1])
-                                    self.api.clearCaches()
-                                    self.api.request_count.recycle(
-                                        last_time=datetime.now()
-                                    )
-                                    self.folderdict["folder"] = self.api.testDir()
-                                    self.device_filter = ""
-                                    self.device_names = []
-                                    self.next_dev_refr = 0
-                                    break_refresh = True
                                 elif k == "i":
                                     if self.use_file:
                                         CONSOLE.info(
@@ -2109,18 +2110,12 @@ class AnkerSolixApiMonitor:
                                             )
                                         ):
                                             # generate MQTT devices and track them
-                                            for dev in (
-                                                devs := [
-                                                    dev
-                                                    for dev in self.api.devices.values()
-                                                    if dev.get("mqtt_supported")
-                                                ]
-                                            ):
-                                                sn = dev.get("device_sn")
-                                                if mdev := SolixMqttDeviceFactory(
-                                                    self.api, sn
-                                                ).create_device():
-                                                    self.mqtt_devices[sn] = mdev
+                                            self.generate_mqtt_devices()
+                                            devs = [
+                                                dev
+                                                for dev in self.api.devices.values()
+                                                if dev.get("mqtt_supported")
+                                            ]
                                             if self.use_file:
                                                 # set the value print as callback for mqtt value refreshes
                                                 self.api.mqtt_update_callback(
