@@ -30,7 +30,7 @@ import logging
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from api.apitypes import ApiEndpointServices  # pylint: disable=no-name-in-module
+from api.apitypes import ApiEndpointServices, Color  # pylint: disable=no-name-in-module
 from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
 from api.export import AnkerSolixApiExport  # pylint: disable=no-name-in-module
 import common
@@ -66,7 +66,7 @@ async def main() -> bool:
 
     CONSOLE.info("Exporting found Anker Solix system data for all assigned sites.")
     randomize: bool = True
-    mqttdata: bool = False
+    mqttdata: bool = True
     services: set = set()
     try:
         user = common.user()
@@ -83,7 +83,9 @@ async def main() -> bool:
                 )  # Login validation will be done during first API call
 
             resp = input(
-                "INPUT: Which Api endpoint services do you want to export? [A]ll / [P]ower / [C]harging / [H]es / [M]qtt only / [D]iscover (default): "
+                f"INPUT: Which Api endpoint services do you want to export? [{Color.CYAN}A{Color.OFF}]ll / "
+                f"[{Color.CYAN}P{Color.OFF}]ower / [{Color.CYAN}C{Color.OFF}]harging / [{Color.CYAN}H{Color.OFF}]es / "
+                f"[{Color.CYAN}M{Color.OFF}]qtt only / [{Color.YELLOW}D{Color.OFF}]iscover (default): "
             )
             if resp != "" or not isinstance(services, set):
                 if resp.upper() in ["A", "LL"]:
@@ -100,47 +102,60 @@ async def main() -> bool:
                     # default to discover required services
                     services = set()
             CONSOLE.info(
-                "Exporting following services: %s",
-                services if services else "Discover automatically",
+                f"Exporting following services: {Color.YELLOW}{services if services else 'Discover automatically'}{Color.OFF}"
             )
             resp = input(
-                f"INPUT: Do you want to change Api endpoint request limit for proper throttling of same endpoint requests? [0] = disabled / [{myapi.endpointLimit()!s}] = default: "
+                f"INPUT: Do you want to change Api endpoint request limit for proper throttling of same endpoint requests? "
+                f"[{Color.CYAN}0{Color.OFF}] = disabled / [{Color.YELLOW}{myapi.endpointLimit()!s}{Color.OFF}] = default: "
             )
             if resp.isdigit() and int(resp) >= 0:
                 myapi.endpointLimit(limit=int(resp))
-            CONSOLE.info("Api endpoint limit: %s", myapi.endpointLimit())
+            CONSOLE.info(
+                f"Api endpoint limit: {Color.YELLOW}{myapi.endpointLimit()!s}{Color.OFF}"
+            )
             resp = input(
-                f"INPUT: Do you want to randomize unique IDs and SNs in exported files? [Y]es{' (default)' if randomize else ''} / [N]o{' (default)' if not randomize else ''}: "
+                f"INPUT: Do you want to randomize unique IDs and SNs in exported files? "
+                f"[{Color.YELLOW if randomize else Color.CYAN}Y{Color.OFF}]es{' (default)' if randomize else ''} / "
+                f"[{Color.YELLOW if not randomize else Color.CYAN}N{Color.OFF}]o{' (default)' if not randomize else ''}: "
             )
             if resp != "" or not isinstance(randomize, bool):
                 randomize = resp.upper() in ["Y", "YES", "TRUE", 1]
-            CONSOLE.info("Randomization of data: %s", randomize)
+            CONSOLE.info(
+                f"Randomization of data: {Color.YELLOW}{randomize!s}{Color.OFF}",
+            )
             if "mqtt_only" in services:
                 mqttdata = True
             else:
                 resp = input(
-                    f"INPUT: Do you want to export optional MQTT device data? These may not be completely randomized and export will take > 5 minutes. [Y]es{' (default)' if mqttdata else ''} / [N]o{' (default)' if not mqttdata else ''}: "
+                    f"INPUT: Do you want to export optional MQTT device data? These may not be completely randomized and export will take > 5 minutes. "
+                    f"[{Color.YELLOW if mqttdata else Color.CYAN}Y{Color.OFF}]es{' (default)' if mqttdata else ''} / "
+                    f"[{Color.YELLOW if not mqttdata else Color.CYAN}N{Color.OFF}]o{' (default)' if not mqttdata else ''}: "
                 )
                 if resp != "" or not isinstance(mqttdata, bool):
                     mqttdata = resp.upper() in ["Y", "YES", "TRUE", 1]
-            CONSOLE.info("MQTT device data export: %s", mqttdata)
+            CONSOLE.info(
+                f"MQTT device data export: {Color.YELLOW}{mqttdata!s}{Color.OFF}",
+            )
             nickname = myapi.apisession.nickname.replace(
                 "*", "x"
             )  # avoid filesystem problems with * in user nicknames
-            folder = input(f"INPUT: Subfolder for export (default: {nickname}): ")
+            folder = input(
+                f"INPUT: Subfolder for export (default: {Color.YELLOW}{nickname}{Color.OFF}): "
+            )
             if folder == "":
                 if nickname == "":
                     return False
                 folder = nickname
-            CONSOLE.info("Subfolder for export: %s", folder)
+            CONSOLE.info(f"Subfolder for export: {Color.YELLOW}{folder!s}{Color.OFF}")
 
             zipped: bool = True
             resp = input(
-                "INPUT: Do you want to zip the output folder? [Y]es (default) / [N]o: "
+                f"INPUT: Do you want to zip the output folder? "
+                f"[{Color.YELLOW}Y{Color.OFF}]es (default) / [{Color.CYAN}N{Color.OFF}]o: "
             )
             if resp != "":
                 zipped = resp.upper() not in ["N", "NO", "FALSE", 0]
-            CONSOLE.info("Zip output folder: %s", zipped)
+            CONSOLE.info(f"Zip output folder: {Color.YELLOW}{zipped!s}{Color.OFF}")
 
             myexport = AnkerSolixApiExport(
                 client=myapi,
