@@ -8,6 +8,7 @@ from .mqttcmdmap import (
     CMD_AC_FAST_CHARGE_SWITCH,
     CMD_AC_OUTPUT_MODE,
     CMD_AC_OUTPUT_SWITCH,
+    CMD_COMMON,
     CMD_COMMON_V2,
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
@@ -1838,5 +1839,60 @@ SOLIXMQTTMAP: Final = {
         "0428": _DOCK_0428,
         # Interval: ~300 seconds
         "0500": _DOCK_0500,
+    },
+    # 250W Prime Charger
+    "A2345": {
+        "020b": CMD_COMMON | {
+            "command_name": SolixMqttCommands.realtime_trigger,
+            "topic": "req",  # Ensure topic is set effectively (CMD_COMMON handles it but verifying)
+        },
+        "0057": CMD_REALTIME_TRIGGER,  # Retain 0057 for topic lookup compatibility
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0303": {
+            "topic": "state_info",
+            "a2": {
+                "bytes": {
+                    "01": {"name": "usbc_1_voltage", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "03": {"name": "usbc_1_current", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "05": {"name": "usbc_1_power", "type": DeviceHexDataTypes.sile.value, "factor": 0.01},
+                }
+            },
+            "a3": {
+                "bytes": {
+                    "01": {"name": "usbc_2_voltage", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "03": {"name": "usbc_2_current", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "05": {"name": "usbc_2_power", "type": DeviceHexDataTypes.sile.value, "factor": 0.01},
+                }
+            },
+            "a4": {
+                "bytes": {
+                    "01": {"name": "usbc_3_voltage", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "03": {"name": "usbc_3_current", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "05": {"name": "usbc_3_power", "type": DeviceHexDataTypes.sile.value, "factor": 0.01},
+                }
+            },
+            "a5": {
+                "bytes": {
+                    "01": {"name": "usbc_4_voltage", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "03": {"name": "usbc_4_current", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "05": {"name": "usbc_4_power", "type": DeviceHexDataTypes.sile.value, "factor": 0.01},
+                }
+            },
+            "a6": {
+                "bytes": {
+                    "01": {"name": "usba_1_voltage", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "03": {"name": "usba_1_current", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "05": {"name": "usba_1_power", "type": DeviceHexDataTypes.sile.value, "factor": 0.01},
+                }
+            },
+            "a7": {
+                "bytes": {
+                    "01": {"name": "usba_2_voltage", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "03": {"name": "usba_2_current", "type": DeviceHexDataTypes.sile.value, "factor": 0.001},
+                    "05": {"name": "usba_2_power", "type": DeviceHexDataTypes.sile.value, "factor": 0.01},
+                }
+            },
+            "fe": {"name": "msg_timestamp"},
+        },
     },
 }

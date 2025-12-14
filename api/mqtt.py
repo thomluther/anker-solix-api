@@ -593,7 +593,10 @@ class AnkerSolixMqttSession:
             deviceDict=deviceDict,
             hexbytes=self.get_command_data(
                 command=SolixMqttCommands.realtime_trigger,
-                parameters={"timeout": timeout},
+                parameters={
+                    "timeout": timeout,
+                    "model": deviceDict.get("device_pn") or deviceDict.get("product_code"),
+                },
             ),
         )[1]
         with contextlib.suppress(ValueError, RuntimeError):
@@ -721,7 +724,7 @@ class AnkerSolixMqttSession:
                                 },
                                 hexbytes=self.get_command_data(
                                     command=SolixMqttCommands.realtime_trigger,
-                                    parameters={"timeout": timeout},
+                                    parameters={"timeout": timeout, "model": pn},
                                 ),
                             )
                             self._logger.debug(
@@ -998,19 +1001,25 @@ def generate_mqtt_command(  # noqa: C901
     # TODO: Add method to build command based on MQTT Map description
 
     if command == SolixMqttCommands.realtime_trigger:
-        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0057"))
-        hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
-        hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
-        hexdata.update_field(
-            DeviceHexDataField(
-                f_name=bytes.fromhex("a3"),
-                f_type=DeviceHexDataTypes.var.value,
-                f_value=int(parameters.get("timeout") or 60).to_bytes(
-                    length=4, byteorder="little"
-                ),
+        if parameters.get("model") == "A2345":
+            # A2345 250W Prime Charger uses 020b as heartbeat/trigger
+            hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="020b"))
+            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
+            hexdata.add_timestamp_field()
+        else:
+            hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0057"))
+            hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
+            hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
+            hexdata.update_field(
+                DeviceHexDataField(
+                    f_name=bytes.fromhex("a3"),
+                    f_type=DeviceHexDataTypes.var.value,
+                    f_value=int(parameters.get("timeout") or 60).to_bytes(
+                        length=4, byteorder="little"
+                    ),
+                )
             )
-        )
-        hexdata.add_timestamp_field()
+            hexdata.add_timestamp_field()
     elif command == SolixMqttCommands.status_request:
         hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0040"))
         hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
