@@ -1998,6 +1998,7 @@ class AnkerSolixApiMonitor:
                                             else len(exampleslist)
                                         )
                                     if selection:
+                                        folderselection = selection
                                         self.api.testDir(
                                             exampleslist[int(selection) - 1]
                                         )

@@ -304,7 +304,11 @@ class DeviceHexDataField:
                 # 2 bytes fix, signed int LE (Base type)
                 if name := fieldmap.get("name", ""):
                     value = int(
-                        int.from_bytes(hexdata, byteorder="little", signed=True)
+                        int.from_bytes(
+                            hexdata,
+                            byteorder="little",
+                            signed=not fieldmap.get("unsigned", False),
+                        )
                     )
                     # check if value stands for software version and convert to version number
                     if "version" in name or "sw_" in name:
@@ -327,7 +331,9 @@ class DeviceHexDataField:
                     elif count == 2:
                         value = round_by_factor(
                             int.from_bytes(
-                                hexdata[0:2], byteorder="little", signed=True
+                                hexdata[0:2],
+                                byteorder="little",
+                                signed=not fieldmap.get("unsigned", False),
                             )
                             * factor,
                             factor,
@@ -338,7 +344,11 @@ class DeviceHexDataField:
                         ]
                     else:
                         value = round_by_factor(
-                            int.from_bytes(hexdata, byteorder="little", signed=True)
+                            int.from_bytes(
+                                hexdata,
+                                byteorder="little",
+                                signed=not fieldmap.get("unsigned", False),
+                            )
                             * factor,
                             factor,
                         )
@@ -580,9 +590,10 @@ class DeviceHexData:
                         or ""
                     )
                     factor = fld.get("factor") or None
+                    unsigned = fld.get("unsigned") or None
                     if isinstance(name, str) and "timestamp" in str(name):
                         name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
-                    s += f"\n{f.decode().rstrip()}{(Color.CYAN + ' --> ' + str(name) + ('' if factor is None else ' (factor ' + str(factor) + ')') + Color.OFF) if name else ''}"
+                    s += f"\n{f.decode().rstrip()}{(Color.CYAN + ' --> ' + str(name) + ('' if factor is None else ' (factor ' + str(factor) + ')') + ('' if unsigned is None else ' (unsigned)') + Color.OFF) if name else ''}"
                 s += f"\n{80 * '-'}"
         else:
             s = ""

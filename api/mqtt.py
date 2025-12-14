@@ -1006,7 +1006,7 @@ def generate_mqtt_command(  # noqa: C901
                 f_name=bytes.fromhex("a3"),
                 f_type=DeviceHexDataTypes.var.value,
                 f_value=int(parameters.get("timeout") or 60).to_bytes(
-                    length=4, byteorder="little"
+                    length=4, byteorder="little", signed=False
                 ),
             )
         )

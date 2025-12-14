@@ -88,7 +88,7 @@ _PPS_VERSIONS_0830 = {
 _A1722_0405 = {
     # C300 AC param info
     "topic": "param_info",
-    "a4": {"name": "remaining_time_hours", "factor": 0.1},
+    "a4": {"name": "remaining_time_hours", "factor": 0.1, "unsigned": True},
     "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
     "a8": {"name": "usbc_2_power"},  # USB-C port 2 output power
     "a9": {"name": "usbc_3_power"},  # USB-C port 3 output power
@@ -102,11 +102,12 @@ _A1722_0405 = {
     "b8": {"name": "dc_charging_status"},  # None (0), Charging (1)
     "b9": {"name": "temperature"},  # In Celsius
     "ba": {"name": "charging_status"},  # None (0), Discharging (1), Charging (2) ???
-    "bb": {"name": "battery_soc?"},  # Battery SOC
-    "bc": {"name": "battery_soh?"},  # Battery Health?
+    "bb": {"name": "battery_soc"},  # Battery SOC
+    "bc": {"name": "battery_soh"},  # Battery Health
     "c1": {
         "name": "dc_output_power_switch"
     },  # DC output switch: Disabled (0) or Enabled (1)
+    "c5": {"name": "device_sn"},  # Device serial number
     "cf": {
         "name": "display_mode"
     },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
@@ -116,7 +117,7 @@ _A1722_0405 = {
 _A1728_0405 = {
     # C300(X) DC param info
     "topic": "param_info",
-    "a3": {"name": "remaining_time_hours", "factor": 0.1},
+    "a3": {"name": "remaining_time_hours", "factor": 0.1, "unsigned": True},
     "a4": {"name": "usbc_1_power"},  # USB-C left output power
     "a5": {"name": "usbc_2_power"},  # USB-C center output power
     "a6": {"name": "usbc_3_power"},  # USB-C right output power
@@ -167,7 +168,11 @@ _A1728_0405 = {
 _A1761_0405 = {
     # PPS C1000(X) parm info
     "topic": "param_info",
-    "a4": {"name": "remaining_time_hours", "factor": 0.1},  # In hours (value * factor)
+    "a4": {
+        "name": "remaining_time_hours",
+        "factor": 0.1,
+        "unsigned": True,
+    },  # In hours (value * factor)
     "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
     "a6": {"name": "ac_output_power"},  # Individual AC outlet power
     "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
@@ -438,7 +443,7 @@ _A1763_0421 = {
 _A1780_0405 = {
     # F2000(P) param info
     "topic": "param_info",
-    "a4": {"name": "remaining_time_hours", "factor": 0.1},  # In hours
+    "a4": {"name": "remaining_time_hours", "factor": 0.1, "unsigned": True},  # In hours
     "a5": {"name": "grid_to_battery_power"},  # AC charging power to battery
     "a6": {"name": "ac_socket_power"},  # Individual AC outlet power
     "a7": {"name": "usbc_1_power"},  # USB-C port 1 output power
@@ -512,7 +517,7 @@ _A1780_0408 = {
 _A1790_0405 = {
     # F3800 param info
     "topic": "param_info",
-    "a4": {"name": "remaining_time_hours", "factor": 0.1},  # In hours
+    "a4": {"name": "remaining_time_hours", "factor": 0.1, "unsigned": True},  # In hours
     "a5": {"name": "ac_input_power"},
     "a6": {"name": "ac_output_power"},
     "a7": {"name": "usbc_1_power"},
@@ -576,6 +581,165 @@ _A1790_0405 = {
 _A1790_040a = {
     # F3800 param info
     "topic": "param_info",
+    "a2": {"name": "expansion_packs?"},
+    "a3": {"name": "main_battery_soc?"},  # main battery SOC
+    "a4": {
+        "bytes": {
+            "00": {
+                "name": "exp_1_sn?",
+                "length": 16,
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                "name": "exp_1_temperature?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                "name": "exp_1_soc?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "22": {
+                "name": "exp_1_soh?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "28": {
+                "name": "exp_1_type",
+                "length": 10,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a5": {
+        "bytes": {
+            "00": {
+                "name": "exp_2_sn?",
+                "length": 16,
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                "name": "exp_2_temperature?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                "name": "exp_2_soc?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "22": {
+                "name": "exp_2_soh?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "28": {
+                "name": "exp_2_type",
+                "length": 10,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a6": {
+        "bytes": {
+            "00": {
+                "name": "exp_3_sn?",
+                "length": 16,
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                "name": "exp_3_temperature?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                "name": "exp_3_soc?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "22": {
+                "name": "exp_3_soh?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "28": {
+                "name": "exp_3_type",
+                "length": 10,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a7": {
+        "bytes": {
+            "00": {
+                "name": "exp_4_sn?",
+                "length": 16,
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                "name": "exp_4_temperature?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                "name": "exp_4_soc?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "22": {
+                "name": "exp_4_soh?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "28": {
+                "name": "exp_4_type",
+                "length": 10,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a8": {
+        "bytes": {
+            "00": {
+                "name": "exp_5_sn?",
+                "length": 16,
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                "name": "exp_5_temperature?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                "name": "exp_5_soc?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "22": {
+                "name": "exp_5_soh?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "28": {
+                "name": "exp_5_type",
+                "length": 10,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a9": {
+        "bytes": {
+            "00": {
+                "name": "exp_6_sn?",
+                "length": 16,
+                "type": DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                "name": "exp_6_temperature?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                "name": "exp_6_soc?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "22": {
+                "name": "exp_6_soh?",
+                "type": DeviceHexDataTypes.ui.value,
+            },
+            "28": {
+                "name": "exp_6_type",
+                "length": 10,
+                "type": DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "fe": {"name": "msg_timestamp"},
 }
 
 _A1790_0410 = {
@@ -1084,6 +1248,127 @@ _A17C5_040a = (
     }
 )
 
+# 250W Prime Charger
+_A2345_0303 = {
+    "topic": "state_info",
+    "a2": {
+        "bytes": {
+            "01": {
+                "name": "usbc_1_voltage",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "03": {
+                "name": "usbc_1_current",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "05": {
+                "name": "usbc_1_power",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.01,
+            },
+        }
+    },
+    "a3": {
+        "bytes": {
+            "01": {
+                "name": "usbc_2_voltage",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "03": {
+                "name": "usbc_2_current",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "05": {
+                "name": "usbc_2_power",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.01,
+            },
+        }
+    },
+    "a4": {
+        "bytes": {
+            "01": {
+                "name": "usbc_3_voltage",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "03": {
+                "name": "usbc_3_current",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "05": {
+                "name": "usbc_3_power",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.01,
+            },
+        }
+    },
+    "a5": {
+        "bytes": {
+            "01": {
+                "name": "usbc_4_voltage",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "03": {
+                "name": "usbc_4_current",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "05": {
+                "name": "usbc_4_power",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.01,
+            },
+        }
+    },
+    "a6": {
+        "bytes": {
+            "01": {
+                "name": "usba_1_voltage",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "03": {
+                "name": "usba_1_current",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "05": {
+                "name": "usba_1_power",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.01,
+            },
+        }
+    },
+    "a7": {
+        "bytes": {
+            "01": {
+                "name": "usba_2_voltage",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "03": {
+                "name": "usba_2_current",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.001,
+            },
+            "05": {
+                "name": "usba_2_power",
+                "type": DeviceHexDataTypes.sile.value,
+                "factor": 0.01,
+            },
+        }
+    },
+    "fe": {"name": "msg_timestamp"},
+}
+
+
 _DOCK_0420 = {
     # multisystem message
     "topic": "param_info",
@@ -1234,7 +1519,7 @@ _DOCK_0500 = {
 
 # Following is the consolidated mapping for all device types and messages
 SOLIXMQTTMAP: Final = {
-    # Power Charger C300 AC
+    # PPS C300 AC
     "A1722": {
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
@@ -1245,7 +1530,7 @@ SOLIXMQTTMAP: Final = {
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
     },
-    # Power Charger C300X AC
+    # PPS C300X AC
     "A1723": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
@@ -1253,7 +1538,7 @@ SOLIXMQTTMAP: Final = {
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
     },
-    # Power Charger C300 DC
+    # PPS C300 DC
     "A1726": {
         "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Custom Range 0-10800 seconds
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
@@ -1265,7 +1550,7 @@ SOLIXMQTTMAP: Final = {
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
     },
-    # Power Charger C300X DC
+    # PPS C300X DC
     "A1728": {
         "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Custom Range 0-10800 seconds
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
@@ -1838,5 +2123,11 @@ SOLIXMQTTMAP: Final = {
         "0428": _DOCK_0428,
         # Interval: ~300 seconds
         "0500": _DOCK_0500,
+    },
+    # Prime Charger 250W
+    "A2345": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0303": _A2345_0303,
     },
 }
