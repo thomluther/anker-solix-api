@@ -1084,9 +1084,10 @@ class AnkerSolixApiMonitor:
                     )
                 if m1 := cm and (mqtt.get("battery_soc", "")):
                     m2 = cm and mqtt.get("power_cutoff", "")
+                    m3 = cm and str(mqtt.get("expansion_packs", ""))
                     m4 = cm and str(mqtt.get("max_soc", ""))
                     CONSOLE.info(
-                        f"{'Battery SoC Tot':<{col1}}: {m1 and (c or cm)}{m1:>4} {'%':<{col2 - 5}}{co} "
+                        f"{'Battery SoC Tot':<{col1}}: {m1 and (c or cm)}{m1:>4} %{co} (Expansions: {m3 and (c or cm)}{m3 or '-'}{co}{')':<{col2 - 20}}"
                         f"{'SoC Min/Max':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} % / {m4 or '---':>3} %{co}"
                     )
                 if m1 := cm and (
@@ -1094,7 +1095,7 @@ class AnkerSolixApiMonitor:
                 ):
                     soc = f"{m1:>4} %"
                     m2 = cm and mqtt.get("temperature", "")
-                    batstr = "Main Bat" if "main_battery_soc" in mqtt else "Battery"
+                    batstr = "Main B." if "main_battery_soc" in mqtt else "Battery"
                     if m2 and mqtt.get("temp_unit_fahrenheit"):
                         m2 = f"{float(m2) * 9 / 5 + 32:>4} °F"
                     else:

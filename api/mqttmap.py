@@ -187,12 +187,12 @@ _A1761_0405 = {
     "bb": {"name": "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
     "bd": {"name": "temperature"},  # Main device temperature (°C)
     "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
-    "c0": {"name": "expansion_packs?"},  # Number of expansion batteries?
+    "c0": {"name": "charging_status?"}, # number to indicate overall battery status?
     "c1": {"name": "main_battery_soc"},  # Main battery state of charge (%)
     "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
     "c3": {"name": "battery_soh"},  # Main battery state of health (%)
     "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
-    "c5": {"name": "expansion_packs_b?"},
+    "c5": {"name": "expansion_packs"}, # number of expansion batteries
     "d0": {"name": "device_sn"},  # Device serial number
     "d1": {"name": "max_load"},  # Maximum load setting (W)
     "d2": {
@@ -782,12 +782,16 @@ _A1790_0804 = {
     "topic": "param_info",
 }
 
-_A17C0_0407 = {
-    # Solarbank network message
+_0407 = {
+    # Network message
     "topic": "state_info",
     "a2": {"name": "device_sn"},
     "a3": {"name": "wifi_name"},
     "a4": {"name": "wifi_signal"},
+}
+
+_A17C0_0407 = _0407 | {
+    # Solarbank network message
     "a5": {"name": "charging_status"},
 }
 
@@ -1580,6 +1584,8 @@ SOLIXMQTTMAP: Final = {
         "0077": CMD_AC_OUTPUT_MODE,  # Normal (1), Smart (0)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1761_0405,
+        # Interval: varies, probably upon change
+        "0407": _0407,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
     },
@@ -2106,14 +2112,8 @@ SOLIXMQTTMAP: Final = {
             },
             "bd": {"name": "solarbank_4_battery_power_signed"},
         },
-        "0407": {
-            # Interval: ~300 seconds
-            # Network message
-            "topic": "param_info",
-            "a2": {"name": "device_sn"},
-            "a3": {"name": "wifi_name"},
-            "a4": {"name": "wifi_signal"},
-        },
+        # Interval: varies, probably upon change
+        "0407": _0407,
         # multisystem messages
         # Interval: ~3-10 seconds, but only with realtime trigger
         "0420": _DOCK_0420,

@@ -142,7 +142,7 @@ class SolixMqttDevice:
 
         """
         # Generate command hex data
-        if not (hexdata := generate_mqtt_command(command, parameters)):
+        if not (hexdata := generate_mqtt_command(command, parameters, self.pn)):
             self._logger.error("Failed to generate MQTT command data for %s", command)
             return False
         if toFile:

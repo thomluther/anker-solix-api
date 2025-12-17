@@ -292,12 +292,14 @@ class AnkerSolixMqttSession:
         self,
         command: str = SolixMqttCommands.realtime_trigger,
         parameters: dict | None = None,
+        model: str | None = None,
     ) -> str | None:
         """Compose the hex data for MQTT publish payload to Anker Solix devices."""
-        if hexdata := generate_mqtt_command(command=command, parameters=parameters):
+        if hexdata := generate_mqtt_command(command, parameters, model):
             self._logger.debug(
-                "Api %s MQTT session generated hexdata for device mqtt command '%s':\n%s",
+                "Api %s MQTT session generated hexdata for device%s command %s:\n%s",
                 self.apisession.nickname,
+                " " + str(model) if model else "",
                 command,
                 hexdata.hex(":"),
             )
@@ -594,6 +596,7 @@ class AnkerSolixMqttSession:
             hexbytes=self.get_command_data(
                 command=SolixMqttCommands.realtime_trigger,
                 parameters={"timeout": timeout},
+                model=deviceDict.get("device_pn"),
             ),
         )[1]
         with contextlib.suppress(ValueError, RuntimeError):
@@ -611,6 +614,7 @@ class AnkerSolixMqttSession:
             deviceDict=deviceDict,
             hexbytes=self.get_command_data(
                 command=SolixMqttCommands.status_request,
+                model=deviceDict.get("device_pn"),
             ),
         )[1]
         with contextlib.suppress(ValueError, RuntimeError):
@@ -722,6 +726,7 @@ class AnkerSolixMqttSession:
                                 hexbytes=self.get_command_data(
                                     command=SolixMqttCommands.realtime_trigger,
                                     parameters={"timeout": timeout},
+                                    model=pn,
                                 ),
                             )
                             self._logger.debug(
@@ -738,7 +743,7 @@ class AnkerSolixMqttSession:
                                     "device_pn": pn,
                                 },
                                 hexbytes=self.get_command_data(
-                                    command=SolixMqttCommands.status_request,
+                                    command=SolixMqttCommands.status_request, model=pn
                                 ),
                             )
                             self._logger.info(
@@ -968,7 +973,9 @@ class AnkerSolixMqttSession:
 
 
 def generate_mqtt_command(  # noqa: C901
-    command: str = SolixMqttCommands.realtime_trigger, parameters: dict | None = None
+    command: str = SolixMqttCommands.realtime_trigger,
+    parameters: dict | None = None,
+    model: str | None = None,
 ) -> DeviceHexData | None:
     r"""Compose the hex data for MQTT publish payload to Anker Solix devices.
 
@@ -992,13 +999,80 @@ def generate_mqtt_command(  # noqa: C901
     """
 
     hexdata = None
+    msgtype = ""
+    fields = {}
     if not isinstance(parameters, dict):
         parameters = {}
+    # get defined message type and description for command if model provided
+    if isinstance(model, str) and (pn_map := SOLIXMQTTMAP.get(model)):
+        msgtype, fields = (
+            [
+                (k, v)
+                for k, v in pn_map.items()
+                if command
+                in [
+                    v.get(COMMAND_NAME),
+                    *v.get(COMMAND_LIST, []),
+                ]
+            ][:1]
+            or [("", {})]
+        )[0]
 
-    # TODO: Add method to build command based on MQTT Map description
-
-    if command == SolixMqttCommands.realtime_trigger:
-        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0057"))
+    if fields:
+        # generical build of command based on MQTT Map description if available
+        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg=msgtype))
+        # consider only byte field descriptions
+        for field, desc in [(k, desc) for k, desc in fields.items() if len(k) <= 2]:
+            field = f"{field.lower():>02}"
+            if (name := desc.get("name")) == "pattern_22":
+                hexdata.update_field(DeviceHexDataField(hexbytes=f"{field}0122"))
+            elif name == "msg_timestamp":
+                # select proper timestamp format depending on field name
+                if field == "fd":
+                    hexdata.add_timestamp_ms_field()
+                else:
+                    hexdata.add_timestamp_field()
+            else:
+                # compose command field based on description
+                if (f_type := desc.get("type")) is None:
+                    return None
+                if (f_value := parameters.get(field)) is None:
+                    return None
+                if isinstance(f_value, str):
+                    if f_type in [DeviceHexDataTypes.str.value]:
+                        f_value = f_value.encode()
+                    else:
+                        return None
+                elif isinstance(f_value, int | float):
+                    if f_type in [DeviceHexDataTypes.sfle.value]:
+                        f_value = f_value.encode()
+                    elif f_type in [
+                        DeviceHexDataTypes.sile.value,
+                    ]:
+                        f_value=int(f_value).to_bytes(
+                            length=2, byteorder="little", signed=not desc.get("unsigned")
+                        ),
+                    elif f_type in [
+                        DeviceHexDataTypes.ui.value,
+                    ]:
+                        f_value=int(f_value).to_bytes(
+                            length=1, byteorder="little",
+                        ),
+                    else:
+                        return None
+                hexdata.update_field(
+                    DeviceHexDataField(
+                        f_name=bytes.fromhex(field),
+                        f_type=f_type,
+                        f_value=int(f_value).to_bytes(
+                            length=4, byteorder="little", signed=False
+                        ),
+                    )
+                )
+    elif command == SolixMqttCommands.realtime_trigger:
+        hexdata = DeviceHexData(
+            msg_header=DeviceHexDataHeader(cmd_msg=msgtype or "0057")
+        )
         hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
         hexdata.update_field(DeviceHexDataField(hexbytes="a2020101"))
         hexdata.update_field(
@@ -1012,7 +1086,9 @@ def generate_mqtt_command(  # noqa: C901
         )
         hexdata.add_timestamp_field()
     elif command == SolixMqttCommands.status_request:
-        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg="0040"))
+        hexdata = DeviceHexData(
+            msg_header=DeviceHexDataHeader(cmd_msg=msgtype or "0040")
+        )
         hexdata.update_field(DeviceHexDataField(hexbytes="a10122"))
         hexdata.add_timestamp_field()
     elif command == SolixMqttCommands.temp_unit_switch:
