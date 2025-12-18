@@ -3,11 +3,11 @@
 from dataclasses import InitVar, asdict, dataclass, field
 from datetime import datetime
 import struct
-from typing import Any
+from typing import Any, Self
 
 from .apitypes import Color, DeviceHexDataTypes, SolixDeviceCategory
 from .helpers import round_by_factor
-from .mqttcmdmap import COMMAND_LIST
+from .mqttcmdmap import COMMAND_LIST, VALUE_DEFAULT, VALUE_DIVIDER, VALUE_OPTIONS
 from .mqttmap import SOLIXMQTTMAP
 
 
@@ -459,6 +459,106 @@ class DeviceHexDataField:
                         )
                     )
         return values
+
+    def update(
+        self,
+        value: float | str | None = None,
+        name: str | bytearray | bytes | None = None,
+        fieldtype: bytearray | bytes | None = None,
+        desc: dict | None = None,
+    ) -> Self:
+        """Return the updated class instance, exception is raised if value encoding was not successfull."""
+        if isinstance(name, str):
+            name = bytearray(bytes.fromhex(f"{name:>02}"))
+        if isinstance(name, bytearray | bytes) and len(name) >= 1:
+            self.f_name = name[0:1]
+        if isinstance(fieldtype, bytearray | bytes):
+            self.f_type = bytearray(fieldtype)
+        try:
+            self.f_value = self.encode_value(
+                value=value, fieldtype=fieldtype, desc=desc
+            )
+            # Update data length
+            self.f_length = len(self.f_type) + len(self.f_value)
+        except (ValueError, TypeError) as err:
+            raise type(err)(f"Error updating field {self.f_name.hex()}: {err!s}") from err
+        else:
+            return self
+
+    def encode_value(
+        self,
+        value: float | str,
+        fieldtype: bytearray | bytes | None = None,
+        desc: dict | None = None,
+    ) -> bytearray | None:
+        """Return the encoded hex value according to existing or provided base type and fieldmap options."""
+        if not isinstance(fieldtype, bytearray | bytes):
+            fieldtype = self.f_type
+        if not isinstance(desc, dict):
+            desc = {}
+        if not isinstance(options := desc.get(VALUE_OPTIONS, {}), dict):
+            options = {}
+        # convert string into corresponding value if defined in options mapping
+        if value in options:
+            value = options.get(value)
+        elif isinstance(value, str) and value.lower() in options:
+            value = options.get(value.lower())
+        elif value is None:
+            # use default value if defined in fieldmap
+            value = desc.get(VALUE_DEFAULT)
+        if value is None:
+            raise ValueError(f"Expected (default) value for encoding, got {type(value)}: {value!s}")
+        signed = not desc.get("unsigned", False)
+        divider = desc.get(VALUE_DIVIDER, 1)
+        hexvalue = None
+        match fieldtype:
+            case DeviceHexDataTypes.str.value:
+                # various number of bytes, encode provided string for base type
+                hexvalue = bytearray(str(value).encode())
+                if length := int(desc.get("length", 0)):
+                    # fill length with \x00
+                    hexvalue += bytearray(
+                        max(0, length - len(hexvalue)) * bytes.fromhex("00")
+                    )
+            case DeviceHexDataTypes.ui.value:
+                # 1 byte fix, unsigned int (Base type)
+                if isinstance(value, int | float):
+                    hexvalue = bytearray(
+                        int(value / divider).to_bytes(
+                            length=1, byteorder="little", signed=signed
+                        )
+                    )
+            case DeviceHexDataTypes.sile.value:
+                # 2 bytes fix, signed int LE (Base type)
+                if isinstance(value, int | float):
+                    hexvalue = bytearray(
+                        int(value / divider).to_bytes(
+                            length=2, byteorder="little", signed=signed
+                        )
+                    )
+            case DeviceHexDataTypes.var.value:
+                # var is always 4 bytes, assuming provided value is int
+                # If a divider is specified, value will be devided prior encoding
+                if isinstance(value, int | float):
+                    hexvalue = bytearray(
+                        int(value / divider).to_bytes(
+                            length=4, byteorder="little", signed=signed
+                        )
+                    )
+            case DeviceHexDataTypes.sfle.value:
+                # 4 bytes, signed float LE (Base type)
+                # '<f' little-endian 32-bit float (4 Bytes, single)
+                if isinstance(value, int | float):
+                    hexvalue = bytearray(struct.pack("<f", value / divider))
+            case _:
+                raise TypeError(
+                    f"Field type not supported for encoding, got {fieldtype!s}"
+                )
+        if not hexvalue:
+            raise TypeError(
+                f"Value not supported for encoding to fieldtype {fieldtype!s}, got {type(value)}: {value!s}, with value options: {options!s}"
+            )
+        return hexvalue
 
 
 @dataclass(order=True, kw_only=True)

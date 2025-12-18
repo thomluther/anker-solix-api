@@ -180,14 +180,14 @@ _A1761_0405 = {
     "a9": {"name": "usba_1_power"},  # USB-A port 1 output power
     "aa": {"name": "usba_2_power"},  # USB-A port 2 output power
     "ae": {"name": "dc_input_power"},  # DC input power (solar/car charging)
-    "b0": {"name": "ac_output_power_total"},  # Total AC output power
+    "af": {"name": "photovoltaic_power"},  # Solar input
+    "b0": {"name": "output_power_total"},  # Combined AC DC output power
     "b3": {"name": "sw_version", "values": 1},  # Main firmware version
     "b9": {"name": "sw_expansion", "values": 1},  # Expansion firmware version
     "ba": {"name": "sw_controller", "values": 1},  # Controller firmware version
     "bb": {"name": "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
     "bd": {"name": "temperature"},  # Main device temperature (°C)
     "be": {"name": "exp_1_temperature"},  # Expansion battery 1 temperature (°C)
-    "c0": {"name": "charging_status?"}, # number to indicate overall battery status?
     "c1": {"name": "main_battery_soc"},  # Main battery state of charge (%)
     "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
     "c3": {"name": "battery_soh"},  # Main battery state of health (%)

@@ -19,7 +19,7 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
-from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, VALUE_FOLLOWS, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import (
     DeviceHexData,
@@ -1017,58 +1017,36 @@ def generate_mqtt_command(  # noqa: C901
             ][:1]
             or [("", {})]
         )[0]
-
     if fields:
-        # generical build of command based on MQTT Map description if available
-        hexdata = DeviceHexData(msg_header=DeviceHexDataHeader(cmd_msg=msgtype))
+        # generic build of command based on MQTT Map description if available
+        # extract nested command descriptions
+        fields = fields.get(str(command), fields)
         # consider only byte field descriptions
-        for field, desc in [(k, desc) for k, desc in fields.items() if len(k) <= 2]:
-            field = f"{field.lower():>02}"
-            if (name := desc.get("name")) == "pattern_22":
-                hexdata.update_field(DeviceHexDataField(hexbytes=f"{field}0122"))
-            elif name == "msg_timestamp":
-                # select proper timestamp format depending on field name
-                if field == "fd":
-                    hexdata.add_timestamp_ms_field()
+        if bytefields := {k: desc for k, desc in fields.items() if len(k) <= 2}:
+            hexdata = DeviceHexData(
+                model=model, msg_header=DeviceHexDataHeader(cmd_msg=msgtype)
+            )
+            for field, desc in bytefields.items():
+                field = f"{field.lower():>02}"
+                if (name := desc.get("name")) == "pattern_22":
+                    hexdata.update_field(DeviceHexDataField(hexbytes=f"{field}0122"))
+                elif name == "msg_timestamp":
+                    # select proper timestamp format depending on field name
+                    if field == "fd":
+                        hexdata.add_timestamp_ms_field()
+                    else:
+                        hexdata.add_timestamp_field()
                 else:
-                    hexdata.add_timestamp_field()
-            else:
-                # compose command field based on description
-                if (f_type := desc.get("type")) is None:
-                    return None
-                if (f_value := parameters.get(field)) is None:
-                    return None
-                if isinstance(f_value, str):
-                    if f_type in [DeviceHexDataTypes.str.value]:
-                        f_value = f_value.encode()
-                    else:
-                        return None
-                elif isinstance(f_value, int | float):
-                    if f_type in [DeviceHexDataTypes.sfle.value]:
-                        f_value = f_value.encode()
-                    elif f_type in [
-                        DeviceHexDataTypes.sile.value,
-                    ]:
-                        f_value=int(f_value).to_bytes(
-                            length=2, byteorder="little", signed=not desc.get("unsigned")
-                        ),
-                    elif f_type in [
-                        DeviceHexDataTypes.ui.value,
-                    ]:
-                        f_value=int(f_value).to_bytes(
-                            length=1, byteorder="little",
-                        ),
-                    else:
-                        return None
-                hexdata.update_field(
-                    DeviceHexDataField(
-                        f_name=bytes.fromhex(field),
-                        f_type=f_type,
-                        f_value=int(f_value).to_bytes(
-                            length=4, byteorder="little", signed=False
-                        ),
+                    # compose command field based on description
+                    value = parameters.get(desc.get(VALUE_FOLLOWS) or name)
+                    hexdata.update_field(
+                        DeviceHexDataField().update(
+                            value=value,
+                            name=field,
+                            fieldtype=desc.get("type"),
+                            desc=desc,
+                        )
                     )
-                )
     elif command == SolixMqttCommands.realtime_trigger:
         hexdata = DeviceHexData(
             msg_header=DeviceHexDataHeader(cmd_msg=msgtype or "0057")

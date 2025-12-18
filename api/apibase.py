@@ -553,6 +553,7 @@ class AnkerSolixBaseApi:
                                 "pv_power_total",
                                 "dc_input_power",
                                 "dc_input_power_total",
+                                "dc_output_power_total",
                                 "output_power",
                                 "output_power_total",
                                 "output_power_signed_total",

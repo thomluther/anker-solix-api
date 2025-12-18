@@ -346,6 +346,9 @@ class AnkerSolixApiMonitor:
             )
             return
         common.clearscreen()
+        # print header
+        if self.use_file:
+            CONSOLE.info("Using input source folder: %s", self.api.testDir())
         col1 = 25
         col2 = 30
         col3 = 25
@@ -423,6 +426,20 @@ class AnkerSolixApiMonitor:
         co = Color.OFF
         cc = Color.MAG  # calculated values
         shown_sites = set()
+        # print header
+        if self.use_file:
+            CONSOLE.info("Using input source folder: %s", self.api.testDir())
+        CONSOLE.info(
+            "Anker Solix Monitor (refresh %s s, details refresh countdown %s):",
+            self.refresh_interval,
+            self.next_dev_refr,
+        )
+        CONSOLE.info(
+            "Sites: %s, Devices: %s, Device Filter: %s",
+            len(self.api.sites),
+            len(self.api.devices),
+            f"{Color.MAG}{self.device_filter!s}{Color.OFF}",
+        )
         for sn, dev in [
             (s, d)
             for s, d in self.api.devices.items()
@@ -1168,7 +1185,7 @@ class AnkerSolixApiMonitor:
                         f"{'DC In Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'Charging Status':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixPpsChargingStatus, m2, 'unknown' if m2 else '----').capitalize() + ' (' + (m2 or '-') + ')'}{co}"
                     )
-                m1 = cm and mqtt.get("output_power_total", "")
+                m1 = cm and mqtt.get("dc_output_power_total", "")
                 if m2 := cm and str(mqtt.get("dc_output_timeout_seconds", "")):
                     m2 = str(timedelta(seconds=int(m2)))
                 if m1 or m2:
@@ -1198,6 +1215,12 @@ class AnkerSolixApiMonitor:
                     CONSOLE.info(
                         f"{'AC Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'AC Out Tot/Off':<{col3}}: {(m2 or m4) and (c or cm)}{m2 or '----':>4} {unit} / {m4 or '-:--:--'}{co}"
+                    )
+                m1 = cm and mqtt.get("output_power_total", "")
+                if m1:
+                    CONSOLE.info(
+                        f"{'Output Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        # f"{'AC Out Tot/Off':<{col3}}: {(m2 or m4) and (c or cm)}{m2 or '----':>4} {unit} / {m4 or '-:--:--'}{co}"
                     )
                 if m1 := cm and mqtt.get("usbc_1_power", ""):
                     m2 = cm and mqtt.get("usbc_2_power", "")
@@ -1601,8 +1624,6 @@ class AnkerSolixApiMonitor:
         exampleslist: list = self.get_subfolders(
             Path(__file__).parent / "examples"
         ) + self.get_subfolders(Path(__file__).parent / "exports")
-        # refresh interval in seconds, will be prompted or set from args
-        refresh_interval: int = self.refresh_interval
         # interval count for details refresh
         details_refresh: int = 10
         if self.interactive:
@@ -1676,10 +1697,10 @@ class AnkerSolixApiMonitor:
                             f"How many seconds refresh interval should be used? ({Color.YELLOW}5-600{Color.OFF}, default: {Color.CYAN}30{Color.OFF}): "
                         )
                         if not resp:
-                            refresh_interval = 30
+                            self.refresh_interval = 30
                             break
                         if resp.isdigit() and 5 <= int(resp) <= 600:
-                            refresh_interval = int(resp)
+                            self.refresh_interval = int(resp)
                             break
 
                     # ask for including energy details
@@ -1763,7 +1784,7 @@ class AnkerSolixApiMonitor:
                             await self.api.update_device_energy(fromFile=self.use_file)
                             deferred = False
                         self.next_refr = datetime.now().astimezone() + timedelta(
-                            seconds=refresh_interval
+                            seconds=self.refresh_interval
                         )
                     if self.next_dev_refr < 0:
                         CONSOLE.info(
@@ -1795,7 +1816,7 @@ class AnkerSolixApiMonitor:
                                 )
                                 startup = False
                         self.next_refr = datetime.now().astimezone() + timedelta(
-                            seconds=refresh_interval
+                            seconds=self.refresh_interval
                         )
                         self.next_dev_refr = details_refresh
 
@@ -1907,21 +1928,6 @@ class AnkerSolixApiMonitor:
                         self.print_device_mqtt(deviceSn=None)
                     else:
                         common.clearscreen()
-                        if self.use_file:
-                            CONSOLE.info(
-                                "Using input source folder: %s", self.api.testDir()
-                            )
-                        CONSOLE.info(
-                            "Anker Solix Monitor (refresh %s s, details refresh countdown %s):",
-                            refresh_interval,
-                            self.next_dev_refr,
-                        )
-                        CONSOLE.info(
-                            "Sites: %s, Devices: %s, Device Filter: %s",
-                            len(self.api.sites),
-                            len(self.api.devices),
-                            f"{Color.MAG}{self.device_filter!s}{Color.OFF}",
-                        )
                         # print the data with MQTT mixin if MQTT session is active
                         self.print_api_data(mqtt_mixin=bool(self.api.mqttsession))
                     CONSOLE.info("Api Requests: %s", self.api.request_count)
@@ -1932,7 +1938,7 @@ class AnkerSolixApiMonitor:
                     try:
                         # start task to print wait progress
                         wait_task = self.loop.create_task(
-                            self.print_wait_progress(seconds=refresh_interval)
+                            self.print_wait_progress(seconds=self.refresh_interval)
                         )
                         # key press loop
                         while True:

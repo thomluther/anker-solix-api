@@ -117,12 +117,14 @@ CMD_REALTIME_TRIGGER = CMD_COMMON | {
         "name": "set_realtime_trigger",  # Disable (0) | Enable (1)
         "type": DeviceHexDataTypes.ui.value,
         VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_DEFAULT: 1,
     },
     "a3": {
         "name": "trigger_timeout_sec",  # realtime timeout in seconds when enabled
         "type": DeviceHexDataTypes.var.value,
         VALUE_MIN: 60,  # real limit is unknown
         VALUE_MAX: 600,  # real limit is unknown
+        VALUE_DEFAULT: 60,
     },
 }
 
