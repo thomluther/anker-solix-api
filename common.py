@@ -1,5 +1,6 @@
 """A collection of helper functions for pyscripts."""
 
+import contextlib
 import datetime
 import getpass
 import logging
@@ -341,19 +342,22 @@ def getkey() -> str | None:
                     k = ord(k)
                 return KEY_MAPPING.get(k, chr(k))
         else:
-            old_settings = termios.tcgetattr(fd)
-            # Enable C-Break mode for terminal
-            tty.setcbreak(fd, when=1)
-            # check if input ready, 2-seconds timeout
-            ready, _, _ = select.select([fd], [], [], 2)
-            if ready:
-                b = os.read(fd, 3).decode()
-                if len(b) == 3:
-                    k = ord(b[2])
-                else:
-                    k = ord(b)
-                return KEY_MAPPING.get(k, chr(k))
+            old_settings = None
+            with contextlib.suppress(termios.error):
+                old_settings = termios.tcgetattr(fd)
+                # Enable C-Break mode for terminal
+                tty.setcbreak(fd, when=1)
+                # check if input ready, 2-seconds timeout
+                ready, _, _ = select.select([fd], [], [], 2)
+                if ready:
+                    b = os.read(fd, 3).decode()
+                    if len(b) == 3:
+                        k = ord(b[2])
+                    else:
+                        k = ord(b)
+                    return KEY_MAPPING.get(k, chr(k))
     finally:
         # This will always be run before returning
-        if not sys.platform.startswith("win"):
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        if not sys.platform.startswith("win") and old_settings:
+            with contextlib.suppress(termios.error):
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
