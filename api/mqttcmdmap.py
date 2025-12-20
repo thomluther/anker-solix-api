@@ -501,11 +501,6 @@ CMD_SB_MAX_LOAD = (
             "type": DeviceHexDataTypes.sile.value,
             VALUE_DEFAULT: 0,
         },
-        "a4": {
-            "name": "set_max_load_a4?",  # Unknown, 0 observed
-            "type": DeviceHexDataTypes.sile.value,
-            VALUE_DEFAULT: 0,
-        },
     }
 )
 

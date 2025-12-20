@@ -7,7 +7,15 @@ from typing import Any, Self
 
 from .apitypes import Color, DeviceHexDataTypes, SolixDeviceCategory
 from .helpers import round_by_factor
-from .mqttcmdmap import COMMAND_LIST, VALUE_DEFAULT, VALUE_DIVIDER, VALUE_OPTIONS
+from .mqttcmdmap import (
+    COMMAND_LIST,
+    VALUE_DEFAULT,
+    VALUE_DIVIDER,
+    VALUE_MAX,
+    VALUE_MIN,
+    VALUE_OPTIONS,
+    VALUE_STEP,
+)
 from .mqttmap import SOLIXMQTTMAP
 
 
@@ -474,6 +482,10 @@ class DeviceHexDataField:
             self.f_name = name[0:1]
         if isinstance(fieldtype, bytearray | bytes):
             self.f_type = bytearray(fieldtype)
+        if not self.f_name:
+            raise TypeError(
+                "Error updating DeviceHexDataField: Missing field identifier"
+            )
         try:
             self.f_value = self.encode_value(
                 value=value, fieldtype=fieldtype, desc=desc
@@ -481,7 +493,9 @@ class DeviceHexDataField:
             # Update data length
             self.f_length = len(self.f_type) + len(self.f_value)
         except (ValueError, TypeError) as err:
-            raise type(err)(f"Error updating field {self.f_name.hex()}: {err!s}") from err
+            raise type(err)(
+                f"Error updating DeviceHexDataField {self.f_name.hex()}: {err!s}"
+            ) from err
         else:
             return self
 
@@ -491,30 +505,46 @@ class DeviceHexDataField:
         fieldtype: bytearray | bytes | None = None,
         desc: dict | None = None,
     ) -> bytearray | None:
-        """Return the encoded hex value according to existing or provided base type and fieldmap options."""
+        """Return the encoded hex value according to existing or provided base type and field description."""
+        fieldvalue = None
         if not isinstance(fieldtype, bytearray | bytes):
             fieldtype = self.f_type
         if not isinstance(desc, dict):
             desc = {}
-        if not isinstance(options := desc.get(VALUE_OPTIONS, {}), dict):
+        if isinstance(options := desc.get(VALUE_OPTIONS, {}), list):
+            fieldvalue = value
+        elif isinstance(options := desc.get(VALUE_OPTIONS, {}), dict):
+            # convert string into corresponding value if defined in options mapping
+            if value in options:
+                fieldvalue = options.get(value)
+            elif isinstance(value, str) and value.lower() in options:
+                fieldvalue = options.get(value.lower())
+            else:
+                fieldvalue = value
+        else:
             options = {}
-        # convert string into corresponding value if defined in options mapping
-        if value in options:
-            value = options.get(value)
-        elif isinstance(value, str) and value.lower() in options:
-            value = options.get(value.lower())
-        elif value is None:
+        if fieldvalue is None:
             # use default value if defined in fieldmap
-            value = desc.get(VALUE_DEFAULT)
-        if value is None:
-            raise ValueError(f"Expected (default) value for encoding, got {type(value)}: {value!s}")
+            fieldvalue = desc.get(VALUE_DEFAULT)
+        if fieldvalue is None:
+            raise ValueError(
+                f"Expected (default) value for encoding, parameter {desc.get("name","")} was {type(value)}: {value!s}, with value options: {options!s}"
+            )
+        # get a validated value for encoding, will raise value or Type Error for invalid value
+        fieldvalue = MqttCmdValidator(
+            min=desc.get(VALUE_MIN),
+            max=desc.get(VALUE_MAX),
+            step=desc.get(VALUE_STEP),
+            options=set(options.values()) if isinstance(options,dict) else set(options)
+        ).check(fieldvalue)
+        # set parameters for value conversion and encoding
         signed = not desc.get("unsigned", False)
         divider = desc.get(VALUE_DIVIDER, 1)
         hexvalue = None
         match fieldtype:
             case DeviceHexDataTypes.str.value:
                 # various number of bytes, encode provided string for base type
-                hexvalue = bytearray(str(value).encode())
+                hexvalue = bytearray(str(fieldvalue).encode())
                 if length := int(desc.get("length", 0)):
                     # fill length with \x00
                     hexvalue += bytearray(
@@ -522,41 +552,41 @@ class DeviceHexDataField:
                     )
             case DeviceHexDataTypes.ui.value:
                 # 1 byte fix, unsigned int (Base type)
-                if isinstance(value, int | float):
+                if isinstance(fieldvalue, int | float):
                     hexvalue = bytearray(
-                        int(value / divider).to_bytes(
+                        int(fieldvalue / divider).to_bytes(
                             length=1, byteorder="little", signed=signed
                         )
                     )
             case DeviceHexDataTypes.sile.value:
                 # 2 bytes fix, signed int LE (Base type)
-                if isinstance(value, int | float):
+                if isinstance(fieldvalue, int | float):
                     hexvalue = bytearray(
-                        int(value / divider).to_bytes(
+                        int(fieldvalue / divider).to_bytes(
                             length=2, byteorder="little", signed=signed
                         )
                     )
             case DeviceHexDataTypes.var.value:
                 # var is always 4 bytes, assuming provided value is int
                 # If a divider is specified, value will be devided prior encoding
-                if isinstance(value, int | float):
+                if isinstance(fieldvalue, int | float):
                     hexvalue = bytearray(
-                        int(value / divider).to_bytes(
+                        int(fieldvalue / divider).to_bytes(
                             length=4, byteorder="little", signed=signed
                         )
                     )
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
                 # '<f' little-endian 32-bit float (4 Bytes, single)
-                if isinstance(value, int | float):
-                    hexvalue = bytearray(struct.pack("<f", value / divider))
+                if isinstance(fieldvalue, int | float):
+                    hexvalue = bytearray(struct.pack("<f", fieldvalue / divider))
             case _:
                 raise TypeError(
                     f"Field type not supported for encoding, got {fieldtype!s}"
                 )
         if not hexvalue:
             raise TypeError(
-                f"Value not supported for encoding to fieldtype {fieldtype!s}, got {type(value)}: {value!s}, with value options: {options!s}"
+                f"Value not supported for encoding to fieldtype {fieldtype!s}, parameter {desc.get("name","")} was {type(value)}: {value!s}, with value options: {options!s}"
             )
         return hexvalue
 
@@ -854,6 +884,14 @@ class MqttCmdValidator:
 
     def __post_init__(self) -> None:
         """Validate init parms."""
+        if not self.min:
+            self.min = 0
+        if not self.max:
+            self.max = 0
+        if not self.step:
+            self.step = 0
+        if not self.options:
+            self.options = set()
         if not isinstance(self.min, float | int):
             raise TypeError(
                 f"Expected type float|int for min, got {type(self.min)}: {self.min!s}"
@@ -908,7 +946,6 @@ class MqttCmdValidator:
                     self.step * round(value / self.step),
                     self.step,
                 )
-
         return value
 
     def asdict(self) -> dict:

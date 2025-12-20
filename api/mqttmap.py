@@ -37,6 +37,7 @@ from .mqttcmdmap import (
     CMD_TEMP_UNIT,
     COMMAND_LIST,
     STATE_NAME,
+    VALUE_DEFAULT,
     VALUE_MAX,
     VALUE_MIN,
     VALUE_OPTIONS,
@@ -831,6 +832,7 @@ _A17C1_0405 = {
     "cb": {"name": "pv_2_power", "factor": 0.1},
     "cc": {"name": "pv_3_power", "factor": 0.1},
     "cd": {"name": "pv_4_power", "factor": 0.1},
+    "d2": {"name": "light_mode"}, # Normal mode (0) or Mood mode (1)
     "d3": {"name": "output_power", "factor": 0.1},
     "e0": {"name": "grid_status"},  # Grid OK (1), No grid (6), Grid connecting (3)
     "e8": {"name": "battery_heating"},  # Not heating (1), heating (3)
@@ -1921,8 +1923,32 @@ SOLIXMQTTMAP: Final = {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
-        "0067": CMD_SB_MIN_SOC,  # select SOC reserve
+        "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
+        "0068": {
+            # solarbank light command group
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_light_switch,  # field a2
+                SolixMqttCommands.sb_light_mode_select,  # field a3
+            ],
+            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
+            SolixMqttCommands.sb_light_mode_select: CMD_SB_LIGHT_MODE,  # Normal (0), Mood light (1)
+        },
         "0073": CMD_SB_AC_SOCKET_SWITCH,  # Switch for emergency AC socket
+        "0080": {
+            # solarbank command group
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_max_load,  # field a2, a3
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+            ],
+            SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000 W, may depend on country settings
+            | {
+                "a2": {
+                    **CMD_SB_MAX_LOAD["a2"],
+                    VALUE_OPTIONS: [350, 600, 800, 1000],
+                }
+            },
+            SolixMqttCommands.sb_disable_grid_export_switch: CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
+        },
         "0405": _A17C1_0405,
         # Interval: varies, probably upon change
         "0407": _A17C0_0407,
@@ -1936,8 +1962,32 @@ SOLIXMQTTMAP: Final = {
     "A17C2": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        "0067": CMD_SB_MIN_SOC,  # select SOC reserve
+        "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
+        "0068": {
+            # solarbank light command group
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_light_switch,  # field a2
+                SolixMqttCommands.sb_light_mode_select,  # field a3
+            ],
+            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
+            SolixMqttCommands.sb_light_mode_select: CMD_SB_LIGHT_MODE,  # Normal (0), Mood light (1)
+        },
         "0073": CMD_SB_AC_SOCKET_SWITCH,  # Switch for emergency AC socket
+        "0080": {
+            # solarbank command group
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_max_load,  # field a2, a3
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+            ],
+            SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000,1200 W, may depend on country settings
+            | {
+                "a2": {
+                    **CMD_SB_MAX_LOAD["a2"],
+                    VALUE_OPTIONS: [350, 600, 800, 1000, 1200],
+                }
+            },
+            SolixMqttCommands.sb_disable_grid_export_switch: CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
+        },
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": _A17C5_0405,
         # Interval: varies, probably upon change
@@ -1952,8 +2002,32 @@ SOLIXMQTTMAP: Final = {
     "A17C3": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        "0067": CMD_SB_MIN_SOC,  # select SOC reserve
+        "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
+        "0068": {
+            # solarbank light command group
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_light_switch,  # field a2
+                SolixMqttCommands.sb_light_mode_select,  # field a3
+            ],
+            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
+            SolixMqttCommands.sb_light_mode_select: CMD_SB_LIGHT_MODE,  # Normal (0), Mood light (1)
+        },
         "0073": CMD_SB_AC_SOCKET_SWITCH,  # Switch for emergency AC socket
+        "0080": {
+            # solarbank command group
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_max_load,  # field a2, a3
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+            ],
+            SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000 W, may depend on country settings
+            | {
+                "a2": {
+                    **CMD_SB_MAX_LOAD["a2"],
+                    VALUE_OPTIONS: [350, 600, 800, 1000],
+                },
+            },
+            SolixMqttCommands.sb_disable_grid_export_switch: CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
+        },
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": _A17C1_0405,
         # Interval: varies, probably upon change
@@ -1992,7 +2066,13 @@ SOLIXMQTTMAP: Final = {
                 "a2": {
                     **CMD_SB_MAX_LOAD["a2"],
                     VALUE_OPTIONS: [350, 600, 800, 1000, 1200],
-                }
+                },
+                # Extra field a4 observed for SB3, which does not seem to be used for SB2?
+                "a4": {
+                    "name": "set_max_load_a4?",  # Unknown, 0 observed
+                    "type": DeviceHexDataTypes.sile.value,
+                    VALUE_DEFAULT: 0,
+                },
             },
             SolixMqttCommands.sb_disable_grid_export_switch: CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
             SolixMqttCommands.sb_pv_limit_select: CMD_SB_PV_LIMIT,  # 2000 W or 3600 W
