@@ -98,7 +98,6 @@ CMD_COMMON = {
 
 CMD_COMMON_V2 = {
     # Common command pattern V2 seen in most of the commands for newer devices with timestamp in ms
-    # TODO: Compare across all described commands if used only for cmd message types 01xx
     "topic": "req",
     "a1": {
         "name": "pattern_22"

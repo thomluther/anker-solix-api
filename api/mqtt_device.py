@@ -12,8 +12,19 @@ from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
 from .mqtt import generate_mqtt_command
-from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttcmdmap import (
+    COMMAND_LIST,
+    COMMAND_NAME,
+    VALUE_FOLLOWS,
+    VALUE_MAX,
+    VALUE_MIN,
+    VALUE_OPTIONS,
+    VALUE_STATE,
+    VALUE_STEP,
+    SolixMqttCommands,
+)
 from .mqttmap import SOLIXMQTTMAP
+from .mqtttypes import MqttCmdValidator
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -54,7 +65,13 @@ class SolixMqttDevice:
         self._setup_controls()
 
     def _setup_controls(self) -> None:
-        """Define controls and options for the device."""
+        """Extract controls, parameters and value options for the device from the mapping description.
+
+        Example control structure:
+            "realtime_trigger": {"msg_type": "0057","topic": "req","command_name": "realtime_trigger","parameters": {
+                "set_realtime_trigger": {"value_options": {"off": 0,"on": 1}},
+                "trigger_timeout_sec": {"value_min": 60,"value_max": 600}}}
+        """
         pn_map = SOLIXMQTTMAP.get(self.pn) or {}
         for cmd, pns in self.features.items():
             if not pns or self.pn in pns:
@@ -72,13 +89,37 @@ class SolixMqttDevice:
                     or [("", {})]
                 )[0]
                 # use default message type for update trigger command if not specified
-                options = {
+                control = {
                     "msg_type": msg
                     or ("0057" if cmd == SolixMqttCommands.realtime_trigger else "")
                 }
-                # add all keys that are no byte fields
-                options.update({k: v for k, v in fields.items() if len(k) > 2})
-                self.controls[cmd] = options
+                # traverse all fields, use use field descriptive name as parameter name and field byte as
+                parameters = {}
+                for key, value in fields.items():
+                    if len(key) > 2:
+                        control[key] = value
+                    elif isinstance(value, dict):
+                        # extract all field descriptions as parameter which have defined value keys
+                        descriptors = {
+                            k: v
+                            for k, v in value.items()
+                            if k
+                            in [
+                                VALUE_MIN,
+                                VALUE_MAX,
+                                VALUE_STEP,
+                                VALUE_STATE,
+                                VALUE_OPTIONS,
+                            ]
+                        }
+                        if (
+                            (name := value.get("name"))
+                            and descriptors
+                            and not value.get(VALUE_FOLLOWS)
+                        ):
+                            parameters[name] = descriptors
+                control["parameters"] = parameters
+                self.controls[cmd] = control
 
     def update_device(self, device: dict) -> None:
         """Define callback for Api device updates."""
@@ -110,16 +151,89 @@ class SolixMqttDevice:
             and {s for s in self.api.mqttsession.subscriptions if self.sn in s}
         )
 
-    def validate_command_value(self, command_id: str, value: Any) -> bool:
-        """Validate command value ranges for device controls."""
-        # This has to be updated according to specific device commands and rules
-        validation_rules = {
-            "realtime_trigger": lambda v: SolixDefaults.TRIGGER_TIMEOUT_MIN
-            <= v
-            <= SolixDefaults.TRIGGER_TIMEOUT_MAX,
-        }
-        rule = validation_rules.get(command_id)
-        return rule(value) if rule else True
+    def get_cmd_parms(self, cmd: str) -> dict:
+        """Get dictionary with parameters and value descriptions for provided command."""
+        if isinstance(cmd, str):
+            return self.controls.get(cmd, {}).get("parameters", {})
+        return {}
+
+    def get_cmd_parm_value(
+        self, cmd: str, parm: str, value: Any
+    ) -> int | float | str | None:
+        """Get validated command parameter value for device control or None if anything invalid."""
+        if not (isinstance(cmd, str) and cmd in self.controls):
+            self._logger.error(
+                "MQTT device %s (%s) control error - Command not supported: '%s'",
+                self.sn,
+                self.pn,
+                cmd,
+            )
+            return None
+        if not (isinstance(parm, str) and (desc := self.get_cmd_parms(cmd).get(parm))):
+            self._logger.error(
+                "MQTT device %s (%s) control error - Command '%s' parameter not supported: '%s'",
+                self.sn,
+                self.pn,
+                cmd,
+                parm,
+            )
+            return None
+        if value is not None:
+            parmvalue = None
+            if isinstance(options := desc.get(VALUE_OPTIONS, {}), list):
+                parmvalue = value
+            elif isinstance(options, dict):
+                # convert string into corresponding value if defined in options mapping
+                if value in options:
+                    parmvalue = options.get(value)
+                elif isinstance(value, str) and value.lower() in options:
+                    parmvalue = options.get(value.lower())
+                else:
+                    parmvalue = value
+            else:
+                options = {}
+            if parmvalue is None:
+                self._logger.error(
+                    "MQTT device %s (%s) control error - Command '%s' parameter '%s' value %s not in supported options %s",
+                    self.sn,
+                    self.pn,
+                    cmd,
+                    parm,
+                    value,
+                    options,
+                )
+                return None
+            # get a validated parameter value
+            try:
+                parmvalue = MqttCmdValidator(
+                    min=desc.get(VALUE_MIN),
+                    max=desc.get(VALUE_MAX),
+                    step=desc.get(VALUE_STEP),
+                    options=set(options.values())
+                    if isinstance(options, dict)
+                    else set(options),
+                ).check(parmvalue)
+            except (ValueError, TypeError) as err:
+                self._logger.error(
+                    "MQTT device %s (%s) control error - Command '%s' parameter '%s' value error: %s",
+                    self.sn,
+                    self.pn,
+                    cmd,
+                    parm,
+                    err,
+                )
+                return None
+            # return validated parameter value or option
+            return parmvalue
+        self._logger.error(
+            "MQTT device %s (%s) control error - Command '%s' parameter '%s' value is invalid: %s",
+            self.sn,
+            self.pn,
+            cmd,
+            parm,
+            value,
+        )
+        return None
 
     async def _send_mqtt_command(
         self,

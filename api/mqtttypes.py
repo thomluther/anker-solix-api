@@ -513,7 +513,7 @@ class DeviceHexDataField:
             desc = {}
         if isinstance(options := desc.get(VALUE_OPTIONS, {}), list):
             fieldvalue = value
-        elif isinstance(options := desc.get(VALUE_OPTIONS, {}), dict):
+        elif isinstance(options, dict):
             # convert string into corresponding value if defined in options mapping
             if value in options:
                 fieldvalue = options.get(value)
