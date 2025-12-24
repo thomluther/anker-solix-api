@@ -193,7 +193,7 @@ _A1761_0405 = {
     "c2": {"name": "exp_1_soc"},  # Expansion battery 1 state of charge (%)
     "c3": {"name": "battery_soh"},  # Main battery state of health (%)
     "c4": {"name": "exp_1_soh"},  # Expansion battery 1 state of health (%)
-    "c5": {"name": "expansion_packs"}, # number of expansion batteries
+    "c5": {"name": "expansion_packs"},  # number of expansion batteries
     "d0": {"name": "device_sn"},  # Device serial number
     "d1": {"name": "max_load"},  # Maximum load setting (W)
     "d2": {
@@ -832,9 +832,10 @@ _A17C1_0405 = {
     "cb": {"name": "pv_2_power", "factor": 0.1},
     "cc": {"name": "pv_3_power", "factor": 0.1},
     "cd": {"name": "pv_4_power", "factor": 0.1},
-    "d2": {"name": "light_mode"}, # Normal mode (0) or Mood mode (1)
+    "d2": {"name": "light_mode"},  # Normal mode (0) or Mood mode (1)
     "d3": {"name": "output_power", "factor": 0.1},
     "e0": {"name": "grid_status"},  # Grid OK (1), No grid (6), Grid connecting (3)
+    "e1": {"name": "light_off_switch"},  # Light on (0), Light off (1)
     "e8": {"name": "battery_heating"},  # Not heating (1), heating (3)
     "fb": {
         "bytes": {
@@ -1146,14 +1147,18 @@ _A17C5_0405 = {
     "ac": {"name": "battery_power_signed"},
     "ad": {"name": "output_power"},
     "ae": {"name": "ac_output_power_signed"},
-    "b0": {"name": "pv_yield?"},
-    "b1": {"name": "charged_energy?"},
-    "b2": {"name": "discharged_energy?"},
+    "b0": {"name": "pv_yield"},
+    "b1": {"name": "charged_energy"},
+    "b2": {"name": "discharged_energy"},
     "b3": {"name": "grid_import_energy"},
     "b4": {"name": "grid_export_energy"},
-    "b5": {"name": "soc_min"},  # TODO: Does this toggle with the setting?
-    "b6": {"name": "output_cutoff_exp_1?"},
-    "b7": {"name": "output_cutoff_exp_2?"},
+    "b5": {
+        "name": "soc_min"
+    },  # TODO: Does this toggle with the setting? Could also be station wide SOC
+    "b6": {"name": "output_cutoff_exp_1?"},  # Could also be min SOC of Main battery?
+    "b7": {
+        "name": "output_cutoff_exp_2?"
+    },  # Could also be min SOC of first Expansion? But why no other expansion SOC in this message?
     "b8": {"name": "usage_mode"},
     "b9": {"name": "home_load_preset"},
     "ba": {
@@ -1570,14 +1575,22 @@ SOLIXMQTTMAP: Final = {
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range with steps?
+        "0044": CMD_DEVICE_MAX_LOAD  # TODO: Range to be confirmed: Range: 100-2000 W, Step: 100 W
+        | {
+            "a2": {
+                **CMD_DEVICE_MAX_LOAD["a2"],
+                VALUE_MIN: 100,
+                VALUE_MAX: 2000,
+                VALUE_STEP: 100,
+            }
+        },
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-        "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/steps/options?
+        # "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/steps/options? 100-800 W, step 100?
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
@@ -1598,6 +1611,7 @@ SOLIXMQTTMAP: Final = {
             # AC command group
             COMMAND_LIST: [
                 SolixMqttCommands.ac_output_switch,
+                SolixMqttCommands.ac_output_timeout_seconds,
                 SolixMqttCommands.ac_charge_limit,
                 SolixMqttCommands.ac_output_mode_select,
             ],
@@ -1646,6 +1660,7 @@ SOLIXMQTTMAP: Final = {
             # DC command group
             COMMAND_LIST: [
                 SolixMqttCommands.dc_output_switch,
+                SolixMqttCommands.dc_output_timeout_seconds,
                 SolixMqttCommands.dc_12v_output_mode_select,
             ],
             SolixMqttCommands.dc_output_switch: CMD_COMMON_V2
@@ -1683,7 +1698,9 @@ SOLIXMQTTMAP: Final = {
             COMMAND_LIST: [
                 SolixMqttCommands.display_switch,
                 SolixMqttCommands.display_mode_select,
+                SolixMqttCommands.display_timeout_seconds,
                 SolixMqttCommands.device_timeout_minutes,
+                SolixMqttCommands.port_memory_switch,
                 SolixMqttCommands.soc_limits,
             ],
             SolixMqttCommands.display_switch: CMD_COMMON_V2
@@ -1754,7 +1771,7 @@ SOLIXMQTTMAP: Final = {
     },
     # PPS F2000
     "A1780": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        # "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
@@ -1768,7 +1785,7 @@ SOLIXMQTTMAP: Final = {
     },
     # PPS F2000 Plus
     "A1780P": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        # "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
@@ -1782,7 +1799,15 @@ SOLIXMQTTMAP: Final = {
     },
     # PPS F3800
     "A1790": {
-        "0044": CMD_DEVICE_MAX_LOAD,  # Range: 200-1800 W, Step: 100 W
+        "0044": CMD_DEVICE_MAX_LOAD  # Range: 200-1800 W, Step: 100 W
+        | {
+            "a2": {
+                **CMD_DEVICE_MAX_LOAD["a2"],
+                VALUE_MIN: 200,
+                VALUE_MAX: 1800,
+                VALUE_STEP: 100,
+            }
+        },
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
@@ -1927,13 +1952,12 @@ SOLIXMQTTMAP: Final = {
         "0068": {
             # solarbank light command group
             COMMAND_LIST: [
-                SolixMqttCommands.sb_light_switch,  # field a2
-                SolixMqttCommands.sb_light_mode_select,  # field a3
+                SolixMqttCommands.sb_light_mode_select,  # field a2
+                SolixMqttCommands.sb_light_switch,  # field a3
             ],
-            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
             SolixMqttCommands.sb_light_mode_select: CMD_SB_LIGHT_MODE,  # Normal (0), Mood light (1)
+            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
         },
-        "0073": CMD_SB_AC_SOCKET_SWITCH,  # Switch for emergency AC socket
         "0080": {
             # solarbank command group
             COMMAND_LIST: [
@@ -1966,13 +1990,12 @@ SOLIXMQTTMAP: Final = {
         "0068": {
             # solarbank light command group
             COMMAND_LIST: [
-                SolixMqttCommands.sb_light_switch,  # field a2
-                SolixMqttCommands.sb_light_mode_select,  # field a3
+                SolixMqttCommands.sb_light_mode_select,  # field a2
+                SolixMqttCommands.sb_light_switch,  # field a3
             ],
-            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
             SolixMqttCommands.sb_light_mode_select: CMD_SB_LIGHT_MODE,  # Normal (0), Mood light (1)
+            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
         },
-        "0073": CMD_SB_AC_SOCKET_SWITCH,  # Switch for emergency AC socket
         "0080": {
             # solarbank command group
             COMMAND_LIST: [
@@ -2006,13 +2029,12 @@ SOLIXMQTTMAP: Final = {
         "0068": {
             # solarbank light command group
             COMMAND_LIST: [
-                SolixMqttCommands.sb_light_switch,  # field a2
-                SolixMqttCommands.sb_light_mode_select,  # field a3
+                SolixMqttCommands.sb_light_mode_select,  # field a2
+                SolixMqttCommands.sb_light_switch,  # field a3
             ],
-            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
             SolixMqttCommands.sb_light_mode_select: CMD_SB_LIGHT_MODE,  # Normal (0), Mood light (1)
+            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
         },
-        "0073": CMD_SB_AC_SOCKET_SWITCH,  # Switch for emergency AC socket
         "0080": {
             # solarbank command group
             COMMAND_LIST: [
@@ -2046,11 +2068,11 @@ SOLIXMQTTMAP: Final = {
         "0068": {
             # solarbank light command group
             COMMAND_LIST: [
-                SolixMqttCommands.sb_light_switch,  # field a2
-                SolixMqttCommands.sb_light_mode_select,  # field a3
+                SolixMqttCommands.sb_light_mode_select,  # field a2
+                SolixMqttCommands.sb_light_switch,  # field a3
             ],
-            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
             SolixMqttCommands.sb_light_mode_select: CMD_SB_LIGHT_MODE,  # Normal (0), Mood light (1)
+            SolixMqttCommands.sb_light_switch: CMD_SB_LIGHT_SWITCH,  # Light Off (1), Light On (0)
         },
         "0073": CMD_SB_AC_SOCKET_SWITCH,  # Switch for emergency AC socket
         "0080": {

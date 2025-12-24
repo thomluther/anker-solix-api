@@ -506,37 +506,24 @@ class DeviceHexDataField:
         desc: dict | None = None,
     ) -> bytearray | None:
         """Return the encoded hex value according to existing or provided base type and field description."""
-        fieldvalue = None
         if not isinstance(fieldtype, bytearray | bytes):
             fieldtype = self.f_type
         if not isinstance(desc, dict):
             desc = {}
-        if isinstance(options := desc.get(VALUE_OPTIONS, {}), list):
-            fieldvalue = value
-        elif isinstance(options, dict):
-            # convert string into corresponding value if defined in options mapping
-            if value in options:
-                fieldvalue = options.get(value)
-            elif isinstance(value, str) and value.lower() in options:
-                fieldvalue = options.get(value.lower())
-            else:
-                fieldvalue = value
-        else:
-            options = {}
-        if fieldvalue is None:
-            # use default value if defined in fieldmap
-            fieldvalue = desc.get(VALUE_DEFAULT)
-        if fieldvalue is None:
+        options = desc.get(VALUE_OPTIONS, {})
+        if isinstance(value, str | int | float):
+            # get a validated value for encoding, will raise value or Type Error for invalid value or definitions
+            fieldvalue = MqttCmdValidator(
+                min=desc.get(VALUE_MIN),
+                max=desc.get(VALUE_MAX),
+                step=desc.get(VALUE_STEP),
+                options=options,
+            ).check(value)
+        # use default value if defined in fieldmap
+        elif (fieldvalue := desc.get(VALUE_DEFAULT)) is None:
             raise ValueError(
-                f"Expected (default) value for encoding, parameter {desc.get("name","")} was {type(value)}: {value!s}, with value options: {options!s}"
+                f"Expected (default) value for encoding, parameter '{desc.get('name', '')}' value was {type(value)}: {value!s}, with value options: {options!s}"
             )
-        # get a validated value for encoding, will raise value or Type Error for invalid value
-        fieldvalue = MqttCmdValidator(
-            min=desc.get(VALUE_MIN),
-            max=desc.get(VALUE_MAX),
-            step=desc.get(VALUE_STEP),
-            options=set(options.values()) if isinstance(options,dict) else set(options)
-        ).check(fieldvalue)
         # set parameters for value conversion and encoding
         signed = not desc.get("unsigned", False)
         divider = desc.get(VALUE_DIVIDER, 1)
@@ -586,7 +573,7 @@ class DeviceHexDataField:
                 )
         if not hexvalue:
             raise TypeError(
-                f"Value not supported for encoding to fieldtype {fieldtype!s}, parameter {desc.get("name","")} was {type(value)}: {value!s}, with value options: {options!s}"
+                f"Value not supported for encoding to fieldtype {fieldtype!s}, parameter '{desc.get('name', '')}' was {type(value)}: {value!s}, with value options: {options!s}"
             )
         return hexvalue
 
@@ -720,10 +707,17 @@ class DeviceHexData:
                         or ""
                     )
                     factor = fld.get("factor") or None
+                    divider = fld.get("value_divider") or None
                     unsigned = fld.get("unsigned") or None
                     if isinstance(name, str) and "timestamp" in str(name):
                         name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
-                    s += f"\n{f.decode().rstrip()}{(Color.CYAN + ' --> ' + str(name) + ('' if factor is None else ' (factor ' + str(factor) + ')') + ('' if unsigned is None else ' (unsigned)') + Color.OFF) if name else ''}"
+                    s += f"\n{f.decode().rstrip()}"
+                    if name:
+                        s += (
+                            f"{Color.CYAN} --> {name}{('' if factor is None else ' (factor ' + str(factor) + ')')}"
+                            f"{('' if divider is None else ' (value_divider ' + str(divider) + ')')}"
+                            f"{('' if unsigned is None else ' (unsigned)')}{Color.OFF}"
+                        )
                 s += f"\n{80 * '-'}"
         else:
             s = ""
@@ -875,12 +869,14 @@ class MqttDataStats:
 
 @dataclass(kw_only=True)
 class MqttCmdValidator:
-    """Dataclass to specify and validate MQTT command options or values."""
+    """Dataclass to specify and validate MQTT command parameter values."""
 
     min: float | int = 0
     max: float | int = 0
     step: float | int = 0
-    options: set[str, float, int] = field(default_factory=set)
+    options: dict[str | int, str | float | int] | list[int | float] = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
         """Validate init parms."""
@@ -891,7 +887,7 @@ class MqttCmdValidator:
         if not self.step:
             self.step = 0
         if not self.options:
-            self.options = set()
+            self.options = {}
         if not isinstance(self.min, float | int):
             raise TypeError(
                 f"Expected type float|int for min, got {type(self.min)}: {self.min!s}"
@@ -904,12 +900,12 @@ class MqttCmdValidator:
             raise TypeError(
                 f"Expected type float|int for step, got {type(self.step)}: {self.step!s}"
             )
-        if self.options and isinstance(self.options, set):
+        if self.options and isinstance(self.options, dict | list):
             # ignore step if options are provided
             self.step = 0
         elif self.options:
             raise TypeError(
-                f"Expected type set() for options, got {type(self.options)}: {self.options!s}"
+                f"Expected type list() or dict() for options, got {type(self.options)}: {self.options!s}"
             )
         if self.min > self.max:
             raise ValueError(
@@ -919,6 +915,8 @@ class MqttCmdValidator:
             raise ValueError(
                 f"Expected step to be smaller or equal to delta max/min, got step: {self.step!s}"
             )
+        if self.min == 0 == self.max and not self.options:
+            raise TypeError("Expected range or options definition!")
 
     def __str__(self) -> str:
         """Print the class fields."""
@@ -930,23 +928,47 @@ class MqttCmdValidator:
             raise TypeError(
                 f"Expected type float|int|str for value, got {type(value)}: {value!s}"
             )
-        if self.options and value not in self.options:
-            raise ValueError(
-                f"Provided value is no valid option {self.options!s}, got: {value!s}"
-            )
-        if not isinstance(value, str):
-            # check numbers
-            if self.min < self.max and not self.min <= value <= self.max:
+        if self.options:
+            if isinstance(self.options, list) and value not in self.options:
+                s = "'" if isinstance(value, str) else ""
                 raise ValueError(
-                    f"Provided value is out of range ({self.min!s}-{self.max!s}), got: {value!s}"
+                    f"Provided value is no valid option {self.options!s}, got: {s}{value!s}{s}"
+                )
+            if isinstance(self.options, dict):
+                # check if value is found in dict or list and get corresponding parameter value
+                if value in self.options:
+                    parmvalue = self.options.get(value)
+                elif isinstance(value, str) and value.lower() in self.options:
+                    parmvalue = self.options.get(value.lower())
+                elif found := [v for v in self.options.values() if v == value]:
+                    parmvalue = found[0]
+                else:
+                    s = "'" if isinstance(value, str) else ""
+                    raise ValueError(
+                        f"Provided value is no valid option {self.options!s}, got: {s}{value!s}{s}"
+                    )
+            else:
+                parmvalue = value
+        else:
+            parmvalue = value
+        if not isinstance(parmvalue, str):
+            # check numbers
+            if self.min < self.max and not self.min <= parmvalue <= self.max:
+                raise ValueError(
+                    f"Provided value is out of range ({self.min!s}-{self.max!s}{', step ' + str(self.step) if self.step not in [0, 1] else ''}), got: {parmvalue!s}"
                 )
             # round value to step with same decimals
             if self.step:
-                value = round_by_factor(
-                    self.step * round(value / self.step),
+                parmvalue = round_by_factor(
+                    self.step * round(parmvalue / self.step),
                     self.step,
                 )
-        return value
+        elif self.min or self.max:
+            # String value for expected number value
+            raise TypeError(
+                f"Provided value is no number in range ({self.min!s}-{self.max!s}{', step ' + str(self.step) if self.step not in [0, 1] else ''}), got: {parmvalue!s}"
+            )
+        return parmvalue
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""

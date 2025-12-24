@@ -363,7 +363,9 @@ class AnkerSolixApiMonitor:
             )
             fields = []
             topics = None
-            for key, value in (dev.get("mqtt_data") or {}).items():
+            mdev: SolixMqttDevice = self.mqtt_devices.get(sn)
+            mqtt = mdev.get_status(fromFile=self.use_file) if mdev else {}
+            for key, value in mqtt.items():
                 if key != "topics":
                     fields.append((key, value))
                 else:
@@ -451,8 +453,8 @@ class AnkerSolixApiMonitor:
             siteid = dev.get("site_id", "")
             site = self.api.sites.get(siteid) or {}
             customized = dev.get("customized") or {}
-            mqtt = dev.get("mqtt_data") or {}
-            mdev = self.mqtt_devices.get(sn)
+            mdev: SolixMqttDevice = self.mqtt_devices.get(sn)
+            mqtt = mdev.get_status(fromFile=self.use_file) if mdev else {}
             # color for updated or mixin MQTT value
             c = (
                 Color.YELLOW

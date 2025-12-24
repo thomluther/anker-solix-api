@@ -6,7 +6,7 @@ import logging
 
 from aiohttp import ClientSession
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from api.mqtt_c1000x import SolixMqttDeviceC1000x  # pylint: disable=no-name-in-module
+from api.mqtt_pps import SolixMqttDevicePps  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class C1000XController:
     def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
         """Initialize."""
         self.api = api_instance
-        self.mqttdevice = SolixMqttDeviceC1000x(
+        self.mqttdevice = SolixMqttDevicePps(
             api_instance=api_instance, device_sn=device_sn
         )
         self.device_sn = device_sn
@@ -27,7 +27,7 @@ class C1000XController:
 
     def get_realtime_data(self):
         """Get real-time data from MQTT cache."""
-        return self.mqttdevice.mqttdata
+        return self.mqttdevice.get_status()
 
     async def monitor_battery_and_control(self):
         """Example: Monitor battery and automatically control outputs."""
@@ -130,7 +130,7 @@ async def main():
         # Update device information
         CONSOLE.info("Checking for C1000X devices...")
         await myapi.update_sites()
-        await myapi.update_device_details()
+        await myapi.get_bind_devices()
 
         # Find C1000X device
         device_sn = None
@@ -141,15 +141,14 @@ async def main():
                 break
 
         if not device_sn:
-            CONSOLE.info("No C1000X device found")
+            CONSOLE.info("No C1000X device (A1761) found")
             return
 
         # Initialize controller
         controller = C1000XController(myapi, device_sn)
 
         # Start MQTT session for real-time data
-        mqtt_session = await myapi.startMqttSession()
-        if not mqtt_session:
+        if not await myapi.startMqttSession():
             CONSOLE.info("Failed to start MQTT session")
             return
 

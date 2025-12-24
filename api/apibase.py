@@ -779,24 +779,33 @@ class AnkerSolixBaseApi:
                             out := device_mqtt.get("output_energy")
                         ):
                             device_mqtt["device_efficiency"] = (
-                                f"{(float(out) / float(pv) * 100):.3f}"
+                                f"{min(100, float(out) / float(pv) * 100):.3f}"
                             )
                         if (charge := device_mqtt.get("charged_energy")) and (
                             discharge := device_mqtt.get("discharged_energy")
                         ):
                             device_mqtt["battery_efficiency"] = (
-                                f"{(float(discharge) / float(charge) * 100):.3f}"
+                                f"{min(100, float(discharge) / float(charge) * 100):.3f}"
                             )
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
                     if calc_capacity and (cap := device.get("battery_capacity")):
                         # calculate total expansions if expansions are available and no number in mqtt cache
                         if mqtt.get("expansion_packs") is None:
+                            # deterministic code assumes expansion if soc or soh > 0
                             device_mqtt["expansion_packs"] = len(
                                 [
                                     k
                                     for k in [f"exp_{i!s}_soc" for i in range(1, 6)]
-                                    if float(device_mqtt.get(k, 0)) > 0
+                                    if (
+                                        float(device_mqtt.get(k, 0)) > 0
+                                        or float(
+                                            device_mqtt.get(
+                                                k.replace("_soc", "_soh"), 0
+                                            )
+                                        )
+                                        > 0
+                                    )
                                 ]
                             )
                         # calculate device overall soc if expansions are available and no overall soc in mqtt cache

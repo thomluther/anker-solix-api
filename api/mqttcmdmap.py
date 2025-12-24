@@ -8,6 +8,7 @@ from .apitypes import DeviceHexDataTypes
 COMMAND_NAME = "command_name"  # name of the command, must be defined in dataclass SolixMqttCommands
 COMMAND_LIST = "command_list"  # specifies the nested commands to describe multiple commands per message type
 STATE_NAME = "state_name"  # extracted value name that represents the current state of the control
+STATE_CONVERTER = "state_converter"  # optional lambda function to convert the setting into expected state
 VALUE_MIN = "value_min"  # min value of a range
 VALUE_MAX = "value_max"  # max value of a range
 VALUE_STEP = "value_step"  # step to be used within range, default is 1
@@ -131,10 +132,10 @@ CMD_TEMP_UNIT = CMD_COMMON | {
     # Command: Set temperature unit
     COMMAND_NAME: SolixMqttCommands.temp_unit_switch,
     "a2": {
-        "name": "set_temp_unit_fahrenheit",  # Celcius (0) | Fahrenheit (1)
+        "name": "set_temp_unit_fahrenheit",  # Celsius (0) | Fahrenheit (1)
         "type": DeviceHexDataTypes.ui.value,
         STATE_NAME: "temp_unit_fahrenheit",
-        VALUE_OPTIONS: {"celcius": 0, "fahrenheit": 1},
+        VALUE_OPTIONS: {"celsius": 0, "fahrenheit": 1},
     },
 }
 
@@ -209,6 +210,7 @@ CMD_AC_OUTPUT_MODE = CMD_COMMON | {
         "name": "set_ac_output_mode",  # Normal (1), Smart (0)
         "type": DeviceHexDataTypes.ui.value,
         STATE_NAME: "ac_output_mode",
+        STATE_CONVERTER: lambda v: {0: 2, 1: 1}.get(v, 2), # Smart setting represented with state 2
         VALUE_OPTIONS: {"smart": 0, "normal": 1},
     },
 }
@@ -247,6 +249,7 @@ CMD_DC_12V_OUTPUT_MODE = CMD_COMMON | {
         "name": "set_dc_12v_output_mode",  # Normal (1), Smart (0)
         "type": DeviceHexDataTypes.ui.value,
         STATE_NAME: "dc_12v_output_mode",
+        STATE_CONVERTER: lambda v: {0: 2, 1: 1}.get(v, 2), # Smart setting represented with state 2
         VALUE_OPTIONS: {"smart": 0, "normal": 1},
     },
 }
@@ -341,12 +344,14 @@ CMD_SOC_LIMITS_V2 = CMD_COMMON_V2 | {
         "type": DeviceHexDataTypes.ui.value,
         STATE_NAME: "max_soc",
         VALUE_OPTIONS: [80, 85, 90, 95, 100],
+        VALUE_STATE: "max_soc",
     },
     "ab": {
         "name": "set_min_soc",  # min_soc: 1, 5, 10, 15, 20 %
         "type": DeviceHexDataTypes.ui.value,
         STATE_NAME: "min_soc",
         VALUE_OPTIONS: [1, 5, 10, 15, 20],
+        VALUE_STATE: "min_soc",
     },
 }
 
@@ -546,16 +551,16 @@ CMD_SB_LIGHT_SWITCH = CMD_COMMON | {
     # Command: Solarbank light switch
     COMMAND_NAME: SolixMqttCommands.sb_light_switch,
     "a2": {
-        "name": "set_light_off_switch",  # Light Off (1), Light On (0)
-        "type": DeviceHexDataTypes.ui.value,
-        STATE_NAME: "light_off_switch",
-        VALUE_OPTIONS: {"off": 1, "on": 0},
-    },
-    "a3": {
         "name": "set_light_mode",  # use actual state of switch
         "type": DeviceHexDataTypes.ui.value,
         VALUE_STATE: "light_mode",  # use this actual state as value
         VALUE_DEFAULT: 0,
+    },
+    "a3": {
+        "name": "set_light_off_switch",  # Light Off (1), Light On (0)
+        "type": DeviceHexDataTypes.ui.value,
+        STATE_NAME: "light_off_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }
 
@@ -563,16 +568,16 @@ CMD_SB_LIGHT_MODE = CMD_COMMON | {
     # Command: Solarbank light mode
     COMMAND_NAME: SolixMqttCommands.sb_light_mode_select,
     "a2": {
-        "name": "set_light_off_switch",  # use actual state of switch
-        "type": DeviceHexDataTypes.ui.value,
-        VALUE_STATE: "light_off_switch",  # use this actual state as value
-        VALUE_DEFAULT: 0,
-    },
-    "a3": {
         "name": "set_light_mode",  # Normal (0), Mood light (1)
         "type": DeviceHexDataTypes.ui.value,
         STATE_NAME: "light_mode",
         VALUE_OPTIONS: {"normal": 0, "mood": 1},
+    },
+    "a3": {
+        "name": "set_light_off_switch",  # use actual state of switch
+        "type": DeviceHexDataTypes.ui.value,
+        VALUE_STATE: "light_off_switch",  # use this actual state as value
+        VALUE_DEFAULT: 0,
     },
 }
 
@@ -580,7 +585,7 @@ CMD_SB_DEVICE_TIMEOUT = CMD_COMMON | {
     # Command: Solarbank device timeout
     COMMAND_NAME: SolixMqttCommands.sb_device_timeout,
     "a2": {
-        "name": "set_device_timeout_30min",  # (0 - 48) * 30 min
+        "name": "set_device_timeout_min",  # (0 - 48) * 30 min factor
         "type": DeviceHexDataTypes.ui.value,
         STATE_NAME: "device_timeout_minutes",
         VALUE_OPTIONS: [0, 30, 60, 120, 240, 360, 720, 1440],  # in minutes as state
