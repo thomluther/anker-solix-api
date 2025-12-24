@@ -10,7 +10,7 @@ from typing import Any
 from aiohttp import ClientSession
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
 from api.mqtt import AnkerSolixMqttSession  # pylint: disable=no-name-in-module
-from api.mqtt_c1000x import SolixMqttDeviceC1000x  # pylint: disable=no-name-in-module
+from api.mqtt_pps import SolixMqttDevicePps  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
         if not device_sn:
             CONSOLE.info("No C1000X device found")
             return
-        mqttdevice = SolixMqttDeviceC1000x(api_instance=myapi, device_sn=device_sn)
+        mqttdevice = SolixMqttDevicePps(api_instance=myapi, device_sn=device_sn)
 
         CONSOLE.info("\n=== Testing C1000X MQTT Controls ===")
 
@@ -290,7 +290,9 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                     CONSOLE.info(
                         f"Setting to: {'Fahrenheit' if new_temp_unit else 'Celsius'}"
                     )
-                    result = await mqttdevice.set_temp_unit(fahrenheit=new_temp_unit)
+                    result = await mqttdevice.set_temp_unit(
+                        unit="fahrenheit" if new_temp_unit else "celsius"
+                    )
                     CONSOLE.info(f"Command result: {'Success' if result else 'Failed'}")
                     if result:
                         # Wait for next update message in RT mode
@@ -404,21 +406,9 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
             CONSOLE.info(f"MQTT error: {e}")
             CONSOLE.info(f"Full traceback: {traceback.format_exc()}")
 
-        CONSOLE.info("\n=== Command Structure Information ===")
+        CONSOLE.info("\n=== Command Information ===")
         CONSOLE.info("C1000X uses MQTT-only controls with these commands:")
-        commands = [
-            "c1000x_ac_output - AC output control",
-            "c1000x_dc_output - 12V DC output control",
-            "c1000x_display - Display on/off control",
-            "c1000x_display_mode - Display brightness (off/low/medium/high)",
-            "c1000x_light_mode - Light mode (off/low/medium/high/blinking)",
-            "c1000x_backup_charge - Backup charge mode",
-            "c1000x_temp_unit - Temperature unit (Celsius/Fahrenheit)",
-            "c1000x_dc_output_mode - DC output mode (normal/smart)",
-            "c1000x_ac_output_mode - AC output mode (normal/smart)",
-        ]
-        for cmd in commands:
-            CONSOLE.info(f"  {cmd}")
+        CONSOLE.info(f"{mqttdevice.controls.keys()}")
 
 
 if __name__ == "__main__":

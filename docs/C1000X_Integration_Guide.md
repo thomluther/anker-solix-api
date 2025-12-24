@@ -5,7 +5,6 @@
 - [MQTT Data Structure](#mqtt-data-structure)
 - [Available Sensors](#available-sensors)
 - [Available Controls](#available-controls)
-- [Setup Instructions](#setup-instructions)
 - [Home Assistant Integration](#home-assistant-integration)
 - [Troubleshooting](#troubleshooting)
 
@@ -57,9 +56,16 @@ Provides hardware and software version information, typically sent on app action
 MQTT real-time data requires the monitoring trigger to be enabled:
 
 ```python
-from api import api
 import asyncio
+import logging
 from aiohttp import ClientSession
+
+import common
+from api import api
+from api.mqtt_pps import SolixMqttDevicePps
+
+logger: logging.Logger = logging.getLogger(__name__)
+CONSOLE: logging.Logger = common.CONSOLE
 
 async def enable_monitoring(device_sn: str):
     async with ClientSession() as session:
@@ -70,8 +76,32 @@ async def enable_monitoring(device_sn: str):
             session,
             logger
         )
+        # Update device information
+        CONSOLE.info("Checking for C1000X devices...")
+        await myapi.update_sites()
+        await myapi.get_bind_devices()
+
+        # Find C1000X device
+        device_sn = None
+        for sn, device in myapi.devices.items():
+            if device.get("device_pn") == "A1761":
+                device_sn = sn
+                CONSOLE.info(f"Found C1000X device: {sn}")
+                break
+        if not device_sn:
+            CONSOLE.info("No C1000X device (A1761) found")
+            return
+
+        # Start MQTT session for real-time data
+        if not await myapi.startMqttSession():
+            CONSOLE.info("Failed to start MQTT session")
+            return
+
+        # Get MQTT device instance
+        mqttdevice = SolixMqttDevicePps(api_instance=api, device_sn=device_sn)
+
         # Enable real-time data trigger
-        await myapi.mqtt_trigger_realtime_data(device_sn)
+        await mqttdevice.realtime_trigger(timeout=300)
 ```
 
 ## Available Sensors
@@ -128,10 +158,10 @@ Control the main AC outlet power.
 
 ```python
 # Enable AC output
-await api.set_c1000x_ac_output("DEVICE_SN", True)
+await mqttdevice.set_ac_output(enabled=True)
 
 # Disable AC output
-await api.set_c1000x_ac_output("DEVICE_SN", False)
+await mqttdevice.set_ac_output(enabled=False)
 ```
 
 **Attribute**: `switch_ac_output_power`
@@ -142,10 +172,10 @@ Control the 12V car port output.
 
 ```python
 # Enable 12V DC output
-await api.set_c1000x_dc_output("DEVICE_SN", True)
+await mqttdevice.set_dc_output(enabled=True)
 
 # Disable 12V DC output
-await api.set_c1000x_dc_output("DEVICE_SN", False)
+await mqttdevice.set_dc_output(enabled=False)
 ```
 
 **Attribute**: `switch_12v_dc_output_power`
@@ -158,10 +188,10 @@ Turn the LCD display on or off.
 
 ```python
 # Turn display on
-await api.set_c1000x_display("DEVICE_SN", True)
+await mqttdevice.set_display(enabled=True)
 
 # Turn display off
-await api.set_c1000x_display("DEVICE_SN", False)
+await mqttdevice.set_display(enabled=False)
 ```
 
 **Attribute**: `switch_display`
@@ -172,8 +202,8 @@ Set the display brightness level.
 
 ```python
 # Set display brightness (numeric or string)
-await api.set_c1000x_display_mode("DEVICE_SN", 2)  # Medium
-await api.set_c1000x_display_mode("DEVICE_SN", "high")
+await mqttdevice.set_display(mode="high")
+await mqttdevice.set_display(mode=2) # Medium
 ```
 
 **Attribute**: `display_mode`
@@ -188,8 +218,8 @@ Control the front LED light.
 
 ```python
 # Set light mode (numeric or string)
-await api.set_c1000x_light_mode("DEVICE_SN", 3)  # High
-await api.set_c1000x_light_mode("DEVICE_SN", "blinking")
+await mqttdevice.set_light(mode="blinking")
+await mqttdevice.set_light(mode=3) # High
 ```
 
 **Attribute**: `light_mode`
@@ -207,10 +237,10 @@ Enable or disable backup charge mode to maintain battery at 100% for emergency p
 
 ```python
 # Enable backup charge mode
-await api.set_c1000x_backup_charge("DEVICE_SN", True)
+await mqttdevice.set_backup_charge(enabled=True)
 
 # Disable backup charge mode
-await api.set_c1000x_backup_charge("DEVICE_SN", False)
+await mqttdevice.set_backup_charge(enabled=False)
 ```
 
 **Attribute**: `backup_charge`
@@ -221,14 +251,14 @@ Set temperature display unit.
 
 ```python
 # Set to Celsius
-await api.set_c1000x_temp_unit("DEVICE_SN", False)
+await mqttdevice.set_temp_unit(unit="celsius")
 
 # Set to Fahrenheit
-await api.set_c1000x_temp_unit("DEVICE_SN", True)
+await mqttdevice.set_temp_unit(unit="fahrenheit")
 ```
 
 **Attribute**: `temp_unit_fahrenheit`
-**Values**: 0 (Celsius), 1 (Fahrenheit)
+**Values**: "fahrenheit" | "celsius"
 
 ### Smart Mode Controls
 
@@ -237,8 +267,8 @@ Switch between normal and smart power saving mode for the 12V output.
 
 ```python
 # Set DC output mode (numeric or string)
-await api.set_c1000x_dc_output_mode("DEVICE_SN", 1)  # Normal
-await api.set_c1000x_dc_output_mode("DEVICE_SN", "smart")
+await mqttdevice.set_dc_output(mode=1)  # Normal
+await mqttdevice.set_dc_output(mode="smart")
 ```
 
 **Attribute**: `12v_dc_output_mode`
@@ -251,8 +281,8 @@ Switch between normal and smart power saving mode for AC outputs.
 
 ```python
 # Set AC output mode (numeric or string)
-await api.set_c1000x_ac_output_mode("DEVICE_SN", 2)  # Smart
-await api.set_c1000x_ac_output_mode("DEVICE_SN", "normal")
+await mqttdevice.set_ac_output(mode=1)  # Normal
+await mqttdevice.set_ac_output(mode="smart")
 ```
 
 **Attribute**: `ac_output_mode`
@@ -265,7 +295,7 @@ await api.set_c1000x_ac_output_mode("DEVICE_SN", "normal")
 Get comprehensive device status including all control states:
 
 ```python
-status = await api.get_c1000x_status("DEVICE_SN")
+status = await mqttdevice.get_status()
 
 print(f"AC Output: {status.get('switch_ac_output_power')}")
 print(f"Battery SOC: {status.get('battery_soc')}%")
@@ -273,110 +303,8 @@ print(f"Temperature: {status.get('temperature')}C")
 print(f"Display Mode: {status.get('display_mode')}")
 ```
 
-## Setup Instructions
 
-### Prerequisites
-- Python 3.12 or 3.13
-- Anker account with C1000X registered
-- Network connectivity for the C1000X device
-
-### Installation
-
-1. Install the library dependencies:
-```bash
-pip install cryptography aiohttp aiofiles paho-mqtt
-```
-
-Or using poetry:
-```bash
-poetry install
-```
-
-2. Set up environment variables (recommended):
-```bash
-export ANKERUSER="your_email@example.com"
-export ANKERPASSWORD="your_password"
-export ANKERCOUNTRY="US"  # or your country code
-```
-
-### Basic Usage Example
-
-```python
-import asyncio
-import logging
-from aiohttp import ClientSession
-from api import api
-
-async def main():
-    # Set up logging
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
-
-    async with ClientSession() as session:
-        # Create API instance
-        myapi = api.AnkerSolixApi(
-            "your_email@example.com",
-            "your_password",
-            "US",
-            session,
-            logger
-        )
-
-        # Update device information
-        await myapi.update_sites()
-        await myapi.update_device_details()
-
-        # Find your C1000X device
-        c1000x_sn = None
-        for sn, device in myapi.devices.items():
-            if device.get("device_pn") == "A1761":
-                c1000x_sn = sn
-                print(f"Found C1000X: {sn}")
-                break
-
-        if c1000x_sn:
-            # Get current status
-            status = await myapi.get_c1000x_status(c1000x_sn)
-            print(f"Battery SOC: {status.get('battery_soc')}%")
-            print(f"AC Output: {status.get('switch_ac_output_power')}")
-
-            # Control the device
-            await myapi.set_c1000x_ac_output(c1000x_sn, True)
-            await myapi.set_c1000x_display_mode(c1000x_sn, "high")
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### MQTT Monitoring Setup
-
-```python
-import asyncio
-from api import api
-from aiohttp import ClientSession
-
-async def monitor_c1000x():
-    async with ClientSession() as session:
-        myapi = api.AnkerSolixApi(
-            "your_email",
-            "your_password",
-            "US",
-            session,
-            logger
-        )
-
-        # Find your device
-        await myapi.update_sites()
-        c1000x_sn = "YOUR_DEVICE_SN"
-
-        # Enable MQTT real-time monitoring
-        await myapi.mqtt_trigger_realtime_data(c1000x_sn)
-
-        # Connect to MQTT (implement your MQTT client here)
-        # Messages will arrive every 3-5 seconds with real-time data
-
-asyncio.run(monitor_c1000x())
-```
+### MQTT message and command monitoring
 
 For comprehensive MQTT monitoring, use the included `mqtt_monitor.py` tool:
 ```bash
@@ -556,7 +484,7 @@ cards:
 3. Update sites and device details:
 ```python
 await myapi.update_sites()
-await myapi.update_device_details()
+await myapi.get_bind_devices()
 ```
 
 ### Control Commands Failing
@@ -580,7 +508,7 @@ print(device.get("device_pn"))  # Should be "A1761"
 **Solution**:
 1. Enable real-time data trigger:
 ```python
-await myapi.mqtt_trigger_realtime_data(device_sn)
+await mqttdevice.realtime_trigger(timeout=300)
 ```
 2. Verify MQTT connection is established
 3. Check device is online and WiFi connected
@@ -600,10 +528,10 @@ await myapi.mqtt_trigger_realtime_data(device_sn)
 2. Use string values if numeric values fail:
 ```python
 # Instead of:
-await api.set_c1000x_display_mode(sn, 5)  # Invalid!
+await mqttdevice.set_display(mode=5)  # Invalid!
 
 # Use:
-await api.set_c1000x_display_mode(sn, "high")  # Valid
+await mqttdevice.set_display(mode="high")  # Valid
 ```
 
 ### Device State Synchronization Issues
@@ -613,34 +541,12 @@ await api.set_c1000x_display_mode(sn, "high")  # Valid
 **Solution**:
 1. Refresh device attributes:
 ```python
-status = await myapi.get_c1000x_status(device_sn, fromFile=False)
+status = await mqttdevice.get_status()
 ```
 2. Wait 2-3 seconds after control commands for state to update
 3. Use MQTT monitoring for real-time state updates
 4. Cloud API updates can lag by 3-5 seconds
 
-### Expansion Battery Not Detected
-
-**Problem**: Expansion battery SOC/SOH showing as 0 or null.
-
-**Solution**:
-1. Verify expansion is physically connected and powered on
-2. Check MQTT field `exp_1_type` for expansion type code
-3. Expansion data may take 10-15 seconds to appear after connection
-4. Some expansion data only available via MQTT, not cloud API
-
-### Temperature Reading Issues
-
-**Problem**: Temperature shows 0 or unexpected values.
-
-**Solution**:
-1. Check `temp_unit_fahrenheit` setting (0=Celsius, 1=Fahrenheit)
-2. Temperature unit setting doesn't convert values, just indicates display
-3. MQTT provides raw values - apply conversion if needed:
-```python
-temp_c = status.get('temperature')
-temp_f = (temp_c * 9/5) + 32 if temp_c else None
-```
 
 ### API Rate Limiting
 

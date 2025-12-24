@@ -564,11 +564,13 @@ class SolixMqttDevice:
 
         """
         # Do not check whether status request fully supported for command, it will be sent with standard message type otherwise
-        return await self._send_mqtt_command(
+        if await self._send_mqtt_command(
             command=SolixMqttCommands.status_request,
             description="sent status request",
             toFile=toFile,
-        )
+        ):
+            return {}
+        return None
 
     def get_combined_cache(
         self,
