@@ -403,7 +403,7 @@ class SolixMqttDevice:
         parm_map: dict | None = None,
         toFile: bool = False,
     ) -> dict | None:
-        """Generic method to validate and send a supported device command that requires a single parameter value at most.
+        """Validate and send a supported device command that requires a single parameter value at most.
 
         Args:
             cmd: A supported device command name
