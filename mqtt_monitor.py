@@ -25,7 +25,11 @@ from aiohttp.client_exceptions import ClientError
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
 from api.apitypes import Color  # pylint: disable=no-name-in-module
 from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
-from api.mqtt import AnkerSolixMqttSession  # pylint: disable=no-name-in-module
+from api.mqtt import (  # pylint: disable=no-name-in-module
+    AnkerSolixMqttSession,
+    MessageCallback,
+)
+from api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
 from api.mqtttypes import DeviceHexData  # pylint: disable=no-name-in-module
 import common
 
@@ -114,6 +118,7 @@ class AnkerSolixMqttMonitor:
         self.endtime: datetime | None = (
             (datetime.now() + timedelta(minutes=args.runtime)) if args.runtime else None
         )
+        self.mqtt_callback: MessageCallback | None = None
 
     async def main(self) -> None:  # noqa: C901
         """Run Main routine to start the monitor in a loop."""
@@ -301,6 +306,9 @@ class AnkerSolixMqttMonitor:
                     deviceDict=self.device_selected, publish=True
                 ):
                     topics.add(f"{cmd_prefix}#")
+                # Create MQTT device instance and save default Api MQTT callback
+                mdev = SolixMqttDeviceFactory(self.api, device_sn).create_device()
+                self.mqtt_callback = mqtt_session.message_callback()
                 try:
                     activetopic = None
                     realtime = self.realtime_trigger
@@ -350,7 +358,12 @@ class AnkerSolixMqttMonitor:
                         if k := await loop.run_in_executor(None, common.getkey):
                             k = k.lower()
                             if k in ["m", "k"]:
+                                # save active message callback for later restore
+                                cb = mqtt_session.message_callback()
+                                # Clear message callback to prevent scrolling during display
+                                mqtt_session.message_callback(None)
                                 self.print_menu()
+                                mqtt_session.message_callback(cb)
                             elif k == "u":
                                 CONSOLE.info(
                                     f"{Color.RED}\nUnsubscribing all topics...{Color.OFF}"
@@ -426,6 +439,49 @@ class AnkerSolixMqttMonitor:
                                     CONSOLE.info(
                                         f"{Color.CYAN}\nPublished status request, status message(s) should appear shortly...{Color.OFF}"
                                     )
+                            elif k == "c":
+                                # control an MQTT device
+                                # save active message callback for later restore
+                                cb = mqtt_session.message_callback()
+                                # Clear message callback to prevent scrolling during display
+                                mqtt_session.message_callback(None)
+                                CONSOLE.info(
+                                    f"\n{Color.YELLOW}Controlling MQTT device...{Color.OFF}"
+                                )
+                                if mdev:
+                                    if control := common.query_mqtt_command(mdev=mdev):
+                                        CONSOLE.info(
+                                            f"Running command '{Color.CYAN}{control[0]}{Color.OFF}' with provided parameters:\n{json.dumps(control[1], indent=2)}"
+                                        )
+                                        if isinstance(
+                                            response := await mdev.run_command(
+                                                cmd=control[0], parm_map=control[1]
+                                            ),
+                                            dict,
+                                        ):
+                                            CONSOLE.info(
+                                                f"{Color.GREEN}Command published.{Color.OFF}"
+                                            )
+                                            if response:
+                                                CONSOLE.info(
+                                                    f"Mocked states:\n{json.dumps(response, indent=2)}"
+                                                )
+                                        else:
+                                            CONSOLE.error(
+                                                f"{Color.RED}Command failed.{Color.OFF}"
+                                            )
+                                    else:
+                                        CONSOLE.warning(
+                                            f"{Color.YELLOW}MQTT device control aborted{Color.OFF}"
+                                        )
+                                else:
+                                    CONSOLE.error(
+                                        f"{Color.RED}MQTT device could not be created{Color.OFF}"
+                                    )
+                                input(
+                                    f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
+                                )
+                                mqtt_session.message_callback(cb)
                             elif k == "d":
                                 # save active message callback for later restore
                                 cb = mqtt_session.message_callback()
@@ -544,6 +600,9 @@ class AnkerSolixMqttMonitor:
         )
         CONSOLE.info(f"[{Color.YELLOW}I{Color.OFF}]mmediate status request for device")
         CONSOLE.info(
+            f"[{Color.YELLOW}C{Color.OFF}]ontrol MQTT device, select described command and parameter values to be published"
+        )
+        CONSOLE.info(
             f"[{Color.YELLOW}V{Color.OFF}]iew value extraction refresh screen or MQTT message decoding"
         )
         CONSOLE.info(f"[{Color.YELLOW}D{Color.OFF}]isplay snapshot of extracted values")
@@ -592,6 +651,9 @@ class AnkerSolixMqttMonitor:
         elif data:
             # no encoded data in message, dump object whatever it is
             CONSOLE.info(f"{timestamp}Device data:\n{json.dumps(data, indent=2)}")
+        # forward message to MQTT device callback if existing
+        if callable(self.mqtt_callback):
+            self.mqtt_callback(session, topic, message, data, model, *args, **kwargs)
 
     def print_table(self) -> None:
         """Print the accumulated extracted values in a table."""
@@ -663,6 +725,9 @@ class AnkerSolixMqttMonitor:
             elif data:
                 # no encoded data in message, dump object whatever it is
                 CONSOLE.info(f"Device data:\n{json.dumps(data, indent=2)}")
+        # forward message to MQTT device callback if existing
+        if callable(self.mqtt_callback):
+            self.mqtt_callback(session, topic, message, data, model, *args, **kwargs)
 
 
 class ReplaceFilter(logging.Filter):

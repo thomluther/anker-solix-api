@@ -211,7 +211,7 @@ class AnkerSolixApiMonitor:
             )
             CONSOLE.info(f"[{Color.YELLOW}F{Color.OFF}]ilter toggle for device display")
             CONSOLE.info(f"[{Color.YELLOW}D{Color.OFF}]ebug actual Api cache")
-            CONSOLE.info(f"[{Color.YELLOW}C{Color.OFF}]ustomize an Api cache entry")
+            CONSOLE.info(f"Customi[{Color.YELLOW}Z{Color.OFF}]e an Api cache entry")
             CONSOLE.info(
                 f"[{Color.YELLOW}V{Color.OFF}]iew actual MQTT data cache and extracted device data"
             )
@@ -244,6 +244,9 @@ class AnkerSolixApiMonitor:
                     f"[{Color.YELLOW}I{Color.OFF}]mmediate status request. Only possible if MQTT session is ON"
                 )
             CONSOLE.info(
+                f"[{Color.YELLOW}C{Color.OFF}]ontrol MQTT device. Only possible if MQTT session is ON"
+            )
+            CONSOLE.info(
                 f"[{Color.YELLOW}M{Color.OFF}]qtt device or Api device (default) display toggle"
             )
             CONSOLE.info(
@@ -252,21 +255,67 @@ class AnkerSolixApiMonitor:
             return input(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...")
         if self.use_file:
             CONSOLE.info(
-                f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/[{Color.YELLOW}C{Color.OFF}]ustomize cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
+                f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/Customi[{Color.YELLOW}Z{Color.OFF}]e cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
                 f"[{Color.YELLOW}N{Color.OFF}]ext/[{Color.YELLOW}P{Color.OFF}]rev/[{Color.YELLOW}O{Color.OFF}]ther folder, "
                 f"s[{Color.YELLOW}I{Color.OFF}]te/A[{Color.YELLOW}L{Color.OFF}]l refresh, "
                 f"MQTT [{Color.YELLOW}S{Color.OFF}]ession ({Color.YELLOW}+{Color.OFF}/{Color.YELLOW}-{Color.OFF}), "
                 f"[{Color.YELLOW}M{Color.OFF}]qtt display, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls, "
-                f"[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
+                f"[{Color.YELLOW}C{Color.OFF}]ontrol/[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
             )
         else:
             CONSOLE.info(
-                f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/[{Color.YELLOW}C{Color.OFF}]ustomize cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
+                f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/Customi[{Color.YELLOW}Z{Color.OFF}]e cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
                 f"MQTT [{Color.YELLOW}S{Color.OFF}]ession toggle, [{Color.YELLOW}R{Color.OFF}]eal time trigger, [{Color.YELLOW}I{Color.OFF}]mmediate status, "
                 f"[{Color.YELLOW}M{Color.OFF}]qtt display toggle, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls toggle, "
-                f"[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
+                f"[{Color.YELLOW}C{Color.OFF}]ontrol/[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
             )
         return ""
+
+    async def control_device(self) -> bool:
+        """Query MQTT command and parameters and run the command against selected device."""
+        # Query which device to use if not filtered and more than one device available
+        if not self.device_filter and len(self.mqtt_devices) > 1:
+            CONSOLE.info("Select device SN to be controlled:")
+            for idx, item in enumerate(
+                itemlist := list(self.mqtt_devices.keys()),
+                start=1,
+            ):
+                devdata = self.mqtt_devices[item].device
+                CONSOLE.info(
+                    f"({Color.YELLOW}{idx}{Color.OFF}) {item} ({devdata.get('device_pn', '')}) - {devdata.get('name', '')}"
+                )
+            while True:
+                select = input(
+                    f"Select {Color.YELLOW}ID{Color.OFF} or [{Color.RED}C{Color.OFF}]ancel: "
+                )
+                if select.upper() in ["C", "CANCEL"]:
+                    return False
+                if select.isdigit() and 1 <= (select := int(select)) <= len(itemlist):
+                    mdev = self.mqtt_devices.get(itemlist[select - 1])
+                    break
+        else:
+            mdev = self.mqtt_devices.get(
+                self.device_filter or next(iter(self.mqtt_devices), "")
+            )
+        if control := common.query_mqtt_command(mdev=mdev, toFile=self.use_file):
+            CONSOLE.info(
+                f"Running command '{Color.CYAN}{control[0]}{Color.OFF}' with provided parameters:\n{json.dumps(control[1], indent=2)}"
+            )
+            if isinstance(
+                response := await mdev.run_command(
+                    cmd=control[0], parm_map=control[1], toFile=self.use_file
+                ),
+                dict,
+            ):
+                CONSOLE.info(f"{Color.GREEN}Command published.{Color.OFF}")
+                if self.use_file and response:
+                    CONSOLE.info(f"Mocked states:\n{json.dumps(response, indent=2)}")
+                response = True
+            else:
+                CONSOLE.error(f"{Color.RED}Command failed.{Color.OFF}")
+            return bool(response)
+        CONSOLE.warning(f"{Color.YELLOW}MQTT device control aborted{Color.OFF}")
+        return False
 
     def customize_cache(self) -> bool:
         """Customize a key in the Api cache and restart device details refresh."""
@@ -734,14 +783,28 @@ class AnkerSolixApiMonitor:
                         f"{'AI Enabled':<{col3}}: {'YES' if aiems.get('enable') else 'NO'}"
                     )
                 m1 = c and mqtt.get("battery_soc", "")
-                m2 = c and mqtt.get("power_cutoff", "")
+                m2 = c and (
+                    mqtt.get("output_cutoff_data", "") or mqtt.get("power_cutoff", "")
+                )
                 if m3 := cm and mqtt.get("battery_soh", ""):
                     m3 = f"{float(m3):6.2f}"
                 soc = f"{m1 or dev.get('battery_soc', '---'):>4} %"
-                CONSOLE.info(
-                    f"{'Battery SoC/SoH':<{col1}}: {m1 and c}{soc} /{m3 and (c or cm)}{m3 if m3 else ' --.--':>4} {'%':<{col2 - 15}}{co} "
-                    f"{'Min SoC':<{col3}}: {m2 and c}{m2 or (dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} %{co}"
-                )
+                if dev.get("generation", 0) > 1:
+                    CONSOLE.info(
+                        f"{'Battery SoC/SoH':<{col1}}: {m1 and c}{soc} /{m3 and (c or cm)}{m3 if m3 else ' --.--':>4} {'%':<{col2 - 15}}{co} "
+                        f"{'Min SoC':<{col3}}: {m2 and c}{m2 or (dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} %{co}"
+                    )
+                else:
+                    m4 = cm and mqtt.get("temperature", "")
+                    if m4 and mqtt.get("temp_unit_fahrenheit"):
+                        m4 = f"{float(m4) * 9 / 5 + 32:>4} °F"
+                    else:
+                        m4 = f"{m4 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
+                    CONSOLE.info(
+                        f"{'Battery SoC/SoH':<{col1}}: {m1 and c}{soc} /{m3 and (c or cm)}{m3 if m3 else ' --.--':>4} {'%':<{col2 - 15}}{co} "
+                        f"{'Min SoC / Temp':<{col3}}: {m2 and (c or cm)}{m2 or (dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} %{co} "
+                        f"/ {m4 and (c or cm)}{m4}{co}"
+                    )
                 energy = f"{dev.get('battery_energy', '----'):>4} Wh"
                 CONSOLE.info(
                     f"{'Battery Energy':<{col1}}: {cc}{energy:<{col2}}{co} "
@@ -761,10 +824,10 @@ class AnkerSolixApiMonitor:
                         if m3 and mqtt.get("temp_unit_fahrenheit"):
                             m3 = f"{float(m3) * 9 / 5 + 32:>4} °F"
                         else:
-                            m3 = f"{m3:>4} °C"
+                            m3 = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                         CONSOLE.info(
                             f"{'Main Bat SN':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
-                            f"{'Main SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2:>3} %{co} / {m3 and (c or cm)}{m3}{co}"
+                            f"{'Main SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>3} %{co} / {m3 and (c or cm)}{m3}{co}"
                         )
                     for i in range(1, 6):
                         m1 = cm and mqtt.get(f"exp_{i}_sn", "")
@@ -774,10 +837,10 @@ class AnkerSolixApiMonitor:
                             if m3 and mqtt.get("temp_unit_fahrenheit"):
                                 m3 = f"{float(m3) * 9 / 5 + 32:>4} °F"
                             else:
-                                m3 = f"{m3:>4} °C"
+                                m3 = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                             CONSOLE.info(
                                 f"{'Exp. ' + str(i) + ' SN':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
-                                f"{'Exp. ' + str(i) + ' SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2:>3} %{co} / {m3 and (c or cm)}{m3}{co}"
+                                f"{'Exp. ' + str(i) + ' SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>3} %{co} / {m3 and (c or cm)}{m3}{co}"
                             )
                         else:
                             break
@@ -790,13 +853,15 @@ class AnkerSolixApiMonitor:
                         f"{'AC Input Limit':<{col3}}: {m2 and c}{m2 or dev.get('ac_input_limit', '----'):>4} W{co}"
                     )
                     CONSOLE.info(
-                        f"{'Pwr Limit Opt':<{col1}}: {(dev.get('power_limit_option') or '------')!s:<{col2}} "
+                        f"{'Pwr Limit Opt':<{col1}}: {(dev.get('power_limit_option') or '------')!s:<{col2}}{co} "
                         f"{'Limit Opt Real':<{col3}}: {(dev.get('power_limit_option_real') or '------')!s}"
                     )
                 if "pv_power_limit" in dev:
                     m1 = c and mqtt.get("pv_limit", "")
                     m2 = c and get_enum_name(
-                        SolixSwitchMode, mqtt.get("grid_export_disabled", ""), ""
+                        SolixSwitchMode,
+                        {0: 1, 1: 0}.get(mqtt.get("grid_export_disabled", "")),
+                        "",
                     )
                     feat1 = dev.get("allow_grid_export")
                     CONSOLE.info(
@@ -913,7 +978,7 @@ class AnkerSolixApiMonitor:
                             get_enum_name(SolarbankLightMode, m3, "unknown")
                         ).capitalize()
                         CONSOLE.info(
-                            f"{'Light':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} "
+                            f"{'Light':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, not m1, str(not m1) or '---').upper():>3} "
                             f"{'(Mode: ' + mode + ')':<{col2 - 4}}{co} "
                             f"{'AC Socket':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
                         )
@@ -1118,12 +1183,12 @@ class AnkerSolixApiMonitor:
                     if m2 and mqtt.get("temp_unit_fahrenheit"):
                         m2 = f"{float(m2) * 9 / 5 + 32:>4} °F"
                     else:
-                        m2 = f"{m2:>4} °C"
+                        m2 = f"{m2 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                     if m3 := cm and mqtt.get("battery_soh", ""):
                         m3 = f"{float(m3):6.2f}"
                     CONSOLE.info(
                         f"{batstr + ' SoC/SoH':<{col1}}: {m1 and (c or cm)}{soc} /{m3 if m3 else ' --.--':>7} {'%':<{col2 - 16}}{co} "
-                        f"{batstr + ' Temp.':<{col3}}: {m2 and (c or cm)}{m2 or '-- °C'!s:>7}{co}"
+                        f"{batstr + ' Temp.':<{col3}}: {m2 and (c or cm)}{m2:>7}{co}"
                     )
                 if m1 := cm and mqtt.get("exp_1_soc", ""):
                     soc = f"{m1:>4} %"
@@ -1131,13 +1196,13 @@ class AnkerSolixApiMonitor:
                     if m2 and mqtt.get("temp_unit_fahrenheit"):
                         m2 = f"{float(m2) * 9 / 5 + 32:>4} °F"
                     else:
-                        m2 = f"{m2:>4} °C"
+                        m2 = f"{m2 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                     if m3 := cm and mqtt.get("exp_1_soh", ""):
                         m3 = f"{float(m3):6.2f}"
                     m4 = cm and mqtt.get("exp_1_temperature", "")
                     CONSOLE.info(
                         f"{'Exp. 1 SoC/SoH':<{col1}}: {m1 and (c or cm)}{soc} /{m3 if m3 else ' --.--':>7} {'%':<{col2 - 16}}{co} "
-                        f"{'Exp. 1 Temp.':<{col3}}: {m2 and (c or cm)}{m2 or '-- °C'!s:>7}{co}"
+                        f"{'Exp. 1 Temp.':<{col3}}: {m2 and (c or cm)}{m2:>7}{co}"
                     )
                 m1 = cm and mqtt.get("backup_charge_switch", "")
                 m2 = cm and str(mqtt.get("exp_1_type", ""))
@@ -2344,6 +2409,25 @@ class AnkerSolixApiMonitor:
                                         f"{Color.RED}\nMQTT device data require active MQTT session...{Color.OFF}"
                                     )
                                 elif k == "c":
+                                    # control an MQTT device
+                                    if self.api.mqttsession:
+                                        CONSOLE.info(
+                                            f"\n{Color.YELLOW}Controlling MQTT device...{Color.OFF}"
+                                        )
+                                        result = await self.control_device()
+                                        input(
+                                            f"Hit [{Color.YELLOW}Enter{Color.OFF}] to continue monitoring..."
+                                        )
+                                        if result:
+                                            break_refresh = True
+                                        else:
+                                            await asyncio.sleep(1)
+                                            break
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nMQTT device control requires active MQTT session...{Color.OFF}"
+                                        )
+                                elif k == "z":
                                     CONSOLE.info(
                                         f"\n{Color.YELLOW}Customizing Api cache entry...{Color.OFF}"
                                     )

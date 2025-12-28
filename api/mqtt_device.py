@@ -11,10 +11,12 @@ import contextlib
 from typing import TYPE_CHECKING, Any
 
 from .apitypes import SolixDefaults
+from .helpers import round_by_factor
 from .mqtt import generate_mqtt_command
 from .mqttcmdmap import (
     COMMAND_LIST,
     COMMAND_NAME,
+    NAME,
     STATE_CONVERTER,
     STATE_NAME,
     VALUE_DEFAULT,
@@ -129,7 +131,7 @@ class SolixMqttDevice:
                                     ]
                                 }
                                 # check if valid parameter for command
-                                if (name := item.get("name")) and descriptors:
+                                if (name := item.get(NAME)) and descriptors:
                                     # check if validator can be initialized, will throw ValueError or TypeError
                                     if (
                                         VALUE_STATE not in descriptors
@@ -192,18 +194,21 @@ class SolixMqttDevice:
         defaults: bool = False,
         state_parms: bool = False,
         follow_parms: bool = False,
+        all: bool = False,
     ) -> dict:
         """Get dictionary with parameters and value descriptions for provided command.
 
-        If defaults is True, also parameters with a default value will be included.
-        If state_parms is True, only parameters that optionally reuse existing state will be provided.
+        If defaults is True, also normal parameters with a default value will be included.
+        If state_parms is True, only parameters that reuse existing state will be provided.
         If follow_parms is True, only parameters that follow another parm will be provided, otherwise those are excluded
+        If all is True, all parameters will be included
         """
         if isinstance(cmd, str):
             return {
                 p: desc
                 for p, desc in self.controls.get(cmd, {}).get("parameters", {}).items()
-                if (
+                if all
+                or (
                     not (state_parms or follow_parms)
                     and (VALUE_DEFAULT not in desc or defaults)
                     and VALUE_STATE not in desc
@@ -247,7 +252,7 @@ class SolixMqttDevice:
                 cmd,
             )
             return None
-        # get all command parameters with or without default depending on provided value
+        # get all normal command parameters with or without default depending on provided value
         parms = self.get_cmd_parms(cmd=cmd, defaults=value is None)
         if not parm:
             if len(parms) > 1 or (not parms and value is not None):
@@ -264,7 +269,7 @@ class SolixMqttDevice:
             parm, desc = next(iter(parms.items()), (None, {}))
         elif not (
             isinstance(parm, str)
-            and (desc := self.get_cmd_parms(cmd=cmd, defaults=True).get(parm))
+            and (desc := self.get_cmd_parms(cmd=cmd, all=True).get(parm))
         ):
             self._logger.error(
                 "MQTT device %s (%s) control error - Command '%s' parameter '%s' is no supported parameter: %s",
@@ -280,7 +285,7 @@ class SolixMqttDevice:
         # lookup state if default is string
         if (
             isinstance(value, str)
-            and str(val := self.mqttdata.get(value))
+            and str(val := self.get_status(fromFile=True).get(value))
             .replace("-", "", 1)
             .replace(".", "", 1)
             .isdigit()
@@ -440,7 +445,7 @@ class SolixMqttDevice:
                     return None
                 # build parameter mapping for command with mock states and user description
                 if par:
-                    desc = self.get_cmd_parms(cmd=cmd, defaults=True).get(par, {})
+                    desc = self.get_cmd_parms(cmd=cmd, all=True).get(par, {})
                 else:
                     # NOTE: At this point there can be max one required parameter, get the first one without defaults
                     par, desc = next(iter(cmd_parms.items()), (None, {}))
@@ -451,15 +456,19 @@ class SolixMqttDevice:
                     # Mock state
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
-                        state_fields[state_name] = converter(fieldvalue) if callable(converter) else fieldvalue
+                        state_fields[state_name] = (
+                            converter(fieldvalue) if callable(converter) else fieldvalue
+                        )
                     # generate generic user description and provided string value or field value
                     user_parms[par] = val if isinstance(val, str) else fieldvalue
                     # mark required parameter as defined
                     req_parms.discard(par)
-            # add command parameters that may need current state value
+            # add command parameters that may need current state value or follow another parameter
             for par, desc in self.get_cmd_parms(
                 cmd=cmd, state_parms=True, follow_parms=True
             ).items():
+                if (step := desc.get(VALUE_STEP)) is None:
+                    step = 1
                 if follows := desc.get(VALUE_FOLLOWS):
                     # get only mock state for follow parameter if they have a state, command generator will lookup value from other parameter
                     if (
@@ -469,11 +478,13 @@ class SolixMqttDevice:
                         is not None
                     ):
                         converter = desc.get(STATE_CONVERTER)
-                        state_fields[state_name] = converter(state) if callable(converter) else state
+                        state_fields[state_name] = (
+                            converter(state) if callable(converter) else state
+                        )
                 elif (
                     par not in parameters
                     and (
-                        state := self.mqttdata.get(
+                        state := self.get_status(fromFile=True).get(
                             desc.get(VALUE_STATE, ""), desc.get(VALUE_DEFAULT)
                         )
                     )
@@ -481,13 +492,17 @@ class SolixMqttDevice:
                 ):
                     # convert state to number format if valid number
                     if str(state).replace("-", "", 1).replace(".", "", 1).isdigit():
-                        parameters[par] = float(state)
+                        parameters[par] = round_by_factor(float(state), step)
                     else:
                         parameters[par] = state
                     # Mock state
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
-                        state_fields[state_name] = converter(parameters[par]) if callable(converter) else parameters[par]
+                        state_fields[state_name] = (
+                            converter(parameters[par])
+                            if callable(converter)
+                            else parameters[par]
+                        )
                     # mark required parameter as defined
                     req_parms.discard(par)
             # check if all required parameters are specified

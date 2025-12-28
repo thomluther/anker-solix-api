@@ -458,7 +458,7 @@ class AnkerSolixBaseApi:
             if new_values and callable(self._mqtt_update_callback):
                 self._mqtt_update_callback(deviceSn)
 
-    def update_device_mqtt(
+    def update_device_mqtt(  # noqa: C901
         self,
         deviceSn: str | None = None,
     ) -> bool:
@@ -775,14 +775,18 @@ class AnkerSolixBaseApi:
                         updated = updated or value_updated
                     # calculate extra fields if required values were updated
                     if calc_efficiency:
-                        if (pv := device_mqtt.get("pv_yield")) and (
-                            out := device_mqtt.get("output_energy")
+                        if (
+                            (pv := device_mqtt.get("pv_yield"))
+                            and (out := device_mqtt.get("output_energy"))
+                            and float(pv) > 0
                         ):
                             device_mqtt["device_efficiency"] = (
                                 f"{min(100, float(out) / float(pv) * 100):.3f}"
                             )
-                        if (charge := device_mqtt.get("charged_energy")) and (
-                            discharge := device_mqtt.get("discharged_energy")
+                        if (
+                            (charge := device_mqtt.get("charged_energy"))
+                            and (discharge := device_mqtt.get("discharged_energy"))
+                            and float(charge) > 0
                         ):
                             device_mqtt["battery_efficiency"] = (
                                 f"{min(100, float(discharge) / float(charge) * 100):.3f}"

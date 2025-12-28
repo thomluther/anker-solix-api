@@ -10,8 +10,19 @@ import select
 import sys
 
 from api.apitypes import (  # pylint: disable=no-name-in-module
+    Color,
     SolarbankRatePlan,
     SolarbankUsageMode,
+)
+from api.helpers import round_by_factor  # pylint: disable=no-name-in-module
+from api.mqtt_device import SolixMqttDevice  # pylint: disable=no-name-in-module
+from api.mqttcmdmap import (  # pylint: disable=no-name-in-module
+    VALUE_DEFAULT,
+    VALUE_MAX,
+    VALUE_MIN,
+    VALUE_OPTIONS,
+    VALUE_STATE,
+    VALUE_STEP,
 )
 
 # platform dependent imports for key press handling
@@ -81,6 +92,7 @@ SAMELINE.addHandler(handler)
 # load environment variables from .env file at runtime if file exists
 if (Path(__file__).parent / ".env").is_file():
     from dotenv import load_dotenv
+
     load_dotenv()
 _CREDENTIALS = {
     "USER": os.getenv("ANKERUSER"),
@@ -354,10 +366,115 @@ def getkey() -> str | None:
                     if len(b) == 3:
                         k = ord(b[2])
                     else:
-                        k = ord(b)
+                        k = ord(b[0])
                     return KEY_MAPPING.get(k, chr(k))
     finally:
         # This will always be run before returning
         if not sys.platform.startswith("win") and old_settings:
             with contextlib.suppress(termios.error):
                 termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
+def query_mqtt_command(  # noqa: C901
+    mdev: SolixMqttDevice, toFile: bool = False
+) -> tuple[str, dict] | None:
+    """Query, validate and return MQTT command and parameters for provided MQTT device."""
+    if not isinstance(mdev, SolixMqttDevice):
+        CONSOLE.error(f"{Color.YELLOW}No MQTT device provided for control.{Color.OFF}")
+        return None
+    # get supported commands
+    if len(commands := list(mdev.controls.keys())) > 1:
+        # select command to be used
+        CONSOLE.info(
+            f"Select a supported command for device '{Color.CYAN}{mdev.sn} ({mdev.pn}){Color.OFF}':"
+        )
+        for idx, item in enumerate(itemlist := commands, start=1):
+            CONSOLE.info(f"({Color.YELLOW}{idx}{Color.OFF}) {item}")
+        while True:
+            sel = input(
+                f"Select {Color.YELLOW}ID{Color.OFF} or [{Color.RED}C{Color.OFF}]ancel: "
+            )
+            if sel.upper() in ["C", "CANCEL"]:
+                return None
+            if sel.isdigit() and 1 <= (sel := int(sel)) <= len(itemlist):
+                cmd = itemlist[sel - 1]
+                break
+    elif not commands:
+        CONSOLE.error(
+            f"{Color.YELLOW}MQTT device {mdev.sn} ({mdev.pn}) does not support any controls.{Color.OFF}"
+        )
+        return None
+    else:
+        cmd = commands[0]
+    parameters = {}
+    CONSOLE.info(
+        f"Enter parameter values for device command '{Color.CYAN}{cmd}{Color.OFF}':"
+    )
+    # get required parameters
+    for parm, desc in mdev.get_cmd_parms(cmd=cmd, defaults=True).items():
+        value_info = ""
+        step = 1
+        if v := desc.get(VALUE_OPTIONS):
+            value_info = f"{Color.YELLOW}{v}"
+        elif (v := desc.get(VALUE_MIN)) is not None:
+            value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
+            if (v := desc.get(VALUE_STEP)) is not None:
+                step = v
+                value_info += f", step {v}"
+        # query default parameters only if value has validation descriptors
+        if value_info:
+            if (v := desc.get(VALUE_DEFAULT)) is not None:
+                value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
+            while True:
+                sel = input(
+                    f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
+                )
+                if sel.upper() in ["C", "CANCEL"]:
+                    return None
+                if not sel and VALUE_DEFAULT in desc:
+                    sel = None
+                    break
+                # convert string to number
+                if sel.replace("-", "", 1).replace(".", "", 1).isdigit():
+                    sel = round_by_factor(float(sel), step)
+                if mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm) is not None:
+                    break
+            if sel is not None:
+                parameters[parm] = sel
+    # get optional states parameters
+    for parm, desc in mdev.get_cmd_parms(cmd=cmd, state_parms=True).items():
+        value_info = ""
+        step = 1
+        state = None
+        if v := desc.get(VALUE_OPTIONS):
+            value_info = f"{Color.YELLOW}{v}"
+        elif (v := desc.get(VALUE_MIN)) is not None:
+            value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
+            if (v := desc.get(VALUE_STEP)) is not None:
+                step = v
+                value_info += f", step {v}"
+        # query default parameters only if value has validation descriptors
+        if value_info:
+            if (v := desc.get(VALUE_STATE)) is not None and (
+                state := mdev.get_status(fromFile=toFile).get(v)
+            ) is not None:
+                value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use last state ({Color.GREEN}{state}{Color.OFF})"
+            elif (v := desc.get(VALUE_DEFAULT)) is not None:
+                value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
+            while True:
+                sel = input(
+                    f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
+                )
+                if sel.upper() in ["C", "CANCEL"]:
+                    return None
+                if not sel and (state is not None or VALUE_DEFAULT in desc):
+                    sel = None
+                    break
+                # convert string to number
+                if sel.replace("-", "", 1).replace(".", "", 1).isdigit():
+                    sel = round_by_factor(float(sel), step)
+                if mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm) is not None:
+                    break
+            if sel is not None:
+                parameters[parm] = sel
+    return (cmd, parameters)
