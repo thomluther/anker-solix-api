@@ -572,8 +572,8 @@ class AnkerSolixMqttSession:
     def cleanup(self):
         """Clean up client connections and delete certificate files."""
         if self.is_connected():
-            self.client.loop_stop()
             self.client.disconnect()
+            self.client.loop_stop()
         self.client = None
         self.subscriptions = set()
         self.triggered_devices = set()

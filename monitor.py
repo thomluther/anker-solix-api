@@ -757,10 +757,10 @@ class AnkerSolixApiMonitor:
                     if m1 := cm and mqtt.get(f"solarbank_{i}_sn", ""):
                         m2 = cm and mqtt.get(f"solarbank_{i}_soc", "")
                         soc = f"{m2 or '--':>4} %"
-                        m4 = cm and mqtt.get(f"solarbank_{i}_battery_power_signed")
+                        m4 = cm and mqtt.get(f"solarbank_{i}_ac_output_power_signed")
                         CONSOLE.info(
                             f"{'Solarbank ' + str(i) + ' SN':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
-                            f"{'SB' + str(i) + ' SoC / B.Pwr':<{col1}}: {m2 and (c or cm)}{soc} /{'----' if m4 is None else m4:>5} {unit}{co}"
+                            f"{'SB' + str(i) + ' SoC / Power':<{col1}}: {m2 and (c or cm)}{soc} /{'----' if m4 is None else m4:>5} {unit}{co}"
                         )
                     else:
                         break

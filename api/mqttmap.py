@@ -2177,8 +2177,8 @@ SOLIXMQTTMAP: Final = {
             "a2": {NAME: "device_sn"},
             "a3": {NAME: "sw_version", "values": 4},
             "a5": {NAME: "ac_output_power_total"},
-            "a6": {NAME: "battery_power_signed_total"},
-            "b3": {NAME: "local_timestamp"},
+            "a6": {NAME: "ac_output_power_signed_total"},
+            "b3": {NAME: "utc_timestamp"},
             "b6": {
                 BYTES: {
                     "00": {
@@ -2191,7 +2191,7 @@ SOLIXMQTTMAP: Final = {
                     },
                 }
             },
-            "b7": {NAME: "solarbank_1_battery_power_signed"},
+            "b7": {NAME: "solarbank_1_ac_output_power_signed"},
             "b8": {
                 BYTES: {
                     "00": {
@@ -2204,7 +2204,7 @@ SOLIXMQTTMAP: Final = {
                     },
                 }
             },
-            "b9": {NAME: "solarbank_2_battery_power_signed"},
+            "b9": {NAME: "solarbank_2_ac_output_power_signed"},
             "ba": {
                 BYTES: {
                     "00": {
@@ -2217,7 +2217,7 @@ SOLIXMQTTMAP: Final = {
                     },
                 }
             },
-            "bb": {NAME: "solarbank_3_battery_power_signed"},
+            "bb": {NAME: "solarbank_3_ac_output_power_signed"},
             "bc": {
                 BYTES: {
                     "00": {
@@ -2230,7 +2230,7 @@ SOLIXMQTTMAP: Final = {
                     },
                 }
             },
-            "bd": {NAME: "solarbank_4_battery_power_signed"},
+            "bd": {NAME: "solarbank_4_ac_output_power_signed"},
         },
         # Interval: varies, probably upon change
         "0407": _0407,

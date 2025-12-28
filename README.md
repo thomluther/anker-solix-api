@@ -314,7 +314,7 @@ Upon successful authentication, you will see relevant parameter of supported dev
 When using monitoring from local json file folder, the values will not change typically, with the exception of mixed in MQTT data from MQTT file poller. The file option is useful to validate the Api parsing with various system constellations, as well as validating MQTT data extraction. You can navigate through the list of json folders to verify/debug various system exports with the tool.
 
 > [!NOTE]
-> MQTT data in File mode can only be extracted if the export files contain MQTT data (optional), the MQTT session is enabled in the monitor tool and an MQTT data description is defined in the `mqttmap.py` for the device PN.
+> MQTT data in File mode can only be extracted if the export files contain MQTT messages (optional), the MQTT session is enabled in the monitor tool and an MQTT data description is defined in the `mqttmap.py` for the device PN.
 
 The monitor uses following value highlighting with enabled MQTT session to distinguish their data source:
 - Yellow: Device MQTT values with any new extracted data
@@ -322,6 +322,11 @@ The monitor uses following value highlighting with enabled MQTT session to disti
 - No color: Api data
 
 Beside value highlighting, systems, devices, vehicles etc have their own highlighting to recognize corresponding sections quickly in the Api display.
+
+You can also issue MQTT device controls with the monitor, if the MQTT session is enabled. You need to select or filter the device, select the control and confirm customizable control parameters and then the composed MQTT command will be published. The monitor should show whether the state was changed accordingly, which you can also verify in the mobile App in parallel.
+
+> [!NOTE]
+> If any MQTT control is used in file mode, the composed MQTT command will only be printed in decoded format for debugging purpose.
 
 <details>
 <summary><b>Expand to see monitor tool usage overview</b><br><br></summary>
@@ -334,12 +339,13 @@ Beside value highlighting, systems, devices, vehicles etc have their own highlig
 [E]lectric Vehicle display toggle ON (default) or OFF
 [F]ilter toggle for device display
 [D]ebug actual Api cache
-[C]ustomize an Api cache entry
+Customi[Z]e an Api cache entry
 [V]iew actual MQTT data cache and extracted device data
 [A]pi call display toggle OFF (default) or ON
 Toggle MQTT [S]ession OFF (default) or ON
 [R]eal time MQTT data trigger (Timeout 1 min). Only possible if MQTT session is ON
 [I]mmediate status request. Only possible if MQTT session is ON
+[C]ontrol MQTT device. Only possible if MQTT session is ON
 [M]qtt device or Api device (default) display toggle
 [Q]uit, [ESC] or [CTRL-C] to stop monitor
 ----------------------------------------------------------------------------------------------------
@@ -353,7 +359,7 @@ Toggle MQTT [S]ession OFF (default) or ON
 [E]lectric Vehicle display toggle ON (default) or OFF
 [F]ilter toggle for device display
 [D]ebug actual Api cache
-[C]ustomize an Api cache entry
+Customi[Z]e an Api cache entry
 [V]iew actual MQTT data cache and extracted device data
 [A]pi call display toggle OFF (default) or ON
 Toggle MQTT [S]ession OFF (default) or ON
@@ -363,6 +369,7 @@ Immediate refresh for a[L]l
 Select [N]next folder for monitoring
 Select [P]previous folder for monitoring
 Select [O]ther folder for monitoring
+[C]ontrol MQTT device. Only possible if MQTT session is ON
 [M]qtt device or Api device (default) display toggle
 [Q]uit, [ESC] or [CTRL-C] to stop monitor
 ----------------------------------------------------------------------------------------------------
@@ -430,8 +437,16 @@ Example exec module to use the Anker Api to establish a client connection to the
 device messages. This module will prompt for the Anker account details if not pre-set in the header. Upon successful authentication,
 you will see the owned devices of the user account and you can select a device you want to monitor. Optionally you
 can dump the output to a file. The tool will display a usage menu before monitoring starts. While monitoring,
-it reacts on key press for the menu options. The menu can be displayed again with 'm'.
+it reacts on key press for the menu options. The menu can be displayed again with 'k'.
 The tool also utilizes the built in real time data trigger, which can trigger frequent data updates of your owned devices.
+
+You can also issue described and supported MQTT device controls with the mqtt_monitor. You need to select the control and confirm customizable control parameters and then the composed MQTT command will be published. The monitor should show the decoded published command if subscribed to the command topics. To verify the MQTT control was correctly executed, you should verify the device settings in the mobile App in parallel. Some device controls required to re-enter the device details panel to get updates visible in the mobile App. If the device control does not work, the command message description is most likely wrong or incomplete. You need to dump MQTT command message examples while doing the same control changes via the App and compare them with the composed commands from the message descriptions of your device PN.
+
+> [!NOTE]
+> - Device firmware changes may introduce additional fields in the control, that are not described yet.
+> - Certain device controls may trigger more than one MQTT command through the App or Cloud. Multiple commands per control are not implemented (yet) in the MQTT control framework of this library. Subsequent commands for controls will have to be described and understood entirely before such multi command controls can be supported.
+> - Some MQTT device controls are just a partial control of a control that is manageable also via the cloud Api. If only the device command is published, the cloud Api may not be aware of the control change. One example is the Solarbank min SOC setting (SOC Reserve), which must be triggered through the cloud Api instead of the MQTT control for full functionality.
+
 
 <details>
 <summary><b>Expand to see monitor tool usage overview</b><br><br></summary>
@@ -447,6 +462,7 @@ The tool also utilizes the built in real time data trigger, which can trigger fr
 [R]eal time data trigger loop OFF (Default) or ON for continuous status messages
 [O]ne real time trigger for device (timeout 60 seconds)
 [I]mmediate status request for device
+[C]ontrol MQTT device, select described command and parameter values to be published
 [V]iew value extraction refresh screen or MQTT message decoding
 [D]isplay snapshot of extracted values
 [Q]uit, [ESC] or [CTRL-C] to stop MQTT monitor
