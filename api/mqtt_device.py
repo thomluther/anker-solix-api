@@ -106,6 +106,7 @@ class SolixMqttDevice:
                         control = {"msg_type": msg}
                         # traverse all fields, use field descriptive name as parameter name and field byte as
                         parameters = {}
+                        required_options = []
                         # get nested command fields if available
                         fields = fields.get(cmd) or fields
                         for key, item in fields.items():
@@ -144,9 +145,20 @@ class SolixMqttDevice:
                                             step=descriptors.get(VALUE_STEP),
                                             options=descriptors.get(VALUE_OPTIONS),
                                         )
+                                        required_options.append(
+                                            descriptors.get(VALUE_OPTIONS)
+                                        )
                                     # add descriptors
                                     parameters[name] = descriptors
                         control["parameters"] = parameters
+                        # check if control is a switch with only "on" and "off" in options
+                        control["is_switch"] = bool(
+                            len(required_options) == 1
+                            and isinstance(opt := required_options[0], dict)
+                            and len(opt) == 2
+                            and "on" in opt
+                            and "off" in opt
+                        )
                         self.controls[cmd] = control
                     except (ValueError, TypeError):
                         self._logger.error(
@@ -235,6 +247,12 @@ class SolixMqttDevice:
             if isinstance(options, dict):
                 return options
         return {}
+
+    def cmd_is_switch(self, cmd: str) -> bool:
+        """Checks whether the command is a switch control."""
+        if isinstance(cmd, str):
+            return bool(self.controls.get(cmd, {}).get("is_switch"))
+        return False
 
     def validate_cmd_value(
         self, cmd: str, value: Any, parm: str | None = None

@@ -6,28 +6,28 @@ from typing import Final
 from .apitypes import DeviceHexDataTypes
 
 # common mapping keys to be used for status and command descriptions
-NAME: Final = "name"  # name of the data field, also used for message descriptions
-TYPE: Final = "type"  # type the data field relevant for de/encoding, must be a byte as defined in DeviceHexDataTypes
-TOPIC: Final = "topic"  # topic suffix of the command or message
-FACTOR: Final = "factor"  # Factor for decoding the data field value. Any command setting this state data field should use the same VALUE_DIVIDER typically
-SIGNED: Final = "signed"  # Boolean flag to indicate the value decoder to use given value decoding signing (required if different than default field type signing)
-BYTES: Final = "bytes"  # Key word to start nested data field break down description map for individual bytes or byte ranges
-LENGTH: Final = "length"  # Define the length of a field in a bytes field breakdown. Only need to be used if length not determined by field type or first byte value
-MASK: Final = "mask"  # Define a bit mask value to be used for decoding the data value. Required if a single byte may reflect multiple data fields/settings
-COMMAND_NAME: Final = "command_name"  # name of the command, must be defined in dataclass SolixMqttCommands
-COMMAND_LIST: Final = "command_list"  # specifies the nested commands to describe multiple commands per message type
-STATE_NAME: Final = "state_name"  # extracted value name that represents the current state of the control
-STATE_CONVERTER: Final = "state_converter"  # optional lambda function to convert the setting into expected state
-VALUE_MIN: Final = "value_min"  # min value of a range
-VALUE_MAX: Final = "value_max"  # max value of a range
-VALUE_STEP: Final = "value_step"  # step to be used within range, default is 1
-VALUE_OPTIONS: Final = (
+NAME: Final[str] = "name"  # name of the data field, also used for message descriptions
+TYPE: Final[str] = "type"  # type the data field relevant for de/encoding, must be a byte as defined in DeviceHexDataTypes
+TOPIC: Final[str] = "topic"  # topic suffix of the command or message
+FACTOR: Final[str] = "factor"  # Factor for decoding the data field value. Any command setting this state data field should use the same VALUE_DIVIDER typically
+SIGNED: Final[str] = "signed"  # Boolean flag to indicate the value decoder to use given value decoding signing (required if different than default field type signing)
+BYTES: Final[str] = "bytes"  # Key word to start nested data field break down description map for individual bytes or byte ranges
+LENGTH: Final[str] = "length"  # Define the length of a field in a bytes field breakdown. Only need to be used if length not determined by field type or first byte value
+MASK: Final[str] = "mask"  # Define a bit mask value to be used for decoding the data value. Required if a single byte may reflect multiple data fields/settings
+COMMAND_NAME: Final[str] = "command_name"  # name of the command, must be defined in dataclass SolixMqttCommands
+COMMAND_LIST: Final[str] = "command_list"  # specifies the nested commands to describe multiple commands per message type
+STATE_NAME: Final[str] = "state_name"  # extracted value name that represents the current state of the control
+STATE_CONVERTER: Final[str] = "state_converter"  # optional lambda function to convert the setting into expected state
+VALUE_MIN: Final[str] = "value_min"  # min value of a range
+VALUE_MAX: Final[str] = "value_max"  # max value of a range
+VALUE_STEP: Final[str] = "value_step"  # step to be used within range, default is 1
+VALUE_OPTIONS: Final[str] = (
     "value_options"  # Use list for value options, or dict for name:value mappings
 )
-VALUE_DEFAULT: Final = "value_default"  # Defines a default value for the field
-VALUE_FOLLOWS: Final = "value_follows"  # defines setting name the value depends on, the options need to define a map for the dependencies
-VALUE_STATE: Final = "value_state"  # Defines a state name that should be used if found
-VALUE_DIVIDER: Final = "value_divider"  # Defines a divider for the applied value, should be same as FACTOR extracting the state value data field
+VALUE_DEFAULT: Final[str] = "value_default"  # Defines a default value for the field
+VALUE_FOLLOWS: Final[str] = "value_follows"  # defines setting name the value depends on, the options need to define a map for the dependencies
+VALUE_STATE: Final[str] = "value_state"  # Defines a state name that should be used if found
+VALUE_DIVIDER: Final[str] = "value_divider"  # Defines a divider for the applied value, should be same as FACTOR extracting the state value data field
 
 
 @dataclass(frozen=True)

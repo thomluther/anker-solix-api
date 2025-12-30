@@ -951,7 +951,7 @@ class AnkerSolixMqttSession:
             )
         return messages
 
-    async def saveToFile(
+    async def savetoFile(
         self, filename: str | Path, data: dict | None = None, append: bool = True
     ) -> bool:
         """Save MQTT message to given file for testing."""

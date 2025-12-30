@@ -1168,8 +1168,8 @@ _A17C5_0405 = {
     "b0": {NAME: "pv_yield"},
     "b1": {NAME: "charged_energy"},
     "b2": {NAME: "discharged_energy"},
-    "b3": {NAME: "grid_import_energy"},
-    "b4": {NAME: "grid_export_energy"},
+    "b3": {NAME: "output_energy"},
+    "b4": {NAME: "0405_energy_b4"},
     "b5": {
         NAME: "soc_min"
     },  # TODO: Does this toggle with the setting? Could also be station wide SOC
@@ -1207,15 +1207,14 @@ _A17C5_0405 = {
     "be": {NAME: "max_load_legal"},
     "bf": {NAME: "timestamp_backup_start"},
     "c0": {NAME: "timestamp_backup_end"},
-    "c2": {NAME: "bat_charge_power?"},
-    "c3": {NAME: "photovoltaic_power?"},
+    "c2": {NAME: "photovoltaic_power?"},
     "c4": {NAME: "grid_power_signed"},
     "c5": {NAME: "home_demand"},
     "c6": {NAME: "pv_1_power"},
     "c7": {NAME: "pv_2_power"},
     "c8": {NAME: "pv_3_power"},
     "c9": {NAME: "pv_4_power"},
-    "cb": {NAME: "expansion_packs?"},
+    "cb": {NAME: "expansion_packs"},
     "d4": {
         NAME: "device_timeout_minutes",
         FACTOR: 30,
@@ -1241,27 +1240,29 @@ _A17C5_0408 = {
     "a8": {NAME: "charging_status?"},
     "aa": {NAME: "home_load_preset"},
     "ab": {NAME: "photovoltaic_power"},
-    "ac": {NAME: "pv_yield?"},
-    "ad": {NAME: "pv_1_energy?"},
-    "ae": {NAME: "pv_2_energy?"},
-    "af": {NAME: "pv_3_energy?"},
-    "b0": {NAME: "pv_4_energy?"},
-    "b1": {NAME: "home_demand?"},
+    "ac": {NAME: "pv_yield"},
+    # "ad": {NAME: "pv_1_energy?"},
+    # "ae": {NAME: "pv_2_energy?"},
+    # "af": {NAME: "pv_3_energy?"},
+    # "b0": {NAME: "pv_4_energy?"},
+    "b1": {NAME: "home_demand"},
     "b2": {NAME: "home_consumption"},
     "b6": {NAME: "battery_power_signed?"},
-    "b7": {NAME: "charged_energy?"},
-    "b8": {NAME: "discharged_energy?"},
+    "b7": {NAME: "charged_energy"},
+    "b8": {NAME: "discharged_energy"},
     "bd": {NAME: "grid_power_signed?"},
     "be": {NAME: "grid_import_energy"},
-    "bf": {NAME: "grid_export_energy?"},
-    "c7": {NAME: "pv_1_power?"},
-    "c8": {NAME: "pv_2_power?"},
-    "c9": {NAME: "pv_3_power?"},
-    "ca": {NAME: "pv_4_power?"},
-    "d3": {NAME: "ac_output_power?"},
+    "bf": {NAME: "grid_export_energy"},
+    "c7": {NAME: "pv_1_power"},
+    "c8": {NAME: "pv_2_power"},
+    "c9": {NAME: "pv_3_power"},
+    "ca": {NAME: "pv_4_power"},
+    "d3": {NAME: "ac_output_power"},
+    "d5": {NAME: "grid_to_home_power"},
     "d6": {NAME: "timestamp_1?"},
     "dc": {NAME: "max_load"},
     "dd": {NAME: "ac_input_limit"},
+    # "de": {NAME: "output_energy"},
     "e0": {NAME: "soc_min?"},
     "e1": {NAME: "soc_max?"},
     "e2": {NAME: "pv_power_3rd_party"},
@@ -1547,7 +1548,7 @@ _DOCK_0500 = {
 
 
 # Following is the consolidated mapping for all device types and messages
-SOLIXMQTTMAP: Final = {
+SOLIXMQTTMAP: Final[dict] = {
     # PPS C300 AC
     "A1722": {
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
@@ -1772,20 +1773,18 @@ SOLIXMQTTMAP: Final = {
             # ab = min_soc: 1, 5, 10, 15, 20 %
         },
         # Interval: ~3-5 seconds, but only with realtime trigger
-        "0405": _A1761_0405,
+        "0421": _A1763_0421,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": _PPS_VERSIONS_0830,
         # Interval: ~300 seconds
         "0889": {
             "a4": {NAME: "0889_unknown_1?"},
             "a5": {NAME: "0889_unknown_2?"},
             "a6": {NAME: "0889_unknown_3?"},
-            "fd": {NAME: "0880_timestamp?"},
+            "fd": {NAME: "0889_timestamp?"},
         },
-        # Interval: ~3-5 seconds, but only with realtime trigger
-        "0421": _A1763_0421,
         # Interval: Irregular, maybe on changes or as response to App status request? Same content as 0421
         "0900": _A1763_0421,
-        # Interval: Irregular, triggered on app actions, no fixed interval
-        "0830": _PPS_VERSIONS_0830,
     },
     # PPS F2000
     "A1780": {

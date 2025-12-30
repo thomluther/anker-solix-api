@@ -1170,13 +1170,18 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         options: set = set()
         device = {}
         site = {}
-        # first get valid site and solarbank from cache depending on provided parameters
+        # first get valid site and combiner box or solarbank from cache depending on provided parameters
         if (
             isinstance(deviceSn, str)
             and (device := self.devices.get(deviceSn) or {})
             and (ignoreAdmin or device.get("is_admin"))
-            and device.get("type") == SolixDeviceType.SOLARBANK.value
-            and device.get("generation") >= 2
+            and (
+                (
+                    device.get("type") == SolixDeviceType.SOLARBANK.value
+                    and device.get("generation") >= 2
+                )
+                or (device.get("type") == SolixDeviceType.COMBINER_BOX.value)
+            )
         ):
             site = self.sites.get(device.get("site_id") or "") or {}
         elif (
@@ -1196,16 +1201,32 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 or [{}]
             )[0]
         if site and device:
+            # use physical station device for option evaluation
+            if dev := self.devices.get(device.get("station_sn", "")):
+                device = dev
             # manual mode is always possible
             options.add(SolarbankUsageMode.manual.name)
+            # For combiner box, verify the consolidated capabilities
+            ac_devs = []
+            smart_devs = []
+            if device.get("type") == SolixDeviceType.COMBINER_BOX.value:
+                sb_devs = [
+                    dev
+                    for dev in self.devices.values()
+                    if dev.get("site_id") == device.get("site_id")
+                    and dev.get("type") == SolixDeviceType.SOLARBANK.value
+                    and dev.get("generation") >= 2
+                ]
+                ac_devs = [dev for dev in sb_devs if dev.get("grid_to_battery_power")]
+                smart_devs = [dev for dev in sb_devs if dev.get("generation") >= 3]
             # Add smart meter usage mode if smart meter installed
             if smartmeter := (site.get("grid_info") or {}).get("grid_list"):
                 options.add(SolarbankUsageMode.smartmeter.name)
-            # Add smart plugs usage mode if no smart plugs installed
+            # Add smart plugs usage mode if smart plugs installed
             if (site.get("smart_plug_info") or {}).get("smartplug_list"):
                 options.add(SolarbankUsageMode.smartplugs.name)
             # Add options introduced with SB2 AC for AC charging
-            if "grid_to_battery_power" in device:
+            if "grid_to_battery_power" in device or ac_devs:
                 options.add(SolarbankUsageMode.backup.name)
                 # Add use time if plan is defined
                 if smartmeter and (
@@ -1214,7 +1235,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 ):
                     options.add(SolarbankUsageMode.use_time.name)
             # Add options introduced with SB3
-            if (device.get("generation") or 0) >= 3 and smartmeter:
+            if ((device.get("generation") or 0) >= 3 or smart_devs) and smartmeter:
                 options.add(SolarbankUsageMode.smart.name)
                 # Add time slot if plan is in features
                 if (site.get("feature_switch") or {}).get("enable_timeslot"):
@@ -1734,9 +1755,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 isAdmin=True,
             )
             self._site_devices.add(station_sn)
+        # copy initial site schedule from solarbank device
+        schedule = self.devices.get(station_sn or "", {}).get("schedule")
         # update device details for solarbanks in device dict
         for device in data.get("device_info") or []:
             if sn := device.get("device_sn"):
+                if station_sn and not schedule:
+                    schedule = self.devices.get(sn, {}).get("schedule")
                 self._update_dev(
                     {
                         "device_sn": sn,
@@ -1748,6 +1773,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     }
                     | ({} if station_sn is None else {"station_sn": station_sn}),
                 )
+        if schedule:
+            self._update_dev({"device_sn": station_sn, "schedule": schedule})
         return data
 
     async def set_power_limit(

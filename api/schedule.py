@@ -278,7 +278,7 @@ async def get_device_parm(
         SolixParmType.SOLARBANK_2_SCHEDULE.value,
     ]:
         if paramType == SolixParmType.SOLARBANK_SCHEDULE.value:
-            # add only Solarbaank 1 devices found in schedule paramData, they are not managed by a station
+            # use only Solarbaank 1 devices found in schedule paramData, they are not managed by a station
             dev_serials = {
                 sn
                 for sn, sb in self.devices.items()
@@ -286,13 +286,24 @@ async def get_device_parm(
                 and sb.get("type") == SolixDeviceType.SOLARBANK.value
                 and (sb.get("generation") or 0) <= 1
             }
+        station_sns = set()
         for sn in dev_serials:
+            if station_sn := self.devices.get(sn, {}).get("station_sn"):
+                station_sns.add(station_sn)
             self._update_dev(
                 {
                     "device_sn": sn,
                     "schedule": paramData,
                     # "current_home_load": data.get("current_home_load") or "",   # This field is not provided with get_device_parm
                     # "parallel_home_load": data.get("parallel_home_load") or "",   # This field is not provided with get_device_parm
+                }
+            )
+        # copy schedule to station device as well, no matter what type it is
+        for sn in station_sns:
+            self._update_dev(
+                {
+                    "device_sn": sn,
+                    "schedule": paramData,
                 }
             )
     elif paramType in [SolixParmType.SOLARBANK_STATION.value]:
@@ -308,7 +319,11 @@ async def get_device_parm(
             )
             # mark devices as station managed and add missing device settings
             dev_serials.discard(station_sn)
+            # copy schedule to physical station device if not existing yet
+            schedule = self.devices.get(station_sn, {}).get("schedule")
             for sn in dev_serials:
+                if station_sn and not schedule:
+                    schedule = self.devices.get(sn, {}).get("schedule")
                 self._update_dev(
                     {
                         "device_sn": sn,
@@ -321,6 +336,7 @@ async def get_device_parm(
             if station_sn in self.devices:
                 station = {"device_sn": station_sn}
                 station["power_cutoff_data"] = paramData.get("soc_list") or []
+                station["schedule"] = schedule
                 # extract active setting for station
                 for setting in station["power_cutoff_data"]:
                     if (

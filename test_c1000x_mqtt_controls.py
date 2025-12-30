@@ -2,19 +2,22 @@
 """Test script for C1000X MQTT-based controls."""
 
 import asyncio
-import contextlib
 import logging
+from pathlib import Path  # noqa: F401
 import traceback
-from typing import Any
 
 from aiohttp import ClientSession
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from api.mqtt import AnkerSolixMqttSession  # pylint: disable=no-name-in-module
+from api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
 from api.mqtt_pps import SolixMqttDevicePps  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 CONSOLE: logging.Logger = common.CONSOLE
+FOLDER = None
+# Specify FOLDER with system export including MQTT messages for testing from files
+#FOLDER = Path(__file__).parent / "exports" / "Mqtt_C1000_Gen2"
+#FOLDER = Path(__file__).parent / "exports" / "Mqtt_C1000_Expansion"
 
 
 async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
@@ -24,117 +27,67 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
         myapi = AnkerSolixApi(
             common.user(), common.password(), common.country(), websession, _LOGGER
         )
+        if use_file := bool(FOLDER):
+            myapi.testDir(FOLDER)
+        # File poller task
+        mqtt_task: asyncio.Task | None = None
 
         # Update device information to get C1000X device
-        await myapi.update_sites()
-        await myapi.update_device_details()
+        await myapi.update_sites(fromFile=use_file)
+        await myapi.update_device_details(fromFile=use_file)
 
         # Find C1000X device
         device_sn = None
         for sn, device in myapi.devices.items():
-            if device.get("device_pn") == "A1761":
+            if device.get("device_pn") in ["A1761", "A1763", "A1765"]:
                 device_sn = sn
                 CONSOLE.info(f"Found C1000X device: {sn}")
                 break
         if not device_sn:
             CONSOLE.info("No C1000X device found")
             return
-        mqttdevice = SolixMqttDevicePps(api_instance=myapi, device_sn=device_sn)
 
-        CONSOLE.info("\n=== Testing C1000X MQTT Controls ===")
+        # create MQTT device
+        mqttdevice: SolixMqttDevicePps = SolixMqttDeviceFactory(
+            api_instance=myapi, device_sn=device_sn
+        ).create_device()
 
-        # Test 1: Test mode commands (no actual MQTT)
-        CONSOLE.info("\n--- Testing Control Methods (Test Mode) ---")
-
-        # Test AC output control
-        result = await mqttdevice.set_ac_output(enabled=True, toFile=True)
-        CONSOLE.info(f"AC output enable (test): {result}")
-
-        # Test display mode
-        result = await mqttdevice.set_display(mode="high", toFile=True)
-        CONSOLE.info(f"Display mode high (test): {result}")
-
-        # Test light mode
-        result = await mqttdevice.set_light(mode="blinking", toFile=True)
-        CONSOLE.info(f"Light mode blinking (test): {result}")
-
-        # Test status retrieval
-        status = mqttdevice.get_status(fromFile=True)
-        CONSOLE.info(f"Status (test): {status}")
-
-        # Test 2: MQTT Connection and Sensor Data
+        # Test 1: MQTT Connection and Sensor Data
         CONSOLE.info("\n--- Testing MQTT Connection and Sensor Data ---")
         CONSOLE.info("Note: These require device to be online and MQTT connected")
-
         try:
-            # Start MQTT session using the same approach as mqtt_monitor.py
+            # Start MQTT session
             CONSOLE.info("Starting MQTT session...")
-            mqtt_session = await myapi.startMqttSession()
-
+            mqtt_session = await myapi.startMqttSession(fromFile=use_file)
             if mqtt_session:
                 CONSOLE.info("✓ MQTT session started successfully")
-
-                # Set up topics and trigger devices like mqtt_monitor.py does
-                topics = set()
-
-                # Get topic prefix for the device (same as mqtt_monitor.py)
-                if prefix := mqtt_session.get_topic_prefix(
-                    deviceDict=mqttdevice.device
-                ):
-                    topics.add(f"{prefix}#")  # Subscribe to all subtopics with wildcard
-                    CONSOLE.info(f"Subscribing to topic pattern: {prefix}#")
-
-                # Set up real-time trigger devices
-                rt_devices = {device_sn}  # Enable real-time updates for our device
-
-                # Define message callback to capture data
-                received_data = {}
-
-                def capture_message(
-                    session: AnkerSolixMqttSession,
-                    topic: str,
-                    message: Any,
-                    data: bytes,
-                    model: str,
-                    device_sn_msg: str,
-                    *args,
-                    **kwargs,
-                ) -> None:
-                    """Capture MQTT messages for analysis."""
-                    received_data[device_sn_msg] = True
-                    CONSOLE.info(
-                        f"✓ Received MQTT data from {device_sn_msg} on topic {topic}"
-                    )
-
-                # Start the message poller (same as mqtt_monitor.py)
-                CONSOLE.info("Starting MQTT message poller with real-time triggers...")
-                CONSOLE.info(
-                    "This will automatically subscribe to topics and trigger device updates"
-                )
-
-                # Create poller task like mqtt_monitor.py does
-                poller_task = asyncio.create_task(
-                    mqtt_session.message_poller(
-                        topics=topics,
-                        trigger_devices=rt_devices,
-                        msg_callback=capture_message,
-                        timeout=120,
-                    )
-                )
-
                 # FORCE immediate data collection via update trigger if connected
                 if mqtt_session.is_connected():
+                    CONSOLE.info("✓ MQTT session connected, subscribing device...")
+                    topic = f"{mqtt_session.get_topic_prefix(deviceDict=mqttdevice.device)}#"
+                    resp = mqtt_session.subscribe(topic)
+                    if resp and resp.is_failure:
+                        CONSOLE.info(f"✗ Failed subscription for topic: {topic}")
                     CONSOLE.info("Forcing immediate device data update...")
                     if await mqttdevice.realtime_trigger(timeout=60):
                         CONSOLE.info("✓ Update trigger published successfully")
                     else:
                         CONSOLE.info("✗ Failed to send update trigger")
+                elif use_file:
+                    # Create task for polling mqtt messages from files for testing
+                    mqtt_task = asyncio.get_running_loop().create_task(
+                        mqtt_session.file_poller(
+                            folderdict={"folder": FOLDER},
+                            speed=1,
+                        )
+                    )
+                    CONSOLE.info("✓ MQTT file data poller task was started.")
                 else:
                     CONSOLE.info("✗ MQTT not connected - cannot force device update")
-
                 # Wait for data to be collected (shorter timeout since we forced update)
-                CONSOLE.info("Waiting for MQTT data collection (up to 30 seconds)...")
-                for i in range(30):
+                max_wait = 30
+                CONSOLE.info(f"Waiting for MQTT data collection (up to {max_wait} seconds)...")
+                for i in range(max_wait):
                     await asyncio.sleep(1)
 
                     # Check if we have MQTT data
@@ -144,7 +97,7 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
 
                     # Show progress every 5 seconds
                     if i % 5 == 4:
-                        CONSOLE.info(f"  Still waiting for data... ({i + 1}/30)")
+                        CONSOLE.info(f"  Still waiting for data... ({i + 1}/{max_wait})")
                         if mqtt_session.mqtt_stats:
                             msg_count = mqtt_session.mqtt_stats.dev_messages.get(
                                 "count", 0
@@ -176,7 +129,7 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                     power_fields = {
                         "grid_to_battery_power": "AC charging power to battery (W)",
                         "ac_output_power": "Individual AC outlet power (W)",
-                        "ac_output_power_total": "Total AC output power (W)",
+                        "output_power_total": "Total combined output power (W)",
                         "usbc_1_power": "USB-C port 1 output power (W)",
                         "usbc_2_power": "USB-C port 2 output power (W)",
                         "usba_1_power": "USB-A port 1 output power (W)",
@@ -258,7 +211,7 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                     CONSOLE.info("  - Device isn't sending MQTT messages")
 
                 # Test 3: Control Commands with Verification (only if we have MQTT data)
-                if mqttdevice.mqttdata:
+                if mqttdevice.get_status(fromFile=use_file):
                     CONSOLE.info(
                         "\n--- Testing MQTT Control Commands with Verification ---"
                     )
@@ -266,14 +219,15 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                     def get_current_values():
                         """Get current device values from MQTT data."""
                         return {
-                            "temp_unit": mqttdevice.mqttdata.get(
+                            "temp_unit": mqttdevice.get_status(fromFile=use_file).get(
                                 "temp_unit_fahrenheit", 0
                             ),
-                            "display": mqttdevice.mqttdata.get("switch_display", 0),
-                            "ac_output": mqttdevice.mqttdata.get(
-                                "switch_ac_output_power", 0
+                            "display": mqttdevice.get_status(fromFile=use_file).get(
+                                "display_switch", 0
                             ),
-                            "light_mode": mqttdevice.mqttdata.get("light_mode", 0),
+                            "light_mode": mqttdevice.get_status(fromFile=use_file).get(
+                                "light_mode", 0
+                            ),
                         }
 
                     # Get initial values
@@ -291,7 +245,8 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                         f"Setting to: {'Fahrenheit' if new_temp_unit else 'Celsius'}"
                     )
                     result = await mqttdevice.set_temp_unit(
-                        unit="fahrenheit" if new_temp_unit else "celsius"
+                        unit="fahrenheit" if new_temp_unit else "celsius",
+                        toFile=use_file,
                     )
                     CONSOLE.info(f"Command result: {'Success' if result else 'Failed'}")
                     if result:
@@ -317,7 +272,9 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                         f"Current display: {'On' if current_display else 'Off'}"
                     )
                     CONSOLE.info(f"Setting to: {'On' if new_display else 'Off'}")
-                    result = await mqttdevice.set_display(enabled=new_display)
+                    result = await mqttdevice.set_display(
+                        enabled=new_display, toFile=use_file
+                    )
                     CONSOLE.info(f"Command result: {'Success' if result else 'Failed'}")
                     if result:
                         # Wait for next update message in RT mode
@@ -344,7 +301,7 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                         f"Current light mode: {light_names[current_light]} ({current_light})"
                     )
                     CONSOLE.info(f"Setting to: {light_names[new_light]} ({new_light})")
-                    result = await mqttdevice.set_light(mode=new_light)
+                    result = await mqttdevice.set_light(mode=new_light, toFile=use_file)
                     CONSOLE.info(f"Command result: {'Success' if result else 'Failed'}")
                     if result:
                         # Wait for next update message in RT mode
@@ -361,13 +318,14 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                             )
 
                     # Test 4: Verify vs asking user
-                    CONSOLE.info("\n4. Manual verification...")
-                    CONSOLE.info("Please check your C1000X device physically:")
-                    CONSOLE.info("- Did the display state change?")
-                    CONSOLE.info("- Did the LED light mode change?")
-                    CONSOLE.info(
-                        "- Is the temperature unit setting different in the display?"
-                    )
+                    if not use_file:
+                        CONSOLE.info("\n4. Manual verification...")
+                        CONSOLE.info("Please check your C1000X device physically:")
+                        CONSOLE.info("- Did the display state change?")
+                        CONSOLE.info("- Did the LED light mode change?")
+                        CONSOLE.info(
+                            "- Is the temperature unit setting different in the display?"
+                        )
 
                     # Final status check
                     CONSOLE.info("\nFinal device status:")
@@ -375,20 +333,9 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                     for key, value in final_values.items():
                         CONSOLE.info(f"  {key}: {value}")
 
-                    # Now cancel the poller task after testing commands
-                    CONSOLE.info("\nStopping MQTT message poller...")
-                    poller_task.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await poller_task
-
                 else:
                     CONSOLE.info("\n--- Skipping Control Commands ---")
                     CONSOLE.info("No MQTT data received, device may not be connected")
-
-                    # Cancel poller task since we're not using it
-                    poller_task.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await poller_task
 
             else:
                 CONSOLE.info("✗ Failed to start MQTT session")
@@ -402,13 +349,23 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                     "  4. Try updating device details first: await myapi.update_sites()"
                 )
 
+            CONSOLE.info("\n=== Command Information ===")
+            CONSOLE.info("C1000X uses MQTT-only controls with these commands:")
+            CONSOLE.info(f"{list(mqttdevice.controls.keys())}")
+
         except Exception as e:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             CONSOLE.info(f"MQTT error: {e}")
             CONSOLE.info(f"Full traceback: {traceback.format_exc()}")
 
-        CONSOLE.info("\n=== Command Information ===")
-        CONSOLE.info("C1000X uses MQTT-only controls with these commands:")
-        CONSOLE.info(f"{mqttdevice.controls.keys()}")
+        # Cleanup MQTT session
+        if mqtt_task:
+            mqtt_task.cancel()
+            # Wait for the task to finish cancellation
+            try:
+                await mqtt_task
+            except asyncio.CancelledError:
+                CONSOLE.info("MQTT file data poller task was cancelled.")
+        myapi.stopMqttSession()
 
 
 if __name__ == "__main__":

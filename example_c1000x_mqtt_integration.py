@@ -6,6 +6,7 @@ import logging
 
 from aiohttp import ClientSession
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
+from api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
 from api.mqtt_pps import SolixMqttDevicePps  # pylint: disable=no-name-in-module
 import common
 
@@ -19,9 +20,9 @@ class C1000XController:
     def __init__(self, api_instance: AnkerSolixApi, device_sn: str) -> None:
         """Initialize."""
         self.api = api_instance
-        self.mqttdevice = SolixMqttDevicePps(
+        self.mqttdevice: SolixMqttDevicePps = SolixMqttDeviceFactory(
             api_instance=api_instance, device_sn=device_sn
-        )
+        ).create_device()
         self.device_sn = device_sn
         self.last_battery_soc: int | None = None
 

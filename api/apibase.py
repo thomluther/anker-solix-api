@@ -587,12 +587,6 @@ class AnkerSolixBaseApi:
                                 "pv_to_grid_power",
                                 "grid_to_home_power",
                                 "wifi_signal",
-                                "usbc_1_power",
-                                "usbc_2_power",
-                                "usbc_3_power",
-                                "usbc_4_power",
-                                "usba_1_power",
-                                "usba_2_power",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -621,6 +615,24 @@ class AnkerSolixBaseApi:
                                 "pv_3_voltage",
                                 "pv_4_voltage",
                                 "battery_voltage",
+                                "usbc_1_power",
+                                "usbc_2_power",
+                                "usbc_3_power",
+                                "usbc_4_power",
+                                "usba_1_power",
+                                "usba_2_power",
+                                "usbc_1_voltage",
+                                "usbc_2_voltage",
+                                "usbc_3_voltage",
+                                "usbc_4_voltage",
+                                "usba_1_voltage",
+                                "usba_2_voltage",
+                                "usbc_1_current",
+                                "usbc_2_current",
+                                "usbc_3_current",
+                                "usbc_4_current",
+                                "usba_1_current",
+                                "usba_2_current",
                             ]
                             and str(value)
                             .replace("-", "", 1)

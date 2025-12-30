@@ -764,6 +764,21 @@ class AnkerSolixApiMonitor:
                         )
                     else:
                         break
+                CONSOLE.info("." * 80)
+                if aiems := (dev.get("schedule") or {}).get("ai_ems") or {}:
+                    status = aiems.get("status")
+                    CONSOLE.info(
+                        f"{'AI Status':<{col1}}: {str(get_enum_name(SolarbankAiemsStatus, status, '-----')).capitalize() + ' (' + str(status) + ')':<{col2}} "
+                        f"{'AI Enabled':<{col3}}: {'YES' if aiems.get('enable') else 'NO'}"
+                    )
+                site_preset = dev.get("set_system_output_power") or "---"
+                CONSOLE.info(
+                    f"{'Schedule  (Now)':<{col1}}: {datetime.now().astimezone().strftime('%H:%M:%S UTC %z'):<{col2}} "
+                    f"{'System Preset':<{col3}}: {str(site_preset).replace('W', ''):>4} W"
+                )
+                if admin:
+                    # print schedule
+                    common.print_schedule(dev.get("schedule") or {})
 
             elif devtype == SolixDeviceType.SOLARBANK.value:
                 unit = dev.get("power_unit", "W")
@@ -776,12 +791,6 @@ class AnkerSolixApiMonitor:
                     f"{'Charge Status':<{col1}}: {str(dev.get('charging_status_desc', '-------')).capitalize():<{col2}} "
                     f"{'Status Code':<{col3}}: {m2 and c}{m2 or dev.get('charging_status', '-')!s}{co}"
                 )
-                if aiems := (dev.get("schedule") or {}).get("ai_ems") or {}:
-                    status = aiems.get("status")
-                    CONSOLE.info(
-                        f"{'AI Status':<{col1}}: {str(get_enum_name(SolarbankAiemsStatus, status, '-----')).capitalize() + ' (' + str(status) + ')':<{col2}} "
-                        f"{'AI Enabled':<{col3}}: {'YES' if aiems.get('enable') else 'NO'}"
-                    )
                 m1 = c and mqtt.get("battery_soc", "")
                 m2 = c and (
                     mqtt.get("output_cutoff_data", "") or mqtt.get("power_cutoff", "")
@@ -931,14 +940,14 @@ class AnkerSolixApiMonitor:
                 )
                 if m1 := cm and mqtt.get("device_efficiency", ""):
                     m1 = f"{float(m1):6.2f}"
-                    if m2 := cm and mqtt.get("battery_efficiency", ""):
-                        m2 = f"{float(m2):6.2f}"
+                if m2 := cm and mqtt.get("battery_efficiency", ""):
+                    m2 = f"{float(m2):6.2f}"
+                if m1 or m2:
                     CONSOLE.info(
                         f"{'System Eff.':<{col1}}: {cc}{m1 or '  --.--':>7} {'%':<{col2 - 8}}{co} "
                         f"{'Battery Eff.':<{col3}}: {cc}{m2 or '  --.--':>7} %{co}"
                     )
                 preset = dev.get("set_output_power") or "---"
-                site_preset = dev.get("set_system_output_power") or "---"
                 m1 = c and mqtt.get("battery_power_signed", "")
                 m2 = c and mqtt.get("home_load_preset", "")
                 CONSOLE.info(
@@ -988,14 +997,24 @@ class AnkerSolixApiMonitor:
                             f"{'Device Timeout':<{col1}}: {m1 and (c or cm)}{m1 + ' Minutes':<{col2}}{co} "
                             f"{'Max load legal':<{col3}}: {m2 and (c or cm)}{m2 if m2 else '----':>4} W{co}"
                         )
-                # update schedule with device details refresh and print it
-                CONSOLE.info(
-                    f"{'Schedule  (Now)':<{col1}}: {datetime.now().astimezone().strftime('%H:%M:%S UTC %z'):<{col2}} "
-                    f"{'System Preset':<{col3}}: {str(site_preset).replace('W', ''):>4} W"
-                )
-                if admin:
-                    # print schedule
-                    common.print_schedule(dev.get("schedule") or {})
+                # print schedule if not station managed
+                if not dev.get("station_sn"):
+                    CONSOLE.info("." * 80)
+                    if (
+                        aiems := (dev.get("schedule") or {}).get("ai_ems") or {}
+                    ) and not dev.get("station_sn"):
+                        status = aiems.get("status")
+                        CONSOLE.info(
+                            f"{'AI Status':<{col1}}: {str(get_enum_name(SolarbankAiemsStatus, status, '-----')).capitalize() + ' (' + str(status) + ')':<{col2}} "
+                            f"{'AI Enabled':<{col3}}: {'YES' if aiems.get('enable') else 'NO'}"
+                        )
+                    site_preset = dev.get("set_system_output_power") or "---"
+                    CONSOLE.info(
+                        f"{'Schedule  (Now)':<{col1}}: {datetime.now().astimezone().strftime('%H:%M:%S UTC %z'):<{col2}} "
+                        f"{'System Preset':<{col3}}: {str(site_preset).replace('W', ''):>4} W"
+                    )
+                    if admin:
+                        common.print_schedule(dev.get("schedule") or {})
 
             elif devtype == SolixDeviceType.INVERTER.value:
                 CONSOLE.info(
@@ -1299,6 +1318,15 @@ class AnkerSolixApiMonitor:
                         f"{'USB-C 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3:<{col2 - 6}}{co} "
                         f"{'USB-C 2 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{m4}{co}"
                     )
+                m1 = cm and mqtt.get("usbc_1_voltage", "")
+                m3 = cm and mqtt.get("usbc_1_current", "")
+                if m1 or m3:
+                    m2 = cm and mqtt.get("usbc_2_voltage", "")
+                    m4 = cm and mqtt.get("usbc_2_current", "")
+                    CONSOLE.info(
+                        f"{'USB-C 1 V / A':<{col1}}: {m1 and (c or cm)}{m1 or '-.---':>5} V / {m3 and (c or cm)}{m3 or '-.---':>5} {'A':<{col2 - 15}}{co} "
+                        f"{'USB-C 2 V / A':<{col3}}: {m2 and (c or cm)}{m2 or '-.---':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A{co}"
+                    )
                 if m1 := cm and mqtt.get("usbc_3_power", ""):
                     m2 = cm and mqtt.get("usbc_4_power", "")
                     if m3 := cm and str(mqtt.get("usbc_3_status", "")):
@@ -1309,6 +1337,15 @@ class AnkerSolixApiMonitor:
                         f"{'USB-C 3 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3:<{col2 - 6}}{co} "
                         f"{'USB-C 4 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{m4}{co}"
                     )
+                m1 = cm and mqtt.get("usbc_3_voltage", "")
+                m3 = cm and mqtt.get("usbc_3_current", "")
+                if m1 or m3:
+                    m2 = cm and mqtt.get("usbc_4_voltage", "")
+                    m4 = cm and mqtt.get("usbc_4_current", "")
+                    CONSOLE.info(
+                        f"{'USB-C 3 V / A':<{col1}}: {m1 and (c or cm)}{m1 or '-.---':>5} V / {m3 and (c or cm)}{m3 or '-.---':>5} {'A':<{col2 - 15}}{co} "
+                        f"{'USB-C 4 V / A':<{col3}}: {m2 and (c or cm)}{m2 or '-.---':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A{co}"
+                    )
                 if m1 := cm and mqtt.get("usba_1_power", ""):
                     m2 = cm and mqtt.get("usba_2_power", "")
                     if m3 := cm and str(mqtt.get("usba_1_status", "")):
@@ -1318,6 +1355,15 @@ class AnkerSolixApiMonitor:
                     CONSOLE.info(
                         f"{'USB-A 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3:<{col2 - 6}}{co} "
                         f"{'USB-A 2 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{m4}{co}"
+                    )
+                m1 = cm and mqtt.get("usba_1_voltage", "")
+                m3 = cm and mqtt.get("usba_1_current", "")
+                if m1 or m3:
+                    m2 = cm and mqtt.get("usba_2_voltage", "")
+                    m4 = cm and mqtt.get("usba_2_current", "")
+                    CONSOLE.info(
+                        f"{'USB-A 1 V / A':<{col1}}: {m1 and (c or cm)}{m1 or '-.---':>5} V / {m3 and (c or cm)}{m3 or '-.---':>5} {'A':<{col2 - 15}}{co} "
+                        f"{'USB-A 2 V / A':<{col3}}: {m2 and (c or cm)}{m2 or '-.---':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A{co}"
                     )
                 if m1 := cm and mqtt.get("dc_12v_1_power", ""):
                     m2 = cm and mqtt.get("dc_12v_2_power", "")
@@ -2072,9 +2118,9 @@ class AnkerSolixApiMonitor:
                                             else len(exampleslist)
                                         )
                                     if selection:
-                                        folderselection = selection
+                                        folderselection = int(selection)
                                         self.api.testDir(
-                                            exampleslist[int(selection) - 1]
+                                            exampleslist[folderselection - 1]
                                         )
                                         self.api.clearCaches()
                                         # cancel file poller task

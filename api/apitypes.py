@@ -3,16 +3,16 @@
 from dataclasses import InitVar, asdict, dataclass
 from datetime import datetime
 from enum import Enum, IntEnum, StrEnum
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Final
 
 # API servers per region. Country assignment not clear, defaulting to EU server
-API_SERVERS = {
+API_SERVERS: Final[dict] = {
     "eu": "https://ankerpower-api-eu.anker.com",
     "com": "https://ankerpower-api.anker.com",
 }
-API_LOGIN = "passport/login"
-API_KEY_EXCHANGE = "openapi/oauth/key/exchange"
-API_HEADERS = {
+API_LOGIN: Final[str] = "passport/login"
+API_KEY_EXCHANGE: Final[str] = "openapi/oauth/key/exchange"
+API_HEADERS: Final[dict] = {
     "content-type": "application/json",
     "model-type": "DESKTOP",
     # "model-type": "PHONE",
@@ -20,7 +20,7 @@ API_HEADERS = {
     "app-name": "anker_power",
     "os-type": "android",
 }
-API_COUNTRIES = {
+API_COUNTRIES: Final[dict] = {
     "com": [
         "DZ",
         "LB",
@@ -99,7 +99,7 @@ API_COUNTRIES = {
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
 """Following are the Anker Power/Solix Cloud API power_service endpoints known so far. Some are common, others are mainly for balcony power systems"""
-API_ENDPOINTS = {
+API_ENDPOINTS: Final[dict] = {
     # Power endpoints */v1/site/*
     "homepage": "power_service/v1/site/get_site_homepage",  # Scene info for configured site(s), content as presented on App Home Page (mostly empty for shared accounts)
     "site_list": "power_service/v1/site/get_site_list",  # List of available site ids for the user, will also show sites shared withe the account
@@ -194,7 +194,7 @@ API_ENDPOINTS = {
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
-API_CHARGING_ENDPOINTS = {
+API_CHARGING_ENDPOINTS: Final[dict] = {
     "get_error_info": "charging_energy_service/get_error_infos",  # No input param needed, show errors for account?
     "get_system_running_info": "charging_energy_service/get_system_running_info",  # Cumulative Home/System Energy Savings since Home creation date
     "energy_statistics": "charging_energy_service/energy_statistics",  # Energy stats for PPS and Home Panel, # source type [solar hes grid home pps diesel]
@@ -210,7 +210,7 @@ API_CHARGING_ENDPOINTS = {
 }
 
 """Following are the Anker Power/Solix Cloud API charging_hes_svc endpoints known so far. They are used for Home Energy Systems like X1."""
-API_HES_SVC_ENDPOINTS = {
+API_HES_SVC_ENDPOINTS: Final[dict] = {
     "get_product_info": "charging_hes_svc/get_device_product_info",  # List of Anker HES devices, works with shared account
     "get_heat_pump_plan": "charging_hes_svc/get_heat_pump_plan_json",  # heat pump plan, works with shared account
     "get_electric_plan_list": "charging_hes_svc/get_electric_utility_and_electric_plan_list",  # Energy plan if available for country & state combination, works with shared account
@@ -474,7 +474,7 @@ the cached JSON file. Other instances should recognize an update of the cached J
 """
 
 # Following are the JSON filename prefixes for exported endpoint names as defined previously
-API_FILEPREFIXES = {
+API_FILEPREFIXES: Final[dict] = {
     # mqtt message prefixes
     "mqtt_message": "mqtt_msg",
     # power_service endpoint file prefixes
