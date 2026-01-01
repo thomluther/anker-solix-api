@@ -33,6 +33,7 @@ from .mqttcmdmap import (
     CMD_SB_POWER_CUTOFF,
     CMD_SB_PV_LIMIT,
     CMD_SB_STATUS_CHECK,
+    CMD_SB_USAGE_MODE,
     CMD_SOC_LIMITS_V2,
     CMD_STATUS_REQUEST,
     CMD_TEMP_UNIT,
@@ -1169,7 +1170,7 @@ _A17C5_0405 = {
     "b1": {NAME: "charged_energy"},
     "b2": {NAME: "discharged_energy"},
     "b3": {NAME: "output_energy"},
-    "b4": {NAME: "0405_energy_b4"},
+    "b4": {NAME: "consumed_energy"},
     "b5": {
         NAME: "soc_min"
     },  # TODO: Does this toggle with the setting? Could also be station wide SOC
@@ -2081,6 +2082,7 @@ SOLIXMQTTMAP: Final[dict] = {
     "A17C5": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": CMD_SB_USAGE_MODE, # NOTE: Cmd not supported directly, but description used for msg decoding
         "0067": CMD_SB_MIN_SOC,  # select SOC reserve
         "0068": {
             # solarbank light command group

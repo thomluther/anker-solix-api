@@ -741,7 +741,7 @@ class DeviceHexData:
                     factor = fld.get(FACTOR) or None
                     divider = fld.get(VALUE_DIVIDER) or None
                     signed = fld.get(SIGNED)
-                    if isinstance(name, str) and "timestamp" in str(name):
+                    if isinstance(name, str) and "timestamp" in str(name) and f.f_type in [DeviceHexDataTypes.str.value, DeviceHexDataTypes.var.value]:
                         name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
                     s += f"\n{f.decode().rstrip()}"
                     if name:

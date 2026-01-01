@@ -824,8 +824,20 @@ class AnkerSolixApiMonitor:
                     m1 = c and str(mqtt.get("expansion_packs", ""))
                     CONSOLE.info(
                         f"{'Exp. Batteries':<{col1}}: {m1 and c}{m1 or dev.get('sub_package_num', '-'):>4} {'Pcs':<{col2 - 5}}{co} "
-                        f"{'AC Socket':<{col3}}: {dev.get('ac_power', '---'):>4} {unit}"
+                        f"{'AC Socket Pwr':<{col3}}: {dev.get('ac_power', '---'):>4} {unit}"
                     )
+                    m1 = cm and mqtt.get("light_off_switch", "")
+                    m2 = cm and mqtt.get("ac_socket_switch", "")
+                    m3 = cm and str(mqtt.get("light_mode", ""))
+                    if str(m1) or str(m2) or m3:
+                        mode = str(
+                            get_enum_name(SolarbankLightMode, m3, "unknown")
+                        ).capitalize()
+                        CONSOLE.info(
+                            f"{'Light':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, not m1, str(not m1) or '---').upper():>3} "
+                            f"{'(Mode: ' + mode + ')':<{col2 - 4}}{co} "
+                            f"{'AC Socket Sw.':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
+                        )
                     m1 = cm and mqtt.get("device_sn", "")
                     m2 = cm and mqtt.get("main_battery_soc", "")
                     if m1 or m2:
@@ -913,11 +925,13 @@ class AnkerSolixApiMonitor:
                             f"{'Solar Ch_3':<{col1}}: {m1 and c}{m1 or dev.get('solar_power_3', '---'):>4} {unit}{co}{(' (' + name1 + ')' if name1 else ''):<{col2 - 6}} "
                             f"{'Solar Ch_4':<{col3}}: {m2 and c}{m2 or dev.get('solar_power_4', '---'):>4} {unit}{co}{(' (' + name2 + ')' if name2 else '')}"
                         )
-                if "micro_inverter_power" in dev:
+                m2 = c and mqtt.get("heating_power", "")
+                m4 = cm and mqtt.get("consumed_energy", "")
+                if m2 or "micro_inverter_power" in dev or "pei_heating_power" in dev:
                     name1 = names.get("micro_inverter_name") or ""
                     CONSOLE.info(
                         f"{'Inverter Power':<{col1}}: {dev.get('micro_inverter_power', '---'):>4} {unit + (' (' + name1 + ')' if name1 else ''):<{col2 - 5}} "
-                        f"{'Heating Power':<{col3}}: {dev.get('pei_heating_power', '---'):>4} {unit}"
+                        f"{'Heating Power':<{col3}}: {m2 and c}{m2 or dev.get('pei_heating_power', '---'):>4} {unit}{m4 and (c or cm)}{((' (' + m4 + ' kWh)') if m4 else '')}{co}"
                     )
                 if "micro_inverter_power_limit" in dev:
                     CONSOLE.info(
@@ -979,18 +993,6 @@ class AnkerSolixApiMonitor:
                         f"{'Smart Plugs':<{col1}}: {(site.get('smart_plug_info') or {}).get('total_power') or '---':>4} {unit:<{col2 - 5}} "
                         f"{'Other (Plan)':<{col3}}: {site.get('other_loads_power') or '---':>4} {unit}"
                     )
-                    m1 = cm and mqtt.get("light_off_switch", "")
-                    m2 = cm and mqtt.get("ac_socket_switch", "")
-                    m3 = cm and str(mqtt.get("light_mode", ""))
-                    if str(m1) or str(m2) or m3:
-                        mode = str(
-                            get_enum_name(SolarbankLightMode, m3, "unknown")
-                        ).capitalize()
-                        CONSOLE.info(
-                            f"{'Light':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, not m1, str(not m1) or '---').upper():>3} "
-                            f"{'(Mode: ' + mode + ')':<{col2 - 4}}{co} "
-                            f"{'AC Socket':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
-                        )
                     if m1 := cm and str(mqtt.get("device_timeout_minutes", "")):
                         m2 = cm and str(mqtt.get("max_load_legal", ""))
                         CONSOLE.info(

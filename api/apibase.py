@@ -607,6 +607,7 @@ class AnkerSolixBaseApi:
                                 "discharged_energy",
                                 "output_energy",
                                 "bypass_energy",
+                                "consumed_energy",
                                 "home_consumption",
                                 "grid_import_energy",
                                 "grid_export_energy",
@@ -645,6 +646,7 @@ class AnkerSolixBaseApi:
                                 "pv_yield",
                                 "charged_energy",
                                 "discharged_energy",
+                                "consumed_energy",
                             ]:
                                 calc_efficiency = True
                         elif (
@@ -787,21 +789,33 @@ class AnkerSolixBaseApi:
                         updated = updated or value_updated
                     # calculate extra fields if required values were updated
                     if calc_efficiency:
-                        if (
-                            (pv := device_mqtt.get("pv_yield"))
-                            and (out := device_mqtt.get("output_energy"))
-                            and float(pv) > 0
-                        ):
-                            device_mqtt["device_efficiency"] = (
-                                f"{min(100, float(out) / float(pv) * 100):.3f}"
+                        pv = device_mqtt.get("pv_yield")
+                        out = device_mqtt.get("output_energy")
+                        charge = device_mqtt.get("charged_energy")
+                        discharge = device_mqtt.get("discharged_energy")
+                        # consider consumed energy for efficiency, since that probably reduces the reported pv_yield and charge energy
+                        consumed = device_mqtt.get("consumed_energy") or 0
+                        # First calculate optional AC charge
+                        ac_charge = 0
+                        if pv and out and charge and discharge:
+                            ac_charge = max(
+                                0,
+                                float(out)
+                                - float(pv)
+                                + float(charge)
+                                - float(discharge),
                             )
-                        if (
-                            (charge := device_mqtt.get("charged_energy"))
-                            and (discharge := device_mqtt.get("discharged_energy"))
-                            and float(charge) > 0
-                        ):
+                        if pv and out and float(pv) > 0:
+                            # Solarbank 2 and later seem to reduce the reported PV energy by consumed energy, so it must be added to input
+                            dev_in = float(pv) + float(consumed) + ac_charge
+                            device_mqtt["device_efficiency"] = (
+                                f"{min(100, float(out) / dev_in * 100):.3f}"
+                            )
+                        if charge and discharge and float(charge) > 0:
+                            # Charge should include PV charge and AC charge if supported by device
+                            # Solarbank 2 and later seem to reduce the reported charge energy by consumed energy
                             device_mqtt["battery_efficiency"] = (
-                                f"{min(100, float(discharge) / float(charge) * 100):.3f}"
+                                f"{min(100, float(discharge) / (float(charge) + float(consumed)) * 100):.3f}"
                             )
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates

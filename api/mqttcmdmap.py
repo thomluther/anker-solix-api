@@ -7,17 +7,37 @@ from .apitypes import DeviceHexDataTypes
 
 # common mapping keys to be used for status and command descriptions
 NAME: Final[str] = "name"  # name of the data field, also used for message descriptions
-TYPE: Final[str] = "type"  # type the data field relevant for de/encoding, must be a byte as defined in DeviceHexDataTypes
+TYPE: Final[str] = (
+    "type"  # type the data field relevant for de/encoding, must be a byte as defined in DeviceHexDataTypes
+)
 TOPIC: Final[str] = "topic"  # topic suffix of the command or message
-FACTOR: Final[str] = "factor"  # Factor for decoding the data field value. Any command setting this state data field should use the same VALUE_DIVIDER typically
-SIGNED: Final[str] = "signed"  # Boolean flag to indicate the value decoder to use given value decoding signing (required if different than default field type signing)
-BYTES: Final[str] = "bytes"  # Key word to start nested data field break down description map for individual bytes or byte ranges
-LENGTH: Final[str] = "length"  # Define the length of a field in a bytes field breakdown. Only need to be used if length not determined by field type or first byte value
-MASK: Final[str] = "mask"  # Define a bit mask value to be used for decoding the data value. Required if a single byte may reflect multiple data fields/settings
-COMMAND_NAME: Final[str] = "command_name"  # name of the command, must be defined in dataclass SolixMqttCommands
-COMMAND_LIST: Final[str] = "command_list"  # specifies the nested commands to describe multiple commands per message type
-STATE_NAME: Final[str] = "state_name"  # extracted value name that represents the current state of the control
-STATE_CONVERTER: Final[str] = "state_converter"  # optional lambda function to convert the setting into expected state
+FACTOR: Final[str] = (
+    "factor"  # Factor for decoding the data field value. Any command setting this state data field should use the same VALUE_DIVIDER typically
+)
+SIGNED: Final[str] = (
+    "signed"  # Boolean flag to indicate the value decoder to use given value decoding signing (required if different than default field type signing)
+)
+BYTES: Final[str] = (
+    "bytes"  # Key word to start nested data field break down description map for individual bytes or byte ranges
+)
+LENGTH: Final[str] = (
+    "length"  # Define the length of a field in a bytes field breakdown. Only need to be used if length not determined by field type or first byte value
+)
+MASK: Final[str] = (
+    "mask"  # Define a bit mask value to be used for decoding the data value. Required if a single byte may reflect multiple data fields/settings
+)
+COMMAND_NAME: Final[str] = (
+    "command_name"  # name of the command, must be defined in dataclass SolixMqttCommands
+)
+COMMAND_LIST: Final[str] = (
+    "command_list"  # specifies the nested commands to describe multiple commands per message type
+)
+STATE_NAME: Final[str] = (
+    "state_name"  # extracted value name that represents the current state of the control
+)
+STATE_CONVERTER: Final[str] = (
+    "state_converter"  # optional lambda function to convert the setting into expected state
+)
 VALUE_MIN: Final[str] = "value_min"  # min value of a range
 VALUE_MAX: Final[str] = "value_max"  # max value of a range
 VALUE_STEP: Final[str] = "value_step"  # step to be used within range, default is 1
@@ -25,9 +45,15 @@ VALUE_OPTIONS: Final[str] = (
     "value_options"  # Use list for value options, or dict for name:value mappings
 )
 VALUE_DEFAULT: Final[str] = "value_default"  # Defines a default value for the field
-VALUE_FOLLOWS: Final[str] = "value_follows"  # defines setting name the value depends on, the options need to define a map for the dependencies
-VALUE_STATE: Final[str] = "value_state"  # Defines a state name that should be used if found
-VALUE_DIVIDER: Final[str] = "value_divider"  # Defines a divider for the applied value, should be same as FACTOR extracting the state value data field
+VALUE_FOLLOWS: Final[str] = (
+    "value_follows"  # defines setting name the value depends on, the options need to define a map for the dependencies
+)
+VALUE_STATE: Final[str] = (
+    "value_state"  # Defines a state name that should be used if found
+)
+VALUE_DIVIDER: Final[str] = (
+    "value_divider"  # Defines a divider for the applied value, should be same as FACTOR extracting the state value data field
+)
 
 
 @dataclass(frozen=True)
@@ -67,6 +93,7 @@ class SolixMqttCommands:
     sb_light_mode_select: str = "sb_light_mode_select"
     sb_disable_grid_export_switch: str = "sb_disable_grid_export_switch"
     sb_device_timeout: str = "sb_device_timeout"
+    sb_usage_mode: str = "sb_usage_mode"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -517,26 +544,29 @@ CMD_SB_MAX_LOAD = (
     }
 )
 
-CMD_SB_DISABLE_GRID_EXPORT_SWITCH = CMD_COMMON | {
-    # Command: Solarbank disable grid export on PV surplus
-    COMMAND_NAME: SolixMqttCommands.sb_disable_grid_export_switch,
-    "a5": {
-        NAME: "set_disable_grid_export_a5?",  # Unknown, 0 observed
-        TYPE: DeviceHexDataTypes.sile.value,
-        VALUE_DEFAULT: 0,
-    },
-    "a6": {
-        NAME: "set_disable_grid_export_switch",  # Allow export (0), disable export (1)
-        TYPE: DeviceHexDataTypes.sile.value,
-        STATE_NAME: "grid_export_disabled",
-        VALUE_OPTIONS: {"off": 0, "on": 1},
-    },
-    "a9": {
-        NAME: "set_disable_grid_export_a9?",  # Unknown, seems new to limit the export W? May require new FW to be supported
-        TYPE: DeviceHexDataTypes.sile.value,
-        VALUE_DEFAULT: 0,
-    },
-}
+CMD_SB_DISABLE_GRID_EXPORT_SWITCH = (
+    CMD_COMMON
+    | {
+        # Command: Solarbank disable grid export on PV surplus
+        COMMAND_NAME: SolixMqttCommands.sb_disable_grid_export_switch,
+        "a5": {
+            NAME: "set_disable_grid_export_a5?",  # Unknown, 0 observed
+            TYPE: DeviceHexDataTypes.sile.value,
+            VALUE_DEFAULT: 0,
+        },
+        "a6": {
+            NAME: "set_disable_grid_export_switch",  # Allow export (0), disable export (1)
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "grid_export_disabled",
+            VALUE_OPTIONS: {"off": 0, "on": 1},
+        },
+        "a9": {
+            NAME: "set_disable_grid_export_a9?",  # Unknown, seems new to limit the export W? May require new FW to be supported
+            TYPE: DeviceHexDataTypes.sile.value,
+            VALUE_DEFAULT: 0,
+        },
+    }
+)
 
 CMD_SB_PV_LIMIT = CMD_COMMON | {
     # Command: Solarbank Set max photovoltaik input limit (MPPT limit)
@@ -608,3 +638,118 @@ CMD_SB_DEVICE_TIMEOUT = CMD_COMMON | {
         VALUE_DIVIDER: 30,
     },
 }
+
+USE_TIME_SLOT = {
+    TYPE: DeviceHexDataTypes.ui.value,
+    VALUE_OPTIONS: {"discharge": 1, "charge": 4, "default": 6},
+    VALUE_DEFAULT: 6,
+}
+
+CMD_SB_USAGE_MODE = (
+    CMD_COMMON
+    | {
+        # Command: Solarbank Usage mode
+        # NOTE: This is driven through the cloud Api and should not be modified directly
+        # ATTENTION: The type and amount of the fields varies depending on usage mode, so it cannot be described actually for proper encoding
+        # The field names also vary, this command must not be enabled in the Mqtt device class for solarbanks
+        COMMAND_NAME: SolixMqttCommands.sb_usage_mode,
+        "a2": {
+            NAME: "set_usage_mode",
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "usage_mode",
+            VALUE_OPTIONS: {
+                "manual": 1,  # Api scene mode is 3
+                "smartmeter": 2,  # Api scene mode is 1
+                "smartplugs": 3,  # Api scene mode is 2
+                "backup": 4,
+                "use_time": 5,
+                "smart": 7,
+                "time_slot": 8,
+            },
+        },
+        "a3": {
+            NAME: "set_timestamp_a3_or_0?",  # unknown timestamp as var field or ui 0
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "a4": {
+            NAME: "set_backup_charge_switch",  # various options depending on usage mode, eventually a bitmask is used
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "backup_charge_switch",
+            VALUE_OPTIONS: {"off": 0, "on": 1},
+            VALUE_DEFAULT: 0,
+        },
+        "a5": {
+            NAME: "set_dynamic_soc_limit",  # 10-100 %, step 1 % or 0 if not used
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "dynamic_soc_limit",
+            VALUE_MIN: 10,
+            VALUE_MAX: 100,
+            VALUE_DEFAULT: 0,
+        },
+        "a6": {
+            NAME: "set_timestamp_backup_start",
+            TYPE: DeviceHexDataTypes.var.value,
+            STATE_NAME: "timestamp_backup_start",
+        },
+        "a6_mode_8": {
+            NAME: "set_time_slot_modes",  # 48 slots, 1 byte per hour, paired today / tomorrow?,
+            TYPE: DeviceHexDataTypes.bin.value,
+            BYTES: {
+                "00": USE_TIME_SLOT,
+                "01": USE_TIME_SLOT,
+                "02": USE_TIME_SLOT,
+                "03": USE_TIME_SLOT,
+                "04": USE_TIME_SLOT,
+                "05": USE_TIME_SLOT,
+                "06": USE_TIME_SLOT,
+                "07": USE_TIME_SLOT,
+                "08": USE_TIME_SLOT,
+                "09": USE_TIME_SLOT,
+                "10": USE_TIME_SLOT,
+                "11": USE_TIME_SLOT,
+                "12": USE_TIME_SLOT,
+                "13": USE_TIME_SLOT,
+                "14": USE_TIME_SLOT,
+                "15": USE_TIME_SLOT,
+                "16": USE_TIME_SLOT,
+                "17": USE_TIME_SLOT,
+                "18": USE_TIME_SLOT,
+                "19": USE_TIME_SLOT,
+                "20": USE_TIME_SLOT,
+                "21": USE_TIME_SLOT,
+                "22": USE_TIME_SLOT,
+                "23": USE_TIME_SLOT,
+                "24": USE_TIME_SLOT,
+                "25": USE_TIME_SLOT,
+                "26": USE_TIME_SLOT,
+                "27": USE_TIME_SLOT,
+                "28": USE_TIME_SLOT,
+                "29": USE_TIME_SLOT,
+                "30": USE_TIME_SLOT,
+                "31": USE_TIME_SLOT,
+                "32": USE_TIME_SLOT,
+                "33": USE_TIME_SLOT,
+                "34": USE_TIME_SLOT,
+                "35": USE_TIME_SLOT,
+                "36": USE_TIME_SLOT,
+                "37": USE_TIME_SLOT,
+                "38": USE_TIME_SLOT,
+                "39": USE_TIME_SLOT,
+                "40": USE_TIME_SLOT,
+                "41": USE_TIME_SLOT,
+                "42": USE_TIME_SLOT,
+                "43": USE_TIME_SLOT,
+                "44": USE_TIME_SLOT,
+                "45": USE_TIME_SLOT,
+                "46": USE_TIME_SLOT,
+                "47": USE_TIME_SLOT,
+                "48": USE_TIME_SLOT,
+            },
+        },
+        "a7": {
+            NAME: "set_timestamp_backup_end",
+            TYPE: DeviceHexDataTypes.var.value,
+            STATE_NAME: "timestamp_backup_end",
+        },
+    }
+)
