@@ -1381,6 +1381,13 @@ class SolixPpsDisplayMode(StrEnum):
     unknown = "unknown"
 
 
+class SolixChargerPortStatus(StrEnum):
+    """Str Enumeration for Anker Solix Charger port status."""
+
+    inactive = "0"
+    active = "1"
+    unknown = "unknown"
+
 @dataclass
 class SolarbankTimeslot:
     """Dataclass to define customizable attributes of an Anker Solix Solarbank time slot as used for the schedule definition or update."""

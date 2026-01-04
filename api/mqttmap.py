@@ -1284,6 +1284,10 @@ _A2345_0303 = {
     TOPIC: "state_info",
     "a2": {
         BYTES: {
+            "00": {
+                NAME: "usbc_1_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usbc_1_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1303,6 +1307,10 @@ _A2345_0303 = {
     },
     "a3": {
         BYTES: {
+            "00": {
+                NAME: "usbc_2_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usbc_2_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1322,6 +1330,10 @@ _A2345_0303 = {
     },
     "a4": {
         BYTES: {
+            "00": {
+                NAME: "usbc_3_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usbc_3_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1341,6 +1353,10 @@ _A2345_0303 = {
     },
     "a5": {
         BYTES: {
+            "00": {
+                NAME: "usbc_4_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usbc_4_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1360,6 +1376,10 @@ _A2345_0303 = {
     },
     "a6": {
         BYTES: {
+            "00": {
+                NAME: "usba_1_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usba_1_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -1379,6 +1399,10 @@ _A2345_0303 = {
     },
     "a7": {
         BYTES: {
+            "00": {
+                NAME: "usba_2_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
             "01": {
                 NAME: "usba_2_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -2247,7 +2271,7 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # Prime Charger 250W
     "A2345": {
-        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        "020b": CMD_STATUS_REQUEST,  # Device status request, more reliable than RT (one time status messages 0405 etc)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0303": _A2345_0303,
     },

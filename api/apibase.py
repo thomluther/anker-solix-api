@@ -601,16 +601,7 @@ class AnkerSolixBaseApi:
                             key
                             in [
                                 # keys with value that should be saved as rounded as 3 decimal float string
-                                "pv_yield",
                                 "battery_soh",
-                                "charged_energy",
-                                "discharged_energy",
-                                "output_energy",
-                                "bypass_energy",
-                                "consumed_energy",
-                                "home_consumption",
-                                "grid_import_energy",
-                                "grid_export_energy",
                                 "pv_1_voltage",
                                 "pv_2_voltage",
                                 "pv_3_voltage",
@@ -641,14 +632,32 @@ class AnkerSolixBaseApi:
                             .isdigit()
                         ):
                             device_mqtt[key] = f"{float(value):.3f}"
-                            if key in [
-                                "output_energy",
+                        elif (
+                            key
+                            in [
+                                # energy keys with value that should be saved as rounded as 3 decimal float string
                                 "pv_yield",
                                 "charged_energy",
                                 "discharged_energy",
+                                "output_energy",
+                                "bypass_energy",
                                 "consumed_energy",
-                            ]:
-                                calc_efficiency = True
+                                "home_consumption",
+                                "grid_import_energy",
+                                "grid_export_energy",
+                            ]):
+                            # aggregated energies should never decrease, otherwise weird values are sent or description is wrong
+                            # 0 value should be ignored, since that may reset energy counters if 0 values read on startup
+                            if 0 < float(value) > float(device_mqtt.get(key,0)):
+                                device_mqtt[key] = f"{float(value):.3f}"
+                                if key in [
+                                    "output_energy",
+                                    "pv_yield",
+                                    "charged_energy",
+                                    "discharged_energy",
+                                    "consumed_energy",
+                                ]:
+                                    calc_efficiency = True
                         elif (
                             key
                             in [

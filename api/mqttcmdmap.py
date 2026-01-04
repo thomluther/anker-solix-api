@@ -36,7 +36,7 @@ STATE_NAME: Final[str] = (
     "state_name"  # extracted value name that represents the current state of the control
 )
 STATE_CONVERTER: Final[str] = (
-    "state_converter"  # optional lambda function to convert the setting into expected state
+    "state_converter"  # optional lambda function to convert the setting value into expected state and vice versa
 )
 VALUE_MIN: Final[str] = "value_min"  # min value of a range
 VALUE_MAX: Final[str] = "value_max"  # max value of a range
@@ -242,9 +242,9 @@ CMD_AC_OUTPUT_MODE = CMD_COMMON | {
         NAME: "set_ac_output_mode",  # Normal (1), Smart (0)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "ac_output_mode",
-        STATE_CONVERTER: lambda v: {0: 2, 1: 1}.get(
-            v, 2
-        ),  # Smart setting represented with state 2
+        STATE_CONVERTER: lambda value, state: {0: 2, 1: 1}.get(value, 2)
+        if value is not None
+        else {2: 0, 1: 1}.get(state, 0),  # Smart setting represented with state 2
         VALUE_OPTIONS: {"smart": 0, "normal": 1},
     },
 }
@@ -252,7 +252,7 @@ CMD_AC_OUTPUT_MODE = CMD_COMMON | {
 CMD_AC_OUTPUT_TIMEOUT_SEC = (
     CMD_COMMON
     | {
-        # Command: PPS DC output timeout setting
+        # Command: PPS AC output timeout setting
         COMMAND_NAME: SolixMqttCommands.ac_output_timeout_seconds,
         "a2": {
             NAME: "set_ac_output_timeout_seconds",  # Timeout seconds, custom range: 0-86400, step 300
@@ -283,9 +283,9 @@ CMD_DC_12V_OUTPUT_MODE = CMD_COMMON | {
         NAME: "set_dc_12v_output_mode",  # Normal (1), Smart (0)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "dc_12v_output_mode",
-        STATE_CONVERTER: lambda v: {0: 2, 1: 1}.get(
-            v, 2
-        ),  # Smart setting represented with state 2
+        STATE_CONVERTER: lambda value, state: {0: 2, 1: 1}.get(value, 2)
+        if value is not None
+        else {2: 0, 1: 1}.get(state, 0),  # Smart setting represented with state 2
         VALUE_OPTIONS: {"smart": 0, "normal": 1},
     },
 }

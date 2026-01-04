@@ -294,8 +294,6 @@ async def get_device_parm(
                 {
                     "device_sn": sn,
                     "schedule": paramData,
-                    # "current_home_load": data.get("current_home_load") or "",   # This field is not provided with get_device_parm
-                    # "parallel_home_load": data.get("parallel_home_load") or "",   # This field is not provided with get_device_parm
                 }
             )
         # copy schedule to station device as well, no matter what type it is
@@ -1484,7 +1482,7 @@ async def set_sb2_home_load(  # noqa: C901
         max_load = SolixDefaults.PRESET_MAX
     # Adjust provided appliance limits
     # Relaxed max_load to device type max if schedule max_load no longer reflecting active device limit, see issue #309
-    if ((d := self.devices.get(deviceSn) or {}).get("generation") or 0) >= 2:
+    if (d := self.devices.get(deviceSn, {}).get("generation", 0)) >= 2:
         model = d.get("device_pn") or ""
         max_load = max(
             [

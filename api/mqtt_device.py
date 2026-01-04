@@ -107,6 +107,7 @@ class SolixMqttDevice:
                         # traverse all fields, use field descriptive name as parameter name and field byte as
                         parameters = {}
                         required_options = []
+                        required_number = None
                         # get nested command fields if available
                         fields = fields.get(cmd) or fields
                         for key, item in fields.items():
@@ -139,6 +140,7 @@ class SolixMqttDevice:
                                         and VALUE_DEFAULT not in descriptors
                                         and VALUE_FOLLOWS not in descriptors
                                     ):
+                                        # This is a required parameter
                                         MqttCmdValidator(
                                             min=descriptors.get(VALUE_MIN),
                                             max=descriptors.get(VALUE_MAX),
@@ -148,10 +150,28 @@ class SolixMqttDevice:
                                         required_options.append(
                                             descriptors.get(VALUE_OPTIONS)
                                         )
+                                        if required_number is None:
+                                            required_number = descriptors.get(
+                                                VALUE_MIN, 0
+                                            ) < descriptors.get(VALUE_MAX, 0)
+                                        else:
+                                            required_number = False
+                                    # flag whether parameter is switch
+                                    descriptors["is_switch"] = bool(
+                                        isinstance(opt := descriptors.get(VALUE_OPTIONS), dict)
+                                        and len(opt) == 2
+                                        and "on" in opt
+                                        and "off" in opt
+                                    )
+                                    # flag whether parameter is number
+                                    descriptors["is_number"] = bool(
+                                        descriptors.get(VALUE_MIN, 0)
+                                        < descriptors.get(VALUE_MAX, 0)
+                                    )
                                     # add descriptors
                                     parameters[name] = descriptors
                         control["parameters"] = parameters
-                        # check if control is a switch with only "on" and "off" in options
+                        # check if control is a switch with only "on" and "off" in single required option
                         control["is_switch"] = bool(
                             len(required_options) == 1
                             and isinstance(opt := required_options[0], dict)
@@ -159,6 +179,8 @@ class SolixMqttDevice:
                             and "on" in opt
                             and "off" in opt
                         )
+                        # check if control is a single number control
+                        control["is_number"] = bool(required_number)
                         self.controls[cmd] = control
                     except (ValueError, TypeError):
                         self._logger.error(
@@ -231,27 +253,83 @@ class SolixMqttDevice:
             }
         return {}
 
-    def get_cmd_parm_option_map(self, cmd: str, parm: str | None = None) -> dict:
-        """Get dictionary with options mapping for first mandatory or the provided parameter."""
+    def get_cmd_parm_option_map(
+        self, cmd: str, parm: str | None = None, limit: int = 100
+    ) -> dict:
+        """Get dictionary with options mapping for first mandatory or the provided parameter. Option list or value range will be converted into dict if limit not exceeded."""
         if isinstance(cmd, str):
+            # first get parameter description
             if isinstance(parm, str):
-                options = (
-                    self.get_cmd_parms(cmd=cmd, defaults=True)
-                    .get(parm, {})
-                    .get(VALUE_OPTIONS, {})
-                )
+                desc = self.get_cmd_parms(cmd=cmd, defaults=True).get(parm, {})
             else:
-                options = next(iter(self.get_cmd_parms(cmd=cmd).values()), {}).get(
-                    VALUE_OPTIONS, {}
-                )
+                desc = next(iter(self.get_cmd_parms(cmd=cmd).values()), {})
+            if not (options := desc.get(VALUE_OPTIONS, {})):
+                # create value range if less than 100 options
+                start = desc.get(VALUE_MIN, 0)
+                stop = desc.get(VALUE_MAX, 0)
+                step = desc.get(VALUE_STEP, 1)
+                if (
+                    start < stop
+                    and len(rng := range(start, stop + step, step)) <= limit
+                ):
+                    options = rng
             if isinstance(options, dict):
                 return options
+            if isinstance(options, list | range):
+                return {str(item): item for item in options}
         return {}
 
-    def cmd_is_switch(self, cmd: str) -> bool:
-        """Checks whether the command is a switch control."""
+    def get_cmd_parm_state_option(
+        self,
+        cmd: str,
+        parm: str | None = None,
+        fromFile: bool = False,
+    ) -> dict:
+        """Get dictionary with command parameter state name and value converted into option string."""
         if isinstance(cmd, str):
+            # first get parameter description
+            if isinstance(parm, str):
+                desc = self.get_cmd_parms(cmd=cmd, defaults=True).get(parm, {})
+            else:
+                desc = next(iter(self.get_cmd_parms(cmd=cmd).values()), {})
+            if (
+                (options := desc.get(VALUE_OPTIONS, {}))
+                and isinstance(options, dict)
+                and (state_name := desc.get(STATE_NAME))
+                and (value := self.get_status(fromFile).get(state_name)) is not None
+            ):
+                # convert state to command option value
+                if callable(converter := desc.get(STATE_CONVERTER)):
+                    value = converter(None, value)
+                return {
+                    state_name: next(
+                        iter(k for k, v in options.items() if v == value), value
+                    )
+                }
+        return {}
+
+    def cmd_is_switch(self, cmd: str, parm: str | None = None) -> bool:
+        """Checks whether the command is a single switch control. If parm is specified, it will check the given parameter."""
+        if isinstance(cmd, str):
+            if isinstance(parm, str):
+                # use parameter flag
+                return bool(
+                    self.get_cmd_parms(cmd=cmd, all=True).get(parm, {}).get("is_switch")
+                )
+            # use control flag
             return bool(self.controls.get(cmd, {}).get("is_switch"))
+        return False
+
+    def cmd_is_number(self, cmd: str, parm: str | None = None) -> bool:
+        """Checks whether the command is a single number control. If parm is specified, it will check the given parameter."""
+        if isinstance(cmd, str):
+            if isinstance(parm, str):
+                # use parameter flag
+                return bool(
+                    self.get_cmd_parms(cmd=cmd, all=True).get(parm, {}).get("is_number")
+                )
+            # use control flag
+            return bool(self.controls.get(cmd, {}).get("is_number"))
         return False
 
     def validate_cmd_value(
@@ -475,7 +553,9 @@ class SolixMqttDevice:
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
                         state_fields[state_name] = (
-                            converter(fieldvalue) if callable(converter) else fieldvalue
+                            converter(fieldvalue, None)
+                            if callable(converter)
+                            else fieldvalue
                         )
                     # generate generic user description and provided string value or field value
                     user_parms[par] = val if isinstance(val, str) else fieldvalue
@@ -497,7 +577,7 @@ class SolixMqttDevice:
                     ):
                         converter = desc.get(STATE_CONVERTER)
                         state_fields[state_name] = (
-                            converter(state) if callable(converter) else state
+                            converter(state, None) if callable(converter) else state
                         )
                 elif (
                     par not in parameters
@@ -517,7 +597,7 @@ class SolixMqttDevice:
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
                         state_fields[state_name] = (
-                            converter(parameters[par])
+                            converter(parameters[par], None)
                             if callable(converter)
                             else parameters[par]
                         )

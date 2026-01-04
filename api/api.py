@@ -565,8 +565,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key in ["schedule"] and isinstance(value, dict):
                         device[key] = dict(value)
                         # set default presets for no active schedule slot
-                        generation = int(device.get("generation", 0))
-                        ac_type = bool(device.get("grid_to_battery_power") or False)
+                        if device.get("type") == SolixDeviceType.COMBINER_BOX.value:
+                            # assume generation and ac type for tracking schedule data in combiner box
+                            generation = 2
+                            ac_type = True
+                        else:
+                            generation = int(device.get("generation", 0))
+                            ac_type = bool(device.get("grid_to_battery_power") or False)
+                        # Count solarbanks for device output presets (only used for SB1)
                         cnt = device.get("solarbank_count", 0)
                         mysite = self.sites.get(device.get("site_id") or "") or {}
                         if generation >= 2:
@@ -1702,7 +1708,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             resp = await self.apisession.request(
                 "post", API_ENDPOINTS["get_site_power_limit"], json=data
             )
-        # update site details in sites dict, this info is also usefull without power dock
+        # update site details in sites dict, this info is also useful without power dock
         if data := resp.get("data") or {}:
             self._update_site(
                 siteId,
@@ -1712,8 +1718,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     "power_limit_option": data.get("power_limit_option"),
                 },
             )
-        # Add station settings if avilable in site details (should have updated with previous device param query in device details poll)
-        site_details = (self.sites.get(siteId) or {}).get("site_details") or {}
+        # Add station settings if available in site details (should have updated with previous device param query in device details poll)
+        site = self.sites.get(siteId) or {}
+        site_details = site.get("site_details") or {}
         station_sn = site_details.get("station_sn", None)
         # create new station device with info for power dock if multi system config
         if station := data.get("ae100_info"):
@@ -1749,6 +1756,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     or 0,
                     "all_ac_input_limit": station.pop("ac_input_limit", None)
                     or str(data.get("ac_input_power_unit") or "").replace("W", ""),
+                    "set_load_power": site.get("retain_load", ""),
                 }
                 | station,
                 siteId=siteId,
