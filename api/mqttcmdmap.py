@@ -83,7 +83,7 @@ class SolixMqttCommands:
     soc_limits: str = "soc_limits"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
-    sb_min_soc_select: str = "sb_min_soc_select"
+    sb_min_soc_select: str = "sb_min_soc_select" # Does not change App station wide setting, needs Api request as well
     sb_inverter_type_select: str = "sb_inverter_type_select"
     sb_max_load: str = "sb_max_load"
     sb_ac_input_limit: str = "sb_ac_input_limit"
@@ -93,7 +93,7 @@ class SolixMqttCommands:
     sb_light_mode_select: str = "sb_light_mode_select"
     sb_disable_grid_export_switch: str = "sb_disable_grid_export_switch"
     sb_device_timeout: str = "sb_device_timeout"
-    sb_usage_mode: str = "sb_usage_mode"
+    sb_usage_mode: str = "sb_usage_mode"  # Not supported, uses various field patterns per mode with same command message
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""

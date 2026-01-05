@@ -1571,6 +1571,26 @@ _DOCK_0500 = {
     TOPIC: "state_info",
 }
 
+_EV_CHARGER_0405 = {
+    # V1 status message
+    TOPIC: "param_info",
+    "a2": {NAME: "unknown_limit?"},
+    "d0": {NAME: "ip_address"},
+    "d7": {NAME: "device_sn_d7?"},
+    "de": {NAME: "device_sn_de?"},
+    "f1": {NAME: "timestamp_f1?"},
+    "f2": {NAME: "timestamp_f2?"},
+}
+
+_EV_CHARGER_0410 = {
+    # V1 status message
+    TOPIC: "param_info",
+    "a2": {NAME: "input_power_p1?"},
+    "a3": {NAME: "input_power_p2?"},
+    "a4": {NAME: "input_power_p3?"},
+    "ab": {NAME: "timestamp_ab?"},
+}
+
 
 # Following is the consolidated mapping for all device types and messages
 SOLIXMQTTMAP: Final[dict] = {
@@ -2106,7 +2126,7 @@ SOLIXMQTTMAP: Final[dict] = {
     "A17C5": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        "005e": CMD_SB_USAGE_MODE, # NOTE: Cmd not supported directly, but description used for msg decoding
+        "005e": CMD_SB_USAGE_MODE,  # NOTE: Cmd not supported directly, but description used for msg decoding
         "0067": CMD_SB_MIN_SOC,  # select SOC reserve
         "0068": {
             # solarbank light command group
@@ -2274,5 +2294,15 @@ SOLIXMQTTMAP: Final[dict] = {
         "020b": CMD_STATUS_REQUEST,  # Device status request, more reliable than RT (one time status messages 0405 etc)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0303": _A2345_0303,
+    },
+    # EV Charger V1
+    "A5191": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: Irregular, but only after status request command?
+        "0405": _EV_CHARGER_0405,  # Device status request, more reliable than RT (one time status messages 0405 etc)
+        # Interval: ~3-5 seconds, but only with realtime trigger?
+        "0410": _EV_CHARGER_0410,
+        # Interval: Irregular
+        "0840": _EV_CHARGER_0405,
     },
 }
