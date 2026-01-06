@@ -260,7 +260,7 @@ class SolixMqttDevice:
         if isinstance(cmd, str):
             # first get parameter description
             if isinstance(parm, str):
-                desc = self.get_cmd_parms(cmd=cmd, defaults=True).get(parm, {})
+                desc = self.get_cmd_parms(cmd=cmd, all=True).get(parm, {})
             else:
                 desc = next(iter(self.get_cmd_parms(cmd=cmd).values()), {})
             if not (options := desc.get(VALUE_OPTIONS, {})):
@@ -289,7 +289,7 @@ class SolixMqttDevice:
         if isinstance(cmd, str):
             # first get parameter description
             if isinstance(parm, str):
-                desc = self.get_cmd_parms(cmd=cmd, defaults=True).get(parm, {})
+                desc = self.get_cmd_parms(cmd=cmd, all=True).get(parm, {})
             else:
                 desc = next(iter(self.get_cmd_parms(cmd=cmd).values()), {})
             if (

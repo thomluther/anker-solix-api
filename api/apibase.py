@@ -632,23 +632,21 @@ class AnkerSolixBaseApi:
                             .isdigit()
                         ):
                             device_mqtt[key] = f"{float(value):.3f}"
-                        elif (
-                            key
-                            in [
-                                # energy keys with value that should be saved as rounded as 3 decimal float string
-                                "pv_yield",
-                                "charged_energy",
-                                "discharged_energy",
-                                "output_energy",
-                                "bypass_energy",
-                                "consumed_energy",
-                                "home_consumption",
-                                "grid_import_energy",
-                                "grid_export_energy",
-                            ]):
+                        elif key in [
+                            # energy keys with value that should be saved as rounded as 3 decimal float string
+                            "pv_yield",
+                            "charged_energy",
+                            "discharged_energy",
+                            "output_energy",
+                            "bypass_energy",
+                            "consumed_energy",
+                            "home_consumption",
+                            "grid_import_energy",
+                            "grid_export_energy",
+                        ]:
                             # aggregated energies should never decrease, otherwise weird values are sent or description is wrong
                             # 0 value should be ignored, since that may reset energy counters if 0 values read on startup
-                            if 0 < float(value) > float(device_mqtt.get(key,0)):
+                            if 0 < float(value) > float(device_mqtt.get(key, 0)):
                                 device_mqtt[key] = f"{float(value):.3f}"
                                 if key in [
                                     "output_energy",
@@ -801,7 +799,13 @@ class AnkerSolixBaseApi:
                         pv = device_mqtt.get("pv_yield")
                         out = device_mqtt.get("output_energy")
                         charge = device_mqtt.get("charged_energy")
-                        discharge = device_mqtt.get("discharged_energy")
+                        if not (discharge := device_mqtt.get("discharged_energy")):
+                            # SB2 does not report discharge, but calculates it as Output + Charged - PV
+                            if pv and out and charge:
+                                discharge = min(
+                                    float(charge),
+                                    max(0, float(out) + float(charge) - float(pv)),
+                                )
                         # consider consumed energy for efficiency, since that probably reduces the reported pv_yield and charge energy
                         consumed = device_mqtt.get("consumed_energy") or 0
                         # First calculate optional AC charge
@@ -815,14 +819,14 @@ class AnkerSolixBaseApi:
                                 - float(discharge),
                             )
                         if pv and out and float(pv) > 0:
-                            # Solarbank 2 and later seem to reduce the reported PV energy by consumed energy, so it must be added to input
+                            # Solarbank 3 seem to reduce the reported PV energy by consumed energy (Heating, Socket), so it must be added to input
                             dev_in = float(pv) + float(consumed) + ac_charge
                             device_mqtt["device_efficiency"] = (
                                 f"{min(100, float(out) / dev_in * 100):.3f}"
                             )
                         if charge and discharge and float(charge) > 0:
                             # Charge should include PV charge and AC charge if supported by device
-                            # Solarbank 2 and later seem to reduce the reported charge energy by consumed energy
+                            # Solarbank 3 seems to reduce the reported charge energy by consumed energy
                             device_mqtt["battery_efficiency"] = (
                                 f"{min(100, float(discharge) / (float(charge) + float(consumed)) * 100):.3f}"
                             )

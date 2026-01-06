@@ -825,9 +825,9 @@ _A17C1_0405 = {
     "ac": {NAME: "ac_output_power", FACTOR: 0.1},
     "ad": {NAME: "battery_soc"},  # controller + expansions avg
     "b0": {NAME: "bat_charge_power", FACTOR: 0.01},
-    "b1": {NAME: "pv_yield?", FACTOR: 0.0001},
-    "b3": {NAME: "home_consumption?", FACTOR: 0.0001},
-    "b2": {NAME: "charged_energy?", FACTOR: 0.00001},
+    "b1": {NAME: "pv_yield", FACTOR: 0.0001},
+    "b3": {NAME: "output_energy", FACTOR: 0.0001},
+    "b2": {NAME: "charged_energy", FACTOR: 0.00001},
     "b4": {NAME: "output_cutoff_data"},
     "b5": {NAME: "lowpower_input_data"},
     "b6": {NAME: "input_cutoff_data"},
@@ -841,7 +841,7 @@ _A17C1_0405 = {
     "c6": {NAME: "usage_mode"},
     "c7": {NAME: "home_load_preset"},
     "c8": {NAME: "ac_socket_power", FACTOR: 0.1},
-    "c9": {NAME: "ac_input_power?", FACTOR: 0.1},
+    "c9": {NAME: "consumed_energy", FACTOR: 0.001},
     "ca": {NAME: "pv_1_power", FACTOR: 0.1},
     "cb": {NAME: "pv_2_power", FACTOR: 0.1},
     "cc": {NAME: "pv_3_power", FACTOR: 0.1},
@@ -1585,9 +1585,12 @@ _EV_CHARGER_0405 = {
 _EV_CHARGER_0410 = {
     # V1 status message
     TOPIC: "param_info",
-    "a2": {NAME: "input_power_p1?"},
-    "a3": {NAME: "input_power_p2?"},
-    "a4": {NAME: "input_power_p3?"},
+    "a2": {NAME: "voltage_p1?", "factor": 0.1},
+    "a3": {NAME: "voltage_p2?", "factor": 0.1},
+    "a4": {NAME: "voltage_p3?", "factor": 0.1},
+    "a5": {NAME: "power_p1?"},
+    "a6": {NAME: "power_p2?"},
+    "a7": {NAME: "power_p3?"},
     "ab": {NAME: "timestamp_ab?"},
 }
 
@@ -1788,10 +1791,10 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.display_timeout_seconds: CMD_COMMON_V2
             | {
                 "a4": {  # TODO: Find our correct field in message group
-                    NAME: "set_display_timeout_sec",  # 0 (Never), 10, 30, 60, 300, 1800
+                    NAME: "set_display_timeout_sec",  # 0 (Never), 10, 20, 30, 60, 300, 1800
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "display_timeout_seconds",
-                    VALUE_OPTIONS: [0, 10, 30, 60, 300, 1800],
+                    VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
                 },
             },
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
