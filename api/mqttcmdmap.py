@@ -62,6 +62,7 @@ class SolixMqttCommands:
 
     status_request: str = "status_request"
     realtime_trigger: str = "realtime_trigger"
+    timer_request: str = "timer_request"
     temp_unit_switch: str = "temp_unit_switch"
     device_max_load: str = "device_max_load"
     device_timeout_minutes: str = "device_timeout_minutes"
@@ -160,6 +161,11 @@ CMD_REALTIME_TRIGGER = CMD_COMMON | {
         VALUE_MAX: 600,  # real limit is unknown
         VALUE_DEFAULT: 60,
     },
+}
+
+CMD_TIMER_REQUEST = CMD_COMMON | {
+    # Command: Device timer request
+    COMMAND_NAME: SolixMqttCommands.timer_request,
 }
 
 CMD_TEMP_UNIT = CMD_COMMON | {

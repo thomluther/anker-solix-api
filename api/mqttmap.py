@@ -39,6 +39,7 @@ from .mqttcmdmap import (
     CMD_SOC_LIMITS_V2,
     CMD_STATUS_REQUEST,
     CMD_TEMP_UNIT,
+    CMD_TIMER_REQUEST,
     COMMAND_LIST,
     FACTOR,
     LENGTH,
@@ -1424,6 +1425,34 @@ _A2345_0303 = {
     "fe": {NAME: "msg_timestamp"},
 }
 
+_PLUG_TIMER_STATUS = {
+    BYTES: {
+        "00": {
+            NAME: "toggle_to_delay_seconds",
+            TYPE: DeviceHexDataTypes.sile.value,
+        },
+        "02": {
+            NAME: "toggle_to_setting?",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "03": {
+            NAME: "toggle_currect_setting?",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "04": {
+            NAME: "toggle_delay_status?",  # 03 seen while toggle_to delay running, 00 while inactive
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "05": {
+            NAME: "toggle_to_elapsed_seconds",
+            TYPE: DeviceHexDataTypes.sile.value,
+        },
+        "07": {
+            NAME: "unknown_toggle_status?",
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+    }
+}
 
 _DOCK_0420 = {
     # multisystem message
@@ -2214,6 +2243,31 @@ SOLIXMQTTMAP: Final[dict] = {
             "aa": {NAME: "grid_import_energy", FACTOR: 0.00001},
             "ab": {NAME: "grid_export_energy", FACTOR: 0.00001},
             "fe": {NAME: "msg_timestamp"},
+        },
+    },
+    # Anker Smartplug
+    "A17X8": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "007a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "007f": CMD_TIMER_REQUEST,  # Request timer status from device
+        "0405": {
+            # Interval: ~5 seconds, but only with realtime trigger
+            TOPIC: "param_info",
+            "a2": {NAME: "device_sn"},
+            "a4": {NAME: "ac_output_power_switch"},  # Off (0), On (1)
+            "a6": {NAME: "sw_version", "values": 4},
+            "a7": {NAME: "sw_controller", "values": 4},
+            "a8": {NAME: "voltage", "factor": 0.1},
+            "a9": {NAME: "current", "factor": 0.1},
+            "aa": {NAME: "power"},
+            "ab": {NAME: "output_energy", FACTOR: 0.001},
+            "ad": _PLUG_TIMER_STATUS,
+            "fe": {NAME: "msg_timestamp"},
+        },
+        "087f": {
+            # Interval: upon timer request command
+            TOPIC: "param_info",
+            "a2": _PLUG_TIMER_STATUS,
         },
     },
     # Anker Power Dock
