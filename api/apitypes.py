@@ -108,7 +108,7 @@ API_ENDPOINTS: Final[dict] = {
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
-    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16]
+    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 20 23 26]
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
     "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)
@@ -727,7 +727,8 @@ class SolixParmType(Enum):
     SOLARBANK_AUTHORIZATIONS = "13"
     SOLARBANK_POWERDOCK = "16"  # get power dock SN
     SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock
-    # SOLARBANK_EV_CHARGER = "20" # to be verified
+    SOLARBANK_3RD_PARTY_PV = "23"  # third party PV settings for site
+    # SOLARBANK_EV_CHARGER = "26" # EV Charger switch?
 
 
 class SolarbankPowerMode(IntEnum):
@@ -1079,7 +1080,8 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
+        "power_limit",
+        "power_limit_option",
     }
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -1095,7 +1097,8 @@ class SolarbankDeviceMetrics:
         "micro_inverter_low_power_limit",
         "grid_to_battery_power",
         "other_input_power",  # This is AC input for charging typically
-        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
+        "power_limit",
+        "power_limit_option",
     }
     # SOLIX Solarbank 2 E1600 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
@@ -1104,7 +1107,8 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "to_home_load",
         "pei_heating_power",
-        # "switch_0w", # Enable once device setting for grid export supported via set_device_attr
+        "power_limit",
+        "power_limit_option",
     }
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {
@@ -1117,9 +1121,6 @@ class SolarbankDeviceMetrics:
         "ac_power",
         "to_home_load",
         "pei_heating_power",
-        # "micro_inverter_power",  # external inverter input not supported by SB3
-        # "micro_inverter_power_limit",  # external inverter input not supported by SB3
-        # "micro_inverter_low_power_limit",  # external inverter input not supported by SB3
         "grid_to_battery_power",
         "other_input_power",  # This is AC input for charging typically
         "power_limit",
@@ -1387,6 +1388,7 @@ class SolixChargerPortStatus(StrEnum):
     inactive = "0"
     active = "1"
     unknown = "unknown"
+
 
 @dataclass
 class SolarbankTimeslot:

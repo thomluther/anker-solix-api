@@ -21,10 +21,12 @@ from .mqttcmdmap import (
     CMD_LIGHT_MODE,
     CMD_PORT_MEMORY_SWITCH,
     CMD_REALTIME_TRIGGER,
+    CMD_SB_3RD_PARTY_PV_SWITCH,
     CMD_SB_AC_INPUT_LIMIT,
     CMD_SB_AC_SOCKET_SWITCH,
     CMD_SB_DEVICE_TIMEOUT,
     CMD_SB_DISABLE_GRID_EXPORT_SWITCH,
+    CMD_SB_EV_CHARGER_SWITCH,
     CMD_SB_INVERTER_TYPE,
     CMD_SB_LIGHT_MODE,
     CMD_SB_LIGHT_SWITCH,
@@ -922,8 +924,8 @@ _A17C1_0408 = {
     # "d3": {NAME: "unknown_power_6?"},
     # "d6": {NAME: "timestamp_1?"},
     # "dc": {NAME: "max_load"},
-    # "e0": {NAME: "soc_min?"},
-    # "e1": {NAME: "soc_max?"},
+    # "e0": {NAME: "min_soc?"},
+    # "e1": {NAME: "max_soc?"},
     # "e2": {NAME: "pv_power_3rd_party?"},
     # "e6": {NAME: "pv_limit"},
     # "e7": {NAME: "ac_input_limit"},
@@ -1171,12 +1173,10 @@ _A17C5_0405 = {
     "b2": {NAME: "discharged_energy"},
     "b3": {NAME: "output_energy"},
     "b4": {NAME: "consumed_energy"},
-    "b5": {
-        NAME: "soc_min"
-    },  # TODO: Does this toggle with the setting? Could also be station wide SOC
-    "b6": {NAME: "output_cutoff_exp_1?"},  # Could also be min SOC of Main battery?
+    "b5": {NAME: "min_soc"},
+    "b6": {NAME: "min_soc_exp_1?"},  # Could also be min SOC of Main battery?
     "b7": {
-        NAME: "output_cutoff_exp_2?"
+        NAME: "min_soc_exp_2?"
     },  # Could also be min SOC of first Expansion? But why no other expansion SOC in this message?
     "b8": {NAME: "usage_mode"},
     "b9": {NAME: "home_load_preset"},
@@ -1236,6 +1236,8 @@ _A17C5_0408 = {
     "a2": {NAME: "device_sn"},
     "a3": {NAME: "local_timestamp"},
     "a4": {NAME: "utc_timestamp"},
+    "a5": {NAME: "battery_soc_calc", FACTOR: 0.1},
+    "a6": {NAME: "battery_soh", FACTOR: 0.1},
     "a7": {NAME: "battery_soc"},
     "a9": {NAME: "usage_mode"},
     "a8": {NAME: "charging_status?"},
@@ -1264,9 +1266,8 @@ _A17C5_0408 = {
     "dc": {NAME: "max_load"},
     "dd": {NAME: "ac_input_limit"},
     # "de": {NAME: "output_energy"},
-    "e0": {NAME: "soc_min?"},
-    "e1": {NAME: "soc_max?"},
-    "e2": {NAME: "pv_power_3rd_party"},
+    "e0": {NAME: "min_soc"},
+    "e1": {NAME: "max_soc?"},
     "e6": {NAME: "pv_limit"},
     "e7": {NAME: "ac_input_limit"},
     "cc": {NAME: "temperature", SIGNED: True},
@@ -1509,13 +1510,11 @@ _DOCK_0420 = {
 _DOCK_0421 = {
     # multisystem message
     TOPIC: "state_info",
-    "a3": {NAME: "pv_limit_solarbank_4"},
-    "a4": {NAME: "pv_limit_solarbank_3"},
-    "a5": {NAME: "pv_limit_solarbank_2"},
-    "a6": {NAME: "pv_limit_solarbank_1"},
+    "a4": {NAME: "max_load_legal"},
+    "a5": {NAME: "max_load"},
+    "a6": {NAME: "ac_input_limit_total?"},
     "a7": {NAME: "battery_soc_total"},  # Average SOC of all solarbank devices in system
-    "ac": {NAME: "soc_max?"},
-    "ad": {NAME: "max_load"},
+    "ac": {NAME: "max_soc?"},
     "fc": {NAME: "device_sn"},
     "fd": {NAME: "local_timestamp"},
     "fe": {NAME: "utc_timestamp"},
@@ -1528,10 +1527,10 @@ _DOCK_0428 = {
     "a3": {NAME: "local_timestamp"},
     "a4": {NAME: "utc_timestamp"},
     "a5": {NAME: "battery_soc_total"},  # Average SOC of all solarbanks
-    "a6": {NAME: "0428_unknown_1?"},
+    "a6": {NAME: "0428_unknown_a6?"},
     "ac": {NAME: "pv_power_total"},
     "b5": {NAME: "battery_power_signed_total"},
-    "bc": {NAME: "battery_power_signed"},
+    "bc": {NAME: "0428_unknown_bc?"},
     "d9": {
         BYTES: {
             "00": {
@@ -2027,7 +2026,7 @@ SOLIXMQTTMAP: Final[dict] = {
             # solarbank command group
             COMMAND_LIST: [
                 SolixMqttCommands.sb_max_load,  # field a2, a3
-                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9
             ],
             SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000 W, may depend on country settings
             | {
@@ -2065,7 +2064,7 @@ SOLIXMQTTMAP: Final[dict] = {
             # solarbank command group
             COMMAND_LIST: [
                 SolixMqttCommands.sb_max_load,  # field a2, a3
-                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9
             ],
             SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000,1200 W, may depend on country settings
             | {
@@ -2104,7 +2103,7 @@ SOLIXMQTTMAP: Final[dict] = {
             # solarbank command group
             COMMAND_LIST: [
                 SolixMqttCommands.sb_max_load,  # field a2, a3
-                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9
             ],
             SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000 W, may depend on country settings
             | {
@@ -2145,7 +2144,7 @@ SOLIXMQTTMAP: Final[dict] = {
             # solarbank command group
             COMMAND_LIST: [
                 SolixMqttCommands.sb_max_load,  # field a2, a3, a4
-                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9
                 SolixMqttCommands.sb_pv_limit_select,  # field a7
                 SolixMqttCommands.sb_ac_input_limit,  # field a8
             ],
@@ -2166,6 +2165,7 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.sb_pv_limit_select: CMD_SB_PV_LIMIT,  # 2000 W or 3600 W
             SolixMqttCommands.sb_ac_input_limit: CMD_SB_AC_INPUT_LIMIT,  # 0 - 1200 W, step: 100
         },
+        "0085": CMD_SB_3RD_PARTY_PV_SWITCH,  # 3rd Party support switch, cloud driven
         "009a": CMD_SB_DEVICE_TIMEOUT,  # timeout in 30 min chunks: 0, 30, 60, 120, 240, 360, 720, 1440 minutes
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": _A17C5_0405,
@@ -2219,6 +2219,16 @@ SOLIXMQTTMAP: Final[dict] = {
     # Anker Power Dock
     "AE100": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0067": CMD_SB_MIN_SOC,  # select SOC reserve, cloud driven
+        "0080": {
+            # solarbank command group
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9, cloud driven
+            ],
+            SolixMqttCommands.sb_disable_grid_export_switch: CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
+        },
+        "0084": CMD_SB_EV_CHARGER_SWITCH,  # EV charger support switch, cloud driven
+        "0085": CMD_SB_3RD_PARTY_PV_SWITCH,  # 3rd Party support switch, cloud driven
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             TOPIC: "param_info",
@@ -2245,10 +2255,10 @@ SOLIXMQTTMAP: Final[dict] = {
                     "00": {
                         NAME: "solarbank_2_sn",
                         TYPE: DeviceHexDataTypes.str.value,
-                        "19": {
-                            NAME: "solarbank_2_soc",
-                            TYPE: DeviceHexDataTypes.ui.value,
-                        },
+                    },
+                    "19": {
+                        NAME: "solarbank_2_soc",
+                        TYPE: DeviceHexDataTypes.ui.value,
                     },
                 }
             },
@@ -2258,10 +2268,10 @@ SOLIXMQTTMAP: Final[dict] = {
                     "00": {
                         NAME: "solarbank_3_sn",
                         TYPE: DeviceHexDataTypes.str.value,
-                        "19": {
-                            NAME: "solarbank_3_soc",
-                            TYPE: DeviceHexDataTypes.ui.value,
-                        },
+                    },
+                    "19": {
+                        NAME: "solarbank_3_soc",
+                        TYPE: DeviceHexDataTypes.ui.value,
                     },
                 }
             },

@@ -83,7 +83,7 @@ class SolixMqttCommands:
     soc_limits: str = "soc_limits"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
-    sb_min_soc_select: str = "sb_min_soc_select" # Does not change App station wide setting, needs Api request as well
+    sb_min_soc_select: str = "sb_min_soc_select"  # Does not change App station wide setting, needs Api request as well
     sb_inverter_type_select: str = "sb_inverter_type_select"
     sb_max_load: str = "sb_max_load"
     sb_ac_input_limit: str = "sb_ac_input_limit"
@@ -94,6 +94,8 @@ class SolixMqttCommands:
     sb_disable_grid_export_switch: str = "sb_disable_grid_export_switch"
     sb_device_timeout: str = "sb_device_timeout"
     sb_usage_mode: str = "sb_usage_mode"  # Not supported, uses various field patterns per mode with same command message
+    sb_3rd_party_pv_switch: str = "sb_3rd_party_pv_switch"  # Driven through cloud
+    sb_ev_charger_switch: str = "sb_ev_charger_switch"  # Driven through cloud
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -526,6 +528,29 @@ CMD_SB_AC_SOCKET_SWITCH = CMD_COMMON | {
     },
 }
 
+CMD_SB_3RD_PARTY_PV_SWITCH = CMD_COMMON | {
+    # Command: Switch to enable 3rd Party PV support
+    COMMAND_NAME: SolixMqttCommands.sb_3rd_party_pv_switch,
+    "a2": {
+        NAME: "set_3rd_party_pv_switch",  # Off (0), On (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "3rd_party_pv_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+}
+
+CMD_SB_EV_CHARGER_SWITCH = CMD_COMMON | {
+    # Command: Switch to enable EV charger support
+    COMMAND_NAME: SolixMqttCommands.sb_ev_charger_switch,
+    "a2": {
+        NAME: "set_ev_charger_switch",  # Off (0), On (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "ev_charger_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+}
+
+
 CMD_SB_MAX_LOAD = (
     CMD_COMMON
     | {
@@ -544,29 +569,30 @@ CMD_SB_MAX_LOAD = (
     }
 )
 
-CMD_SB_DISABLE_GRID_EXPORT_SWITCH = (
-    CMD_COMMON
-    | {
-        # Command: Solarbank disable grid export on PV surplus
-        COMMAND_NAME: SolixMqttCommands.sb_disable_grid_export_switch,
-        "a5": {
-            NAME: "set_disable_grid_export_a5?",  # Unknown, 0 observed
-            TYPE: DeviceHexDataTypes.sile.value,
-            VALUE_DEFAULT: 0,
-        },
-        "a6": {
-            NAME: "set_disable_grid_export_switch",  # Allow export (0), disable export (1)
-            TYPE: DeviceHexDataTypes.sile.value,
-            STATE_NAME: "grid_export_disabled",
-            VALUE_OPTIONS: {"off": 0, "on": 1},
-        },
-        "a9": {
-            NAME: "set_disable_grid_export_a9?",  # Unknown, seems new to limit the export W? May require new FW to be supported
-            TYPE: DeviceHexDataTypes.sile.value,
-            VALUE_DEFAULT: 0,
-        },
-    }
-)
+CMD_SB_DISABLE_GRID_EXPORT_SWITCH = CMD_COMMON | {
+    # Command: Solarbank disable grid export on PV surplus
+    COMMAND_NAME: SolixMqttCommands.sb_disable_grid_export_switch,
+    "a5": {
+        NAME: "set_disable_grid_export_a5?",  # Unknown, 0 observed
+        TYPE: DeviceHexDataTypes.sile.value,
+        VALUE_DEFAULT: 0,
+    },
+    "a6": {
+        NAME: "set_disable_grid_export_switch",  # Allow export (0), disable export (1)
+        TYPE: DeviceHexDataTypes.sile.value,
+        STATE_NAME: "grid_export_disabled",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_STATE: "grid_export_disabled",
+    },
+    "a9": {
+        NAME: "set_grid_export_limit",  # 100-100000, step 1
+        TYPE: DeviceHexDataTypes.sile.value,
+        VALUE_DEFAULT: 0,
+        VALUE_STATE: "grid_export_limit",
+        VALUE_MIN: 100,
+        VALUE_MAX: 100000,
+    },
+}
 
 CMD_SB_PV_LIMIT = CMD_COMMON | {
     # Command: Solarbank Set max photovoltaik input limit (MPPT limit)

@@ -22,6 +22,7 @@ MODELS = {
     "A17C2",  # Solarbank 2 E1600 AC
     "A17C3",  # Solarbank 2 E1600 Plus
     "A17C5",  # Solarbank 3 E2700 Pro
+    "AE100",  # Power Dock
 }
 # Define possible controls per Model
 # Those commands are only supported once also described for a message type in the model mapping (except realtime trigger)
@@ -32,7 +33,7 @@ FEATURES = {
     SolixMqttCommands.temp_unit_switch: MODELS,
     # Min SOC different since SB3
     SolixMqttCommands.sb_power_cutoff_select: {"A17C0", "A17C1", "A17C2", "A17C3"},
-    SolixMqttCommands.sb_min_soc_select: {"A17C5"},
+    SolixMqttCommands.sb_min_soc_select: {"A17C5", "AE100"},
     # Commands since SB2
     SolixMqttCommands.sb_ac_socket_switch: MODELS,
     SolixMqttCommands.sb_light_switch: MODELS,
@@ -43,6 +44,8 @@ FEATURES = {
     SolixMqttCommands.sb_device_timeout: MODELS,
     SolixMqttCommands.sb_ac_input_limit: MODELS,
     SolixMqttCommands.sb_pv_limit_select: MODELS,
+    SolixMqttCommands.sb_3rd_party_pv_switch: MODELS,
+    SolixMqttCommands.sb_ev_charger_switch: {"AE100"},
 }
 
 

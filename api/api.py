@@ -274,6 +274,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "energy_today",
                             "energy_last_period",
                             "time_zone",
+                            "grid_export_limit",
                         ]
                         and value
                     ):
@@ -353,17 +354,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "power_limit",
                             "pv_power_limit",
                             "ac_input_limit",
-                            "switch_0w",
                         ]
                         and str(value).isdigit()
                     ):
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
-                            if key in ["switch_0w"]:
-                                device["allow_grid_export"] = not bool(value)
-                            else:
-                                device[key] = int(value)
+                            device[key] = int(value)
                     elif key in ["sub_package_num"] and str(value).isdigit():
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
@@ -1463,6 +1460,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         deviceSn: str | None = None,
         socReserve: int | None = None,
         gridExport: bool | None = None,
+        gridExportLimit: int | None = None,
         toFile: bool = False,
     ) -> bool | dict:
         """Set various parm for the station.
@@ -1495,8 +1493,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             or {}
         )
         data = {}
-        if gridExport is not None:
+        if gridExport is not None and "switch_0w" in station_settings:
             data["switch_0w"] = 0 if bool(gridExport) else 1
+        if (
+            isinstance(gridExportLimit, float | int)
+            and "feed-in_power_limit" in station_settings
+        ):
+            data["feed-in_power_limit"] = round(gridExportLimit)
         if isinstance(socReserve, float | int):
             # lookup id of specified soc
             socid = next(
@@ -1673,7 +1676,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0,"ac_input_limit": 1200}],
             "current_power":0,"all_power_limit":0,"ae100_info":null,"parallel_type":"Single","ac_input_power_unit":"1200W","legal_limit":800,"power_limit_option":[
                 {"limit": 350,"limit_real": 350},{"limit": 600,"limit_real": 600},
-                {"limit": 800,"limit_real": 800},{"limit": 1200,"limit_real": 1200}]}
+                {"limit": 800,"limit_real": 800},{"limit": 1200,"limit_real": 1200}]
+            "exceed_alarm":false}
         Multi System:
             {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","power_unit": "kwh","legal_power_limit": 3600,"device_info": [
                 {"device_pn": "A17C5","device_sn": "9JVB42LJK8J0P5RY","device_name": "Solarbank 3 E2700 Pro",
@@ -1688,7 +1692,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 "device_pn": "AE100","device_sn": "9JVB42LJK8J0P5RX","device_name": "AE100",
                 "device_img": "https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/06/24/iot-admin/6eBAql2OBqMlGG1W/20250624-201743.png",
                 "power_limit": 0,"power_limit_option": null,"power_limit_option_real": null,"status": 0,"ac_input_limit": 0},
-            "parallel_type": "AE100","ac_input_power_unit": "2400W"}
+            "parallel_type": "AE100V2","ac_input_power_unit": "3600W","legal_limit": 0,"power_limit_option": [
+                {"limit": 1200,"limit_real": 1200},{"limit": 2400,"limit_real": 2400},{"limit": 3600,"limit_real": 3600},{"limit": 4800,"limit_real": 4800}],
+            "exceed_alarm": false}
         """
         siteId = str(siteId) or ""
         data = {"site_id": siteId}
@@ -1793,6 +1799,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         ac_output: float | str | None = None,
         pv_input: float | str | None = None,
         grid_export: bool | int | None = None,
+        grid_export_limit: float | str | None = None,
         toFile: bool = False,
     ) -> bool | dict:
         """Set the provided power limits for the site and device."""
@@ -1813,7 +1820,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if str(pv_input).replace("-", "", 1).replace(".", "", 1).isdigit()
             else None
         )
+        grid_export_limit = (
+            round(float(grid_export_limit))
+            if str(grid_export_limit).replace("-", "", 1).replace(".", "", 1).isdigit()
+            else None
+        )
         grid_export = bool(grid_export) if grid_export is not None else None
+        query = []
         # Prepare payload from parameters for proper device attributes
         if ac_input is not None:
             data["ac_power_limit"] = ac_input
@@ -1823,12 +1836,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             data["pv_power_limit"] = pv_input
         if grid_export is not None:
             data["switch_0w"] = 0 if grid_export else 1
+            query.append("switch_0w")
+        if grid_export_limit is not None:
+            # TODO: The required attribute name needs to be validated with a supported device
+            data["feed_in_power_limit"] = grid_export_limit
+            query.append("feed_in_power_limit")
         # update device attributes
         if not isinstance(
             await self.set_device_attributes(
                 deviceSn=deviceSn,
                 attributes=data,
-                query_attributes=None if grid_export is None else ["switch_0w"],
+                query_attributes=query if query else None,
                 toFile=toFile,
             ),
             dict,

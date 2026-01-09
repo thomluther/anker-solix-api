@@ -184,6 +184,7 @@ async def get_device_parm(
 
     Working paramType is 4 for SB1 schedules, 6 for SB2 schedules, 9 for enforced SB1 schedules when in coupled SB2 system (9 no longer supported since Jul 2025?), but can be modified if necessary.
     SB3 also supports 12 and 13 to list various options/settings for Smart mode and dynamic tariff plans. 18 is used to show station settings, e.g. SOC reserve and export to grid
+    23 shows a switch setting, 26 shows the 3rd party PV panel settings
     Example data for provided site_id with param_type 4 for SB1:
     {"param_data": "{\"ranges\":[
         {\"id\":0,\"start_time\":\"00:00\",\"end_time\":\"08:30\",\"turn_on\":true,\"appliance_loads\":[{\"id\":0,\"name\":\"Benutzerdefiniert\",\"power\":300,\"number\":1}],\"charge_priority\":80},
@@ -224,7 +225,11 @@ async def get_device_parm(
     {"param_data":"{\"AE100\":\"7X297LBE75Z0BU4LE\",
         \"id_img\":\"https://public-aiot-fra-prod.s3.dualstack.eu-central-1.amazonaws.com/anker-power/public/product/2025/06/24/iot-admin/6eBAql2OBqMlGG1W/20250624-201743.png\"}"}
     Example data for provided site_id with param_type 18:
-    {"param_data": {"soc_list": [{"id": 1,"is_selected": 1,"soc": 10},{"id": 2,"is_selected": 0,"soc": 5}],"switch_0w": 0,"enable_0w": 0}}
+    {"param_data": {"soc_list": [{"id": 1,"is_selected": 1,"soc": 10},{"id": 2,"is_selected": 0,"soc": 5}],"switch_0w": 0,"enable_0w": 0,"enable_0w_change":false,"feed-in_power_limit":0}
+    Example data for provided site_id with param_type 23:
+    {"param_data": "{\"switch\": 0}"}
+    Example data for provided site_id with param_type 26:
+    {"param_data": "{\"third_part_pv_setting\": 1, \"show_third_party_pv_panel\": 1}"}
     """
     if not isinstance(testSchedule, dict):
         testSchedule = None
@@ -325,9 +330,12 @@ async def get_device_parm(
                 self._update_dev(
                     {
                         "device_sn": sn,
-                        # station_sn indicates whether logical station is used by site, it will be set to the combiner_box SN if phyiscally available
+                        # station_sn indicates whether logical station is used by site, it will be set to the combiner_box SN if physically available
                         "station_sn": station_sn,
                         "allow_grid_export": not bool(paramData.get("switch_0w", None)),
+                        "grid_export_limit": str(
+                            paramData.get("feed-in_power_limit", "")
+                        ),
                     }
                 )
             # update physical station device if in use (this cannot be done by power_limit query in site details poller if update triggered by param change)
@@ -345,6 +353,7 @@ async def get_device_parm(
                 station["allow_grid_export"] = not bool(
                     paramData.get("switch_0w", None)
                 )
+                station["grid_export_limit"] = paramData.get("feed-in_power_limit", 0)
                 self._update_dev(station)
     return data
 
@@ -361,8 +370,12 @@ async def set_device_parm(
     r"""Set device parameters (e.g. solarbank schedule).
 
     command: Must be 17 for SB1, SB2 and SB3 solarbank schedules. Maybe new models require other command value?
-    paramType: was always string "4" for SB1, SB2 needs "6" and a different structure. SB3 may use 13 for data authorization setting
-               Multisystems use "18" for station settings
+    paramType: was always string "4" for SB1, but SB2 and later needs "6" and a different structure. SB3 may use 13 for data authorization setting
+               Multisystems supported introduced "18" for station settings, which is also used for Api station display of single system setups
+               NOTE: It appears this only affects the value display in the App, but device control changes are not triggered through this Api call and may need
+               additional MQTT controls to modify the corresponding device settings
+               "23" controls an additional switch which is unknown yet
+               "26" is used to modify 3rd party PV settings
     Example paramData for type "4":
     {"param_data": '{"ranges":['
         '{"id":0,"start_time":"00:00","end_time":"08:30","turn_on":true,"appliance_loads":[{"id":0,"name":"Benutzerdefiniert","power":300,"number":1}],"charge_priority":80},'
@@ -378,11 +391,11 @@ async def set_device_parm(
             {\"start_time\":\"00:00\",\"end_time\":\"08:00\",\"power\":90},{\"start_time\":\"08:00\",\"end_time\":\"22:00\",\"power\":120},{\"start_time\":\"22:00\",\"end_time\":\"24:00\",\"power\":90}]}],
     \"blend_plan\":null,\"default_home_load\":200,\"max_load\":800,\"min_load\":0,\"step\":10}"}
 
-    Example data for provided site_id with param_type "18" for SB3+:
+    Example data for provided site_id with param_type "18" for station parameters:
     {"param_data":"{\"soc_list":[
         {\"id\":1,\"is_selected\":1,\"soc\":10},
         {\"id\":2,\"is_selected\":0,\"soc\":5}],
-    \"switch_0w\":1,\"enable_0w\":0,\"enable_0w_change\":false}"}
+    \"switch_0w\":1,\"enable_0w\":0,\"enable_0w_change\":false,\"feed-in_power_limit\":4500}"}
     """
 
     data = {
@@ -413,6 +426,8 @@ async def set_device_parm(
                     await self.set_power_cutoff(deviceSn=sn, setId=setId, toFile=toFile)
             if (setting := paramData.get("switch_0w")) is not None:
                 filedata["switch_0w"] = setting
+            if (setting := paramData.get("feed-in_power_limit")) is not None:
+                filedata["feed-in_power_limit"] = setting
         else:
             filedata = paramData
         if filedata:
