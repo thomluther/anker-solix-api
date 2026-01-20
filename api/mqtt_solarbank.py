@@ -39,6 +39,7 @@ FEATURES = {
     SolixMqttCommands.sb_light_switch: MODELS,
     SolixMqttCommands.sb_light_mode_select: MODELS,
     SolixMqttCommands.sb_max_load: MODELS,
+    SolixMqttCommands.sb_max_load_parallel: MODELS,
     # commands since SB2 AC / SB3
     SolixMqttCommands.sb_disable_grid_export_switch: MODELS,
     SolixMqttCommands.sb_device_timeout: MODELS,

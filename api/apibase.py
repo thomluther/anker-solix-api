@@ -583,6 +583,7 @@ class AnkerSolixBaseApi:
                                 "min_load",
                                 "max_load",
                                 "max_load_legal",
+                                "max_load_total",
                                 "home_load_preset",
                                 "pv_to_grid_power",
                                 "grid_to_home_power",
@@ -602,11 +603,13 @@ class AnkerSolixBaseApi:
                             in [
                                 # keys with value that should be saved as rounded as 3 decimal float string
                                 "battery_soh",
+                                "voltage",
                                 "pv_1_voltage",
                                 "pv_2_voltage",
                                 "pv_3_voltage",
                                 "pv_4_voltage",
                                 "battery_voltage",
+                                "power",
                                 "usbc_1_power",
                                 "usbc_2_power",
                                 "usbc_3_power",
@@ -619,6 +622,7 @@ class AnkerSolixBaseApi:
                                 "usbc_4_voltage",
                                 "usba_1_voltage",
                                 "usba_2_voltage",
+                                "current",
                                 "usbc_1_current",
                                 "usbc_2_current",
                                 "usbc_3_current",
@@ -706,6 +710,8 @@ class AnkerSolixBaseApi:
                                 "utc_timestamp",
                                 "timestamp_backup_start",
                                 "timestamp_backup_end",
+                                "toggle_to_delay_seconds",
+                                "toggle_to_elapsed_seconds",
                             ]
                             and value is not None
                         ):
@@ -1769,13 +1775,16 @@ class AnkerSolixBaseApi:
             {"time":"00:00","price":"111.49"},{"time":"01:00","price":"109.91"},{"time":"02:00","price":"102.02"},...,{"time":"23:00","price":"95.49"}],
         "currency":"EUR","today_avg_price":"87.04","tomorrow_avg_price":"71.69"}
         """
-        # validate provider
+        # validate provider, ensure area is defined since query will fail otherwise
         if not (
-            provider := provider
-            if isinstance(provider, SolixPriceProvider)
-            else SolixPriceProvider(provider=provider)
-            if isinstance(provider, str | dict)
-            else None
+            (
+                provider := provider
+                if isinstance(provider, SolixPriceProvider)
+                else SolixPriceProvider(provider=provider)
+                if isinstance(provider, str | dict)
+                else None
+            )
+            and provider.area
         ):
             return {}
         # validate date

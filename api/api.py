@@ -218,6 +218,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "group_info",
                         "power_limit_option",
                         "power_limit_option_real",
+                        "all_power_limit_option",
                         "station_sn",
                     ]:
                         if key in ["power_limit_option"]:
@@ -1757,9 +1758,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     "is_passive": "wifi_online"
                     not in (self.devices.get(station_sn) or {}),
                     "current_power": data.get("current_power"),
-                    "all_power_limit": station.pop("power_limit", None)
-                    or data.get("all_power_limit")
+                    "all_power_limit": station.get("power_limit", None)  # usually 0
+                    or data.get("all_power_limit")  # usually 0
+                    or data.get("legal_power_limit")  # station limit set via App
                     or 0,
+                    "all_power_limit_option": station.get("power_limit_option", None)
+                    or data.get("power_limit_option")
+                    or None,
                     "all_ac_input_limit": station.pop("ac_input_limit", None)
                     or str(data.get("ac_input_power_unit") or "").replace("W", ""),
                     "set_load_power": site.get("retain_load", ""),

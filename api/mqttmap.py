@@ -19,6 +19,8 @@ from .mqttcmdmap import (
     CMD_DISPLAY_SWITCH,
     CMD_DISPLAY_TIMEOUT_SEC,
     CMD_LIGHT_MODE,
+    CMD_PLUG_DELAYED_TOGGLE,
+    CMD_PLUG_SCHEDULE,
     CMD_PORT_MEMORY_SWITCH,
     CMD_REALTIME_TRIGGER,
     CMD_SB_3RD_PARTY_PV_SWITCH,
@@ -41,6 +43,7 @@ from .mqttcmdmap import (
     CMD_TEMP_UNIT,
     CMD_TIMER_REQUEST,
     COMMAND_LIST,
+    COMMAND_NAME,
     FACTOR,
     LENGTH,
     MASK,
@@ -1429,14 +1432,18 @@ _PLUG_TIMER_STATUS = {
     BYTES: {
         "00": {
             NAME: "toggle_to_delay_seconds",
-            TYPE: DeviceHexDataTypes.sile.value,
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "01": {
+            NAME: "toggle_to_delay_minutes?",
+            TYPE: DeviceHexDataTypes.ui.value,
         },
         "02": {
-            NAME: "toggle_to_setting?",
+            NAME: "toggle_to_delay_hours?",
             TYPE: DeviceHexDataTypes.ui.value,
         },
         "03": {
-            NAME: "toggle_currect_setting?",
+            NAME: "toggle_current_setting?",
             TYPE: DeviceHexDataTypes.ui.value,
         },
         "04": {
@@ -1445,10 +1452,14 @@ _PLUG_TIMER_STATUS = {
         },
         "05": {
             NAME: "toggle_to_elapsed_seconds",
-            TYPE: DeviceHexDataTypes.sile.value,
+            TYPE: DeviceHexDataTypes.ui.value,
+        },
+        "06": {
+            NAME: "toggle_to_elapsed_minutes?",
+            TYPE: DeviceHexDataTypes.ui.value,
         },
         "07": {
-            NAME: "unknown_toggle_status?",
+            NAME: "toggle_to_elapsed_hours?",
             TYPE: DeviceHexDataTypes.ui.value,
         },
     }
@@ -1534,14 +1545,17 @@ _DOCK_0420 = {
         }
     },
     "c1": {NAME: "main_device_sn?"},
+    "c2": {NAME: "pv_power_3rd_party?"},
+    "c3": {NAME: "0420_timestamp_c3?"},
+    "c4": {NAME: "0420_timestamp_c4?"},
 }
 
 _DOCK_0421 = {
     # multisystem message
     TOPIC: "state_info",
-    "a4": {NAME: "max_load_legal"},
-    "a5": {NAME: "max_load"},
-    "a6": {NAME: "ac_input_limit_total?"},
+    "a4": {NAME: "max_load_total"},
+    "a5": {NAME: "ac_input_limit_total"},
+    "a6": {NAME: "max_load_limit_total"},
     "a7": {NAME: "battery_soc_total"},  # Average SOC of all solarbank devices in system
     "ac": {NAME: "max_soc?"},
     "fc": {NAME: "device_sn"},
@@ -2040,6 +2054,18 @@ SOLIXMQTTMAP: Final[dict] = {
     "A17C1": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
         "0068": {
@@ -2079,6 +2105,18 @@ SOLIXMQTTMAP: Final[dict] = {
     "A17C2": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
         "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
         "0068": {
             # solarbank light command group
@@ -2118,6 +2156,18 @@ SOLIXMQTTMAP: Final[dict] = {
     "A17C3": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
         "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
         "0068": {
             # solarbank light command group
@@ -2157,6 +2207,18 @@ SOLIXMQTTMAP: Final[dict] = {
     "A17C5": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
         "005e": CMD_SB_USAGE_MODE,  # NOTE: Cmd not supported directly, but description used for msg decoding
         "0067": CMD_SB_MIN_SOC,  # select SOC reserve
         "0068": {
@@ -2247,9 +2309,12 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # Anker Smartplug
     "A17X8": {
+        "0040": CMD_STATUS_REQUEST,  # Device status request, more reliable than RT (one time status messages 0405 etc)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "007a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
-        "007f": CMD_TIMER_REQUEST,  # Request timer status from device
+        "007c": CMD_PLUG_SCHEDULE,  # Set a plug schedule
+        "007e": CMD_PLUG_DELAYED_TOGGLE,  # Set a delayed toggle
+        "007f": CMD_TIMER_REQUEST,  # Request timer status from device for delayed toggle
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
             TOPIC: "param_info",
@@ -2273,6 +2338,19 @@ SOLIXMQTTMAP: Final[dict] = {
     # Anker Power Dock
     "AE100": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005a": CMD_SB_MAX_LOAD  # same pattern but different command for max load settings in parallel systems
+        | {
+            COMMAND_NAME: SolixMqttCommands.sb_max_load_parallel,
+            "a2": {
+                **CMD_SB_MAX_LOAD["a2"],
+                VALUE_OPTIONS: [1200, 2400, 3600, 4800],
+                STATE_NAME: "max_load_total",
+            },
+            "a3": {
+                **CMD_SB_MAX_LOAD["a3"],
+                VALUE_DEFAULT: 2,
+            },
+        },
         "0067": CMD_SB_MIN_SOC,  # select SOC reserve, cloud driven
         "0080": {
             # solarbank command group

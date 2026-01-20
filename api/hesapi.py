@@ -27,6 +27,7 @@ from .apitypes import (
     SolixPriceProvider,
     SolixSiteType,
 )
+from .errors import AnkerSolixError
 from .helpers import convertToKwh
 from .session import AnkerSolixClientSession
 
@@ -1586,9 +1587,13 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 / f"{API_FILEPREFIXES['hes_get_wifi_info']}_{deviceSn}.json"
             )
         else:
-            resp = await self.apisession.request(
-                "post", API_HES_SVC_ENDPOINTS["get_wifi_info"], json=data
-            )
+            # Ignore permission errors from endpoint
+            try:
+                resp = await self.apisession.request(
+                    "post", API_HES_SVC_ENDPOINTS["get_wifi_info"], json=data
+                )
+            except AnkerSolixError:
+                resp = {}
         # update device data if device_sn found in wifi list
         if data := resp.get("data") or {}:
             for wifi_info in data.get("wifiInfos") or []:

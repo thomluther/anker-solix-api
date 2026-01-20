@@ -25,6 +25,8 @@ FEATURES = {
     SolixMqttCommands.status_request: MODELS,
     SolixMqttCommands.realtime_trigger: MODELS,
     SolixMqttCommands.ac_output_switch: MODELS,
+    # SolixMqttCommands.plug_schedule: MODELS, # Complex command with multiple parameters
+    # SolixMqttCommands.plug_delayed_toggle: MODELS, # Complex command with multiple parameters
 }
 
 

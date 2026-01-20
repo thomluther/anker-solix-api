@@ -726,9 +726,10 @@ class AnkerSolixApiMonitor:
                     f"{'Actual power':<{col1}}: {m1 and c}{m1 or dev.get('current_power', '----'):>4} {unit:<{col2 - 5}}{co} "
                     f"{'All AC In Limit':<{col3}}: {dev.get('all_ac_input_limit', '----'):>4} W"
                 )
+                m1 = c and mqtt.get("max_load_total", "")
                 CONSOLE.info(
-                    f"{'All Pwr Limit':<{col1}}: {dev.get('all_power_limit', '----'):>4} {unit:<{col2 - 5}} "
-                    f"{'Pwr Limit Opt':<{col3}}: {dev.get('power_limit_option') or '----'!s}"
+                    f"{'All Pwr Limit':<{col1}}: {m1 and c}{m1 or dev.get('all_power_limit', '----'):>4} {unit:<{col2 - 5}}{co} "
+                    f"{'Pwr Limit Opt':<{col3}}: {dev.get('all_power_limit_option') or '----'!s}"
                 )
                 feat1 = dev.get("allow_grid_export")
                 CONSOLE.info(
@@ -1065,14 +1066,39 @@ class AnkerSolixApiMonitor:
                     f"{'Runtime':<{col3}}: {json.dumps(dev.get('running_time')).replace('null', '-------'):>3}"
                 )
                 unit = dev.get("power_unit", "W")
+                m1 = c and mqtt.get("power", "")
                 CONSOLE.info(
-                    f"{'Plug Power':<{col1}}: {dev.get('current_power', ''):>4} {unit:<{col2 - 5}} "
+                    f"{'Plug Power':<{col1}}: {m1 and c}{m1 or dev.get('current_power', ''):>4} {unit:<{col2 - 5}}{co} "
                     f"{'Tag':<{col3}}: {dev.get('tag', '')}"
                 )
+                if (m1 := cm and mqtt.get("voltage", "")) and "." in m1:
+                    m1 = f"{float(m1):>5.2f}"
+                if (m2 := cm and mqtt.get("current", "")) and "." in m2:
+                    m2 = f"{float(m2):>5.3f}"
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'Voltage':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} {'V':<{col2 - 6}}{co} "
+                        f"{'Current':<{col3}}: {m2 and (c or cm)}{m2 or '-.---':>5} A{co}"
+                    )
                 if dev.get("energy_today"):
                     CONSOLE.info(
                         f"{'Energy Today':<{col1}}: {dev.get('energy_today') or '-.--':>4} {'kWh':<{col2 - 5}} "
                         f"{'Last Period':<{col3}}: {dev.get('energy_last_period') or '-.--':>4} kWh"
+                    )
+                m1 = cm and mqtt.get("light_switch", "")
+                m2 = cm and mqtt.get("output_energy", "")
+                if str(m1) or m2:
+                    CONSOLE.info(
+                        f"{'Plug Switch':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2 - 3}}{co} "
+                        f"{'Output Energy':<{col3}}: {m2 and (c or cm)}{m2 or '-.---':>7} kWh{co}"
+                    )
+                m1 = cm and mqtt.get("toggle_to_delay_seconds", "")
+                m2 = cm and mqtt.get("toggle_to_elapsed_seconds", "")
+                if str(m1) or str(m2):
+                    CONSOLE.info(
+                        f"{'Toggle Delay':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} / "
+                        f"{get_enum_name(SolixPpsDisplayMode, m3, 'unknown' if m3 else '----').capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
+                        f"{'Remaining':<{col3}}: {m2 and (c or cm)}{(str(int(m1)-int(m2)) or '----'):>4} Sec.{co}"
                     )
 
             elif devtype in [

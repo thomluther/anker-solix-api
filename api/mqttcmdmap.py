@@ -87,6 +87,7 @@ class SolixMqttCommands:
     sb_min_soc_select: str = "sb_min_soc_select"  # Does not change App station wide setting, needs Api request as well
     sb_inverter_type_select: str = "sb_inverter_type_select"
     sb_max_load: str = "sb_max_load"
+    sb_max_load_parallel: str = "sb_max_load_parallel"
     sb_ac_input_limit: str = "sb_ac_input_limit"
     sb_ac_socket_switch: str = "sb_ac_socket_switch"
     sb_pv_limit_select: str = "sb_pv_limit_select"
@@ -97,6 +98,8 @@ class SolixMqttCommands:
     sb_usage_mode: str = "sb_usage_mode"  # Not supported, uses various field patterns per mode with same command message
     sb_3rd_party_pv_switch: str = "sb_3rd_party_pv_switch"  # Driven through cloud
     sb_ev_charger_switch: str = "sb_ev_charger_switch"  # Driven through cloud
+    plug_schedule: str = "plug_schedule"
+    plug_delayed_toggle: str = "plug_delayed_toggle"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -568,9 +571,10 @@ CMD_SB_MAX_LOAD = (
             STATE_NAME: "max_load",
         },
         "a3": {
-            NAME: "set_max_load_a3?",  # Unknown, 0 observed
+            NAME: "set_max_load_type",  # single load (3), parallel load (2), individual (0)
             TYPE: DeviceHexDataTypes.sile.value,
             VALUE_DEFAULT: 0,
+            VALUE_OPTIONS: {"individual": 0, "parallel": 2, "single": 3},
         },
     }
 )
@@ -610,6 +614,7 @@ CMD_SB_PV_LIMIT = CMD_COMMON | {
         VALUE_OPTIONS: [2000, 3600],
     },
 }
+
 CMD_SB_AC_INPUT_LIMIT = CMD_COMMON | {
     # Command: Solarbank Set max AC input limit (AC charge)
     COMMAND_NAME: SolixMqttCommands.sb_ac_input_limit,
@@ -785,3 +790,107 @@ CMD_SB_USAGE_MODE = (
         },
     }
 )
+
+CMD_PLUG_SCHEDULE = (
+    CMD_COMMON
+    | {
+        # Command: Smartplug schedule
+        COMMAND_NAME: SolixMqttCommands.plug_schedule,
+        "a2": {
+            NAME: "set_plug_schedule_a2?",  # 1 - unknown
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_DEFAULT: 1,
+        },
+        "a3": {
+            NAME: "set_plug_schedule_order?",  # 1 - x
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_MIN: 1,
+            VALUE_MAX: 10,
+        },
+        "a4": {
+            NAME: "set_plug_schedule_a4?",  # 1 - unknown
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_DEFAULT: 1,
+        },
+        "a5": {
+            NAME: "set_plug_schedule_time",  # first byte = hour 0-23, second byte = minute 00-59
+            TYPE: DeviceHexDataTypes.sile.value,
+            VALUE_MIN: 0,
+            VALUE_MAX: 15127,  # 173b hex little endian for 23:59 time
+        },
+        "a6": {
+            NAME: "set_plug_schedule_switch",  # Off (0), On (1)
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_OPTIONS: {"off": 0, "on": 1},
+        },
+    }
+)
+
+CMD_PLUG_DELAYED_TOGGLE = CMD_COMMON | {
+    # Command: Smartplug delayed toggle
+    COMMAND_NAME: SolixMqttCommands.plug_delayed_toggle,
+    "a2": {
+        NAME: "set_toggle_to_switch?",  # Off (0), On (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+    "a3": {
+        # NAME: "set_toggle_to_delay?",  # 3 bytes: Seconds:Minutes:Hours
+        TYPE: DeviceHexDataTypes.bin.value,
+        BYTES: {
+            "00": {
+                NAME: "set_toggle_to_delay_seconds",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 59,
+                VALUE_DEFAULT: 0,
+            },
+            "01": {
+                NAME: "set_toggle_to_delay_minutes?",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 59,
+                VALUE_DEFAULT: 0,
+            },
+            "02": {
+                NAME: "set_toggle_to_delay_hours?",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 23,
+                VALUE_DEFAULT: 0,
+            },
+        },
+    },
+    "a4": {
+        NAME: "set_toggle_back_switch?",  # Off (0), On (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+    "a5": {
+        # NAME: "set_toggle_back_delay?",  # 3 bytes: Seconds:Minutes:Hours
+        TYPE: DeviceHexDataTypes.bin.value,
+        BYTES: {
+            "00": {
+                NAME: "set_toggle_back_delay_seconds?",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 59,
+                VALUE_DEFAULT: 0,
+            },
+            "01": {
+                NAME: "set_toggle_back_delay_minutes?",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 59,
+                VALUE_DEFAULT: 0,
+            },
+            "02": {
+                NAME: "set_toggle_back_delay_hours?",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 23,
+                VALUE_DEFAULT: 0,
+            },
+        },
+    },
+}
