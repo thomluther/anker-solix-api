@@ -1832,7 +1832,7 @@ SOLIXMQTTMAP: Final[dict] = {
             },
             SolixMqttCommands.display_timeout_seconds: CMD_COMMON_V2
             | {
-                "a4": {  # TODO: Find our correct field in message group
+                "a4": {  # TODO: Find correct status field in message group
                     NAME: "set_display_timeout_sec",  # 0 (Never), 10, 20, 30, 60, 300, 1800
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "display_timeout_seconds",
@@ -2132,6 +2132,7 @@ SOLIXMQTTMAP: Final[dict] = {
             COMMAND_LIST: [
                 SolixMqttCommands.sb_max_load,  # field a2, a3
                 SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9
+                SolixMqttCommands.sb_ac_input_limit,  # field a8
             ],
             SolixMqttCommands.sb_max_load: CMD_SB_MAX_LOAD  # 350,600,800,1000,1200 W, may depend on country settings
             | {
@@ -2141,6 +2142,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 }
             },
             SolixMqttCommands.sb_disable_grid_export_switch: CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
+            SolixMqttCommands.sb_ac_input_limit: CMD_SB_AC_INPUT_LIMIT,  # 0 - 1200 W, step: 100
         },
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
         "0405": _A17C5_0405,
@@ -2352,13 +2354,7 @@ SOLIXMQTTMAP: Final[dict] = {
             },
         },
         "0067": CMD_SB_MIN_SOC,  # select SOC reserve, cloud driven
-        "0080": {
-            # solarbank command group
-            COMMAND_LIST: [
-                SolixMqttCommands.sb_disable_grid_export_switch,  # field a5, a6, a9, cloud driven
-            ],
-            SolixMqttCommands.sb_disable_grid_export_switch: CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
-        },
+        "0080": CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
         "0084": CMD_SB_EV_CHARGER_SWITCH,  # EV charger support switch, cloud driven
         "0085": CMD_SB_3RD_PARTY_PV_SWITCH,  # 3rd Party support switch, cloud driven
         "0405": {

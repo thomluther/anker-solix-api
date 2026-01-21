@@ -543,12 +543,16 @@ class DeviceHexDataField:
                     else options
                 )
             # get a validated value for encoding, will raise value or Type Error for invalid value or definitions
-            fieldvalue = MqttCmdValidator(
-                min=desc.get(VALUE_MIN),
-                max=desc.get(VALUE_MAX),
-                step=desc.get(VALUE_STEP),
-                options=options,
-            ).check(value)
+            fieldvalue = (
+                MqttCmdValidator(
+                    min=desc.get(VALUE_MIN),
+                    max=desc.get(VALUE_MAX),
+                    step=desc.get(VALUE_STEP),
+                    options=options,
+                ).check(value)
+                if value != desc.get(VALUE_DEFAULT)
+                else value
+            )
         # use default value if defined in fieldmap
         elif (fieldvalue := desc.get(VALUE_DEFAULT)) is None:
             raise ValueError(
@@ -741,7 +745,12 @@ class DeviceHexData:
                     factor = fld.get(FACTOR) or None
                     divider = fld.get(VALUE_DIVIDER) or None
                     signed = fld.get(SIGNED)
-                    if isinstance(name, str) and "timestamp" in str(name) and f.f_type in [DeviceHexDataTypes.str.value, DeviceHexDataTypes.var.value]:
+                    if (
+                        isinstance(name, str)
+                        and "timestamp" in str(name)
+                        and f.f_type
+                        in [DeviceHexDataTypes.str.value, DeviceHexDataTypes.var.value]
+                    ):
                         name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
                     s += f"\n{f.decode().rstrip()}"
                     if name:

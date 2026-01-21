@@ -158,7 +158,9 @@ class SolixMqttDevice:
                                             required_number = False
                                     # flag whether parameter is switch
                                     descriptors["is_switch"] = bool(
-                                        isinstance(opt := descriptors.get(VALUE_OPTIONS), dict)
+                                        isinstance(
+                                            opt := descriptors.get(VALUE_OPTIONS), dict
+                                        )
                                         and len(opt) == 2
                                         and "on" in opt
                                         and "off" in opt
@@ -402,12 +404,16 @@ class SolixMqttDevice:
             return True
         try:
             # return validated parameter value or option
-            return MqttCmdValidator(
-                min=desc.get(VALUE_MIN),
-                max=desc.get(VALUE_MAX),
-                step=desc.get(VALUE_STEP),
-                options=desc.get(VALUE_OPTIONS),
-            ).check(value)
+            return (
+                MqttCmdValidator(
+                    min=desc.get(VALUE_MIN),
+                    max=desc.get(VALUE_MAX),
+                    step=desc.get(VALUE_STEP),
+                    options=desc.get(VALUE_OPTIONS),
+                ).check(value)
+                if value != desc.get(VALUE_DEFAULT)
+                else value
+            )
         except (ValueError, TypeError) as err:
             self._logger.error(
                 "MQTT device %s (%s) control error - Command '%s' parameter '%s' value error: %s",

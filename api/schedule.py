@@ -353,7 +353,7 @@ async def get_device_parm(
                 station["allow_grid_export"] = not bool(
                     paramData.get("switch_0w", None)
                 )
-                station["grid_export_limit"] = paramData.get("feed-in_power_limit", 0)
+                station["grid_export_limit"] = str(paramData.get("feed-in_power_limit", ""))
                 self._update_dev(station)
     return data
 

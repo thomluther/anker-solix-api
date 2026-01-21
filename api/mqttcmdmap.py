@@ -132,7 +132,6 @@ TIMESTAMP_FE = {
 
 CMD_COMMON = {
     # Common command pattern seen in most of the commands
-    # TODO: Compare across all described commands if used only for cmd message types 00xx
     TOPIC: "req",
     "a1": {NAME: "pattern_22"},  # Bytes composed automatically based on name and field
 } | TIMESTAMP_FE
@@ -595,12 +594,13 @@ CMD_SB_DISABLE_GRID_EXPORT_SWITCH = CMD_COMMON | {
         VALUE_STATE: "grid_export_disabled",
     },
     "a9": {
-        NAME: "set_grid_export_limit",  # 100-100000, step 1
+        NAME: "set_grid_export_limit",  # 0-100000, step 100
         TYPE: DeviceHexDataTypes.sile.value,
         VALUE_DEFAULT: 0,
         VALUE_STATE: "grid_export_limit",
-        VALUE_MIN: 100,
+        VALUE_MIN: 0,
         VALUE_MAX: 100000,
+        VALUE_STEP: 100,
     },
 }
 

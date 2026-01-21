@@ -632,6 +632,7 @@ A1780P 767 Power House (SOLIX F2000) with WLAN  Portable Power Station
 A1781  SOLIX F2600                              Portable Power Station
 A1782  SOLIX F3000                              Portable Power Station
 A1783  SOLIX C2000 Gen 2                        Portable Power Station
+A1785  SOLIX C2000X Gen 2                       Portable Power Station
 A1790  SOLIX F3800                              Portable Power Station
 A1790P SOLIX F3800 Plus                         Portable Power Station
 A17A0  Powered Cooler 30                        Powered Cooler
@@ -659,12 +660,14 @@ A5140  MI60 Microinverter                       Balcony Solar Power System
 A5143  MI80 Microinverter(BLE)                  Balcony Solar Power System
 A5150  Microinverter                            Residential Storage System
 A5191  V1 Smart EV Charger                      Smart EV Charger
-A5220  Battery Module                           Residential Storage System
+A5220  X1 Battery Module                        Residential Storage System
 A5341  Backup Controller                        Residential Storage System
 A5450  Zigbee Dongle                            Residential Storage System
 A91B2  240W Charging Station                    Charger
 AE100  SOLIX Power Dock                         Balcony Solar Power System
 AE1R0  Anker SOLIX P1 Meter                     Accessory
+AS100  C1000 Gen 2 LE                           Portable Power Station
+AX1S0  Power Dock Pro                           Residential Storage System
 ----------------------------------------------------------------------------------------------------
 """
 
@@ -900,6 +903,7 @@ class SolixDeviceCapacity:
     A1762: int = 1056  # SOLIX Portable Power Station 1000
     A1763: int = 1024  # SOLIX C1000 Gen 2 Portable Power Station
     A1765: int = 1024  # SOLIX C1000X Gen 2 Portable Power Station
+    AS100: int = 1024  # SOLIX C1000 Gen 2 LE Portable Power Station
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
@@ -912,6 +916,9 @@ class SolixDeviceCapacity:
     A1782: int = 3072  # SOLIX F3000 Portable Power Station with Smart Meter support
     A1783: int = (
         2048  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
+    )
+    A1785: int = (
+        2048  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
     )
     A1790: int = 3840  # SOLIX F3800 Portable Power Station
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
@@ -1004,6 +1011,9 @@ class SolixDeviceCategory:
     A1762: str = SolixDeviceType.PPS.value  # SOLIX Portable Power Station 1000
     A1763: str = SolixDeviceType.PPS.value  # SOLIX C1000 Gen 2 Portable Power Station
     A1765: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 Portable Power Station
+    AS100: str = (
+        SolixDeviceType.PPS.value
+    )  # SOLIX C1000X Gen 2 LE Portable Power Station
     A1770: str = (
         SolixDeviceType.PPS.value
     )  # Anker PowerHouse 757 Portable Power Station
@@ -1022,6 +1032,9 @@ class SolixDeviceCategory:
     A1783: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
+    A1785: str = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
     A17E1: str = (
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX Solarbank Prime E10 Power Module (US Market)
@@ -1040,6 +1053,7 @@ class SolixDeviceCategory:
     A5220: str = SolixDeviceType.HES.value  # SOLIX X1 Battery module
     A5341: str = SolixDeviceType.HES.value  # SOLIX X1 Backup Controller
     A5450: str = SolixDeviceType.HES.value  # SOLIX X1 Zigbee Dongle
+    AX1S0: str = SolixDeviceType.HES.value  # SOLIX Power Dock Pro
     # Power Cooler
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40

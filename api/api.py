@@ -1518,6 +1518,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             data["id"] = socid
         if not (data or station_settings):
             return False
+        # Remove fields not required for station setting changes
+        data.pop("enable_0w", None)  # 0/1 toggles enable_0w_change to False/True
+        data.pop(
+            "enable_0w_change", None
+        )  # Allow change per device, False for stations
         # Make the Api call and return result
         return await self.set_device_parm(
             siteId=siteId,
@@ -1748,6 +1753,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 station["allow_grid_export"] = not bool(
                     station_param.get("switch_0w", None)
                 )
+                station["grid_export_limit"] = str(
+                    station_param.get("feed-in_power_limit", "")
+                )
                 # add station_sn to site as reference
                 self._update_site(siteId, {"station_sn": station_sn})
             # drop same name device limits as those field may be used to control individual device settings
@@ -1804,7 +1812,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         ac_output: float | str | None = None,
         pv_input: float | str | None = None,
         grid_export: bool | int | None = None,
-        grid_export_limit: float | str | None = None,
         toFile: bool = False,
     ) -> bool | dict:
         """Set the provided power limits for the site and device."""
@@ -1825,11 +1832,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if str(pv_input).replace("-", "", 1).replace(".", "", 1).isdigit()
             else None
         )
-        grid_export_limit = (
-            round(float(grid_export_limit))
-            if str(grid_export_limit).replace("-", "", 1).replace(".", "", 1).isdigit()
-            else None
-        )
         grid_export = bool(grid_export) if grid_export is not None else None
         query = []
         # Prepare payload from parameters for proper device attributes
@@ -1842,10 +1844,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if grid_export is not None:
             data["switch_0w"] = 0 if grid_export else 1
             query.append("switch_0w")
-        if grid_export_limit is not None:
-            # TODO: The required attribute name needs to be validated with a supported device
-            data["feed_in_power_limit"] = grid_export_limit
-            query.append("feed_in_power_limit")
         # update device attributes
         if not isinstance(
             await self.set_device_attributes(

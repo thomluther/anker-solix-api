@@ -492,11 +492,16 @@ class AnkerSolixApiMonitor:
             len(self.api.devices),
             f"{Color.MAG}{self.device_filter!s}{Color.OFF}",
         )
+        grouped = {}
+        for sn, dev in self.api.devices.items():
+            if (site := dev.get("site_id","")) not in self.api.sites:
+                site = ""
+            grouped[site] = [*grouped.get(site, []), sn]
         for sn, dev in [
-            (s, d)
-            for s, d in self.api.devices.items()
-            if (not self.site_selected or d.get("site_id") == self.site_selected)
-            and (not self.device_filter or self.device_filter == s)
+            (sn, self.api.devices[sn])
+            for site, sns in grouped.items()
+            if (not self.site_selected or site == self.site_selected)
+            for sn in sns if (not self.device_filter or self.device_filter == sn)
         ]:
             devtype = dev.get("type", "Unknown")
             admin = dev.get("is_admin", False)
@@ -732,9 +737,10 @@ class AnkerSolixApiMonitor:
                     f"{'Pwr Limit Opt':<{col3}}: {dev.get('all_power_limit_option') or '----'!s}"
                 )
                 feat1 = dev.get("allow_grid_export")
+                feat2 = dev.get("grid_export_limit") or "----"
                 CONSOLE.info(
                     f"{'Min SoC':<{col1}}: {(dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} {'%':<{col2 - 5}} "
-                    f"{'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4}"
+                    f"{'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4} (Limit {feat2} W)"
                 )
                 unit = "W"
                 if m1 := cm and mqtt.get("battery_soc_total", ""):
@@ -887,9 +893,10 @@ class AnkerSolixApiMonitor:
                         "",
                     )
                     feat1 = dev.get("allow_grid_export")
+                    feat2 = dev.get("grid_export_limit") or "----"
                     CONSOLE.info(
                         f"{'Solar Limit':<{col1}}: {m1 and c}{m1 or dev.get('pv_power_limit', '----'):>4} {unit:<{col2 - 5}}{co} "
-                        f"{'Grid export':<{col3}}: {m2 and c}{str(m2).upper() or ('ON' if feat1 else '---' if feat1 is None else 'OFF'):>4}{co}"
+                        f"{'Grid export':<{col3}}: {m2 and c}{str(m2).upper() or ('ON' if feat1 else '---' if feat1 is None else 'OFF'):>4}{co} (Limit {feat2} W)"
                     )
                 m1 = c and mqtt.get("photovoltaic_power", "")
                 m2 = c and mqtt.get("output_power", "")
@@ -1098,7 +1105,7 @@ class AnkerSolixApiMonitor:
                     CONSOLE.info(
                         f"{'Toggle Delay':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} / "
                         f"{get_enum_name(SolixPpsDisplayMode, m3, 'unknown' if m3 else '----').capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
-                        f"{'Remaining':<{col3}}: {m2 and (c or cm)}{(str(int(m1)-int(m2)) or '----'):>4} Sec.{co}"
+                        f"{'Remaining':<{col3}}: {m2 and (c or cm)}{(str(int(m1) - int(m2)) or '----'):>4} Sec.{co}"
                     )
 
             elif devtype in [
