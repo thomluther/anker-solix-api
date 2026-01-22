@@ -637,17 +637,16 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         for sn, device in self.devices.items():
             site_id = device.get("site_id", "")
             dev_Type = device.get("type", "")
-            # Fetch details that work for shared accounts
             if site_id and dev_Type in ({SolixDeviceType.HES.value} - exclude):
-                # Fetch device wifi info if not found yet with bind_devices
-                self._logger.debug(
-                    "Getting api %s wifi info for device",
-                    self.apisession.nickname,
-                )
-                await self.get_hes_wifi_info(deviceSn=sn, fromFile=fromFile)
                 # Fetch details that only work for site admins
                 if device.get("is_admin", False):
-                    pass
+                    # Fetch device wifi info if not found yet with bind_devices
+                    self._logger.debug(
+                        "Getting api %s wifi info for device",
+                        self.apisession.nickname,
+                    )
+                    await self.get_hes_wifi_info(deviceSn=sn, fromFile=fromFile)
+                # Fetch details that work for shared accounts
         return self.devices
 
     async def get_system_running_info(
@@ -1574,7 +1573,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         return entry
 
     async def get_hes_wifi_info(self, deviceSn: str, fromFile: bool = False) -> dict:
-        """Get the wifi info of a hes device, works with member access.
+        """Get the wifi info of a hes device, worked with member access but may need admin access since 2026.
 
         Example data:
         {"ssid": "","rssi": 100,"wifiInfos": [

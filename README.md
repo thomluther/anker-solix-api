@@ -81,8 +81,7 @@ python [...].py
 
 # Anker Account Information
 
-Because of the way the Anker Solix Cloud Api was working, one account with email/password could not be used for the Anker mobile app and this Api in parallel.
-The Anker Solix Cloud allowed only one login token per account at any time. Each new login request by a client will create a new token and the previous token on the server was dropped. For that reason, it was not possible to use this Api client and your mobile app with the same account in parallel. Starting with Anker mobile app release 2.0, you could share your owned system(s) with 'family members'. Since then it was possible to create a second Anker account with a different email address and share your owned system(s) with one or more secondary accounts as member.
+Originally, one account with email/password could not be used for the Anker mobile app and this Api in parallel. In the past, the Anker Solix Cloud allowed only one login token per account at any time. Each new login request by a client will create a new token and the previous token on the server was dropped. For that reason, it was not possible to use this Api client and your mobile app with the same account in parallel. Starting with Anker mobile app release 2.0, you could share your owned system(s) with 'family members'. Since then it was possible to create a second Anker account with a different email address and share your owned system(s) with one or more secondary accounts as member.
 
 > [!NOTE]
 > A shared account is only a member of the shared system, and as such currently has no permissions to access or query device details of the shared system.
@@ -156,7 +155,7 @@ if __name__ == "__main__":
 # Data polling
 
 The AnkerSolixApi class starts an AnkerSolixApiSession to handle the Api connection for the provided Anker user account.
-The AnkerSolixApi class provides also methods that utilize the `power_service` endpoints and it provides 4 main methods to query data and cache them into internal dictionaries (the Api cache):
+The AnkerSolixApi class provides also methods which utilize the `power_service` endpoints and it provides 4 main methods to query data and cache them into internal dictionaries (the Api cache):
 
 - `AnkerSolixApi.update_sites()` to query overview data for all accessible sites and store data in dictionaries `AnkerSolixApi.sites`, `AnkerSolixApi.devices` and `AnkerSolixApi.account` for quick access.
 
@@ -165,7 +164,7 @@ The AnkerSolixApi class provides also methods that utilize the `power_service` e
 - `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query or for stand alone devices and store data in dictionary `AnkerSolixApi.devices`.
 
   This method should be run less frequently since this will mostly fetch various device configuration settings and needs multiple queries.
-  It currently is developed for Solarbank and Inverter devices only. Further device types such as Power Panels or Home Energy Systems (X1) have a corresponding method in their api class, which will be used and merged accordingly. This method should be used first, before any of the 2 following methods is used, since it may create virtual sites for stand alone devices that track also energy statistics in the cloud, but are not reported by the update_sites() method.
+  It currently is developed for Solarbank and Inverter devices only. Further device types such as Power Panels or Home Energy Systems (X1) have a corresponding method in their Api class, which will be used and merged accordingly. This method should be used first, before any of the 2 following methods is used, since it may create virtual sites for stand alone devices that track also energy statistics in the cloud, but are not reported by the update_sites() method.
 
 - `AnkerSolixApi.update_site_details()` to query further settings for the defined site (power system) and store data in dictionary `AnkerSolixApi.sites` for quick access.
 
@@ -205,36 +204,39 @@ Device type | Description
 -- | --
 `account` | Anker Solix user account used for the configured hub entry. It collects all common entities belonging to the account or api connection.
 `system` | Anker Solix 'Power System' as defined in the Anker app. It collects all entities belonging to the defined system and is referred as 'site' in the cloud api.
-`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1) **(includes MQTT monitoring)**<br>- A17C1: Solarbank 2 E1600 Pro **(includes partial MQTT monitoring)**<br>- A17C3: Solarbank 2 E1600 Plus **(includes partial MQTT monitoring)**<br>- A17C2: Solarbank 2 E1600 AC **(includes partial MQTT monitoring)**<br>- A17C5: Solarbank 3 E2700 **(includes partial MQTT monitoring)**
-`combiner_box` | Anker Solix (passive) combiner box configured in the system:<br>- AE100: Power Dock for Solarbank Multisystems **(includes partial MQTT monitoring)**
+`solarbank` | Anker Solix Solarbank configured in the system:<br>- A17C0: Solarbank E1600 (Gen 1) **(with MQTT monitoring & control)**<br>- A17C1: Solarbank 2 E1600 Pro **(with MQTT monitoring & control)**<br>- A17C3: Solarbank 2 E1600 Plus **(with MQTT monitoring & control)**<br>- A17C2: Solarbank 2 E1600 AC **(with MQTT monitoring & control)**<br>- A17C5: Solarbank 3 E2700 **(with MQTT monitoring & control)**
+`combiner_box` | Anker Solix (passive) combiner box configured in the system:<br>- AE100: Power Dock for Solarbank Multisystems **(with MQTT monitoring & control)**
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
-`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(includes partial MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(includes partial MQTT monitoring)**
-`smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(No device settings supported)**
-`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(partial MQTT monitoring)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(partial MQTT monitoring)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring and experimental control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(partial MQTT monitoring)**<br>- A1780(P): F2000(P) Portable Power Station **(partial MQTT monitoring)**<br>- A1790(P): F3800(P) Portable Power Station **(partial MQTT monitoring)**
-`powerpanel` | Anker Solix Power Panels configured in the system **(only basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
-`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(only basic Api monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
+`smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(with MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(with MQTT monitoring)**
+`smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(with MQTT monitoring & control)**
+`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**
+`powerpanel` | Anker Solix Power Panels configured in the system **(basic Api monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
+`hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the announced Anker Solix V1 EV Charger.
 
 
 > [!IMPORTANT]
-> While some api responses may show standalone devices that you can manage with your Anker account, the cloud api does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values but only for the time they are prompted in the App. Therefore there may not be any Api endpoints that provide usage data or settings of such stand alone devices. If your device is tracking energy statistics, it it likely using the power api that seems to be the unique Anker service to record energy data over time.
+> While some api responses may show standalone devices that you can manage with your Anker account, the cloud api does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values. MQTT data may be published at regular, less frequent intervals, or may be triggered for real time data publish as prompted by the mobile App. Therefore, there are no Api endpoints that provide usage data or settings of such stand alone devices. If your device is tracking energy statistics, it it likely using the power Api that seems to be the unique Anker service to record energy data over time.
 
 
 # MQTT client
 
-This is a rather new implementation in the library. It provides data classes to structure the byte data as received in MQTT or Bluetooth messages. The modules also contain a data mapping for the byte fields as known so far. This mapping descriptions in `mqttmap.py` and `mqttcmdmap.py` must be enhanced for each device model, constellation and message type that is provided, to allow MQTT data decoding, extraction and usage.
+This is a rather new implementation in the library. It provides data classes to structure the byte data as received in MQTT messages. The modules also contain a data mapping for the byte fields as known so far. This mapping descriptions in `mqttmap.py` and `mqttcmdmap.py` must be enhanced for each device model, constellation and message type that is provided, to allow MQTT data decoding, extraction and usage.
 Devices publish 3 different type of messages typically:
 - Message 0405 and optional other 04xx messages while triggered for real time data (typically in 3-5 second intervals)
+  - These messages may also be published once upon a status request command if supported by the device
 - Message 08xx at regular intervals of 60-500 seconds (typically as long as device is awake)
 - Other messages like 07xx at irregular intervals, probably upon changes like message for Wifi signal strength
-Once you decode and describe messages, you need to document their interval as well. All message types with meaningful data fields should be described, messages that do no contain relevant data should be skipped. If only the 0405 message for a device is described, no data can be extracted by the MQTT client if the real time trigger is not active. Therefore standard messages 08xx should be described as well if available and their interval should be known.
-MQTT command messages have various types, but they may be similar across various devices and only use different message number. There are simple commands that contain only 1 variable field with a value beside the common header and command message fields. Other commands may be very complex and contain many variable fields.
+
+Once you decode and describe messages, you need to document their interval as well. All message types with meaningful data fields should be described, messages that do not contain relevant data should be skipped in the description. If only the triggered/requested message types for a device are described, no data can be extracted by the MQTT client if the real time trigger is not active. Therefore, standard/regular message types should be described as well if available and their interval should be known.
+
+MQTT command messages have various message types, but they may be similar across various devices and only use different message number. There are simple commands that contain only 1 variable field with a value beside the common header and command message fields. Other commands may be very complex and contain many variable fields.
 
 > [!IMPORTANT]
 > At this point there is limited integration of MQTT data to the Api cache since the propriatary byte data must be described first for various devices.
 This is where YOU can contribute as device owner, see discussion [MQTT data decoding guidelines](https://github.com/thomluther/anker-solix-api/discussions/222).
 
-Following is a code snipped how you can utilize the library for easy byte data structuring and to see decoding options of your received byte data packages from MQTT or BT clients. You can use this in the client example above.
+Following is a code snipped how you can utilize the library for easy byte data structuring and to see decoding options of your received byte data packages from MQTT clients. You can use this in the client example above.
 
 ```python
 # required additional imports
@@ -247,17 +249,17 @@ from api import mqtttypes
       b64str = "/wkOAAMBDwhXAKEBMjg="
       hexstr = b64decode(b64str).hex()
       # structure hex bytes in data class, specify your device model to get defined decoding descriptions for fields
-      data = mqtttypes.DeviceHexData(model="A17C5",hexbytes=hexstr)
+      data = mqtttypes.DeviceHexData(model="A17C5", hexbytes=hexstr)
       # print data structure
       CONSOLE.info(str(data))
       # print bytes with decode options and defined field name description
       CONSOLE.info(data.decode())
 ```
 
-The most convenient way to monitor and decode MQTT messages or commands of your device is the [mqtt_monitor.py](#mqtt_monitorpy) tool. It allows you also to dump all the monitor output to a file for later review and interpretation in case the live view is too fast, especially with the real time trigger active. You can use the dumped messages also for comparing the field changes before and after an MQTT command to identify the state field for the command.
+The most convenient way to monitor and decode MQTT messages or commands of your device is the [mqtt_monitor.py](#mqtt_monitorpy) tool. It also allows you to dump all the monitor output to a file for later review and interpretation in case the live view is too fast, especially while the real time trigger is active. You can use the dumped messages also for comparing the status messages field changes before and after an MQTT command to identify the state field for the command.
 In order to decode MQTT commands, you need to execute them in the App while the mqtt_monitor is active. Then you can easily find the command messages and how the settings/values are encoded into bytes. For each command, the valid and supported options, ranges or value steps must be documented in the mapping description before the controls for a particular device can be implemented into the library. It will be required to document full hex message examples per command, since they must be fully described to use the description for command composition and generic device control.
-All MQTT commands must be defined and described in `mqttcmdmap.py`. The device message descriptions in `mqttmap.py` can then reuse the defined commands for the correct message type as being observed. The device mapping also need to describe the 'STATE' name field of the command in messages were the command state is reported. Described commands without described state fields cannot be utilized for device control tools.
-Please follow the [guidelines in this comment](https://github.com/thomluther/anker-solix-api/discussions/222#discussioncomment-14660599) to analyze and described command messages and their corresponding state fields.
+All MQTT commands must be defined and described in `mqttcmdmap.py`. The device message descriptions in `mqttmap.py` can then reuse (and optionally update) the defined commands for the correct message type as being observed. The device mapping also need to describe the 'STATE_NAME' field of the command in status messages were the command state is reported. Described commands without described state fields cannot be utilized for device control tools.
+Please follow the [guidelines in this comment](https://github.com/thomluther/anker-solix-api/discussions/222#discussioncomment-14660599) to analyze and describe command messages and their corresponding state fields.
 
 
 # AnkerSolixApi Tools
@@ -268,7 +270,7 @@ Please follow the [guidelines in this comment](https://github.com/thomluther/ank
 poetry run python ./test_api.py
 ```
 
-Example exec module that can be used to explore and test AnkerSolixApi methods or direct endpoint requests with parameters. You can modify this module as required. Optionally you can create your own test file called `client.py` starting with the usage example above. This file is not indexed and added to gitignore, so your local changes are not tracked for git updates/commits.
+Example exec module that can be used to explore and test AnkerSolixApi methods or direct endpoint requests with parameters. You can modify this module as required. Optionally you can create your own test file called `client.py` starting with the usage example above. The `client.py` file is not indexed and added to gitignore, so your local changes are not tracked for git updates/commits.
 This allows you to code your credentials in the local file if you do not want to utilize the environment variables:
 ```python
 _CREDENTIALS = {
@@ -277,7 +279,7 @@ _CREDENTIALS = {
     "COUNTRY": os.getenv("ANKERCOUNTRY"),
 }
 ```
-Those environment variables can optionally be defined in a local .env file in your repo root folder which is excluded from repo updates.
+Those environment variables can optionally be defined in a local `.env` file in your repo root folder which is excluded from repo updates as well.
 ```console
 ANKERUSER="username"
 ANKERPASSWORD="password"
@@ -293,7 +295,7 @@ poetry run python ./export_system.py
 ```
 
 Example exec module to use the Anker Api for export of defined system data and device details.
-This module will prompt for the Anker account details if not pre-set in the header or defined in environment variables.
+This module will prompt for the Anker account details if not pre-set in the header or defined in environment variables or an `.env` file.
 Upon successful authentication, you can specify which endpoint types you want to export and a subfolder for the exported JSON files received as Api query response, defaulting to your nick name. Optionally you can specify whether personalized information in the response data should be randomized in the files, like SNs, Site IDs, Trace IDs etc, and whether the output folder should be zipped to a file.
 You can review the response files afterwards. They can be used as examples for dedicated data extraction from the devices.
 Optionally the AnkerSolixApi class can use the json files for debugging and testing on various system outputs.
@@ -309,7 +311,7 @@ poetry run python ./monitor.py
 
 Example exec module to use the Anker Api for continuously querying and displaying important Anker power device parameters.
 This module can use real time data from your Anker account, or optionally use json files from your local examples or export folder.
-When using the real time option, it will prompt for the Anker account details if not pre-set in the header or defined in environment variables.
+When using the real time option, it will prompt for the Anker account details if not pre-set in the header or defined in environment variables or an `.env` file.
 Upon successful authentication, you will see relevant parameter of supported devices displayed and refreshed at regular interval.
 When using monitoring from local json file folder, the values will not change typically, with the exception of mixed in MQTT data from MQTT file poller. The file option is useful to validate the Api parsing with various system constellations, as well as validating MQTT data extraction. You can navigate through the list of json folders to verify/debug various system exports with the tool.
 
@@ -317,8 +319,8 @@ When using monitoring from local json file folder, the values will not change ty
 > MQTT data in File mode can only be extracted if the export files contain MQTT messages (optional), the MQTT session is enabled in the monitor tool and an MQTT data description is defined in the `mqttmap.py` for the device PN.
 
 The monitor uses following value highlighting with enabled MQTT session to distinguish their data source:
-- Yellow: Device MQTT values with any new extracted data
-- Cyan: Last device MQTT values
+- Yellow: Device MQTT values with any new extracted data for the device
+- Cyan: Last known device MQTT values if no device data was updated
 - No color: Api data
 
 Beside value highlighting, systems, devices, vehicles etc have their own highlighting to recognize corresponding sections quickly in the Api display.
@@ -327,6 +329,10 @@ You can also issue MQTT device controls with the monitor, if the MQTT session is
 
 > [!NOTE]
 > If any MQTT control is used in file mode, the composed MQTT command will only be printed in decoded format for debugging purpose.
+
+> [!IMPORTANT]
+> Some Solarbank MQTT controls may need to be coordinated with Api commands to work and display properly in the mobile App and the monitor. Only using the MQTT control may change the settings on the solarbank itself, but not reflect the full change to the cloud, the App and within dependent system or station controls. Use them with care.
+
 
 <details>
 <summary><b>Expand to see monitor tool usage overview</b><br><br></summary>
@@ -383,7 +389,7 @@ Keep in mind that credential prompts are only avoided if they are defined as env
   - ANKERPASSWORD=<password>
   - ANKERCOUNTRY=<country_id>
 
-Optionally you can define those variables in an .env file, which is defining them at runtime, see [test_api.py](#test_apipy).
+Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
 #### Main usage options
 - `--help` / `-h`: Get usage information
@@ -437,15 +443,15 @@ Example exec module to use the Anker Api to establish a client connection to the
 device messages. This module will prompt for the Anker account details if not pre-set in the header. Upon successful authentication,
 you will see the owned devices of the user account and you can select a device you want to monitor. Optionally you
 can dump the output to a file. The tool will display a usage menu before monitoring starts. While monitoring,
-it reacts on key press for the menu options. The menu can be displayed again with 'k'.
+it reacts on key press for the menu options. The menu can be displayed again with 'k' or 'm'.
 The tool also utilizes the built in real time data trigger, which can trigger frequent data updates of your owned devices.
 
-You can also issue described and supported MQTT device controls with the mqtt_monitor. You need to select the control and confirm customizable control parameters and then the composed MQTT command will be published. The monitor should show the decoded published command if subscribed to the command topics. To verify the MQTT control was correctly executed, you should verify the device settings in the mobile App in parallel. Some device controls required to re-enter the device details panel to get updates visible in the mobile App. If the device control does not work, the command message description is most likely wrong or incomplete. You need to dump MQTT command message examples while doing the same control changes via the App and compare them with the composed commands from the message descriptions of your device PN.
+You can also issue described and supported MQTT device controls with the mqtt_monitor. You need to select the control and confirm customizable control parameters and then the composed MQTT command will be published. The monitor should show the decoded published command if subscribed to the command topics. To verify the MQTT control was correctly executed, you should verify the device settings in the mobile App in parallel. Some device controls require to re-enter the device details panel to get updates visualized in the mobile App. If the device control does not work, the command message description is most likely wrong or incomplete. You need to dump MQTT command message examples while doing the same control changes via the App and compare them with the composed commands from the message descriptions of your device PN.
 
 > [!NOTE]
 > - Device firmware changes may introduce additional fields in the control, that are not described yet.
 > - Certain device controls may trigger more than one MQTT command through the App or Cloud. Multiple commands per control are not implemented (yet) in the MQTT control framework of this library. Subsequent commands for controls will have to be described and understood entirely before such multi command controls can be supported.
-> - Some MQTT device controls are just a partial control of a control that is manageable also via the cloud Api. If only the device command is published, the cloud Api may not be aware of the control change. One example is the Solarbank min SOC setting (SOC Reserve), which must be triggered through the cloud Api instead of the MQTT control for full functionality.
+> - Some MQTT device controls are just a partial control if the control is also manageable via the cloud Api. If only the device command is published, the cloud Api may not be aware of the control change. One example is the Solarbank min SOC setting (SOC Reserve), which must be triggered through the cloud Api instead of the MQTT control for full functionality. Other examples are settings through the station in a solarbank system, especially if the station control needs to modify multiple devices in the system (Multisystems with or without power dock)
 
 
 <details>
@@ -482,7 +488,7 @@ Keep in mind that credential prompts are only avoided if they are defined as env
   - ANKERPASSWORD=<password>
   - ANKERCOUNTRY=<country_id>
 
-Optionally you can define those variables in an .env file, which is defining them at runtime, see [test_api.py](#test_apipy).
+Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
 #### Main usage options
 - `--help` / `-h`: Get usage information
@@ -534,6 +540,9 @@ data is also selected for export, 2-4 additional Api queries per day are require
 429: Too many requests
 ```
 Therefore, large range queries of multiple weeks with daily totals may therefore have an unpredictable runtime of several minutes.
+
+> [!TIP]
+> This tool becomes obsolete with the Energy Export capability that was built into the mobile App. Use the official export function preferably, which will also contain a daily breakdown per tracked energy type in your system.
 
 
 # Contributing
