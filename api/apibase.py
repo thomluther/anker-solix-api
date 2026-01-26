@@ -543,6 +543,7 @@ class AnkerSolixBaseApi:
                                 "solarbank_2_ac_output_power_signed",
                                 "solarbank_3_ac_output_power_signed",
                                 "solarbank_4_ac_output_power_signed",
+                                "solarbank_ac_output_power_signed_total",
                                 "temperature",
                                 "photovoltaic_power",
                                 "pv_1_power",

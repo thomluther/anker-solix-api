@@ -494,14 +494,15 @@ class AnkerSolixApiMonitor:
         )
         grouped = {}
         for sn, dev in self.api.devices.items():
-            if (site := dev.get("site_id","")) not in self.api.sites:
+            if (site := dev.get("site_id", "")) not in self.api.sites:
                 site = ""
             grouped[site] = [*grouped.get(site, []), sn]
         for sn, dev in [
             (sn, self.api.devices[sn])
             for site, sns in grouped.items()
             if (not self.site_selected or site == self.site_selected)
-            for sn in sns if (not self.device_filter or self.device_filter == sn)
+            for sn in sns
+            if (not self.device_filter or self.device_filter == sn)
         ]:
             devtype = dev.get("type", "Unknown")
             admin = dev.get("is_admin", False)
@@ -732,9 +733,17 @@ class AnkerSolixApiMonitor:
                     f"{'All AC In Limit':<{col3}}: {dev.get('all_ac_input_limit', '----'):>4} W"
                 )
                 m1 = c and mqtt.get("max_load_total", "")
+                if isinstance(opt := dev.get("all_power_limit_option"), list):
+                    opt = [
+                        item
+                        for d in opt
+                        if isinstance(d, dict)
+                        for key, item in d.items()
+                        if key == "limit"
+                    ]
                 CONSOLE.info(
                     f"{'All Pwr Limit':<{col1}}: {m1 and c}{m1 or dev.get('all_power_limit', '----'):>4} {unit:<{col2 - 5}}{co} "
-                    f"{'Pwr Limit Opt':<{col3}}: {dev.get('all_power_limit_option') or '----'!s}"
+                    f"{'Pwr Limit Opt':<{col3}}: {opt or '----'!s}"
                 )
                 feat1 = dev.get("allow_grid_export")
                 feat2 = dev.get("grid_export_limit") or "----"
@@ -744,22 +753,21 @@ class AnkerSolixApiMonitor:
                 )
                 unit = "W"
                 if m1 := cm and mqtt.get("battery_soc_total", ""):
-                    m2 = cm and mqtt.get("max_load", "")
                     CONSOLE.info(
                         f"{'Battery SoC Tot':<{col1}}: {m1 and (c or cm)}{m1 or '--':>4} {'%':<{col2 - 5}}{co} "
-                        f"{'Max Load':<{col1}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
-                    )
-                if m1 := cm and mqtt.get("pv_power_total", ""):
-                    m2 = cm and mqtt.get("battery_power_signed_total", "")
-                    CONSOLE.info(
-                        f"{'PV Power Total':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                        f"{'Battery Pwr Tot':<{col1}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
+                        f"{'Max Load Legal':<{col1}}: {site.get("site_details",{}).get('legal_power_limit') or '----':>4} {unit}{co}"
                     )
                 if m1 := cm and mqtt.get("home_demand_total", ""):
                     m2 = cm and mqtt.get("ac_output_power_signed_total", "")
                     CONSOLE.info(
                         f"{'Home Demand Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'AC Pwr Out Tot':<{col1}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
+                    )
+                if m1 := cm and mqtt.get("pv_power_total", ""):
+                    m2 = cm and mqtt.get("solarbank_ac_output_power_signed_total", "")
+                    CONSOLE.info(
+                        f"{'PV Power Total':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'SB Pwr Out Tot':<{col1}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 for i in range(1, 5):
                     if m1 := cm and mqtt.get(f"solarbank_{i}_sn", ""):
@@ -881,8 +889,16 @@ class AnkerSolixApiMonitor:
                         f"{'Power Limit':<{col1}}: {m1 and c}{m1 or dev.get('power_limit', '----'):>4} {unit:<{col2 - 5}}{co} "
                         f"{'AC Input Limit':<{col3}}: {m2 and c}{m2 or dev.get('ac_input_limit', '----'):>4} W{co}"
                     )
+                    if isinstance(opt := dev.get("power_limit_option"), list):
+                        opt = [
+                            item
+                            for d in opt
+                            if isinstance(d, dict)
+                            for key, item in d.items()
+                            if key == "limit"
+                        ]
                     CONSOLE.info(
-                        f"{'Pwr Limit Opt':<{col1}}: {(dev.get('power_limit_option') or '------')!s:<{col2}}{co} "
+                        f"{'Pwr Limit Opt':<{col1}}: {(opt or '------')!s:<{col2}}{co} "
                         f"{'Limit Opt Real':<{col3}}: {(dev.get('power_limit_option_real') or '------')!s}"
                     )
                 if "pv_power_limit" in dev:

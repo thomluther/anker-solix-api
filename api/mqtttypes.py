@@ -429,9 +429,9 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
                 if len(hexdata) == 4 and (name := fieldmap.get(NAME, "")):
-                    values[name] = struct.unpack("<f", hexdata)[0] * float(
-                        fieldmap.get(FACTOR, 1)
-                    )
+                    # floats should not be rounded to factor, but avoid negative 0 for negative factors
+                    value = struct.unpack("<f", hexdata)[0] * float(fieldmap.get(FACTOR, 1))
+                    values[name] = 0 if value == 0 else value
             case DeviceHexDataTypes.strb.value:
                 # 06 can be many bytes, mix of Str and Byte values
                 # mapping must specify start byte string ("00"-"len-1") for fields, field description needs TYPE,

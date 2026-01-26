@@ -730,8 +730,8 @@ class SolixParmType(Enum):
     SOLARBANK_AUTHORIZATIONS = "13"
     SOLARBANK_POWERDOCK = "16"  # get power dock SN
     SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock
-    SOLARBANK_3RD_PARTY_PV = "23"  # third party PV settings for site
-    # SOLARBANK_EV_CHARGER = "26" # EV Charger switch?
+    # SOLARBANK_EV_CHARGER = "23" # EV Charger switch?
+    SOLARBANK_3RD_PARTY_PV = "26"  # third party PV settings for site
 
 
 class SolarbankPowerMode(IntEnum):

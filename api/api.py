@@ -228,8 +228,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 {},
                             ):
                                 # mark power limit option as Auto if empty like in app
-                                # TODO(Multisystem): Update limit option once various options supported
-                                device[key] = value or "Auto"
+                                device[key] = value or ["Auto"]
                         else:
                             device[key] = value
                     elif (
@@ -1765,14 +1764,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     or "Power Dock",
                     "is_passive": "wifi_online"
                     not in (self.devices.get(station_sn) or {}),
-                    "current_power": data.get("current_power"),
+                    # "current_power": data.get("current_power"), # Field is always 0 Watt
                     "all_power_limit": station.get("power_limit", None)  # usually 0
                     or data.get("all_power_limit")  # usually 0
                     or data.get("legal_power_limit")  # station limit set via App
                     or 0,
                     "all_power_limit_option": station.get("power_limit_option", None)
-                    or data.get("power_limit_option")
-                    or None,
+                    or data.get("power_limit_option"),
                     "all_ac_input_limit": station.pop("ac_input_limit", None)
                     or str(data.get("ac_input_power_unit") or "").replace("W", ""),
                     "set_load_power": site.get("retain_load", ""),
@@ -1793,7 +1791,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     {
                         "device_sn": sn,
                         "power_limit": device.get("power_limit") or 0,
-                        "power_limit_option": device.get("power_limit_option") or None,
+                        "power_limit_option": device.get("power_limit_option")
+                        or (
+                            data.get("power_limit_option")
+                            if data.get("parallel_type") == "Single"
+                            else None
+                        ),
                         "power_limit_option_real": device.get("power_limit_option_real")
                         or None,
                         "ac_input_limit": device.get("ac_input_limit") or 0,

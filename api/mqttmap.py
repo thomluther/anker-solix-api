@@ -1465,6 +1465,71 @@ _PLUG_TIMER_STATUS = {
     }
 }
 
+_DOCK_0405 = {
+    # multisystem message
+    TOPIC: "param_info",
+    "a2": {NAME: "device_sn"},
+    "a3": {NAME: "sw_version", "values": 4},
+    "a5": {NAME: "ac_output_power_total"},
+    "a6": {
+        NAME: "solarbank_ac_output_power_signed_total",
+        FACTOR: -1,
+    },  # All SB outputs (negative is SB output)
+    "b3": {NAME: "utc_timestamp"},
+    "b6": {
+        BYTES: {
+            "00": {
+                NAME: "solarbank_1_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                NAME: "solarbank_1_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "b7": {NAME: "solarbank_1_ac_output_power_signed", FACTOR: -1},
+    "b8": {
+        BYTES: {
+            "00": {
+                NAME: "solarbank_2_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                NAME: "solarbank_2_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "b9": {NAME: "solarbank_2_ac_output_power_signed", FACTOR: -1},
+    "ba": {
+        BYTES: {
+            "00": {
+                NAME: "solarbank_3_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                NAME: "solarbank_3_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "bb": {NAME: "solarbank_3_ac_output_power_signed", FACTOR: -1},
+    "bc": {
+        BYTES: {
+            "00": {
+                NAME: "solarbank_4_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                NAME: "solarbank_4_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "bd": {NAME: "solarbank_4_ac_output_power_signed", FACTOR: -1},
+}
+
 _DOCK_0420 = {
     # multisystem message
     TOPIC: "param_info",
@@ -1475,11 +1540,14 @@ _DOCK_0420 = {
     "a8": {NAME: "0420_unknown_1?"},
     "a9": {NAME: "0420_unknown_2?"},
     "ab": {NAME: "grid_power_signed"},
-    "ac": {NAME: "ac_output_power_signed_total"},  # Total across all devices in system
-    "ae": {NAME: "output_power_signed_total"},  # Total across all devices in system
+    "ac": {NAME: "ac_output_power_signed_total"},  # Combined output power
+    "ae": {NAME: "output_power_signed_total"},  # Combined output power
     "af": {NAME: "home_demand_total"},  # Total across all devices in system
     "b0": {NAME: "pv_power_total"},  # Total across all devices in system
-    "b1": {NAME: "battery_power_signed_total"},  # Total across all devices in system
+    "b1": {
+        NAME: "solarbank_ac_output_power_signed_total",
+        FACTOR: -1,
+    },  # All SB outputs (negative is SB output)
     "b3": {
         BYTES: {
             "00": {
@@ -2357,67 +2425,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0080": CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
         "0084": CMD_SB_EV_CHARGER_SWITCH,  # EV charger support switch, cloud driven
         "0085": CMD_SB_3RD_PARTY_PV_SWITCH,  # 3rd Party support switch, cloud driven
-        "0405": {
-            # Interval: ~5 seconds, but only with realtime trigger
-            TOPIC: "param_info",
-            "a2": {NAME: "device_sn"},
-            "a3": {NAME: "sw_version", "values": 4},
-            "a5": {NAME: "ac_output_power_total"},
-            "a6": {NAME: "ac_output_power_signed_total"},
-            "b3": {NAME: "utc_timestamp"},
-            "b6": {
-                BYTES: {
-                    "00": {
-                        NAME: "solarbank_1_sn",
-                        TYPE: DeviceHexDataTypes.str.value,
-                    },
-                    "19": {
-                        NAME: "solarbank_1_soc",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                }
-            },
-            "b7": {NAME: "solarbank_1_ac_output_power_signed"},
-            "b8": {
-                BYTES: {
-                    "00": {
-                        NAME: "solarbank_2_sn",
-                        TYPE: DeviceHexDataTypes.str.value,
-                    },
-                    "19": {
-                        NAME: "solarbank_2_soc",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                }
-            },
-            "b9": {NAME: "solarbank_2_ac_output_power_signed"},
-            "ba": {
-                BYTES: {
-                    "00": {
-                        NAME: "solarbank_3_sn",
-                        TYPE: DeviceHexDataTypes.str.value,
-                    },
-                    "19": {
-                        NAME: "solarbank_3_soc",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                }
-            },
-            "bb": {NAME: "solarbank_3_ac_output_power_signed"},
-            "bc": {
-                BYTES: {
-                    "00": {
-                        NAME: "solarbank_4_sn",
-                        TYPE: DeviceHexDataTypes.str.value,
-                    },
-                    "19": {
-                        NAME: "solarbank_4_soc",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                }
-            },
-            "bd": {NAME: "solarbank_4_ac_output_power_signed"},
-        },
+        # Interval: ~3-10 seconds, but only with realtime trigger
+        "0405": _DOCK_0405,
         # Interval: varies, probably upon change
         "0407": _0407,
         # multisystem messages
