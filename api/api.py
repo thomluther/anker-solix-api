@@ -1576,8 +1576,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     ) -> dict:
         r"""Get requested device attributes.
 
-        Example data for attributes list ["rssi", "pv_power_limit"]:
-        {"device_sn": "9JVB42LJK8J0P5RY","attributes": {"pv_power_limit": 800,"rssi": "-74"}}
+        Example data for attributes list ["rssi", "pv_power_limit", "ac_power_limit"]:
+        {"device_sn": "9JVB42LJK8J0P5RY","attributes": {"pv_power_limit": 3600, "ac_power_limit": 1200, "rssi": "-74"}
         """
         # validate parameters
         attributes = [attributes] if isinstance(attributes, str) else attributes
@@ -1622,7 +1622,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
         If queried attributes are provided, these will be used to validate the actual settings. If omitted, no attribute change validation will be done.
         Example attributes input:
-        {"pv_power_limit": 800, "ac_power_limit": 1200}
+        {"pv_power_limit": 3600, "ac_power_limit": 1200, "power_limit": 800}
         """
         # validate parameter
         if not isinstance(attributes, dict):
@@ -1790,7 +1790,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 self._update_dev(
                     {
                         "device_sn": sn,
-                        "power_limit": device.get("power_limit") or 0,
+                        "power_limit": device.get("power_limit")
+                        or (
+                            data.get("power_limit")
+                            if data.get("parallel_type") == "Single"
+                            else 0
+                        ),
                         "power_limit_option": device.get("power_limit_option")
                         or (
                             data.get("power_limit_option")
@@ -1814,6 +1819,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         ac_input: float | str | None = None,
         ac_output: float | str | None = None,
         pv_input: float | str | None = None,
+        # Grid export should be set through site station params for proper Api reflection
         grid_export: bool | int | None = None,
         toFile: bool = False,
     ) -> bool | dict:
@@ -1838,18 +1844,21 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         grid_export = bool(grid_export) if grid_export is not None else None
         query = []
         # Prepare payload from parameters for proper device attributes
+        # All device attributes not contained in get_power_limit response must be re-queried from get_device_attrs
         if ac_input is not None:
             data["ac_power_limit"] = ac_input
         if ac_output is not None:
             data["power_limit"] = ac_output
         if pv_input is not None:
             data["pv_power_limit"] = pv_input
+            query.append("pv_power_limit")
         if grid_export is not None:
             data["switch_0w"] = 0 if grid_export else 1
             query.append("switch_0w")
         # update device attributes
+        attr_resp = None
         if not isinstance(
-            await self.set_device_attributes(
+            attr_resp := await self.set_device_attributes(
                 deviceSn=deviceSn,
                 attributes=data,
                 query_attributes=query if query else None,
@@ -1883,7 +1892,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 },
             )
         # query the actual limits and update cache
-        return await self.get_power_limit(siteId=siteId, fromFile=toFile)
+        return {"device_attributes": attr_resp} | await self.get_power_limit(siteId=siteId, fromFile=toFile)
 
     async def get_ota_info(
         self, solarbankSn: str = "", inverterSn: str = "", fromFile: bool = False

@@ -1089,26 +1089,27 @@ class AnkerSolixApiMonitor:
                     f"{'Runtime':<{col3}}: {json.dumps(dev.get('running_time')).replace('null', '-------'):>3}"
                 )
                 unit = dev.get("power_unit", "W")
-                m1 = c and mqtt.get("power", "")
+                if (m1 := c and mqtt.get("power", "")):
+                    m1 = f"{float(m1):.0f}"
                 CONSOLE.info(
                     f"{'Plug Power':<{col1}}: {m1 and c}{m1 or dev.get('current_power', ''):>4} {unit:<{col2 - 5}}{co} "
                     f"{'Tag':<{col3}}: {dev.get('tag', '')}"
                 )
                 if (m1 := cm and mqtt.get("voltage", "")) and "." in m1:
-                    m1 = f"{float(m1):>5.2f}"
+                    m1 = f"{float(m1):>6.2f}"
                 if (m2 := cm and mqtt.get("current", "")) and "." in m2:
-                    m2 = f"{float(m2):>5.3f}"
+                    m2 = f"{float(m2):>6.3f}"
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Voltage':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} {'V':<{col2 - 6}}{co} "
-                        f"{'Current':<{col3}}: {m2 and (c or cm)}{m2 or '-.---':>5} A{co}"
+                        f"{'Voltage':<{col1}}: {m1 and (c or cm)}{m1 or '---.--':>7} {'V':<{col2 - 8}}{co} "
+                        f"{'Current':<{col3}}: {m2 and (c or cm)}{m2 or '-.---':>7} A{co}"
                     )
                 if dev.get("energy_today"):
                     CONSOLE.info(
                         f"{'Energy Today':<{col1}}: {dev.get('energy_today') or '-.--':>4} {'kWh':<{col2 - 5}} "
                         f"{'Last Period':<{col3}}: {dev.get('energy_last_period') or '-.--':>4} kWh"
                     )
-                m1 = cm and mqtt.get("light_switch", "")
+                m1 = cm and mqtt.get("ac_output_power_switch", "")
                 m2 = cm and mqtt.get("output_energy", "")
                 if str(m1) or m2:
                     CONSOLE.info(
@@ -1119,9 +1120,8 @@ class AnkerSolixApiMonitor:
                 m2 = cm and mqtt.get("toggle_to_elapsed_seconds", "")
                 if str(m1) or str(m2):
                     CONSOLE.info(
-                        f"{'Toggle Delay':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} / "
-                        f"{get_enum_name(SolixPpsDisplayMode, m3, 'unknown' if m3 else '----').capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
-                        f"{'Remaining':<{col3}}: {m2 and (c or cm)}{(str(int(m1) - int(m2)) or '----'):>4} Sec.{co}"
+                        f"{'Toggle Delay':<{col1}}: {str(m1) and (c or cm)}{(int(m1 or 0))!s:>5} {'Sec.':<{col2 - 5}}{co}"
+                        f"{'Remaining':<{col3}}: {str(m2) and (c or cm)}{(int(m1 or 0) - int(m2 or 0))!s:>5} Sec.{co}"
                     )
 
             elif devtype in [

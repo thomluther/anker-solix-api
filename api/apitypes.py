@@ -1279,6 +1279,7 @@ class SolarbankParallelTypes(StrEnum):
     cascaded = "cascaded"  # For SB1 only if SB1 is attached to SB2 in single system
     ae100 = "ae100"  # Solarbank power dock in use
     ae100v2 = "ae100v2"
+    diy = "diy" # Solarbank 3 parallel without power dock
 
 
 class SmartmeterStatus(StrEnum):

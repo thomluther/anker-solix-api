@@ -12,8 +12,8 @@ can review the response files afterwards. They can be used as examples for
 dedicated data extraction from the devices.
 
 Optionally you can export MQTT messages from eligible devices. They can also be
-rnadomized for the known Api device SNs, but not for complete data that may exist in
-unknown binrary data of the MQTT message. Upon MQTT export, the duration will be > 5 min
+randomized for the known Api device SNs, but not for complete data that may exist in
+unknown binary data of the MQTT message. Upon MQTT export, the duration will be > 5 min
 to include most standard messages of the device, including a 60 second real time data period.
 
 The API class can use the json files for debugging and testing on

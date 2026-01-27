@@ -1951,8 +1951,11 @@ class AnkerSolixBaseApi:
                 date = datetime.fromisoformat(poll_time)
                 trend = []
                 # calculate total dynamic price
+                # TODO: Other providers than Nordpool may send final price for kWh (including fee and VAT?)
+                # There is currently no field to recognize the provided price type or unit
                 for day in range(2):
                     daystring = (date + timedelta(days=day)).strftime("%Y-%m-%d")
+                    # Attention: Newer provider may provide very long lists, limit the list to 24 entries for both days
                     trend.extend(
                         {
                             "timestamp": f"{daystring} {item.get('time')}",
@@ -1966,7 +1969,7 @@ class AnkerSolixBaseApi:
                                 else "tomorrow_price_trend"
                             )
                             or []
-                        )
+                        )[:24]
                         if (
                             (spotprice := item.get("price") or "")
                             .replace("-", "", 1)
