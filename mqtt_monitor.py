@@ -30,7 +30,7 @@ from api.mqtt import (  # pylint: disable=no-name-in-module
     MessageCallback,
 )
 from api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
-from api.mqtttypes import DeviceHexData  # pylint: disable=no-name-in-module
+from api.mqtttypes import DeviceHexData, DeviceJsonData  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module
@@ -643,14 +643,20 @@ class AnkerSolixMqttMonitor:
                 (message.get("head") or {}).get("timestamp") or 0
             ).strftime("%Y-%m-%d %H:%M:%S ")
         CONSOLE.info(f"\nReceived message on topic: {topic}\n{message}")
+        CONSOLE.info(f"{timestamp}Device hex data:\n{data.hex(':')}")
         if isinstance(data, bytes):
-            CONSOLE.info(f"{timestamp}Device hex data:\n{data.hex(':')}")
             # structure hex data
             hd = DeviceHexData(model=model or "", hexbytes=data)
             CONSOLE.info(hd.decode())
+        elif isinstance(data, dict):
+            # structure json data
+            hd = DeviceJsonData(model=model or "", data=data)
+            CONSOLE.info(hd.decode())
         elif data:
             # no encoded data in message, dump object whatever it is
-            CONSOLE.info(f"{timestamp}Device data:\n{json.dumps(data, indent=2)}")
+            CONSOLE.info(
+                f"{timestamp}Device data:\n{json.dumps(data, indent=2, default=str)}"
+            )
         # forward message to MQTT device callback if existing
         if callable(self.mqtt_callback):
             self.mqtt_callback(session, topic, message, data, model, *args, **kwargs)
@@ -693,7 +699,7 @@ class AnkerSolixMqttMonitor:
         session: AnkerSolixMqttSession,
         topic: str,
         message: Any,
-        data: bytes,
+        data: bytes | dict,
         model: str,
         *args,
         **kwargs,
@@ -707,7 +713,14 @@ class AnkerSolixMqttMonitor:
                 (message.get("head") or {}).get("timestamp") or 0
             ).strftime("%Y-%m-%d %H:%M:%S")
         common.clearscreen()
-        hd = DeviceHexData(model=model or "", hexbytes=data)
+        if isinstance(data, bytes):
+            # structure hex data
+            hd = DeviceHexData(model=model or "", hexbytes=data)
+            msg_type = hd.msg_header.msgtype.hex(':')
+        elif isinstance(data, dict):
+            # structure json data
+            hd = DeviceJsonData(model=model or "", data=data)
+            msg_type = hd.msgtype
         CONSOLE.info(
             f"Realtime Trigger: {Color.GREEN + ' ON' if len(session.triggered_devices) else Color.RED + 'OFF'}{Color.OFF}, "
             f"Active topic: {Color.GREEN}{str(session.subscriptions or '')[1:-1]}{Color.OFF}"
@@ -715,7 +728,7 @@ class AnkerSolixMqttMonitor:
         CONSOLE.info(f"{session.mqtt_stats!s}")
         if message:
             CONSOLE.info(
-                f"{timestamp}: Received message '{Color.YELLOW + hd.msg_header.msgtype.hex(':') + Color.OFF}' on topic: {Color.YELLOW + topic + Color.OFF}"
+                f"{timestamp}: Received message '{Color.YELLOW + msg_type + Color.OFF}' on topic: {Color.YELLOW + topic + Color.OFF}"
             )
         self.print_table()
         if message:

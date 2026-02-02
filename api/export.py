@@ -2015,7 +2015,7 @@ class AnkerSolixApiExport:
                 if not (
                     msgtype := DeviceHexData(hexbytes=data).msg_header.msgtype.hex()
                 ):
-                    msgtype = "other"
+                    msgtype = "json"
                 # randomize potential hex serials of system device serials in hex data
                 if self.randomized:
                     if siteId := (self.api_power.devices.get(device_sn) or {}).get(
@@ -2036,7 +2036,10 @@ class AnkerSolixApiExport:
             if isinstance(payload, dict):
                 if datastr:
                     # replace based64 encoded string in data field of message payload
-                    payload["data"] = b64encode(bytes.fromhex(datastr)).decode()
+                    if "data" in payload:
+                        payload["data"] = b64encode(bytes.fromhex(datastr)).decode()
+                    elif "trans" in payload:
+                        payload["trans"] = b64encode(bytes.fromhex(datastr)).decode()
                 # replace other sensitive values in payload
                 payload = self._check_keys(payload)
                 message["payload"] = json.dumps(payload)
