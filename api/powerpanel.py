@@ -139,9 +139,11 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         device[key] = value
                         calc_capacity = True
                     elif key in ["average_power"] and value:
-                        device[key] = value
                         # calculate remaining capacity for new SOC
-                        calc_capacity = True
+                        calc_capacity |= (device.get("average_power") or {}).get(
+                            "state_of_charge"
+                        ) != value.get("state_of_charge")
+                        device[key] = value
                     elif key in [
                         # Examples for boolean key values
                         "auto_upgrade",

@@ -1016,11 +1016,14 @@ class DeviceJsonData:
             # add descriptions to decoded fields
             lines = json.dumps(self.data, indent=2, default=str).splitlines()
             if fieldmap := self._get_fieldmap():
-                if isinstance(m_type := self.data.get("type"), str) and "data" in self.data:
+                if (
+                    isinstance(m_type := self.data.get("type"), str)
+                    and "data" in self.data
+                ):
                     # extend fieldmap with field descriptions under type_data map
-                    fieldmap = fieldmap | SOLIXMQTTMAP.get(self.model).get(self.msgtype,{}).get(
-                        f"{m_type}_data", {}
-                    )
+                    fieldmap = fieldmap | SOLIXMQTTMAP.get(self.model).get(
+                        self.msgtype, {}
+                    ).get(f"{m_type}_data", {})
                 # search each json key in fieldmap
                 for i, line in enumerate(lines):
                     if (key := (line.split('"')[1:2] or [""])[0]) and (
@@ -1055,9 +1058,7 @@ class DeviceJsonData:
         if isinstance(data, dict) and isinstance(fieldmap, dict):
             # get map
             for key, value in [
-                (k, v)
-                for k, v in data.items()
-                if k in fieldmap or isinstance(v, dict)
+                (k, v) for k, v in data.items() if k in fieldmap or isinstance(v, dict)
             ]:
                 f_map = fieldmap.get(key, {})
                 if isinstance(value, dict):
@@ -1099,7 +1100,7 @@ class MqttDataStats:
     kb_hourly_received: float = 0
     start_time: datetime = field(default_factory=datetime.now)
     dev_messages: dict[str, dict[str, dict]] = field(default_factory=dict)
-    msg_data: InitVar[DeviceHexData | dict | None] = None
+    msg_data: InitVar[DeviceHexData | DeviceJsonData | bytes | dict | None] = None
 
     def __post_init__(self, msg_data) -> None:
         """Init the dataclass from optional DeviceHexData for first stats."""
@@ -1107,7 +1108,7 @@ class MqttDataStats:
             self.start_time = datetime.now()
         if not isinstance(self.dev_messages, dict):
             self.dev_messages = {}
-        if isinstance(msg_data, DeviceHexData | dict):
+        if isinstance(msg_data, DeviceHexData | DeviceJsonData | bytes | dict):
             self.add_data(device_data=msg_data)
 
     def __str__(self) -> str:
