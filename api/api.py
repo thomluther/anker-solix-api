@@ -1892,7 +1892,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 },
             )
         # query the actual limits and update cache
-        return {"device_attributes": attr_resp} | await self.get_power_limit(siteId=siteId, fromFile=toFile)
+        return {"device_attributes": attr_resp} | await self.get_power_limit(
+            siteId=siteId, fromFile=toFile
+        )
 
     async def get_ota_info(
         self, solarbankSn: str = "", inverterSn: str = "", fromFile: bool = False
