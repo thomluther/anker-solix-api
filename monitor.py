@@ -1168,6 +1168,13 @@ class AnkerSolixApiMonitor:
                         f"{'Battery Status':<{col1}}: {str(m2) and (c or cm)}"
                         f"{get_enum_name(SolixBatteryStatus, str(m2), 'unknown' if str(m2) else '-----').capitalize() + ' (' + (str(m2) or '-') + ')'}{co} "
                     )
+                if m1 := cm and mqtt.get("last_update", ""):
+                    m2 = cm and mqtt.get("local_time", "")
+                    CONSOLE.info(
+                        f"{'MQTT Msg Time':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
+                        f"{'Local Time':<{col3}}: {m2 and (c or cm)}{m2}{co}"
+                    )
+
                 if m1 := cm and mqtt.get("photovoltaic_power", ""):
                     m2 = cm and mqtt.get("pv_to_home_power", "")
                     m3 = cm and mqtt.get("", "")
@@ -2276,6 +2283,7 @@ class AnkerSolixApiMonitor:
                                         self.folderdict["folder"] = self.api.testDir()
                                         self.device_filter = ""
                                         self.device_names = []
+                                        self.mqtt_devices = {}
                                         self.next_dev_refr = 0
                                         break_refresh = True
                                     else:
