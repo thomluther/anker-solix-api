@@ -1619,7 +1619,7 @@ class AnkerSolixApiExport:
         randomstr = self._randomdata.get(val, "")
         # generate new random string
         if not randomstr and val and key not in ["device_name"]:
-            if "_sn" in key or "mainSn" in key or key in ["sn"]:
+            if "_sn" in key or "Sn" in key or key in ["sn"]:
                 randomstr = "".join(
                     random.choices(string.ascii_uppercase + string.digits, k=len(val))
                 )
@@ -1640,7 +1640,7 @@ class AnkerSolixApiExport:
                         a + b
                         for a, b in zip(randomstr[::2], randomstr[1::2], strict=False)
                     )
-            elif "_id" in key or "_password" in key:
+            elif any(x in key for x in ["_id", "_password", "stationId"]):
                 for part in val.split("-"):
                     if randomstr:
                         randomstr = "-".join(
@@ -1696,9 +1696,10 @@ class AnkerSolixApiExport:
                 x in k
                 for x in [
                     "_sn",
-                    "mainSn",
+                    "Sn",
                     "site_id",
                     "station_id",
+                    "stationId",
                     "user_id",
                     "member_id",
                     "vehicle_id",

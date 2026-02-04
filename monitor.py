@@ -27,8 +27,10 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
     SolarbankAiemsStatus,
     SolarbankLightMode,
     SolarbankUsageMode,
+    SolixBatteryStatus,
     SolixChargerPortStatus,
     SolixDeviceType,
+    SolixPlantStatus,
     SolixPpsChargingStatus,
     SolixPpsDisplayMode,
     SolixPpsOutputMode,
@@ -606,7 +608,7 @@ class AnkerSolixApiMonitor:
                         )
                         CONSOLE.info(
                             f"{'Main SN':<{col1}}: {hes.get('main_sn', 'unknown'):<{col2}} "
-                            f"{'System Code':<{col3}}: {hes.get('systemCode', 'unknown')}"
+                            f"{'System Code':<{col3}}: {hes.get('systemCode', 'unknown')} ({hes.get('countryCode', '--')})"
                         )
                         feat1 = hes.get("connected")
                         CONSOLE.info(
@@ -622,6 +624,12 @@ class AnkerSolixApiMonitor:
                         CONSOLE.info(
                             f"{'Has heat pump':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2 - 4}} "
                             f"{'Support diesel':<{col3}}: {'YES' if feat2 else '---' if feat2 is None else ' NO':>3}"
+                        )
+                        feat1 = hes.get("hasEvCharger")
+                        feat2 = hes.get("emsDisable")
+                        CONSOLE.info(
+                            f"{'Has EV Charger':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2 - 4}} "
+                            f"{'EMS Disable':<{col3}}: {'YES' if feat2 else '---' if feat2 is None else ' NO':>3}"
                         )
                     if ai_runtime := (site.get("site_details") or {}).get(
                         "ai_ems_runtime"
@@ -643,8 +651,8 @@ class AnkerSolixApiMonitor:
             else:
                 CONSOLE.info("-" * 80)
             CONSOLE.info(
-                f"{'Device [' + dev.get('device_pn', '') + ']':<{col1}}: {Color.MAG}{(dev.get('name', 'NoName')):<{col2}}{co} "
-                f"{'Alias':<{col3}}: {Color.MAG}{dev.get('alias', 'Unknown')}{co}"
+                f"{'Device [' + dev.get('device_pn', '') + ']':<{col1}}: {c or Color.MAG}{(dev.get('name', 'NoName')):<{col2}}{co} "
+                f"{'Alias':<{col3}}: {c or Color.MAG}{dev.get('alias', 'Unknown')}{co}"
             )
             CONSOLE.info(
                 f"{'Serialnumber':<{col1}}: {sn:<{col2}} "
@@ -1128,35 +1136,82 @@ class AnkerSolixApiMonitor:
                 SolixDeviceType.POWERPANEL.value,
                 SolixDeviceType.HES.value,
             ]:
+                if (main_sn := dev.get("main_sn")) and main_sn != sn:
+                    CONSOLE.info(
+                        f"{'Main SN':<{col1}}: {main_sn:<{col2}} "
+                        f"{'Main PN':<{col3}}: {dev.get('main_pn', '-----')!s}"
+                    )
                 if hes := dev.get("hes_data") or {}:
                     CONSOLE.info(
                         f"{'Station ID':<{col1}}: {hes.get('station_id', '-------'):<{col2}}     (Type: {str(hes.get('type', '---')).upper()})"
                     )
                     CONSOLE.info(
-                        f"{'Cloud Status':<{col1}}: {str(hes.get('status_desc', '-------')).capitalize():<{col2}} "
-                        f"{'Status Code':<{col3}}: {hes.get('online_status', '-')!s}"
+                        f"{'Cloud Status':<{col1}}: {str(hes.get('status_desc', '-------')).capitalize() + ' (' + str(hes.get('online_status', '-')) + ')':<12}"
+                        f"{'':<{col2 - 12}}{co} "
+                        f"{'Network Status':<{col3}}: {str(hes.get('network_status_desc', '-------')).capitalize()} ({hes.get('network_status', '-')!s})"
                     )
                     CONSOLE.info(
-                        f"{'Network Status':<{col1}}: {str(hes.get('network_status_desc', '-------')).capitalize():<{col2}} "
-                        f"{'Status Code':<{col3}}: {hes.get('network_status', '-')!s}"
-                    )
-                    CONSOLE.info(
-                        f"{'Grid Status':<{col1}}: {str(hes.get('grid_status_desc', '-------')).capitalize():<{col2}} "
-                        f"{'Status Code':<{col3}}: {hes.get('grid_status', '-')!s}"
-                    )
-                    CONSOLE.info(
-                        f"{'Role Status':<{col1}}: {str(hes.get('role_status_desc', '-------')).capitalize():<{col2}} "
-                        f"{'Status Code':<{col3}}: {hes.get('master_slave_status', '-')!s}"
+                        f"{'Grid Status':<{col1}}: {str(hes.get('grid_status_desc', '-------')).capitalize() + ' (' + str(hes.get('grid_status', '-')) + ')':<12}"
+                        f"{'':<{col2 - 12}}{co} "
+                        f"{'Role Status':<{col3}}: {str(hes.get('role_status_desc', '-------')).capitalize()} ({hes.get('master_slave_status', '-')!s})"
                     )
                 if "status_desc" in dev:
                     CONSOLE.info(
                         f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} "
                         f"{'Status Code':<{col3}}: {dev.get('status', '-')!s}"
                     )
+                m1 = cm and mqtt.get("plant_status", "")
+                m2 = cm and mqtt.get("battery_status", "")
+                if str(m1) or str(m2):
+                    CONSOLE.info(
+                        f"{'Plant Status':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixPlantStatus, str(m1), 'unknown' if str(m1) else '-----').capitalize() + ' (' + (str(m1) or '-') + ')':<12}{'':<{col2 - 12}}{co} "
+                        f"{'Battery Status':<{col1}}: {str(m2) and (c or cm)}"
+                        f"{get_enum_name(SolixBatteryStatus, str(m2), 'unknown' if str(m2) else '-----').capitalize() + ' (' + (str(m2) or '-') + ')'}{co} "
+                    )
+                if m1 := cm and mqtt.get("photovoltaic_power", ""):
+                    m2 = cm and mqtt.get("pv_to_home_power", "")
+                    m3 = cm and mqtt.get("", "")
+                    CONSOLE.info(
+                        f"{'Solar Power':<{col1}}: {m1 and (c or cm)}{m1:>5} {unit}{m3 and (c or cm)}{((' (' + m3 + ' kWh)') if m3 else ''):<{col2 - 7}}{co} "
+                        f"{'PV -> Home Pwr':<{col3}}: {m2 and (c or cm)}{m2:>5} {unit}{co}"
+                    )
+                if m1 := cm and mqtt.get("pv_to_battery_power", ""):
+                    m2 = cm and mqtt.get("pv_to_grid_power", "")
+                    CONSOLE.info(
+                        f"{'PV -> Batt Pwr':<{col1}}: {m1 and (c or cm)}{m1:>5} {unit:<{col2 - 6}}{co} "
+                        f"{'PV -> Grid Pwr':<{col3}}: {m2 and (c or cm)}{m2:>5} {unit}{co}"
+                    )
+                if m1 := cm and mqtt.get("battery_power_signed", ""):
+                    m2 = cm and mqtt.get("battery_to_home_power", "")
+                    CONSOLE.info(
+                        f"{'Battery Power':<{col1}}: {m1 and (c or cm)}{m1:>5} {unit:<{col2 - 6}}{co} "
+                        f"{'Bat -> Home Pwr':<{col3}}: {m2 and (c or cm)}{m2:>5} {unit}{co}"
+                    )
+                if m1 := cm and mqtt.get("grid_to_battery_power", ""):
+                    m2 = cm and mqtt.get("battery_to_grid_power", "")
+                    CONSOLE.info(
+                        f"{'Grid -> Bat Pwr':<{col1}}: {m1 and (c or cm)}{m1:>5} {unit:<{col2 - 6}}{co} "
+                        f"{'Bat -> Grid Pwr':<{col3}}: {m2 and (c or cm)}{m2:>5} {unit}{co}"
+                    )
+                if m1 := cm and mqtt.get("grid_power_signed", ""):
+                    m2 = cm and mqtt.get("home_demand", "")
+                    CONSOLE.info(
+                        f"{'Grid power':<{col1}}: {m1 and (c or cm)}{m1:>5} {unit:<{col2 - 6}}{co} "
+                        f"{'Home Demand':<{col3}}: {m2 and (c or cm)}{m2:>5} {unit}{co}"
+                    )
                 if "battery_capacity" in dev:
                     CONSOLE.info(
                         f"{'Capacity':<{col1}}: {cc}{customized.get('battery_capacity') or dev.get('battery_capacity', '-----')!s:>5} {'Wh':<{col2 - 6}}{co} "
                         f"{'Battery Count':<{col3}}: {dev.get('batCount') or '-'}"
+                    )
+                if m1 := cm and mqtt.get("battery_voltage", ""):
+                    m1 = f"{float(m1):6.2f}"
+                if m2 := cm and mqtt.get("battery_soh", ""):
+                    m2 = f"{float(m2):6.2f}"
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'Battery Volt':<{col1}}: {m1 and (c or cm)}{m1:>6} {'V':<{col2 - 7}}{co} "
+                        f"{'Battery SoH':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>6} %{co}"
                     )
                 if avg := dev.get("average_power") or {}:
                     unit = str(avg.get("power_unit") or "").upper()
