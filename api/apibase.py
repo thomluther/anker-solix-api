@@ -656,10 +656,21 @@ class AnkerSolixBaseApi:
                             "grid_export_energy",
                             "charged_energy_today",
                             "discharged_energy_today",
+                            "pv_yield_today",
+                            "pv_consumption_today",
+                            "pv_charge_today",
+                            "pv_export_today",
+                            "battery_consumption_today",
+                            "grid_discharged_today",
+                            "grid_charged_today",
+                            "grid_consumption_today",
+                            "home_consumption_today",
                         ]:
                             # aggregated energies should never decrease, otherwise weird values are sent or description is wrong
-                            # 0 value should be ignored, since that may reset energy counters if 0 values read on startup
-                            if 0 < float(value) > float(device_mqtt.get(key, 0)):
+                            # 0 value should be ignored for aggregated, since that may reset energy counters if 0 values read on startup
+                            if str(key).endswith("_today") or 0 < float(value) > float(
+                                device_mqtt.get(key, 0)
+                            ):
                                 device_mqtt[key] = f"{float(value):.3f}"
                                 if key in [
                                     "output_energy",

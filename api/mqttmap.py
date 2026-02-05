@@ -1704,6 +1704,66 @@ _EV_CHARGER_0410 = {
     "ab": {NAME: "timestamp_ab?"},
 }
 
+_X1_JSON = {
+    "sn": {NAME: "device_sn"},
+    "subSn": {NAME: "sub_device_sn"},
+    "localTime": {NAME: "local_time"},
+    "ems_data": {
+        "bs": {  # 0: Standby; 1: Charging; 2: Discharging; 3: Sleep
+            NAME: "battery_status"
+        },
+        "gs": {NAME: "grid_status"},  # 0: OK??
+        "ps": {  # 1: On-grid; 2: Off-grid 3: Standby 4: Fault
+            NAME: "plant_status"
+        },
+        "soc": {NAME: "battery_soc"},  # 100 %
+        "pp": {NAME: "photovoltaic_power"},  # 650 W
+        "p2lp": {NAME: "pv_to_home_power"},  # 650 W
+        "p2bp": {NAME: "pv_to_battery_power"},  # 0 W
+        "p2gp": {NAME: "pv_to_grid_power"},  # 0 W
+        "bp": {NAME: "battery_power_signed", FACTOR: -1},  # 0 W
+        "b2lp": {NAME: "battery_to_home_power"},  # 0 W
+        "b2gp": {NAME: "battery_to_grid_power"},  # 0 W
+        "gp": {NAME: "grid_power_signed"},  # 0 W
+        "g2bp": {NAME: "grid_to_battery_power"},  # 0 W
+        "g2lp": {NAME: "grid_to_home_power"},  # 0 W
+        "lp": {NAME: "home_demand"},  # 650 W
+        # daily energies in Wh?
+        "pe": {NAME: "pv_yield_today", FACTOR: 0.001},  # 28629.02 Wh
+        "p2le": {NAME: "pv_consumption_today", FACTOR: 0.001},  # 6348.36 Wh
+        "p2be": {NAME: "pv_charge_today", FACTOR: 0.001},  # 22255.69 Wh
+        "p2ge": {NAME: "pv_export_today", FACTOR: 0.001},  # 24.98 Wh
+        "bdce": {NAME: "charged_energy_today", FACTOR: 0.001},  # 22255.69 Wh
+        "bdde": {NAME: "discharged_energy_today", FACTOR: 0.001},  # 6879 Wh
+        "b2le": {NAME: "battery_consumption_today", FACTOR: 0.001},  # 6838.9 Wh
+        "b2ge": {NAME: "grid_discharged_today", FACTOR: 0.001},  # 40.09 Wh
+        "g2be": {NAME: "grid_charged_today", FACTOR: 0.001},  # 0 Wh
+        "g2le": {NAME: "grid_consumption_today", FACTOR: 0.001},  # 54 Wh
+        "le": {NAME: "home_consumption_today", FACTOR: 0.001},  # 13241.26 Wh
+        # aggregated energies in Wh?
+        "pae": {NAME: "pv_yield", FACTOR: 0.001},  # 5143662.5 Wh
+        "bac": {NAME: "charged_energy", FACTOR: 0.001},  # 2675350.25 Wh
+        "bad": {NAME: "discharged_energy", FACTOR: 0.001},  # 2541277 Wh
+    },
+    "pack_data": {
+        "t": {NAME: "exp_{x}_temperature"},  # [42.4, 41.5, 42, 41.5] °C
+        "fv": {NAME: "f_voltage"},  # 53.6,
+        "batv": {NAME: "battery_voltage"},  # 53.5 V
+        "usoc": {NAME: "battery_soc"},  # Battery SOC
+        "soh": {NAME: "battery_soh"},  # Battery Health
+        "tce": {NAME: "charged_energy?", FACTOR: 0.001},  # 426497
+        "tde": {NAME: "discharged_energy?", FACTOR: 0.001},  # 399819
+        "dce": {NAME: "charged_energy_today", FACTOR: 0.001},  # 3522,
+        "dde": {NAME: "discharged_energy_today", FACTOR: 0.001},  # 633,
+        "rt": {NAME: "r_temperature?"},  # 38.1,
+        "mt": {NAME: "m_temperature?"},  # 38.7,
+        "ct": {NAME: "c_temperature?"},  # 41,
+        "wm": {
+            NAME: "work_mode"
+        },  # 0: Self-consumption; 1: TOU; 2: Backup only, 3: 3rd party control (VPP, etc) 4. User-Defined 5. Socket Aggregation
+    },
+}
+
 
 # Following is the consolidated mapping for all device types and messages
 SOLIXMQTTMAP: Final[dict] = {
@@ -2448,52 +2508,20 @@ SOLIXMQTTMAP: Final[dict] = {
         "0303": _A2345_0303,
     },
     # HES X1
-    "A5103": {
-        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+    "A5101": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
         # Interval: unknown?
-        "json": {
-            "sn": {NAME: "device_sn"},
-            "subSn": {NAME: "sub_device_sn"},
-            "localTime": {NAME: "local_time"},
-            "ems_data": {
-                "bs": {  # 0: Standby; 1: Charging; 2: Discharging; 3: Sleep
-                    NAME: "battery_status"
-                },
-                "gs": {NAME: "grid_status"},  # 0: OK??
-                "ps": {  # 1: On-grid; 2: Off-grid 3: Standby 4: Fault
-                    NAME: "plant_status"
-                },
-                "soc": {NAME: "battery_soc"},  # 100 %
-                "pp": {NAME: "photovoltaic_power"},  # 650 W
-                "p2lp": {NAME: "pv_to_home_power"},  # 650 W
-                "p2bp": {NAME: "pv_to_battery_power"},  # 0 W
-                "p2gp": {NAME: "pv_to_grid_power"},  # 0 W
-                "bp": {NAME: "battery_power_signed", FACTOR: -1},  # 0 W
-                "b2lp": {NAME: "battery_to_home_power"},  # 0 W
-                "b2gp": {NAME: "battery_to_grid_power"},  # 0 W
-                "gp": {NAME: "grid_power_signed"},  # 0 W
-                "g2bp": {NAME: "grid_to_battery_power"},  # 0 W
-                "g2lp": {NAME: "grid_to_home_power"},  # 0 W
-                "lp": {NAME: "home_demand"},  # 650 W
-            },
-            "pack_data": {
-                "t": {NAME: "exp_{x}_temperature"},  # [42.4, 41.5, 42, 41.5] °C
-                "fv": {NAME: "f_voltage"},  # 53.6,
-                "batv": {NAME: "battery_voltage"},  # 53.5 V
-                "usoc": {NAME: "battery_soc"},  # Battery SOC
-                "soh": {NAME: "battery_soh"},  # Battery Health
-                "tce": {NAME: "charged_energy?", FACTOR: 0.001},  # 426497
-                "tde": {NAME: "discharged_energy?", FACTOR: 0.001},  # 399819
-                "dce": {NAME: "charged_energy_today", FACTOR: 0.001},  # 3522,
-                "dde": {NAME: "discharged_energy_today", FACTOR: 0.001},  # 633,
-                "rt": {NAME: "r_temperature?"},  # 38.1,
-                "mt": {NAME: "m_temperature?"},  # 38.7,
-                "ct": {NAME: "c_temperature?"},  # 41,
-                "wm": {
-                    NAME: "work_mode"
-                },  # 0: Self-consumption; 1: TOU; 2: Backup only, 3: 3rd party control (VPP, etc) 4. User-Defined 5. Socket Aggregation
-            },
-        },
+        "json": _X1_JSON,
+    },
+    "A5102": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        # Interval: unknown?
+        "json": _X1_JSON,
+    },
+    "A5103": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        # Interval: unknown?
+        "json": _X1_JSON,
     },
     # EV Charger V1
     "A5191": {
