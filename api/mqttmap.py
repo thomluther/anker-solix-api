@@ -1685,23 +1685,36 @@ _EV_CHARGER_0405 = {
     # V1 status message
     TOPIC: "param_info",
     "a2": {NAME: "unknown_limit?"},
+    "a4": {NAME: "auto_start_switch"},  # Off (0), On (1)
+    "a8": {NAME: "rated_current?", FACTOR: 0.1},
+    "aa": {NAME: "current_balance_aa?"},  # 10-500 A, step 1 A
+    "b7": {NAME: "modbus_switch"},  # Off (0), On (1)
+    "cc": {NAME: "tcp_timeout_seconds"},  # Modbus TCP timeout
+    "ce": {NAME: "max_current", FACTOR: 0.1},
+    "cf": {NAME: "tcp_port"},  # Modbus TCP port
     "d0": {NAME: "ip_address"},
+    "d4": {NAME: "current_balance_d4?"},  # 10-500 A, step 1 A
     "d7": {NAME: "device_sn_d7?"},
+    "da": {NAME: "min_charge_current?"},  # 6 - 32 A, step 1 A
     "de": {NAME: "device_sn_de?"},
-    "f1": {NAME: "timestamp_f1?"},
-    "f2": {NAME: "timestamp_f2?"},
+    "f1": {NAME: "sw_version", "values": 4},
+    "f2": {NAME: "sw_controller", "values": 4},
+    "f3": {NAME: "hw_version", "values": 4},
+    "fe": {NAME: "offline_current_limit"},  # 6 A
 }
 
 _EV_CHARGER_0410 = {
     # V1 status message
     TOPIC: "param_info",
-    "a2": {NAME: "voltage_p1?", "factor": 0.1},
-    "a3": {NAME: "voltage_p2?", "factor": 0.1},
-    "a4": {NAME: "voltage_p3?", "factor": 0.1},
+    "a2": {NAME: "voltage_p1", "factor": 0.1},
+    "a3": {NAME: "voltage_p2", "factor": 0.1},
+    "a4": {NAME: "voltage_p3", "factor": 0.1},
     "a5": {NAME: "power_p1?"},
     "a6": {NAME: "power_p2?"},
     "a7": {NAME: "power_p3?"},
-    "ab": {NAME: "timestamp_ab?"},
+    "a8": {NAME: "charging_power?"},
+    "aa": {NAME: "charging_energy?", "factor": 0.001},
+    "ab": {NAME: "last_charge_timestamp"},
 }
 
 _X1_JSON = {
@@ -1746,7 +1759,7 @@ _X1_JSON = {
         "bad": {NAME: "discharged_energy", FACTOR: 0.001},  # 2541277 Wh
     },
     "pack_data": {
-        "t": {NAME: "exp_{x}_temperature"},  # [42.4, 41.5, 42, 41.5] °C
+        "t": {NAME: "exp_{x}_temperature"},  # List field with temps: [42.4, 41.5, 42, 41.5] °C
         "fv": {NAME: "f_voltage"},  # 53.6,
         "batv": {NAME: "battery_voltage"},  # 53.5 V
         "usoc": {NAME: "battery_soc"},  # Battery SOC
@@ -1761,6 +1774,39 @@ _X1_JSON = {
         "wm": {
             NAME: "work_mode"
         },  # 0: Self-consumption; 1: TOU; 2: Backup only, 3: 3rd party control (VPP, etc) 4. User-Defined 5. Socket Aggregation
+    },
+}
+
+_PP_JSON = {
+    "localtime": {NAME: "local_time"},
+    "data": {
+        # power values
+        "b2lp": {NAME: "battery_to_home_power"},  # 0 W
+        "b2gp": {NAME: "battery_to_grid_power"},  # 0 W
+        "bp": {NAME: "battery_power_signed", FACTOR: -1},  # -2296 W = charging
+        "pp": {NAME: "photovoltaic_power"},  # 0 W
+        "p2lp": {NAME: "pv_to_home_power"},  # 0 W
+        "p2bp": {NAME: "pv_to_battery_power"},  # 0 W
+        "p2gp": {NAME: "pv_to_grid_power"},  # 0 W
+        "gp": {NAME: "grid_power_signed"},  # 3705 W
+        "g2bp": {NAME: "grid_to_battery_power"},  # 2296 W
+        "g2lp": {NAME: "grid_to_home_power"},  # 1409 W
+        "lp": {NAME: "home_demand"},  # 1409 W
+        # status
+        "ws": {NAME: "working_status"},  # 0 = standby, 1 = running
+        "m": {NAME: "mode"},  # (0 = off, 1 = on, 2 = auto)
+        "gs": {NAME: "grid_status"},  # (0 = offline, 1 = online)
+        "bs": {  # 0: Standby; 1: Charging; 2: Discharging
+            NAME: "battery_status"
+        },
+        "ps": {  # 0: Off, 1: On-grid
+            NAME: "plant_status"
+        },
+        "soc": {NAME: "battery_soc"},  # 62 %
+        "bc": {NAME: "pps_count"},  # 2
+        "bds": {
+            NAME: "pps_{x}_data"
+        },  # list with PPS data dict, eg {"sn": <pps_sn>,"soc":61,"power":-1148,"error":0}
     },
 }
 
@@ -2126,16 +2172,9 @@ SOLIXMQTTMAP: Final[dict] = {
             "ab": {NAME: "photovoltaic_power"},
             "ac": {NAME: "output_power"},
             "ad": {NAME: "charging_status?"},
-            "ae": {
-                BYTES: {
-                    "12": [{NAME: "allow_export_switch", MASK: 0x04}],
-                    "14": {
-                        NAME: "charge_priority_limit",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                    "15": [{NAME: "priority_discharge_switch", MASK: 0x01}],
-                }
-            },
+            #"ae": Binary structure for schedule slots, dynamic size depending on schedule
+            # 2 bytes LE for start/end time in minutes, 1 byte priority limit, Export switch switch setting and discharge prio in bitmask
+            # Dynamic byte structures cannot be described, the schedule should be managed completely via Api
             "b0": {NAME: "bat_charge_power"},
             "b1": {NAME: "pv_yield", FACTOR: 0.0001},
             "b2": {NAME: "charged_energy", FACTOR: 0.0001},
@@ -2506,6 +2545,16 @@ SOLIXMQTTMAP: Final[dict] = {
         "020b": CMD_STATUS_REQUEST,  # Device status request, more reliable than RT (one time status messages 0405 etc)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0303": _A2345_0303,
+    },
+    # Power Panel
+    "A17B1": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        # Interval: unknown?
+        "0505": {
+            "a2": {
+                "json": _PP_JSON,
+            }
+        }
     },
     # HES X1
     "A5101": {

@@ -629,7 +629,7 @@ class AnkerSolixMqttMonitor:
         session: AnkerSolixMqttSession,
         topic: str,
         message: Any,
-        data: bytes,
+        data: bytes | dict,
         model: str,
         *args,
         **kwargs,
@@ -643,8 +643,8 @@ class AnkerSolixMqttMonitor:
                 (message.get("head") or {}).get("timestamp") or 0
             ).strftime("%Y-%m-%d %H:%M:%S ")
         CONSOLE.info(f"\nReceived message on topic: {topic}\n{message}")
-        CONSOLE.info(f"{timestamp}Device hex data:\n{data.hex(':')}")
         if isinstance(data, bytes):
+            CONSOLE.info(f"{timestamp}Device hex data:\n{data.hex(':')}")
             # structure hex data
             hd = DeviceHexData(model=model or "", hexbytes=data)
             CONSOLE.info(hd.decode())

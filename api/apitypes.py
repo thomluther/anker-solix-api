@@ -1640,4 +1640,5 @@ class DeviceHexDataTypes(Enum):
     # The optional LENGTH with int for byte count can be specified (default is 0 if no base type used),
     # where Length of 0 indicates that first byte contains variable field length, e.g. for str type
     strb = bytes.fromhex("06")
+    json = bytes.fromhex("FE")  # virtual type to mark json in string types
     unk = bytes.fromhex("FF")  # unkonwn marker

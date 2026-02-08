@@ -141,7 +141,7 @@ class AnkerSolixMqttSession:
         data = (
             (payload.get("data") or payload.get("trans"))
             if isinstance(payload, dict)
-            else None
+            else payload
         )
         # Decrypt base64-encoded encrypted data field from expected dictionary in message payload
         data = b64decode(data) if isinstance(data, str) else data
