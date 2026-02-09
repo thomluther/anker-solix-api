@@ -130,6 +130,15 @@ TIMESTAMP_FE = {
     },
 }
 
+TIMESTAMP_FE_NOTYPE = {
+    # classical format using 4 bytes for timestamp value in sec
+    # however, no field type byte is used
+    "fe": {
+        NAME: "msg_timestamp",
+        TYPE: DeviceHexDataTypes.unk.value,
+    },
+}
+
 CMD_COMMON = {
     # Common command pattern seen in most of the commands
     TOPIC: "req",

@@ -30,9 +30,9 @@ from .mqttcmdmap import (
 from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import (
     DeviceHexData,
-    DeviceJsonData,
     DeviceHexDataField,
     DeviceHexDataHeader,
+    DeviceJsonData,
     MqttDataStats,
 )
 from .session import AnkerSolixClientSession
@@ -367,7 +367,8 @@ class AnkerSolixMqttSession:
             },
             "payload": json.dumps(
                 {
-                    "account_id": self.mqtt_info.get("user_id"),
+                    # use device owner for member devices if available
+                    "account_id": deviceDict.get("owner_user_id") or self.mqtt_info.get("user_id"),
                     "device_sn": sn,
                     # data field in payload must be b64 encoded
                     "data": b64encode(hexbytes or b"").decode("utf-8"),
@@ -1025,11 +1026,11 @@ def generate_mqtt_command(
                 if (name := desc.get(NAME)) == "pattern_22":
                     hexdata.update_field(DeviceHexDataField(hexbytes=f"{field}0122"))
                 elif name == "msg_timestamp":
-                    # select proper timestamp format depending on field name
+                    # select proper timestamp format depending on field name and type
                     if field == "fd":
                         hexdata.add_timestamp_ms_field()
                     else:
-                        hexdata.add_timestamp_field()
+                        hexdata.add_timestamp_field(fieldtype=desc.get(TYPE))
                 else:
                     # compose command field based on description
                     value = parameters.get(desc.get(VALUE_FOLLOWS) or name)

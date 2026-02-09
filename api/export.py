@@ -1681,10 +1681,10 @@ class AnkerSolixApiExport:
             self._randomdata.update({val: randomstr})
         return randomstr or str(val)
 
-    def _check_keys(self, data: Any):
+    def _check_keys(self, data: Any) -> Any:
         """Recursive traversal of complex nested objects to randomize value for certain keys."""
 
-        if isinstance(data, int | float | str):
+        if isinstance(data, int | float | str | bool):
             return data
         for k, v in data.copy().items():
             if isinstance(v, dict):
@@ -1716,7 +1716,13 @@ class AnkerSolixApiExport:
                     "_mac",
                 ]
             ) or k in ["sn"]:
-                data[k] = self._randomize(v, k)
+                if isinstance(v,list):
+                    # randomize individual string elements in list
+                    data[k] = [self._randomize(value, k) if isinstance(value, str) else value for value in v]
+                elif isinstance(v, str):
+                    data[k] = self._randomize(v, k)
+                else:
+                    data[k] = v
         return data
 
     async def _export(
@@ -1843,11 +1849,11 @@ class AnkerSolixApiExport:
 
         mqttsession = None
         try:
-            # get all owned devices that may support MQTT messages
+            # get all owned or member devices that may support MQTT messages
             if mqttdevices := [
                 dev
                 for dev in self.api_power.devices.values()
-                if dev.get("is_admin") and not dev.get("is_passive")
+                if dev.get("mqtt_supported")
             ]:
                 # reuse existing MQTT client or start new one
                 if mqttsession := self.api_power.mqttsession:

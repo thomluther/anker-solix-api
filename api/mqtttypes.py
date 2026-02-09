@@ -186,6 +186,15 @@ class DeviceHexDataField:
                 self.f_type = bytearray()
                 self.f_value = bytearray()
         else:
+            # check types
+            if isinstance(self.f_type, bytes):
+                self.f_type = bytearray(self.f_type)
+            elif not isinstance(self.f_type, bytearray):
+                self.f_type = bytearray()
+            if isinstance(self.f_value, bytes):
+                self.f_value = bytearray(self.f_value)
+            elif not isinstance(self.f_value, bytearray):
+                self.f_value = bytearray()
             # Update data length if initialized without hexbytes
             self.f_length = len(self.f_type) + len(self.f_value)
             if self.f_length > 255:
@@ -320,7 +329,7 @@ class DeviceHexDataField:
                 fle = ""
                 dle = ""
             s = f"{Color.RED}{self.f_name.hex()!s:<2}{Color.OFF} {self.f_length.to_bytes(length=(self.f_length.bit_length() + 7) // 8, byteorder='little').hex():>4} "
-            s += f"{tcol}{(self.f_type.hex() or '--')!s:<4}{Color.OFF}  {self.f_value.hex(':')}\n"
+            s += f"{tcol}{(self.f_type.hex().replace("fe","00") or '--')!s:<4}{Color.OFF}  {self.f_value.hex(':')}\n"
             s += f"{'└->':<3}{self.f_length!s:>4} {tcol}{typ!s:<5}{Color.OFF} "
             s += f"{tcol if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''}{uile:>15}{Color.OFF if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''} "
             s += f"{tcol if typ == DeviceHexDataTypes.sile.name else ''}{sile:>15}{Color.OFF if typ == DeviceHexDataTypes.sile.name else ''} "
@@ -882,13 +891,17 @@ class DeviceHexData:
             # update length and hexbytes
             self._update_hexbytes()
 
-    def add_timestamp_field(self, fieldname: str | bytes = "fe") -> None:
+    def add_timestamp_field(self, fieldname: str | bytes = "fe", fieldtype: bytes | None = DeviceHexDataTypes.var.value) -> None:
         """Add or update a timestamp field in seconds as maybe required to publish command data."""
         if isinstance(fieldname, str):
             fieldname = bytes.fromhex(fieldname)
+        if not isinstance(fieldtype, bytes):
+            fieldtype = DeviceHexDataTypes.var.value
+        if fieldtype == DeviceHexDataTypes.unk.value:
+            fieldtype = None
         datafield = DeviceHexDataField(
             f_name=fieldname,
-            f_type=DeviceHexDataTypes.var.value,
+            f_type=fieldtype,
             f_value=convert_timestamp(datetime.now().timestamp()),
         )
         self.update_field(datafield=datafield)

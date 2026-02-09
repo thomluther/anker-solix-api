@@ -137,13 +137,16 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             ):
                 # Update admin based on ms device type for standalone devices
                 device["is_admin"] = value in [0, 1]
+                # member devices should only be listed in bind_device query and return owner_user_id
+                if (value := devData.get("owner_user_id")):
+                    device["owner_user_id"] = value
             calc_capacity = False  # Flag whether capacity may need recalculation
             for key, value in devData.items():
                 try:
                     if key in ["product_code", "device_pn"] and value:
                         device["device_pn"] = str(value)
                         # Flag device for supported mqtt trigger if admin and device not passive
-                        if device.get("is_admin") and not device.get("is_passive"):
+                        if (device.get("is_admin") or device.get("owner_user_id")) and not device.get("is_passive"):
                             device["mqtt_supported"] = True
                             # update customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
@@ -275,6 +278,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "energy_last_period",
                             "time_zone",
                             "grid_export_limit",
+                            "owner_user_id",
                         ]
                         and value
                     ):

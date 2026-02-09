@@ -50,6 +50,7 @@ from .mqttcmdmap import (
     NAME,
     SIGNED,
     STATE_NAME,
+    TIMESTAMP_FE_NOTYPE,
     TOPIC,
     TYPE,
     VALUE_DEFAULT,
@@ -1686,17 +1687,54 @@ _EV_CHARGER_0405 = {
     TOPIC: "param_info",
     "a2": {NAME: "unknown_limit?"},
     "a4": {NAME: "auto_start_switch"},  # Off (0), On (1)
-    "a8": {NAME: "rated_current?", FACTOR: 0.1},
-    "aa": {NAME: "current_balance_aa?"},  # 10-500 A, step 1 A
+    # "xx": {NAME: "boost_mode"},  # Off (0), On (1)
+    # "xx": {NAME: "ev_charging_status"} # Standby(0), Preparing(1), Charging(2), Charger_Paused(3),
+    # Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
+    # "xx": {NAME: "occp_connection_status"} # disconnected(0), connecting(1), connected(2)
+    "a8": {
+        NAME: "max_evcharge_current",
+        FACTOR: 0.1,
+    },  # 6 - rated_current (32 A), step 1 A
+    "aa": {NAME: "led_brightness"},  # 0-100 %, step 10 %
+    "ac": {NAME: "auto_charge_restart_switch"},  # Off (0), On (1)
+    "ad": {NAME: "random_delay_switch"},  # Off (0), On (1)
+    "af": {
+        NAME: "wipe_up_mode"
+    },  # off (0) / start charge (1) / stop charge (2) / boost charge (3)
+    "b0": {
+        NAME: "wipe_down_mode"
+    },  # off (0) / start charge (1) / stop charge (2) / boost charge (3)
+    "b2": {NAME: "smart_touch_mode"},  # simple (0), anti_mistouch (1)
+    "b4": {NAME: "led_off_schedule_switch"},  # Off (0), On (1)
+    "b5": {NAME: "led_off_start_time", SIGNED: False},  # sile: hour * 256 + sec
+    "b6": {NAME: "led_off_end_time", SIGNED: False},  # sile: hour * 256 + sec
     "b7": {NAME: "modbus_switch"},  # Off (0), On (1)
     "cc": {NAME: "tcp_timeout_seconds"},  # Modbus TCP timeout
-    "ce": {NAME: "max_current", FACTOR: 0.1},
+    "ce": {NAME: "rated_current", FACTOR: 0.1},  # rated A limit for model
     "cf": {NAME: "tcp_port"},  # Modbus TCP port
     "d0": {NAME: "ip_address"},
-    "d4": {NAME: "current_balance_d4?"},  # 10-500 A, step 1 A
-    "d7": {NAME: "device_sn_d7?"},
-    "da": {NAME: "min_charge_current?"},  # 6 - 32 A, step 1 A
-    "de": {NAME: "device_sn_de?"},
+    "d3": {NAME: "load_balance_switch"},  # Off (0), On (1)
+    "d4": {NAME: "main_breaker_limit"},  # 10-500 A, step 1 A
+    "d5": {NAME: "load_balance_monitoring_mode?"},  # System monitoring (1)
+    "d6": {NAME: "load_balance_setting_d6?"},  # 1 if SM monitored?
+    "d7": {NAME: "load_balance_monitoring_sn?"},
+    "d8": {NAME: "solar_evcharge_switch"},  # Off (0), On (1)
+    "d9": {NAME: "solar_evcharge_mode"},  # solar & grid (0), solar only (1)
+    "da": {NAME: "solar_evcharge_min_current"},  # 6 - rated_current (32 A), step 1 A
+    "db": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
+    "dc": {
+        NAME: "auto_phase_switching_switch?"
+    },  # Off (0), On (1), only awailable in 3 phase mode
+    "dd": {NAME: "solar_evcharge_monitoring_mode?"},  # System monitoring (1)
+    "de": {NAME: "solar_evcharge_monitoring_sn?"},
+    "e3": {NAME: "start_evcharge_switch"},  # Off (0), On (1)
+    "e6": {NAME: "schedule_switch"},  # on (1), off (2)
+    "e7": {NAME: "week_start_time", SIGNED: False},  # sile: hour * 256 + sec
+    "e8": {NAME: "week_end_time", SIGNED: False},  # sile: hour * 256 + sec
+    "e9": {NAME: "weekend_start_time", SIGNED: False},  # sile: hour * 256 + sec
+    "ea": {NAME: "weekend_end_time", SIGNED: False},  # sile: hour * 256 + sec
+    "eb": {NAME: "weekend_mode"},  # 1: same, 2: different
+    "ec": {NAME: "schedule_mode"},  # 0: normal, 1: smart
     "f1": {NAME: "sw_version", "values": 4},
     "f2": {NAME: "sw_controller", "values": 4},
     "f3": {NAME: "hw_version", "values": 4},
@@ -1713,8 +1751,12 @@ _EV_CHARGER_0410 = {
     "a6": {NAME: "power_p2?"},
     "a7": {NAME: "power_p3?"},
     "a8": {NAME: "charging_power?"},
-    "aa": {NAME: "charging_energy?", "factor": 0.001},
+    "aa": {NAME: "charged_capacity?", "factor": 0.001},
     "ab": {NAME: "last_charge_timestamp"},
+    "ac": {NAME: "ev_plug_status?"},  # not connected (0), connected (1)?
+    "ad": {NAME: "plug_countdown_seconds"},
+    "ae": {NAME: "start_countdown_seconds?"},
+    "bb": {NAME: "start_charger_switch"},  # Off (0), On (1)
 }
 
 _X1_JSON = {
@@ -1759,7 +1801,9 @@ _X1_JSON = {
         "bad": {NAME: "discharged_energy", FACTOR: 0.001},  # 2541277 Wh
     },
     "pack_data": {
-        "t": {NAME: "exp_{x}_temperature"},  # List field with temps: [42.4, 41.5, 42, 41.5] °C
+        "t": {
+            NAME: "exp_{x}_temperature"
+        },  # List field with temps: [42.4, 41.5, 42, 41.5] °C
         "fv": {NAME: "f_voltage"},  # 53.6,
         "batv": {NAME: "battery_voltage"},  # 53.5 V
         "usoc": {NAME: "battery_soc"},  # Battery SOC
@@ -2172,7 +2216,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "ab": {NAME: "photovoltaic_power"},
             "ac": {NAME: "output_power"},
             "ad": {NAME: "charging_status?"},
-            #"ae": Binary structure for schedule slots, dynamic size depending on schedule
+            # "ae": Binary structure for schedule slots, dynamic size depending on schedule
             # 2 bytes LE for start/end time in minutes, 1 byte priority limit, Export switch switch setting and discharge prio in bitmask
             # Dynamic byte structures cannot be described, the schedule should be managed completely via Api
             "b0": {NAME: "bat_charge_power"},
@@ -2554,7 +2598,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "a2": {
                 "json": _PP_JSON,
             }
-        }
+        },
     },
     # HES X1
     "A5101": {
@@ -2574,12 +2618,22 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # EV Charger V1
     "A5191": {
-        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        #"0040": CMD_STATUS_REQUEST | {  # Device status request (one time status messages 0840=0405, but no 410)
+        #    **TIMESTAMP_FE_NOTYPE # App uses timestamp field without field type, Anker Bug?
+        #},
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0410
+        # Interval: 5 minutes regular, contains 3 unknown settings. Only regular message without trigger/request
+        "0400": {
+            TOPIC: "state_info",
+            "a2": {NAME: "unknown_setting_400_a2"},
+            "a3": {NAME: "unknown_setting_400_a3"},
+            "a4": {NAME: "unknown_setting_400_a4"},
+        },
         # Interval: Irregular, but only after status request command?
-        "0405": _EV_CHARGER_0405,  # Device status request, more reliable than RT (one time status messages 0405 etc)
-        # Interval: ~3-5 seconds, but only with realtime trigger?
+        "0405": _EV_CHARGER_0405,  # Device parms, after command was acknowledged
+        # Interval: ~3-5 seconds, but only with realtime trigger
         "0410": _EV_CHARGER_0410,
-        # Interval: Irregular
+        # Interval: once requested via status request command, same as 0405
         "0840": _EV_CHARGER_0405,
     },
 }
