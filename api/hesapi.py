@@ -171,6 +171,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         and value
                     ):
                         device[key] = str(value)
+                    elif key in [
+                        # key with any value
+                        "ev_charger_status",
+                    ]:
+                        device[key] = value
                     elif key in ["rssi"] and value:
                         # For HES this is actually not a relative rssi value (0-255), but signal strength 0-100 %
                         device["wifi_signal"] = str(value)
@@ -794,9 +799,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 self._update_dev(
                     {
                         "device_sn": ev_charger.get("evChargerSn"),
-                        "alias": ev_charger.get("evChargerName"),
-                    }
+                        "alias_name": ev_charger.get("evChargerName"),
+                        "ev_charger_status": ev_charger.get("evChargerStatus"),
+                    }, siteId=siteId
                 )
+                self._site_devices.add(ev_charger.get("evChargerSn"))
         return data
 
     async def get_avg_power_from_energy(

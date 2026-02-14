@@ -20,6 +20,7 @@ MODELS = {
     "A25X7",  #  Prime Wireless Charger
     "A2687",  #  160W Prime Charger
     "A91B2",  #  240W Charging Station
+    "A5191",  #  V1 EV Charger
 }
 
 # Define possible controls per Model
@@ -28,6 +29,7 @@ MODELS = {
 FEATURES = {
     SolixMqttCommands.status_request: MODELS,
     SolixMqttCommands.realtime_trigger: MODELS,
+    SolixMqttCommands.ev_auto_start_switch: MODELS,
 }
 
 

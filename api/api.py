@@ -29,6 +29,7 @@ from .apitypes import (
     SolixDeviceType,
     SolixGridStatus,
     SolixNetworkStatus,
+    SolixOcppConnectionStatus,
     SolixParmType,
     SolixPriceTypes,
     SolixRoleStatus,
@@ -138,7 +139,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 # Update admin based on ms device type for standalone devices
                 device["is_admin"] = value in [0, 1]
                 # member devices should only be listed in bind_device query and return owner_user_id
-                if (value := devData.get("owner_user_id")):
+                if value := devData.get("owner_user_id"):
                     device["owner_user_id"] = value
             calc_capacity = False  # Flag whether capacity may need recalculation
             for key, value in devData.items():
@@ -146,7 +147,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     if key in ["product_code", "device_pn"] and value:
                         device["device_pn"] = str(value)
                         # Flag device for supported mqtt trigger if admin and device not passive
-                        if (device.get("is_admin") or device.get("owner_user_id")) and not device.get("is_passive"):
+                        if (
+                            device.get("is_admin") or device.get("owner_user_id")
+                        ) and not device.get("is_passive"):
                             device["mqtt_supported"] = True
                             # update customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
@@ -223,6 +226,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "power_limit_option_real",
                         "all_power_limit_option",
                         "station_sn",
+                        "total_stats",
                     ]:
                         if key in ["power_limit_option"]:
                             if key in getattr(
@@ -404,14 +408,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update(
                             {
                                 key: str(value),
-                                "status_desc": next(
-                                    iter(
-                                        [
-                                            item.name
-                                            for item in SolixDeviceStatus
-                                            if item.value == str(value)
-                                        ]
-                                    ),
+                                "status_desc": get_enum_name(
+                                    SolixDeviceStatus,
+                                    str(value),
                                     SolixDeviceStatus.unknown.name,
                                 ),
                             }
@@ -903,14 +902,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device.update(
                             {
                                 key: str(value),
-                                "grid_status_desc": next(
-                                    iter(
-                                        [
-                                            item.name
-                                            for item in SmartmeterStatus
-                                            if item.value == str(value)
-                                        ]
-                                    ),
+                                "grid_status_desc": get_enum_name(
+                                    SmartmeterStatus,
+                                    str(value),
                                     SmartmeterStatus.unknown.name,
                                 ),
                             }
@@ -1011,15 +1005,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device.update(
                                 {
                                     key: value,
-                                    "ocpp_status_desc": next(
-                                        iter(
-                                            [
-                                                item.name
-                                                for item in SolixDeviceStatus
-                                                if item.value == str(value)
-                                            ]
-                                        ),
-                                        SolixDeviceStatus.unknown.name,
+                                    "ocpp_status_desc": get_enum_name(
+                                        SolixOcppConnectionStatus,
+                                        str(value),
+                                        SolixOcppConnectionStatus.unknown.name,
                                     ),
                                 }
                             )
@@ -1104,10 +1093,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     def clearCaches(self) -> None:
         """Clear the api cache dictionaries and close active MQTT client."""
         super().clearCaches()
-        if self.powerpanelApi:
-            self.powerpanelApi.clearCaches()
-        if self.hesApi:
-            self.hesApi.clearCaches()
+        self.powerpanelApi = None
+        self.hesApi = None
 
     async def update_sites(
         self,
@@ -2028,14 +2015,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if data := resp.get("data") or {}:
             # add data to site_details
             mydata = data.copy()
-            mydata["status_desc"] = next(
-                iter(
-                    [
-                        item.name
-                        for item in SolarbankAiemsRuntimeStatus
-                        if item.value == mydata.get("status")
-                    ]
-                ),
+            mydata["status_desc"] = get_enum_name(
+                SolarbankAiemsRuntimeStatus,
+                mydata.get("status"),
                 SolarbankAiemsRuntimeStatus.unknown.name,
             )
             self._update_site(siteId=siteId, details={"ai_ems_runtime": mydata})

@@ -100,6 +100,27 @@ class SolixMqttCommands:
     sb_ev_charger_switch: str = "sb_ev_charger_switch"  # Driven through cloud
     plug_schedule: str = "plug_schedule"
     plug_delayed_toggle: str = "plug_delayed_toggle"
+    modbus_switch: str = "modbus_switch"
+    ev_start_charge_switch: str = "ev_start_charge_switch"
+    ev_auto_start_switch: str = "ev_auto_start_switch"
+    ev_auto_charge_restart_switch: str = "ev_auto_charge_restart_switch"
+    smart_touch_mode: str = "smart_touch_mode"
+    swipe_up_mode: str = "swipe_up_mode"
+    swipe_down_mode: str = "swipe_down_mode"
+    ev_charge_schedule: str = "ev_charge_schedule"  # complex command
+    ev_max_charge_current: str = "ev_max_charge_current"
+    ev_random_delay_switch: str = "ev_random_delay_switch"
+    ev_device_state: str = "ev_device_state"
+    light_brightness: str = "light_brightness"
+    light_off_schedule: str = (
+        "light_off_schedule"  # complex command with switch and schedule
+    )
+    main_breaker_limit: str = "main_breaker_limit"
+    ev_load_balancing: str = (
+        "ev_load_balancing"  # complex command with switches and schedule
+    )
+    ev_solar_charging: str = "ev_solar_charging"  # complex command with switches
+    ev_min_charge_current: str = "ev_min_charge_current"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -901,5 +922,17 @@ CMD_PLUG_DELAYED_TOGGLE = CMD_COMMON | {
                 VALUE_DEFAULT: 0,
             },
         },
+    },
+}
+
+CMD_EV_AUTO_START_SWITCH = CMD_COMMON | {
+    # {k: v for k, v in CMD_COMMON.items() if k != "fe"}
+    # Command: EV Auto start switch setting
+    COMMAND_NAME: SolixMqttCommands.ev_auto_start_switch,
+    "a4": {
+        NAME: "set_auto_start_switch",  # Off (0), On (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "auto_start_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }

@@ -18,6 +18,7 @@ from .mqttcmdmap import (
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
     CMD_DISPLAY_TIMEOUT_SEC,
+    CMD_EV_AUTO_START_SWITCH,
     CMD_LIGHT_MODE,
     CMD_PLUG_DELAYED_TOGGLE,
     CMD_PLUG_SCHEDULE,
@@ -50,7 +51,7 @@ from .mqttcmdmap import (
     NAME,
     SIGNED,
     STATE_NAME,
-    TIMESTAMP_FE_NOTYPE,
+    # TIMESTAMP_FE_NOTYPE,
     TOPIC,
     TYPE,
     VALUE_DEFAULT,
@@ -848,7 +849,7 @@ _A17C1_0405 = {
     "c6": {NAME: "usage_mode"},
     "c7": {NAME: "home_load_preset"},
     "c8": {NAME: "ac_socket_power", FACTOR: 0.1},
-    "c9": {NAME: "consumed_energy", FACTOR: 0.001},
+    "c9": {NAME: "consumed_energy", FACTOR: 0.0001},
     "ca": {NAME: "pv_1_power", FACTOR: 0.1},
     "cb": {NAME: "pv_2_power", FACTOR: 0.1},
     "cc": {NAME: "pv_3_power", FACTOR: 0.1},
@@ -1429,19 +1430,179 @@ _A2345_0303 = {
     "fe": {NAME: "msg_timestamp"},
 }
 
+_A2345_0a00 = {
+    "a2": {NAME: "sw_version", "values": 4},
+    "a4": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_1_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
+            "01": {
+                NAME: "usbc_1_voltage",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "03": {
+                NAME: "usbc_1_current",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "05": {
+                NAME: "usbc_1_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.01,
+            },
+        }
+    },
+    "a5": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_2_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
+            "01": {
+                NAME: "usbc_2_voltage",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "03": {
+                NAME: "usbc_2_current",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "05": {
+                NAME: "usbc_2_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.01,
+            },
+        }
+    },
+    "a6": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_3_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
+            "01": {
+                NAME: "usbc_3_voltage",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "03": {
+                NAME: "usbc_3_current",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "05": {
+                NAME: "usbc_3_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.01,
+            },
+        }
+    },
+    "a7": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_4_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
+            "01": {
+                NAME: "usbc_4_voltage",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "03": {
+                NAME: "usbc_4_current",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "05": {
+                NAME: "usbc_4_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.01,
+            },
+        }
+    },
+    "a8": {
+        BYTES: {
+            "00": {
+                NAME: "usba_1_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
+            "01": {
+                NAME: "usba_1_voltage",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "03": {
+                NAME: "usba_1_current",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "05": {
+                NAME: "usba_1_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.01,
+            },
+        }
+    },
+    "a9": {
+        BYTES: {
+            "00": {
+                NAME: "usba_2_status",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },  # status: Inactive (0), Active (1)
+            "01": {
+                NAME: "usba_2_voltage",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "03": {
+                NAME: "usba_2_current",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "05": {
+                NAME: "usba_2_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.01,
+            },
+        }
+    },
+    # "af": {
+    #     BYTES: {
+    #         "00": {
+    #             NAME: "usbc_1_switch",
+    #             TYPE: DeviceHexDataTypes.ui.value,
+    #         },  # Off (0), On (1)
+    #         "01": {
+    #             NAME: "usbc_2_switch",
+    #             TYPE: DeviceHexDataTypes.ui.value,
+    #         },  # Off (0), On (1)
+    #         "02": {
+    #             NAME: "usbc_3_switch",
+    #             TYPE: DeviceHexDataTypes.ui.value,
+    #         },  # Off (0), On (1)
+    #         "03": {
+    #             NAME: "usbc_4_switch",
+    #             TYPE: DeviceHexDataTypes.ui.value,
+    #         },  # Off (0), On (1)
+    #         "04": {
+    #             NAME: "usba_switch",
+    #             TYPE: DeviceHexDataTypes.ui.value,
+    #         },  # Off (0), On (1)
+    #     }
+    # },
+    "fe": {NAME: "msg_timestamp"},
+}
+
 _PLUG_TIMER_STATUS = {
     BYTES: {
         "00": {
-            NAME: "toggle_to_delay_seconds",
-            TYPE: DeviceHexDataTypes.ui.value,
-        },
-        "01": {
-            NAME: "toggle_to_delay_minutes?",
-            TYPE: DeviceHexDataTypes.ui.value,
-        },
-        "02": {
-            NAME: "toggle_to_delay_hours?",
-            TYPE: DeviceHexDataTypes.ui.value,
+            NAME: "toggle_to_delay_time",
+            TYPE: DeviceHexDataTypes.var.value,  # seconds:minutes:hours
+            LENGTH: 3,
         },
         "03": {
             NAME: "toggle_current_setting?",
@@ -1452,16 +1613,9 @@ _PLUG_TIMER_STATUS = {
             TYPE: DeviceHexDataTypes.ui.value,
         },
         "05": {
-            NAME: "toggle_to_elapsed_seconds",
-            TYPE: DeviceHexDataTypes.ui.value,
-        },
-        "06": {
-            NAME: "toggle_to_elapsed_minutes?",
-            TYPE: DeviceHexDataTypes.ui.value,
-        },
-        "07": {
-            NAME: "toggle_to_elapsed_hours?",
-            TYPE: DeviceHexDataTypes.ui.value,
+            NAME: "toggle_to_elapsed_time",  # seconds:minutes:hours
+            TYPE: DeviceHexDataTypes.var.value,
+            LENGTH: 3,
         },
     }
 }
@@ -1686,16 +1840,15 @@ _EV_CHARGER_0405 = {
     # V1 status message
     TOPIC: "param_info",
     "a2": {NAME: "unknown_limit?"},
+    "a3": {
+        NAME: "ocpp_connect_status?"
+    },  # disconnected(0), connecting(1), connected(2)
     "a4": {NAME: "auto_start_switch"},  # Off (0), On (1)
-    # "xx": {NAME: "boost_mode"},  # Off (0), On (1)
-    # "xx": {NAME: "ev_charging_status"} # Standby(0), Preparing(1), Charging(2), Charger_Paused(3),
-    # Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
-    # "xx": {NAME: "occp_connection_status"} # disconnected(0), connecting(1), connected(2)
     "a8": {
         NAME: "max_evcharge_current",
         FACTOR: 0.1,
     },  # 6 - rated_current (32 A), step 1 A
-    "aa": {NAME: "led_brightness"},  # 0-100 %, step 10 %
+    "aa": {NAME: "light_brightness"},  # 0-100 %, step 10 %
     "ac": {NAME: "auto_charge_restart_switch"},  # Off (0), On (1)
     "ad": {NAME: "random_delay_switch"},  # Off (0), On (1)
     "af": {
@@ -1705,12 +1858,12 @@ _EV_CHARGER_0405 = {
         NAME: "wipe_down_mode"
     },  # off (0) / start charge (1) / stop charge (2) / boost charge (3)
     "b2": {NAME: "smart_touch_mode"},  # simple (0), anti_mistouch (1)
-    "b4": {NAME: "led_off_schedule_switch"},  # Off (0), On (1)
-    "b5": {NAME: "led_off_start_time", SIGNED: False},  # sile: hour * 256 + sec
-    "b6": {NAME: "led_off_end_time", SIGNED: False},  # sile: hour * 256 + sec
+    "b4": {NAME: "light_off_schedule_switch"},  # Off (0), On (1)
+    "b5": {NAME: "light_off_start_time", SIGNED: False},  # sile: hour * 256 + sec
+    "b6": {NAME: "light_off_end_time", SIGNED: False},  # sile: hour * 256 + sec
     "b7": {NAME: "modbus_switch"},  # Off (0), On (1)
     "cc": {NAME: "tcp_timeout_seconds"},  # Modbus TCP timeout
-    "ce": {NAME: "rated_current", FACTOR: 0.1},  # rated A limit for model
+    "ce": {NAME: "max_current_limit", FACTOR: 0.1},  # rated A limit for model
     "cf": {NAME: "tcp_port"},  # Modbus TCP port
     "d0": {NAME: "ip_address"},
     "d3": {NAME: "load_balance_switch"},  # Off (0), On (1)
@@ -1723,11 +1876,12 @@ _EV_CHARGER_0405 = {
     "da": {NAME: "solar_evcharge_min_current"},  # 6 - rated_current (32 A), step 1 A
     "db": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
     "dc": {
-        NAME: "auto_phase_switching_switch?"
+        NAME: "auto_phase_switch?"
     },  # Off (0), On (1), only awailable in 3 phase mode
     "dd": {NAME: "solar_evcharge_monitoring_mode?"},  # System monitoring (1)
     "de": {NAME: "solar_evcharge_monitoring_sn?"},
-    "e3": {NAME: "start_evcharge_switch"},  # Off (0), On (1)
+    "e3": {NAME: "ev_charger_status"},
+    # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
     "e6": {NAME: "schedule_switch"},  # on (1), off (2)
     "e7": {NAME: "week_start_time", SIGNED: False},  # sile: hour * 256 + sec
     "e8": {NAME: "week_end_time", SIGNED: False},  # sile: hour * 256 + sec
@@ -1738,7 +1892,7 @@ _EV_CHARGER_0405 = {
     "f1": {NAME: "sw_version", "values": 4},
     "f2": {NAME: "sw_controller", "values": 4},
     "f3": {NAME: "hw_version", "values": 4},
-    "fe": {NAME: "offline_current_limit"},  # 6 A
+    "fe": {NAME: "min_current_limit"},  # 6 A
 }
 
 _EV_CHARGER_0410 = {
@@ -1747,22 +1901,39 @@ _EV_CHARGER_0410 = {
     "a2": {NAME: "voltage_p1", "factor": 0.1},
     "a3": {NAME: "voltage_p2", "factor": 0.1},
     "a4": {NAME: "voltage_p3", "factor": 0.1},
-    "a5": {NAME: "power_p1?"},
-    "a6": {NAME: "power_p2?"},
-    "a7": {NAME: "power_p3?"},
-    "a8": {NAME: "charging_power?"},
-    "aa": {NAME: "charged_capacity?", "factor": 0.001},
-    "ab": {NAME: "last_charge_timestamp"},
-    "ac": {NAME: "ev_plug_status?"},  # not connected (0), connected (1)?
+    "a5": {NAME: "current_p1", "factor": 0.1},
+    "a6": {NAME: "current_p2", "factor": 0.1},
+    "a7": {NAME: "current_p3", "factor": 0.1},
+    "a8": {NAME: "charging_power"},
+    "a9": {NAME: "charging_duration_seconds"},
+    "aa": {NAME: "charging_energy", "factor": 0.001},
+    "ac": {NAME: "charging_mode"},  # off (0) / start (1) / stop (2) / boost (3) ?
+    "ab": {NAME: "charging_start_timestamp"},
     "ad": {NAME: "plug_countdown_seconds"},
     "ae": {NAME: "start_countdown_seconds?"},
-    "bb": {NAME: "start_charger_switch"},  # Off (0), On (1)
+    "af": {NAME: "charging_window_seconds?"},
+    "b0": {NAME: "charging_power_p1"},
+    "b1": {NAME: "charging_power_p2"},
+    "b2": {NAME: "charging_power_p3"},
+    "b3": {NAME: "charging_energy_p1", "factor": 0.001},
+    "b4": {NAME: "charging_energy_p2", "factor": 0.001},
+    "b5": {NAME: "charging_energy_p3", "factor": 0.001},
+    "b6": {NAME: "order_id?"},
+    "b7": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
+    "b8": {NAME: "ocpp_connect_status"},
+    # disconnected (0), Connecting (1), Connected (2)
+    # "b7": {NAME: "ev_plug_status?"},  # not connected (0), connected (1)?
+    "b9": {NAME: "cp_signal_status?"},
+    # A=12V(0), B1=9V(3), B2=9V(4), C1=6V(5), C2=6V(6), Error(7), D1=3V(8), D2=3V(9),  E=0V(10), F=-12(11),
+    "ba": {NAME: "evcharge_boost?"},  # disabled (0), enabled (1)
+    "bb": {NAME: "ev_charger_status"},
+    # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
 }
 
 _X1_JSON = {
     "sn": {NAME: "device_sn"},
     "subSn": {NAME: "sub_device_sn"},
-    "localTime": {NAME: "local_time"},
+    "localTime": {NAME: "local_datetime"},
     "ems_data": {
         "bs": {  # 0: Standby; 1: Charging; 2: Discharging; 3: Sleep
             NAME: "battery_status"
@@ -1822,7 +1993,7 @@ _X1_JSON = {
 }
 
 _PP_JSON = {
-    "localtime": {NAME: "local_time"},
+    "localtime": {NAME: "local_datetime"},
     "data": {
         # power values
         "b2lp": {NAME: "battery_to_home_power"},  # 0 W
@@ -2586,9 +2757,12 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # Prime Charger 250W
     "A2345": {
-        "020b": CMD_STATUS_REQUEST,  # Device status request, more reliable than RT (one time status messages 0405 etc)
+        "0200": CMD_STATUS_REQUEST,  # Device status request
+        "0223": {k: v for k, v in CMD_REALTIME_TRIGGER.items() if k != "a3"},
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0303": _A2345_0303,
+        # Interval: only with status request command
+        "0a00": _A2345_0a00,
     },
     # Power Panel
     "A17B1": {
@@ -2618,10 +2792,17 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # EV Charger V1
     "A5191": {
-        #"0040": CMD_STATUS_REQUEST | {  # Device status request (one time status messages 0840=0405, but no 410)
+        # "0040": CMD_STATUS_REQUEST | {  # Device status request (one time status messages 0840=0405, but no 410)
         #    **TIMESTAMP_FE_NOTYPE # App uses timestamp field without field type, Anker Bug?
-        #},
+        # },
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0410
+        "0100": {
+            # EV command group
+            COMMAND_LIST: [
+                SolixMqttCommands.ev_auto_start_switch,  # field a4
+            ],
+            SolixMqttCommands.ev_auto_start_switch: CMD_EV_AUTO_START_SWITCH,  # Off (0), On (1)
+        },
         # Interval: 5 minutes regular, contains 3 unknown settings. Only regular message without trigger/request
         "0400": {
             TOPIC: "state_info",

@@ -495,7 +495,7 @@ class AnkerSolixBaseApi:
                                 # keys with value being saved as string
                                 "device_sn",
                                 "sub_device_sn",
-                                "local_time",
+                                "local_datetime",
                                 "exp_1_sn",
                                 "exp_2_sn",
                                 "exp_3_sn",
@@ -522,6 +522,14 @@ class AnkerSolixBaseApi:
                                 "pps_2_sn",
                                 "pps_1_model",
                                 "pps_2_model",
+                                "toggle_to_delay_time",
+                                "toggle_to_elapsed_time",
+                                "light_off_start_time",
+                                "light_off_end_time",
+                                "week_start_time",
+                                "week_end_time",
+                                "weekend_start_time",
+                                "weekend_end_time",
                             ]
                             and value is not None
                         ):
@@ -595,6 +603,16 @@ class AnkerSolixBaseApi:
                                 "pv_to_grid_power",
                                 "grid_to_home_power",
                                 "wifi_signal",
+                                "charging_power",
+                                "charging_power_p1",
+                                "charging_power_p2",
+                                "charging_power_p3",
+                                "min_current_limit",
+                                "max_current_limit",
+                                "main_breaker_limit",
+                                "max_evcharge_current",
+                                "solar_evcharge_min_current",
+                                "light_brightness",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -608,7 +626,7 @@ class AnkerSolixBaseApi:
                         elif (
                             key
                             in [
-                                # keys with value that should be saved as rounded as 3 decimal float string
+                                # keys with value that should be saved as rounded 3 decimal float string
                                 "battery_soh",
                                 "voltage",
                                 "pv_1_voltage",
@@ -636,6 +654,12 @@ class AnkerSolixBaseApi:
                                 "usbc_4_current",
                                 "usba_1_current",
                                 "usba_2_current",
+                                "voltage_p1",
+                                "voltage_p2",
+                                "voltage_p3",
+                                "current_p1",
+                                "current_p2",
+                                "current_p3",
                             ]
                             and str(value)
                             .replace("-", "", 1)
@@ -654,6 +678,10 @@ class AnkerSolixBaseApi:
                             "home_consumption",
                             "grid_import_energy",
                             "grid_export_energy",
+                            "charging_energy",
+                            "charging_energy_p1",
+                            "charging_energy_p2",
+                            "charging_energy_p3",
                             "charged_energy_today",
                             "discharged_energy_today",
                             "pv_yield_today",
@@ -668,7 +696,7 @@ class AnkerSolixBaseApi:
                         ]:
                             # aggregated energies should never decrease, otherwise weird values are sent or description is wrong
                             # 0 value should be ignored for aggregated, since that may reset energy counters if 0 values read on startup
-                            if str(key).endswith("_today") or 0 < float(value) > float(
+                            if str(key).startswith("charging_") or str(key).endswith("_today") or 0 < float(value) > float(
                                 device_mqtt.get(key, 0)
                             ):
                                 device_mqtt[key] = f"{float(value):.3f}"
@@ -697,6 +725,11 @@ class AnkerSolixBaseApi:
                                 "usbc_4_status",
                                 "usba_1_status",
                                 "usba_2_status",
+                                "usbc_1_switch",
+                                "usbc_2_switch",
+                                "usbc_3_switch",
+                                "usbc_4_switch",
+                                "usba_switch",
                                 "usage_mode",
                                 "energy_saving_mode",
                                 "allow_export_switch",
@@ -732,8 +765,36 @@ class AnkerSolixBaseApi:
                                 "utc_timestamp",
                                 "timestamp_backup_start",
                                 "timestamp_backup_end",
-                                "toggle_to_delay_seconds",
-                                "toggle_to_elapsed_seconds",
+                                "charging_start_timestamp",
+                                "tcp_timeout_seconds",
+                                "charging_duration_seconds",
+                                "plug_countdown_seconds",
+                                "start_countdown_seconds",
+                                "auto_start_switch",
+                                "auto_charge_restart_switch",
+                                "start_evcharge_switch",
+                                "random_delay_switch",
+                                "smart_touch_mode",
+                                "wipe_up_mode",
+                                "wipe_down_mode",
+                                "light_off_schedule_switch",
+                                "modbus_switch",
+                                "tcp_port",
+                                "ip_address",
+                                "load_balance_switch",
+                                "solar_evcharge_switch",
+                                "solar_evcharge_mode",
+                                "phase_operating_mode",
+                                "auto_phase_switch",
+                                "schedule_switch",
+                                "weekend_mode",
+                                "schedule_mode",
+                                "phase_operating_mode",
+                                "charging_mode",
+                                "evcharge_boost",
+                                "ev_charger_status",
+                                "ocpp_connect_status",
+                                "cp_signal_status",
                             ]
                             and value is not None
                         ):

@@ -1149,6 +1149,11 @@ async def poll_device_details(  # noqa: C901
                         fromFile=fromFile,
                     )
 
+        # Fetch device type specific details, if device type not excluded
+        if dev_Type in ({SolixDeviceType.EV_CHARGER.value} - exclude):
+            # Fetch charger total statistics
+            await api.get_device_charge_order_stats(deviceSn=sn, fromFile=fromFile)
+
         # Merge additional powerpanel data
         if api.powerpanelApi:
             device.update(api.powerpanelApi.devices.get(sn) or {})
@@ -1156,8 +1161,6 @@ async def poll_device_details(  # noqa: C901
         # Merge additional hes data
         if api.hesApi:
             device.update(api.hesApi.devices.get(sn) or {})
-
-        # TODO(#0): Fetch other details of specific device types as known and relevant
 
         # update entry in devices and notify registered callbacks
         api.devices.update({sn: device})

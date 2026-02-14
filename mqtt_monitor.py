@@ -30,7 +30,10 @@ from api.mqtt import (  # pylint: disable=no-name-in-module
     MessageCallback,
 )
 from api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
-from api.mqtttypes import DeviceHexData, DeviceJsonData  # pylint: disable=no-name-in-module
+from api.mqtttypes import (  # pylint: disable=no-name-in-module
+    DeviceHexData,
+    DeviceJsonData,
+)
 import common
 
 # use Console logger from common module
@@ -119,6 +122,7 @@ class AnkerSolixMqttMonitor:
             (datetime.now() + timedelta(minutes=args.runtime)) if args.runtime else None
         )
         self.mqtt_callback: MessageCallback | None = None
+        self.msg_buffer: list = []
 
     async def main(self) -> None:  # noqa: C901
         """Run Main routine to start the monitor in a loop."""
@@ -360,9 +364,11 @@ class AnkerSolixMqttMonitor:
                             if k in ["m", "k"]:
                                 # save active message callback for later restore
                                 cb = mqtt_session.message_callback()
-                                # Clear message callback to prevent scrolling during display
-                                mqtt_session.message_callback(None)
+                                # Buffer messages to prevent scrolling during display
+                                mqtt_session.message_callback(self.buffer_message)
                                 self.print_menu()
+                                # print buffered messages and restore previous callback
+                                await self.print_buffer(cb)
                                 mqtt_session.message_callback(cb)
                             elif k == "u":
                                 CONSOLE.info(
@@ -443,8 +449,8 @@ class AnkerSolixMqttMonitor:
                                 # control an MQTT device
                                 # save active message callback for later restore
                                 cb = mqtt_session.message_callback()
-                                # Clear message callback to prevent scrolling during display
-                                mqtt_session.message_callback(None)
+                                # Buffer messages to prevent scrolling during display
+                                mqtt_session.message_callback(self.buffer_message)
                                 CONSOLE.info(
                                     f"\n{Color.YELLOW}Controlling MQTT device...{Color.OFF}"
                                 )
@@ -481,16 +487,20 @@ class AnkerSolixMqttMonitor:
                                 input(
                                     f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
                                 )
+                                # print buffered messages and restore previous callback
+                                await self.print_buffer(cb)
                                 mqtt_session.message_callback(cb)
                             elif k == "d":
                                 # save active message callback for later restore
                                 cb = mqtt_session.message_callback()
-                                # Clear message callback to prevent scrolling during display
-                                mqtt_session.message_callback(None)
+                                # Buffer messages to prevent scrolling during display
+                                mqtt_session.message_callback(self.buffer_message)
                                 self.print_table()
                                 input(
                                     f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
                                 )
+                                # print buffered messages and restore previous callback
+                                await self.print_buffer(cb)
                                 mqtt_session.message_callback(cb)
                             elif k == "v":
                                 if (
@@ -713,10 +723,11 @@ class AnkerSolixMqttMonitor:
                 (message.get("head") or {}).get("timestamp") or 0
             ).strftime("%Y-%m-%d %H:%M:%S")
         common.clearscreen()
+        msg_type = "other"
         if isinstance(data, bytes):
             # structure hex data
             hd = DeviceHexData(model=model or "", hexbytes=data)
-            msg_type = hd.msg_header.msgtype.hex(':')
+            msg_type = hd.msg_header.msgtype.hex(":")
         elif isinstance(data, dict):
             # structure json data
             hd = DeviceJsonData(model=model or "", data=data)
@@ -741,6 +752,30 @@ class AnkerSolixMqttMonitor:
         # forward message to MQTT device callback if existing
         if callable(self.mqtt_callback):
             self.mqtt_callback(session, topic, message, data, model, *args, **kwargs)
+
+    def buffer_message(
+        self,
+        session: AnkerSolixMqttSession,
+        topic: str,
+        message: Any,
+        data: bytes | dict,
+        model: str,
+        *args,
+        **kwargs,
+    ) -> None:
+        """Buffer the received MQTT message while printing is paused."""
+        self.msg_buffer.append((session, topic, message, data, model, args, kwargs))
+        # limit buffer size to last 20 messages to prevent memory issues in long pauses
+        if len(self.msg_buffer) > 20:
+            self.msg_buffer.pop(0)
+
+    async def print_buffer(self, function: callable) -> None:
+        """Send the buffered messages to the callable and clear buffer."""
+        if not callable(function):
+            self.msg_buffer.clear()
+        while len(self.msg_buffer) > 0:
+            function(*self.msg_buffer.pop(0))
+            await asyncio.sleep(0.1)  # small delay to prevent flooding
 
 
 class ReplaceFilter(logging.Filter):

@@ -329,7 +329,7 @@ class DeviceHexDataField:
                 fle = ""
                 dle = ""
             s = f"{Color.RED}{self.f_name.hex()!s:<2}{Color.OFF} {self.f_length.to_bytes(length=(self.f_length.bit_length() + 7) // 8, byteorder='little').hex():>4} "
-            s += f"{tcol}{(self.f_type.hex().replace("fe","00") or '--')!s:<4}{Color.OFF}  {self.f_value.hex(':')}\n"
+            s += f"{tcol}{(self.f_type.hex().replace('fe', '00') or '--')!s:<4}{Color.OFF}  {self.f_value.hex(':')}\n"
             s += f"{'└->':<3}{self.f_length!s:>4} {tcol}{typ!s:<5}{Color.OFF} "
             s += f"{tcol if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''}{uile:>15}{Color.OFF if typ in [DeviceHexDataTypes.ui.name, DeviceHexDataTypes.str.name] else ''} "
             s += f"{tcol if typ == DeviceHexDataTypes.sile.name else ''}{sile:>15}{Color.OFF if typ == DeviceHexDataTypes.sile.name else ''} "
@@ -382,18 +382,22 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.sile.value:
                 # 2 bytes fix, signed int LE (Base type)
                 if name := fieldmap.get(NAME):
-                    value = int(
-                        int.from_bytes(
-                            hexdata,
-                            byteorder="little",
-                            signed=fieldmap.get(SIGNED) is not False,
+                    if name.endswith("_time"):
+                        # special case for 2 bytes indicating minutes, hours
+                        value = convert_time(hexdata) or ""
+                    else:
+                        value = int(
+                            int.from_bytes(
+                                hexdata,
+                                byteorder="little",
+                                signed=fieldmap.get(SIGNED) is not False,
+                            )
                         )
-                    )
                     # check if value stands for software version and convert to version number
                     if "version" in name or "sw_" in name:
                         # convert int to string for version numbering
                         value = ".".join(str(value))
-                    else:
+                    elif not isinstance(value, str):
                         factor = fieldmap.get(FACTOR, 1)
                         value = round_by_factor(value * factor, factor)
                     values[name] = value
@@ -432,6 +436,9 @@ class DeviceHexDataField:
                             )
                             for b in hexdata
                         ]
+                    elif name.endswith("_time"):
+                        # special case for 2-3 bytes indicating [seconds,] minutes, hours
+                        value = convert_time(hexdata) or ""
                     else:
                         value = round_by_factor(
                             int.from_bytes(
@@ -608,7 +615,10 @@ class DeviceHexDataField:
         if not isinstance(desc, dict):
             desc = {}
         options = desc.get(VALUE_OPTIONS, {})
-        if isinstance(value, str | int | float):
+        if desc.get(NAME, "").endswith("_time"):
+            # special case for time strings HH:MM[:SS], convert to bytes already
+            fieldvalue = convert_time(str(value)) or bytes.fromhex("000000")
+        elif isinstance(value, str | int | float):
             # for provided default or state values without value validation descriptions, use value as is
             if not (options or VALUE_MIN in desc or VALUE_MAX in desc):
                 options = (
@@ -668,6 +678,10 @@ class DeviceHexDataField:
                             length=2, byteorder="little", signed=signed
                         )
                     )
+                # special case for converted time bytes
+                elif isinstance(fieldvalue, bytes):
+                    # drop first byte with seconds
+                    hexvalue = bytearray(fieldvalue[-2:])
             case DeviceHexDataTypes.var.value:
                 # var is always 4 bytes, assuming provided value is int
                 # If a divider is specified, value will be devided prior encoding
@@ -676,6 +690,12 @@ class DeviceHexDataField:
                         int(fieldvalue / divider).to_bytes(
                             length=4, byteorder="little", signed=signed
                         )
+                    )
+                # special case for converted time bytes
+                elif isinstance(fieldvalue, bytes):
+                    # ensure 4 bytes length if requirded
+                    hexvalue = bytearray(
+                        (bytes.fromhex("0000") + fieldvalue)[-(desc.get(LENGTH, 3)) :]
                     )
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
@@ -755,7 +775,11 @@ class DeviceHexData:
         return f"model:{self.model}, header:{{{self.msg_header!s}}}, hexbytes:{self.hexbytes.hex()}, checksum:{self.checksum.hex()}"
 
     def _get_fieldmap(self) -> dict:
-        return SOLIXMQTTMAP.get(self.model, {}).get(self.msg_header.msgtype.hex(), {}).copy()
+        return (
+            SOLIXMQTTMAP.get(self.model, {})
+            .get(self.msg_header.msgtype.hex(), {})
+            .copy()
+        )
 
     def _get_xor_checksum(self, hexbytes: bytearray | None = None) -> bytearray:
         """Generate the XOR checksum byte across provided bytearray or actual hexdata."""
@@ -891,7 +915,11 @@ class DeviceHexData:
             # update length and hexbytes
             self._update_hexbytes()
 
-    def add_timestamp_field(self, fieldname: str | bytes = "fe", fieldtype: bytes | None = DeviceHexDataTypes.var.value) -> None:
+    def add_timestamp_field(
+        self,
+        fieldname: str | bytes = "fe",
+        fieldtype: bytes | None = DeviceHexDataTypes.var.value,
+    ) -> None:
         """Add or update a timestamp field in seconds as maybe required to publish command data."""
         if isinstance(fieldname, str):
             fieldname = bytes.fromhex(fieldname)
@@ -1139,7 +1167,11 @@ class DeviceJsonData:
                             nested_fields[-1:] or [""]
                         )[0].endswith("data")
                     # check if list starts
-                    if not isnested and list_fields <= 0 and (fld := fieldmap.get(key, {})):
+                    if (
+                        not isnested
+                        and list_fields <= 0
+                        and (fld := fieldmap.get(key, {}))
+                    ):
                         value = self.data.get(key)
                         name = fld.get(NAME) or ""
                         factor = fld.get(FACTOR) or None
@@ -1419,4 +1451,41 @@ def convert_timestamp(
                 return float(msec) / 1000
         else:
             return float(int.from_bytes(value, byteorder="little", signed=True))
+    return None
+
+
+def convert_time(value: bytes | bytearray | str) -> bytes | str | None:
+    """Convert time between bytes used in MQTT messages and string formats.
+
+    Automatically detects input type and converts accordingly.
+
+    Args:
+        data: Time data in bytes format (2-3 bytes in little endian: ([seconds,] minutes, hours))
+              or string format (HH:MM or HH:MM:SS).
+
+    Returns:
+        String in HH:MM[:SS] format if input is bytes/bytearray.
+        Bytes (2-3 bytes) if input is string ([seconds,] minutes, hours)
+        None if input is invalid or unsupported type.
+    """
+    if isinstance(value, bytes | bytearray) and (2 <= len(value) <= 3):
+        # Convert bytes to string
+        parts = [f"{x:02d}" for x in value]
+        parts.reverse()  # reverse to little endian
+        return ":".join(parts)
+    if (
+        isinstance(value, str)
+        and (parts := value.split(":"))
+        and (2 <= len(parts) <= 3)
+    ):
+        # Convert string to bytes
+        if (
+            (parts[0].isdigit() and 0 <= int(parts[0]) <= 23)
+            and (parts[1].isdigit() and 0 <= int(parts[1]) <= 59)
+            and (len(parts) < 3 or (parts[2].isdigit() and 0 <= int(parts[2]) <= 59))
+        ):
+            return bytes(
+                ([int(parts[2])] if len(parts) > 2 else [])
+                + [int(parts[1]), int(parts[0])]
+            )
     return None
