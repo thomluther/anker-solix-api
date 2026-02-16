@@ -43,6 +43,7 @@ from .mqttcmdmap import (
     CMD_STATUS_REQUEST,
     CMD_TEMP_UNIT,
     CMD_TIMER_REQUEST,
+    CMD_USB_PORT_SWITCH,
     COMMAND_LIST,
     COMMAND_NAME,
     FACTOR,
@@ -1570,30 +1571,46 @@ _A2345_0a00 = {
             },
         }
     },
-    # "af": {
-    #     BYTES: {
-    #         "00": {
-    #             NAME: "usbc_1_switch",
-    #             TYPE: DeviceHexDataTypes.ui.value,
-    #         },  # Off (0), On (1)
-    #         "01": {
-    #             NAME: "usbc_2_switch",
-    #             TYPE: DeviceHexDataTypes.ui.value,
-    #         },  # Off (0), On (1)
-    #         "02": {
-    #             NAME: "usbc_3_switch",
-    #             TYPE: DeviceHexDataTypes.ui.value,
-    #         },  # Off (0), On (1)
-    #         "03": {
-    #             NAME: "usbc_4_switch",
-    #             TYPE: DeviceHexDataTypes.ui.value,
-    #         },  # Off (0), On (1)
-    #         "04": {
-    #             NAME: "usba_switch",
-    #             TYPE: DeviceHexDataTypes.ui.value,
-    #         },  # Off (0), On (1)
-    #     }
-    # },
+    "aa": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_1_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        },
+    },
+    "ab": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_2_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        },
+    },
+    "ac": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_3_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        },
+    },
+    "ad": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_4_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        },
+    },
+    "ae": {
+        BYTES: {
+            "00": {
+                NAME: "usba_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        },
+    },
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -1836,6 +1853,13 @@ _DOCK_0500 = {
     TOPIC: "state_info",
 }
 
+_EV_CHARGER_0403 = {
+    # V1 status message
+    TOPIC: "param_info",
+    "a5": {NAME: "charging_window_seconds?"},
+    "a6": {NAME: "solar_evcharge_min_current?"},  # 6 - max_current_limit (32 A), step 1 A
+}
+
 _EV_CHARGER_0405 = {
     # V1 status message
     TOPIC: "param_info",
@@ -1919,7 +1943,7 @@ _EV_CHARGER_0410 = {
     "b4": {NAME: "charging_energy_p2", "factor": 0.001},
     "b5": {NAME: "charging_energy_p3", "factor": 0.001},
     "b6": {NAME: "order_id?"},
-    "b7": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
+    #"b7": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
     "b8": {NAME: "ocpp_connect_status"},
     # disconnected (0), Connecting (1), Connected (2)
     # "b7": {NAME: "ev_plug_status?"},  # not connected (0), connected (1)?
@@ -2763,6 +2787,71 @@ SOLIXMQTTMAP: Final[dict] = {
         "0303": _A2345_0303,
         # Interval: only with status request command
         "0a00": _A2345_0a00,
+        "0207": {
+            # USB port switch command with various option per port
+            COMMAND_LIST: [
+                SolixMqttCommands.usbc_1_port_switch,
+                SolixMqttCommands.usbc_2_port_switch,
+                SolixMqttCommands.usbc_3_port_switch,
+                SolixMqttCommands.usbc_4_port_switch,
+                SolixMqttCommands.usba_port_switch,
+            ],
+            SolixMqttCommands.usbc_1_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            | {
+                "a2": {
+                    **CMD_USB_PORT_SWITCH["a2"],
+                    VALUE_DEFAULT: 0,
+                },
+                "a3": {
+                    **CMD_USB_PORT_SWITCH["a3"],
+                    STATE_NAME: "usbc_1_switch",
+                },
+            },
+            SolixMqttCommands.usbc_2_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            | {
+                "a2": {
+                    **CMD_USB_PORT_SWITCH["a2"],
+                    VALUE_DEFAULT: 1,
+                },
+                "a3": {
+                    **CMD_USB_PORT_SWITCH["a3"],
+                    STATE_NAME: "usbc_2_switch",
+                },
+            },
+            SolixMqttCommands.usbc_3_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            | {
+                "a2": {
+                    **CMD_USB_PORT_SWITCH["a2"],
+                    VALUE_DEFAULT: 2,
+                },
+                "a3": {
+                    **CMD_USB_PORT_SWITCH["a3"],
+                    STATE_NAME: "usbc_3_switch",
+                },
+            },
+            SolixMqttCommands.usbc_4_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            | {
+                "a2": {
+                    **CMD_USB_PORT_SWITCH["a2"],
+                    VALUE_DEFAULT: 3,
+                },
+                "a3": {
+                    **CMD_USB_PORT_SWITCH["a3"],
+                    STATE_NAME: "usbc_4_switch",
+                },
+            },
+            SolixMqttCommands.usba_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            | {
+                "a2": {
+                    **CMD_USB_PORT_SWITCH["a2"],
+                    VALUE_DEFAULT: 4,
+                },
+                "a3": {
+                    **CMD_USB_PORT_SWITCH["a3"],
+                    STATE_NAME: "usba_switch",
+                },
+            },
+        },
     },
     # Power Panel
     "A17B1": {
@@ -2810,6 +2899,8 @@ SOLIXMQTTMAP: Final[dict] = {
             "a3": {NAME: "unknown_setting_400_a3"},
             "a4": {NAME: "unknown_setting_400_a4"},
         },
+        # Interval: Unknown
+        "0403": _EV_CHARGER_0403,  # Few device parms for charging after 0105 command?
         # Interval: Irregular, but only after status request command?
         "0405": _EV_CHARGER_0405,  # Device parms, after command was acknowledged
         # Interval: ~3-5 seconds, but only with realtime trigger

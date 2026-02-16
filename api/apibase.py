@@ -696,8 +696,10 @@ class AnkerSolixBaseApi:
                         ]:
                             # aggregated energies should never decrease, otherwise weird values are sent or description is wrong
                             # 0 value should be ignored for aggregated, since that may reset energy counters if 0 values read on startup
-                            if str(key).startswith("charging_") or str(key).endswith("_today") or 0 < float(value) > float(
-                                device_mqtt.get(key, 0)
+                            if (
+                                str(key).startswith("charging_")
+                                or str(key).endswith("_today")
+                                or 0 < float(value) > float(device_mqtt.get(key, 0))
                             ):
                                 device_mqtt[key] = f"{float(value):.3f}"
                                 if key in [

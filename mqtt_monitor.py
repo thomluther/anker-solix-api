@@ -123,6 +123,7 @@ class AnkerSolixMqttMonitor:
         )
         self.mqtt_callback: MessageCallback | None = None
         self.msg_buffer: list = []
+        self.pause_output = False
 
     async def main(self) -> None:  # noqa: C901
         """Run Main routine to start the monitor in a loop."""
@@ -204,7 +205,9 @@ class AnkerSolixMqttMonitor:
                             CONSOLE.info(
                                 f"({Color.YELLOW}{idx}{Color.OFF}) {devicename}"
                             )
-                        selection = input(
+                        selection = await self.loop.run_in_executor(
+                            None,
+                            input,
                             f"Enter device number ({Color.YELLOW}{'1-' if len(device_names) > 1 else ''}{len(device_names)}{Color.OFF}) or {Color.CYAN}nothing{Color.OFF} to quit: "
                         )
                         if not selection:
@@ -219,7 +222,9 @@ class AnkerSolixMqttMonitor:
 
                 if not (self.device_sn or self.filedump):
                     # ask whether dumping messages to file
-                    response = input(
+                    response = await self.loop.run_in_executor(
+                        None,
+                        input,
                         f"Do you want to dump MQTT message decoding also to file? ({Color.YELLOW}Y{Color.OFF}/{Color.CYAN}N{Color.OFF}): "
                     )
                     self.filedump = bool(
@@ -233,7 +238,9 @@ class AnkerSolixMqttMonitor:
                     )
                     prefix = f"{model}_mqtt_dump"
                     if not (self.fileprefix or self.device_sn):
-                        self.fileprefix = input(
+                        self.fileprefix = await self.loop.run_in_executor(
+                            None,
+                            input,
                             f"Filename prefix for export ({Color.CYAN}{prefix}{Color.OFF}): "
                         )
                     filename = f"{self.fileprefix or prefix}_{datetime.now().strftime('%Y-%m-%d__%H_%M_%S')}.txt"
@@ -366,7 +373,11 @@ class AnkerSolixMqttMonitor:
                                 cb = mqtt_session.message_callback()
                                 # Buffer messages to prevent scrolling during display
                                 mqtt_session.message_callback(self.buffer_message)
-                                self.print_menu()
+                                self.pause_output = True
+                                await self.loop.run_in_executor(
+                                    None, self.print_menu
+                                )
+                                self.pause_output = False
                                 # print buffered messages and restore previous callback
                                 await self.print_buffer(cb)
                                 mqtt_session.message_callback(cb)
@@ -451,6 +462,7 @@ class AnkerSolixMqttMonitor:
                                 cb = mqtt_session.message_callback()
                                 # Buffer messages to prevent scrolling during display
                                 mqtt_session.message_callback(self.buffer_message)
+                                self.pause_output = True
                                 CONSOLE.info(
                                     f"\n{Color.YELLOW}Controlling MQTT device...{Color.OFF}"
                                 )
@@ -484,9 +496,12 @@ class AnkerSolixMqttMonitor:
                                     CONSOLE.error(
                                         f"{Color.RED}MQTT device could not be created{Color.OFF}"
                                     )
-                                input(
+                                await self.loop.run_in_executor(
+                                    None,
+                                    input,
                                     f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
                                 )
+                                self.pause_output = False
                                 # print buffered messages and restore previous callback
                                 await self.print_buffer(cb)
                                 mqtt_session.message_callback(cb)
@@ -495,10 +510,14 @@ class AnkerSolixMqttMonitor:
                                 cb = mqtt_session.message_callback()
                                 # Buffer messages to prevent scrolling during display
                                 mqtt_session.message_callback(self.buffer_message)
+                                self.pause_output = True
                                 self.print_table()
-                                input(
+                                await self.loop.run_in_executor(
+                                    None,
+                                    input,
                                     f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
                                 )
+                                self.pause_output = False
                                 # print buffered messages and restore previous callback
                                 await self.print_buffer(cb)
                                 mqtt_session.message_callback(cb)
@@ -587,7 +606,7 @@ class AnkerSolixMqttMonitor:
 
     def print_menu(self) -> None:
         """Print the key menu."""
-        CONSOLE.info(100 * "-")
+        CONSOLE.info(f"\n{100 * "-"}")
         CONSOLE.info(f"{Color.YELLOW}MQTT Monitor key menu:{Color.OFF}")
         CONSOLE.info(100 * "-")
         CONSOLE.info(
@@ -629,10 +648,11 @@ class AnkerSolixMqttMonitor:
         INLINE.info("Listening...")
         while True:
             await asyncio.sleep(5)
-            INLINE.info(".")
-            if (m := int((datetime.now() - start).total_seconds() / 60)) != minute:
-                minute = m
-                INLINE.info(f"{m}")
+            if not self.pause_output:
+                INLINE.info(".")
+                if (m := int((datetime.now() - start).total_seconds() / 60)) != minute:
+                    minute = m
+                    INLINE.info(f"{m}")
 
     def print_message(
         self,
@@ -645,6 +665,8 @@ class AnkerSolixMqttMonitor:
         **kwargs,
     ) -> None:
         """Print and decode the received messages."""
+        if self.pause_output:
+            return
         if topic:
             self.found_topics.add(topic)
         timestamp = ""
@@ -715,6 +737,8 @@ class AnkerSolixMqttMonitor:
         **kwargs,
     ) -> None:
         """Print the accumulated and refreshed values including last message timestamp."""
+        if self.pause_output:
+            return
         if topic:
             self.found_topics.add(topic)
         timestamp = ""

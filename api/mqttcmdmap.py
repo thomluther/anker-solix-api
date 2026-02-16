@@ -81,6 +81,11 @@ class SolixMqttCommands:
     light_switch: str = "light_switch"
     light_mode_select: str = "light_mode_select"
     port_memory_switch: str = "port_memory_switch"
+    usbc_1_port_switch: str = "usbc_1_port_switch"
+    usbc_2_port_switch: str = "usbc_2_port_switch"
+    usbc_3_port_switch: str = "usbc_3_port_switch"
+    usbc_4_port_switch: str = "usbc_4_port_switch"
+    usba_port_switch: str = "usba_port_switch"
     soc_limits: str = "soc_limits"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
@@ -411,6 +416,28 @@ CMD_PORT_MEMORY_SWITCH = CMD_COMMON | {
         VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }
+
+CMD_USB_PORT_SWITCH = CMD_COMMON | {
+    # Command: Charger USB port switch setting
+    # COMMAND_NAME: Must be added depdning on which port is to be switched,
+    "a2": {
+        NAME: "set_port_switch_select",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {
+            "C1": 0,
+            "C2": 1,
+            "C3": 2,
+            "C4": 3,
+            "A": 4,
+        },
+    },
+    "a3": {
+        NAME: "set_port_switch",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+}
+
 
 CMD_SOC_LIMITS_V2 = CMD_COMMON_V2 | {
     # Command: PPS soc limit settings

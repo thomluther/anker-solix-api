@@ -29,6 +29,11 @@ MODELS = {
 FEATURES = {
     SolixMqttCommands.status_request: MODELS,
     SolixMqttCommands.realtime_trigger: MODELS,
+    SolixMqttCommands.usbc_1_port_switch: MODELS,
+    SolixMqttCommands.usbc_2_port_switch: MODELS,
+    SolixMqttCommands.usbc_3_port_switch: MODELS,
+    SolixMqttCommands.usbc_4_port_switch: MODELS,
+    SolixMqttCommands.usba_port_switch: MODELS,
     SolixMqttCommands.ev_auto_start_switch: MODELS,
 }
 

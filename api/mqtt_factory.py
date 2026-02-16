@@ -44,9 +44,20 @@ class SolixMqttDeviceFactory:
             if pn in SOLIXMQTTMAP:
                 if category in [SolixDeviceType.PPS.value] and pn in PPS_MODELS:
                     return SolixMqttDevicePps(self.api, self.device_sn)
-                if category in [SolixDeviceType.SOLARBANK.value, SolixDeviceType.COMBINER_BOX.value] and pn in SB_MODELS:
+                if (
+                    category
+                    in [
+                        SolixDeviceType.SOLARBANK.value,
+                        SolixDeviceType.COMBINER_BOX.value,
+                    ]
+                    and pn in SB_MODELS
+                ):
                     return SolixMqttDeviceSolarbank(self.api, self.device_sn)
-                if category in [SolixDeviceType.CHARGER.value, SolixDeviceType.EV_CHARGER.value] and pn in CHARGER_MODELS:
+                if (
+                    category
+                    in [SolixDeviceType.CHARGER.value, SolixDeviceType.EV_CHARGER.value]
+                    and pn in CHARGER_MODELS
+                ):
                     return SolixMqttDeviceCharger(self.api, self.device_sn)
                 if category in [SolixDeviceType.SMARTPLUG.value] and pn in VAR_MODELS:
                     return SolixMqttDeviceVarious(self.api, self.device_sn)

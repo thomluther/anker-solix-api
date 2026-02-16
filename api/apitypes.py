@@ -1364,12 +1364,14 @@ class SolixSwitchMode(IntEnum):
     on = 1
     unknown = -1
 
+
 class SolixSwitchModeV2(StrEnum):
     """Str Enumeration for generic Anker Solix switch modes V2."""
 
     on = "1"
     off = "2"
     unknown = "unknown"
+
 
 class SolixPpsOutputStatus(StrEnum):
     """Str Enumeration for Anker Solix PPS output status."""
@@ -1439,6 +1441,7 @@ class SolixPhaseMode(StrEnum):
     one_phase = "1"
     three_phase = "3"
     unknown = "unknown"
+
 
 class SolixOcppConnectionStatus(StrEnum):
     """Str Enumeration for OCPP connection status."""

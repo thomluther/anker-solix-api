@@ -368,7 +368,8 @@ class AnkerSolixMqttSession:
             "payload": json.dumps(
                 {
                     # use device owner for member devices if available
-                    "account_id": deviceDict.get("owner_user_id") or self.mqtt_info.get("user_id"),
+                    "account_id": deviceDict.get("owner_user_id")
+                    or self.mqtt_info.get("user_id"),
                     "device_sn": sn,
                     # data field in payload must be b64 encoded
                     "data": b64encode(hexbytes or b"").decode("utf-8"),

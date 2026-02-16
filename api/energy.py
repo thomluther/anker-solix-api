@@ -1093,7 +1093,7 @@ async def get_device_charge_order_stats(
         resp = await self.apisession.request(
             "post", API_ENDPOINTS["get_device_charge_order_stats"], json=data
         )
-    data =resp.get("data") or {}
-    if stats:=data.get("total_stats"):
+    data = resp.get("data") or {}
+    if stats := data.get("total_stats"):
         self._update_dev({"device_sn": deviceSn, "total_stats": stats})
     return data

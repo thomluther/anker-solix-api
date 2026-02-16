@@ -801,7 +801,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         "device_sn": ev_charger.get("evChargerSn"),
                         "alias_name": ev_charger.get("evChargerName"),
                         "ev_charger_status": ev_charger.get("evChargerStatus"),
-                    }, siteId=siteId
+                    },
+                    siteId=siteId,
                 )
                 self._site_devices.add(ev_charger.get("evChargerSn"))
         return data

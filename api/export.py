@@ -1716,9 +1716,12 @@ class AnkerSolixApiExport:
                     "_mac",
                 ]
             ) or k in ["sn"]:
-                if isinstance(v,list):
+                if isinstance(v, list):
                     # randomize individual string elements in list
-                    data[k] = [self._randomize(value, k) if isinstance(value, str) else value for value in v]
+                    data[k] = [
+                        self._randomize(value, k) if isinstance(value, str) else value
+                        for value in v
+                    ]
                 elif isinstance(v, str):
                     data[k] = self._randomize(v, k)
                 else:
