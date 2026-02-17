@@ -1857,7 +1857,9 @@ _EV_CHARGER_0403 = {
     # V1 status message
     TOPIC: "param_info",
     "a5": {NAME: "charging_window_seconds?"},
-    "a6": {NAME: "solar_evcharge_min_current?"},  # 6 - max_current_limit (32 A), step 1 A
+    "a6": {
+        NAME: "solar_evcharge_min_current?"
+    },  # 6 - max_current_limit (32 A), step 1 A
 }
 
 _EV_CHARGER_0405 = {
@@ -1943,7 +1945,7 @@ _EV_CHARGER_0410 = {
     "b4": {NAME: "charging_energy_p2", "factor": 0.001},
     "b5": {NAME: "charging_energy_p3", "factor": 0.001},
     "b6": {NAME: "order_id?"},
-    #"b7": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
+    # "b7": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
     "b8": {NAME: "ocpp_connect_status"},
     # disconnected (0), Connecting (1), Connected (2)
     # "b7": {NAME: "ev_plug_status?"},  # not connected (0), connected (1)?
@@ -2781,14 +2783,17 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # Prime Charger 250W
     "A2345": {
-        "0200": CMD_STATUS_REQUEST,  # Device status request
-        "0223": {k: v for k, v in CMD_REALTIME_TRIGGER.items() if k != "a3"},
-        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0200": CMD_STATUS_REQUEST,  # Device status request for message 0a00
+        # Special realtime trigger for this device, with 10 seconds timeout fix, sending a 0303 message per second
+        "020b": {
+            k: v for k, v in CMD_REALTIME_TRIGGER.items() if k not in ["a2", "a3"]
+        },
+        # Interval: ~1 second, but only with realtime trigger. Consumption data, all data fields are also in 0a00 message
         "0303": _A2345_0303,
-        # Interval: only with status request command
+        # Interval: only with status request command. Contains all settings and consumption data
         "0a00": _A2345_0a00,
         "0207": {
-            # USB port switch command with various option per port
+            # USB port switch command. Same command, but selected port is a parameter
             COMMAND_LIST: [
                 SolixMqttCommands.usbc_1_port_switch,
                 SolixMqttCommands.usbc_2_port_switch,
@@ -2796,55 +2801,55 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.usbc_4_port_switch,
                 SolixMqttCommands.usba_port_switch,
             ],
-            SolixMqttCommands.usbc_1_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            SolixMqttCommands.usbc_1_port_switch: CMD_USB_PORT_SWITCH
             | {
                 "a2": {
                     **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 0,
+                    VALUE_DEFAULT: 0,  # same pattern but different default option for port
                 },
                 "a3": {
                     **CMD_USB_PORT_SWITCH["a3"],
                     STATE_NAME: "usbc_1_switch",
                 },
             },
-            SolixMqttCommands.usbc_2_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            SolixMqttCommands.usbc_2_port_switch: CMD_USB_PORT_SWITCH
             | {
                 "a2": {
                     **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 1,
+                    VALUE_DEFAULT: 1,  # same pattern but different default option for port
                 },
                 "a3": {
                     **CMD_USB_PORT_SWITCH["a3"],
                     STATE_NAME: "usbc_2_switch",
                 },
             },
-            SolixMqttCommands.usbc_3_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            SolixMqttCommands.usbc_3_port_switch: CMD_USB_PORT_SWITCH
             | {
                 "a2": {
                     **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 2,
+                    VALUE_DEFAULT: 2,  # same pattern but different default option for port
                 },
                 "a3": {
                     **CMD_USB_PORT_SWITCH["a3"],
                     STATE_NAME: "usbc_3_switch",
                 },
             },
-            SolixMqttCommands.usbc_4_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            SolixMqttCommands.usbc_4_port_switch: CMD_USB_PORT_SWITCH
             | {
                 "a2": {
                     **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 3,
+                    VALUE_DEFAULT: 3,  # same pattern but different default option for port
                 },
                 "a3": {
                     **CMD_USB_PORT_SWITCH["a3"],
                     STATE_NAME: "usbc_4_switch",
                 },
             },
-            SolixMqttCommands.usba_port_switch: CMD_USB_PORT_SWITCH # same pattern but different option for port
+            SolixMqttCommands.usba_port_switch: CMD_USB_PORT_SWITCH
             | {
                 "a2": {
                     **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 4,
+                    VALUE_DEFAULT: 4,  # same pattern but different default option for port
                 },
                 "a3": {
                     **CMD_USB_PORT_SWITCH["a3"],

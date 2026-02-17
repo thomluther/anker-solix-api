@@ -188,6 +188,7 @@ class AnkerSolixApiMonitor:
         self.delayed_sn_refresh: set = set()
         self.loop: asyncio.AbstractEventLoop
         self.print_task = None
+        self.input_task = None
         self.pause_output = False
 
     def get_subfolders(self, folder: str | Path) -> list:
@@ -375,24 +376,26 @@ class AnkerSolixApiMonitor:
 
     async def print_wait_progress(self, seconds: int) -> None:
         """Print wait progress for data poller monitoring for given number of seconds."""
-        for sec in range(seconds):
-            now = datetime.now().astimezone()
-            # IDLE may be used with different stdin which does not support cursor placement, skip time progress display in that case
-            if sys.stdin is sys.__stdin__:
-                if not self.pause_output:
-                    SAMELINE.info(
-                        f"Site refresh: {int((self.next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(self.next_dev_refr):>2}"
-                    )
-                if self.next_refr < now:
-                    break
-            elif sec == 0 or self.next_refr < now:
-                if not self.pause_output:
-                    CONSOLE.info(
-                        f"Site refresh: {int((self.next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(self.next_dev_refr):>2}",
-                    )
-                if self.next_refr < now:
-                    break
+        for _ in range(seconds):
+            self.print_waiter()
+            if self.next_refr < datetime.now().astimezone():
+                break
             await asyncio.sleep(1)
+
+    def print_waiter(self) -> None:
+        """Print the actual wait time."""
+        if self.pause_output:
+            return
+        now = datetime.now().astimezone()
+        # IDLE may be used with different stdin which does not support cursor placement, skip time progress display in that case
+        if sys.stdin is sys.__stdin__:
+            SAMELINE.info(
+                f"Site refresh: {int((self.next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(self.next_dev_refr):>2}"
+            )
+        elif self.next_refr < now:
+            CONSOLE.info(
+                f"Site refresh: {int((self.next_refr - now).total_seconds()):>3} sec,  Device details countdown: {int(self.next_dev_refr):>2}",
+            )
 
     def print_device_mqtt(
         self,
@@ -444,7 +447,7 @@ class AnkerSolixApiMonitor:
                 if len(fields) >= 2:
                     # print row
                     CONSOLE.info(
-                        f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}} {fields[1][0]:<{col3}}: {fields[1][1]!s}"
+                        f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}} {fields[1][0]:<{col3}}: {fields[1][1]!s}"
                     )
                     fields.clear()
             if fields:
@@ -479,6 +482,8 @@ class AnkerSolixApiMonitor:
         # clear any delayed refresh and print key options
         self.delayed_sn_refresh.clear()
         self.get_menu_options()
+        CONSOLE.info("Api Requests: %s", self.api.request_count)
+        self.print_waiter()
 
     async def print_api_data_delayed(
         self, mqtt_mixin: bool = True, delay: int = 0
@@ -489,6 +494,12 @@ class AnkerSolixApiMonitor:
             return
         common.clearscreen()
         self.print_api_data(mqtt_mixin=mqtt_mixin)
+        CONSOLE.info("Api Requests: %s", self.api.request_count)
+        CONSOLE.log(
+            logging.INFO if self.showApiCalls else logging.DEBUG,
+            self.api.request_count.get_details(last_hour=True),
+        )
+        self.print_waiter()
 
     def print_api_data(self, mqtt_mixin: bool = True) -> None:  # noqa: C901
         """Print the Api data in formatted structures."""
@@ -2186,6 +2197,22 @@ class AnkerSolixApiMonitor:
         self.delayed_sn_refresh.clear()
         self.get_menu_options()
 
+    async def async_inupt(self, prompt: str) -> str:
+        """Get interruptable intput without blocking the event loop."""
+        result = None
+        try:
+            self.input_task = self.loop.create_task(asyncio.to_thread(input, prompt))
+            await self.input_task
+            result = self.input_task.result()
+        except asyncio.CancelledError, KeyboardInterrupt:
+            # Handle gracefully
+            CONSOLE.warning("\n[Input Cancelled]")
+            raise
+        else:
+            return result
+        finally:
+            self.input_task = None
+
     async def main(self) -> None:  # noqa: C901
         """Run Main routine to start the monitor in a loop."""
         # pylint: disable=logging-fstring-interpolation
@@ -2206,9 +2233,7 @@ class AnkerSolixApiMonitor:
                 for idx, filename in enumerate(exampleslist, start=1):
                     CONSOLE.info(f"({Color.YELLOW}{idx}{Color.OFF}) {filename}")
                 CONSOLE.info(f"({Color.RED}Q{Color.OFF}) Quit")
-            selection = await self.loop.run_in_executor(
-                None,
-                input,
+            selection = await self.async_inupt(
                 f"Input Source number {Color.CYAN}0{Color.YELLOW}-{len(exampleslist)}{Color.OFF}) or [{Color.RED}Q{Color.OFF}]uit: ",
             )
             if (
@@ -2267,9 +2292,7 @@ class AnkerSolixApiMonitor:
 
                 if self.interactive:
                     while True:
-                        resp = await self.loop.run_in_executor(
-                            None,
-                            input,
+                        resp = await self.async_inupt(
                             f"How many seconds refresh interval should be used? ({Color.YELLOW}5-600{Color.OFF}, default: {Color.CYAN}30{Color.OFF}): ",
                         )
                         if not resp:
@@ -2281,9 +2304,7 @@ class AnkerSolixApiMonitor:
 
                     # ask for including energy details
                     while True:
-                        resp = await self.loop.run_in_executor(
-                            None,
-                            input,
+                        resp = await self.async_inupt(
                             f"Do you want to include daily site energy statistics? ([{Color.YELLOW}Y{Color.OFF}]es / [{Color.CYAN}N{Color.OFF}]o = default): ",
                         )
                         if not resp or resp.upper() in ["N", "NO"]:
@@ -2329,9 +2350,7 @@ class AnkerSolixApiMonitor:
                                     CONSOLE.info(
                                         f"({Color.YELLOW}{idx}{Color.OFF}) {sitename}"
                                     )
-                                selection = await self.loop.run_in_executor(
-                                    None,
-                                    input,
+                                selection = await self.async_inupt(
                                     f"Enter site number ({Color.YELLOW}0-{len(site_names) - 1}{Color.OFF}) or nothing for {Color.CYAN}All{Color.OFF}: ",
                                 )
                                 if selection.isdigit() and 1 <= int(selection) < len(
@@ -2342,9 +2361,7 @@ class AnkerSolixApiMonitor:
                                     ].split(",")[0]
                             # ask which endpoint limit should be applied or use command line arg
                             if self.interactive:
-                                selection = await self.loop.run_in_executor(
-                                    None,
-                                    input,
+                                selection = await self.async_inupt(
                                     f"Enter Api endpoint limit for request throttling ({Color.YELLOW}1-50, 0 = disabled{Color.OFF}) "
                                     f"[Default: {Color.CYAN}{self.api.apisession.endpointLimit()}{Color.OFF}]: ",
                                 )
@@ -2492,9 +2509,7 @@ class AnkerSolixApiMonitor:
                                 CONSOLE.info(
                                     f"({Color.YELLOW}{idx}{Color.OFF}) {devicename}"
                                 )
-                            selection = await self.loop.run_in_executor(
-                                None,
-                                input,
+                            selection = await self.async_inupt(
                                 f"Enter device number ({Color.YELLOW}0-{len(self.device_names) - 1}{Color.OFF}) or nothing for {Color.CYAN}All{Color.OFF}: ",
                             )
                             if selection.isdigit() and 1 <= int(selection) < len(
@@ -2532,10 +2547,14 @@ class AnkerSolixApiMonitor:
                                 self.triggered = None
                                 if self.api.mqttsession:
                                     self.api.mqttsession.triggered_devices = set()
-                            # Check if a key was pressed
-                            if k := await self.loop.run_in_executor(
-                                None, common.getkey
-                            ):
+                            # Check if a key was pressed and handle interrupts for loop
+                            try:
+                                k = await self.loop.run_in_executor(None, common.getkey)
+                            except asyncio.CancelledError:
+                                # Handle gracefully
+                                CONSOLE.warning("\n[Input Cancelled]")
+                                raise
+                            if k:
                                 k = k.lower()
                                 if k == "k":
                                     # print key menu
@@ -2565,9 +2584,7 @@ class AnkerSolixApiMonitor:
                                             f"({Color.RED}C{Color.OFF}) Cancel"
                                         )
                                         while True:
-                                            selection = await self.loop.run_in_executor(
-                                                None,
-                                                input,
+                                            selection = await self.async_inupt(
                                                 f"Enter source file number ({Color.YELLOW}1-{len(exampleslist)}{Color.OFF}) or [{Color.RED}C{Color.OFF}]ancel: ",
                                             )
                                             if selection.upper() in ["C", "CANCEL"]:
@@ -2871,9 +2888,7 @@ class AnkerSolixApiMonitor:
                                         "\nApi cache:\n%s",
                                         json.dumps(self.api.getCaches(), indent=2),
                                     )
-                                    await self.loop.run_in_executor(
-                                        None,
-                                        input,
+                                    await self.async_inupt(
                                         f"Hit [{Color.CYAN}Enter{Color.OFF}] to continue...\n",
                                     )
                                     self.pause_output = False
@@ -2933,9 +2948,7 @@ class AnkerSolixApiMonitor:
                                                 f"{dev.get('device_sn')} ({dev.get('device_pn')}){Color.OFF}\n"
                                                 f"{json.dumps(dev.get('mqtt_data'), indent=2)}"
                                             )
-                                        await self.loop.run_in_executor(
-                                            None,
-                                            input,
+                                        await self.async_inupt(
                                             f"Hit [{Color.CYAN}Enter{Color.OFF}] to continue...\n",
                                         )
                                         self.pause_output = False
@@ -2951,9 +2964,7 @@ class AnkerSolixApiMonitor:
                                             f"\n{Color.YELLOW}Controlling MQTT device...{Color.OFF}"
                                         )
                                         result = await self.control_device()
-                                        await self.loop.run_in_executor(
-                                            None,
-                                            input,
+                                        await self.async_inupt(
                                             f"Hit [{Color.YELLOW}Enter{Color.OFF}] to continue monitoring...",
                                         )
                                         self.pause_output = False
@@ -2989,11 +3000,13 @@ class AnkerSolixApiMonitor:
                     finally:
                         # Cancel the started tasks
                         wait_task.cancel()
+                        if self.input_task:
+                            self.input_task.cancel()
                         # Wait for the tasks to finish cancellation
                         try:
                             await wait_task
                         except asyncio.CancelledError:
-                            CONSOLE.info("\nData poller wait task was cancelled.")
+                            CONSOLE.info("Data poller wait task was cancelled.")
         except (
             asyncio.CancelledError,
             KeyboardInterrupt,
@@ -3061,8 +3074,8 @@ if __name__ == "__main__":
             CONSOLE.info("")
 
         if not asyncio.run(AnkerSolixApiMonitor(arg).main(), debug=False):
-            CONSOLE.warning("\nAborted!")
+            CONSOLE.warning("Aborted!")
     except KeyboardInterrupt:
-        CONSOLE.warning("\nAborted!")
+        CONSOLE.warning("Aborted!")
     except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(exception), exception)

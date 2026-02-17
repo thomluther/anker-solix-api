@@ -205,9 +205,7 @@ class AnkerSolixMqttMonitor:
                             CONSOLE.info(
                                 f"({Color.YELLOW}{idx}{Color.OFF}) {devicename}"
                             )
-                        selection = await self.loop.run_in_executor(
-                            None,
-                            input,
+                        selection = await self.async_inupt(
                             f"Enter device number ({Color.YELLOW}{'1-' if len(device_names) > 1 else ''}{len(device_names)}{Color.OFF}) or {Color.CYAN}nothing{Color.OFF} to quit: "
                         )
                         if not selection:
@@ -222,9 +220,7 @@ class AnkerSolixMqttMonitor:
 
                 if not (self.device_sn or self.filedump):
                     # ask whether dumping messages to file
-                    response = await self.loop.run_in_executor(
-                        None,
-                        input,
+                    response = await self.async_inupt(
                         f"Do you want to dump MQTT message decoding also to file? ({Color.YELLOW}Y{Color.OFF}/{Color.CYAN}N{Color.OFF}): "
                     )
                     self.filedump = bool(
@@ -238,9 +234,7 @@ class AnkerSolixMqttMonitor:
                     )
                     prefix = f"{model}_mqtt_dump"
                     if not (self.fileprefix or self.device_sn):
-                        self.fileprefix = await self.loop.run_in_executor(
-                            None,
-                            input,
+                        self.fileprefix = await self.async_inupt(
                             f"Filename prefix for export ({Color.CYAN}{prefix}{Color.OFF}): "
                         )
                     filename = f"{self.fileprefix or prefix}_{datetime.now().strftime('%Y-%m-%d__%H_%M_%S')}.txt"
@@ -374,9 +368,7 @@ class AnkerSolixMqttMonitor:
                                 # Buffer messages to prevent scrolling during display
                                 mqtt_session.message_callback(self.buffer_message)
                                 self.pause_output = True
-                                await self.loop.run_in_executor(
-                                    None, self.print_menu
-                                )
+                                await self.loop.run_in_executor(None, self.print_menu)
                                 self.pause_output = False
                                 # print buffered messages and restore previous callback
                                 await self.print_buffer(cb)
@@ -496,9 +488,7 @@ class AnkerSolixMqttMonitor:
                                     CONSOLE.error(
                                         f"{Color.RED}MQTT device could not be created{Color.OFF}"
                                     )
-                                await self.loop.run_in_executor(
-                                    None,
-                                    input,
+                                await self.async_inupt(
                                     f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
                                 )
                                 self.pause_output = False
@@ -512,9 +502,7 @@ class AnkerSolixMqttMonitor:
                                 mqtt_session.message_callback(self.buffer_message)
                                 self.pause_output = True
                                 self.print_table()
-                                await self.loop.run_in_executor(
-                                    None,
-                                    input,
+                                await self.async_inupt(
                                     f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
                                 )
                                 self.pause_output = False
@@ -606,7 +594,7 @@ class AnkerSolixMqttMonitor:
 
     def print_menu(self) -> None:
         """Print the key menu."""
-        CONSOLE.info(f"\n{100 * "-"}")
+        CONSOLE.info(f"\n{100 * '-'}")
         CONSOLE.info(f"{Color.YELLOW}MQTT Monitor key menu:{Color.OFF}")
         CONSOLE.info(100 * "-")
         CONSOLE.info(
@@ -715,7 +703,7 @@ class AnkerSolixMqttMonitor:
                 if len(fields) >= 2:
                     # print row
                     CONSOLE.info(
-                        f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}} {fields[1][0]:<{col3}}: {fields[1][1]!s}"
+                        f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}} {fields[1][0]:<{col3}}: {fields[1][1]!s}"
                     )
                     fields.clear()
             if fields:
@@ -800,6 +788,18 @@ class AnkerSolixMqttMonitor:
         while len(self.msg_buffer) > 0:
             function(*self.msg_buffer.pop(0))
             await asyncio.sleep(0.1)  # small delay to prevent flooding
+
+    async def async_inupt(self, prompt: str) -> str:
+        """Get interruptable input without blocking the event loop."""
+        result = None
+        try:
+            result = await self.loop.run_in_executor(None, input, prompt)
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            # Handle gracefully
+            CONSOLE.warning("\n[Input Cancelled]")
+            raise
+        else:
+            return result
 
 
 class ReplaceFilter(logging.Filter):
