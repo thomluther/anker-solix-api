@@ -591,18 +591,18 @@ async def energy_analysis(
         "type": rangeType if rangeType in ["week", "month", "year"] else "day",
         "start_time": startDay.strftime(
             "%Y-%m"
-            if rangeType in ["month"]
+            if rangeType == "month"
             else "%Y"
-            if rangeType in ["year"]
+            if rangeType == "year"
             else "%Y-%m-%d"
         ),
         "end_time": ""
         if not isinstance(endDay, datetime)
         else endDay.strftime(
             "%Y-%m"
-            if rangeType in ["month"]
+            if rangeType == "month"
             else "%Y"
-            if rangeType in ["year"]
+            if rangeType == "year"
             else "%Y-%m-%d"
         ),
     }
@@ -1021,18 +1021,18 @@ async def get_device_pv_statistics(
         "type": rangeType,
         "start": startDay.strftime(
             "%Y-%m"
-            if rangeType in ["month"]
+            if rangeType == "month"
             else "%Y"
-            if rangeType in ["year"]
+            if rangeType == "year"
             else "%Y-%m-%d"
         ),
         "end": ""
         if not endDay
         else endDay.strftime(
             "%Y-%m"
-            if rangeType in ["month"]
+            if rangeType == "month"
             else "%Y"
-            if rangeType in ["year"]
+            if rangeType == "year"
             else "%Y-%m-%d"
         ),
         "version": version,
@@ -1075,10 +1075,10 @@ async def get_device_charge_order_stats(
         "device_sn": deviceSn,
         "date_type": rangeType,
         "start_date": ""
-        if not startDay or rangeType in ["all"]
+        if not startDay or rangeType == "all"
         else startDay.strftime("%Y-%m-%d"),
         "end_date": ""
-        if not endDay or rangeType in ["all"]
+        if not endDay or rangeType == "all"
         else endDay.strftime("%Y-%m-%d"),
     }
     # get first data period from file or api

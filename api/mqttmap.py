@@ -14,12 +14,25 @@ from .mqttcmdmap import (
     CMD_DC_OUTPUT_SWITCH,
     CMD_DC_OUTPUT_TIMEOUT_SEC,
     CMD_DEVICE_MAX_LOAD,
+    CMD_DEVICE_POWER_MODE,
     CMD_DEVICE_TIMEOUT_MIN,
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
     CMD_DISPLAY_TIMEOUT_SEC,
+    CMD_EV_AUTO_CHARGE_RESTART_SWITCH,
     CMD_EV_AUTO_START_SWITCH,
+    CMD_EV_CHARGE_RANDOM_DELAY_SWITCH,
+    CMD_EV_CHARGER_MODE,
+    CMD_EV_CHARGER_SCHEDULE_SETTINGS,
+    CMD_EV_CHARGER_SCHEDULE_TIMES,
+    CMD_EV_LIGHT_BRIGHTNESS,
+    CMD_EV_LIGHT_OFF_SCHEDULE,
+    CMD_EV_LOAD_BALANCING,
+    CMD_EV_MAX_CHARGE_CURRENT,
+    CMD_EV_SOLAR_CHARGING,
     CMD_LIGHT_MODE,
+    CMD_MAIN_BREAKER_LIMIT,
+    CMD_MODBUS_SWITCH,
     CMD_PLUG_DELAYED_TOGGLE,
     CMD_PLUG_SCHEDULE,
     CMD_PORT_MEMORY_SWITCH,
@@ -39,8 +52,11 @@ from .mqttcmdmap import (
     CMD_SB_PV_LIMIT,
     CMD_SB_STATUS_CHECK,
     CMD_SB_USAGE_MODE,
+    CMD_SMART_TOUCH_MODE,
     CMD_SOC_LIMITS_V2,
     CMD_STATUS_REQUEST,
+    CMD_SWIPE_DOWN_MODE,
+    CMD_SWIPE_UP_MODE,
     CMD_TEMP_UNIT,
     CMD_TIMER_REQUEST,
     CMD_USB_PORT_SWITCH,
@@ -1894,9 +1910,9 @@ _EV_CHARGER_0405 = {
     "d0": {NAME: "ip_address"},
     "d3": {NAME: "load_balance_switch"},  # Off (0), On (1)
     "d4": {NAME: "main_breaker_limit"},  # 10-500 A, step 1 A
-    "d5": {NAME: "load_balance_monitoring_mode?"},  # System monitoring (1)
-    "d6": {NAME: "load_balance_setting_d6?"},  # 1 if SM monitored?
-    "d7": {NAME: "load_balance_monitoring_sn?"},
+    "d5": {NAME: "load_balance_setting_d5"},  # System monitoring (1)
+    "d6": {NAME: "load_balance_setting_d6"},  # 1 if SM monitored?
+    "d7": {NAME: "load_balance_monitor_device"},
     "d8": {NAME: "solar_evcharge_switch"},  # Off (0), On (1)
     "d9": {NAME: "solar_evcharge_mode"},  # solar & grid (0), solar only (1)
     "da": {NAME: "solar_evcharge_min_current"},  # 6 - rated_current (32 A), step 1 A
@@ -1905,7 +1921,7 @@ _EV_CHARGER_0405 = {
         NAME: "auto_phase_switch?"
     },  # Off (0), On (1), only awailable in 3 phase mode
     "dd": {NAME: "solar_evcharge_monitoring_mode?"},  # System monitoring (1)
-    "de": {NAME: "solar_evcharge_monitoring_sn?"},
+    "de": {NAME: "solar_evcharge_monitor_device"},
     "e3": {NAME: "ev_charger_status"},
     # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
     "e6": {NAME: "schedule_switch"},  # on (1), off (2)
@@ -2894,8 +2910,60 @@ SOLIXMQTTMAP: Final[dict] = {
             # EV command group
             COMMAND_LIST: [
                 SolixMqttCommands.ev_auto_start_switch,  # field a4
+                SolixMqttCommands.ev_max_charge_current,  # field a8
+                SolixMqttCommands.light_brightness,  # field aa
+                SolixMqttCommands.ev_auto_charge_restart_switch,  # field ac
+                SolixMqttCommands.ev_random_delay_switch,  # field ad
+                SolixMqttCommands.swipe_up_mode_select,  # field af
+                SolixMqttCommands.swipe_down_mode_select,  # field b0
+                SolixMqttCommands.smart_touch_mode_select,  # field b2
+                SolixMqttCommands.light_off_schedule,  # field b4, b5, b6
+                SolixMqttCommands.modbus_switch,  # field b7
             ],
             SolixMqttCommands.ev_auto_start_switch: CMD_EV_AUTO_START_SWITCH,  # Off (0), On (1)
+            SolixMqttCommands.ev_max_charge_current: CMD_EV_MAX_CHARGE_CURRENT,  # min limit to max limit (e.g. 6-32 A, step 1 A)
+            SolixMqttCommands.ev_auto_charge_restart_switch: CMD_EV_AUTO_CHARGE_RESTART_SWITCH,  # Off (0), On (1)
+            SolixMqttCommands.ev_random_delay_switch: CMD_EV_CHARGE_RANDOM_DELAY_SWITCH,  # Off (0), On (1)
+            SolixMqttCommands.light_brightness: CMD_EV_LIGHT_BRIGHTNESS,  # 0-100 %, step 10 %
+            SolixMqttCommands.swipe_up_mode_select: CMD_SWIPE_UP_MODE,  # off (0), start charge (1), stop charge (2), boost charge (3)
+            SolixMqttCommands.swipe_down_mode_select: CMD_SWIPE_DOWN_MODE,  # off (0), start charge (1), stop charge (2), boost charge (3)
+            SolixMqttCommands.smart_touch_mode_select: CMD_SMART_TOUCH_MODE,  # simple (0), avoid_error (1)
+            SolixMqttCommands.light_off_schedule: CMD_EV_LIGHT_OFF_SCHEDULE,  # Switch, start time, end time
+            SolixMqttCommands.modbus_switch: CMD_MODBUS_SWITCH,  # Off (0), On (1)
+        },
+        "0105": {
+            COMMAND_LIST: [
+                SolixMqttCommands.ev_charger_mode_select,  # field a4
+            ],
+            SolixMqttCommands.ev_charger_mode_select: CMD_EV_CHARGER_MODE,  # Start(1), Stop(2), Boost(4)
+        },
+        "0106": {
+            COMMAND_LIST: [
+                SolixMqttCommands.ev_charger_schedule_settings,  # field a2, a8
+                SolixMqttCommands.ev_charger_schedule_times,  # field a3 - a7
+            ],
+            SolixMqttCommands.ev_charger_schedule_settings: CMD_EV_CHARGER_SCHEDULE_SETTINGS,  # Schedule switch, mode
+            SolixMqttCommands.ev_charger_schedule_times: CMD_EV_CHARGER_SCHEDULE_TIMES,  # schedule times
+        },
+        "0108": {
+            COMMAND_LIST: [
+                SolixMqttCommands.device_power_mode,  # field a2
+            ],
+            SolixMqttCommands.device_power_mode: CMD_DEVICE_POWER_MODE,  # Start(1), Stop(2), Boost(4)
+        },
+        "010c": {
+            COMMAND_LIST: [
+                SolixMqttCommands.main_breaker_limit,  # field a3
+                SolixMqttCommands.ev_load_balancing,  # field a2, a4, a5, a6
+            ],
+            SolixMqttCommands.main_breaker_limit: CMD_MAIN_BREAKER_LIMIT,  # 10-500 A, step 1 A
+            SolixMqttCommands.ev_load_balancing: CMD_EV_LOAD_BALANCING,  # Switch, monitoring type and device SN
+        },
+        "010e": {
+            COMMAND_LIST: [
+                SolixMqttCommands.ev_solar_charging,  # field a2-a8
+            ],
+            SolixMqttCommands.ev_solar_charging: CMD_EV_SOLAR_CHARGING,  # Solar charge settings
         },
         # Interval: 5 minutes regular, contains 3 unknown settings. Only regular message without trigger/request
         "0400": {

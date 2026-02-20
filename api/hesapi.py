@@ -127,7 +127,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             # update generation if specified in device type definitions
                             if len(dev_type) > 1:
                                 device.update({"generation": int(dev_type[1])})
-                    elif key in ["device_name"]:
+                    elif key == "device_name":
                         if value:
                             device.update({"name": str(value)})
                         elif (
@@ -147,7 +147,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                     or str(value)
                                 }
                             )
-                    elif key in ["alias_name"] and value:
+                    elif key == "alias_name" and value:
                         device["alias"] = str(value)
                     elif key in [
                         # Examples for boolean key values
@@ -156,10 +156,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         "is_primary",
                     ]:
                         device[key] = bool(value)
-                    elif key in [
-                        # key with string values
-                        "wireless_type",
-                    ] or (
+                    # key with string values
+                    elif key == "wireless_type" or (
                         key
                         in [
                             # Example for key with string values that should only be updated if value returned
@@ -171,23 +169,21 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         and value
                     ):
                         device[key] = str(value)
-                    elif key in [
-                        # key with any value
-                        "ev_charger_status",
-                    ]:
+                    # key with any value
+                    elif key == "ev_charger_status":
                         device[key] = value
-                    elif key in ["rssi"] and value:
+                    elif key == "rssi" and value:
                         # For HES this is actually not a relative rssi value (0-255), but signal strength 0-100 %
                         device["wifi_signal"] = str(value)
-                    elif key in ["average_power"] and value:
+                    elif key == "average_power" and value:
                         calc_capacity |= (device.get("average_power") or {}).get(
                             "state_of_charge"
                         ) != value.get("state_of_charge")
                         device[key] = value
-                    elif key in ["batCount"] and str(value).isdigit():
+                    elif key == "batCount" and str(value).isdigit():
                         calc_capacity |= device.get(key) != int(value)
                         device[key] = int(value)
-                    elif key in ["battery_capacity"] and str(value).isdigit():
+                    elif key == "battery_capacity" and str(value).isdigit():
                         # This key is used to trigger recalculation from customization
                         calc_capacity = True
                         device[key] = value

@@ -124,6 +124,7 @@ class AnkerSolixMqttMonitor:
         self.mqtt_callback: MessageCallback | None = None
         self.msg_buffer: list = []
         self.pause_output = False
+        self.input_task: bool = False
 
     async def main(self) -> None:  # noqa: C901
         """Run Main routine to start the monitor in a loop."""
@@ -314,6 +315,8 @@ class AnkerSolixMqttMonitor:
                 # Create MQTT device instance and save default Api MQTT callback
                 mdev = SolixMqttDeviceFactory(self.api, device_sn).create_device()
                 self.mqtt_callback = mqtt_session.message_callback()
+                progress_task = None
+                poller_task = None
                 try:
                     activetopic = None
                     realtime = self.realtime_trigger
@@ -328,20 +331,20 @@ class AnkerSolixMqttMonitor:
                             )
                     else:
                         # print the menu before starting if interactive
-                        self.print_menu()
+                        await self.print_menu()
                     CONSOLE.info(
                         f"Starting MQTT message listener, real time data trigger is: {Color.GREEN + 'ON' if realtime else Color.RED + 'OFF'}{Color.OFF}"
                     )
                     # Start the background poller with subscriptions and update trigger
                     poller_task = self.loop.create_task(
-                        mqtt_session.message_poller(
-                            topics=topics,
-                            trigger_devices=rt_devices,
-                            msg_callback=self.print_values
-                            if self.value_display
-                            else self.print_message,
-                            timeout=60,
-                        )
+                            mqtt_session.message_poller(
+                                topics=topics,
+                                trigger_devices=rt_devices,
+                                msg_callback=self.print_values
+                                if self.value_display
+                                else self.print_message,
+                                timeout=60,
+                            )
                     )
                     # Start the wait progress printer in background
                     progress_task = self.loop.create_task(self.print_wait_progress())
@@ -359,200 +362,237 @@ class AnkerSolixMqttMonitor:
                                 f"{Color.CYAN}\nPublished immediate status request, status message(s) should appear shortly...{Color.OFF}"
                             )
                     while True:
-                        # Check if a key was pressed
-                        if k := await loop.run_in_executor(None, common.getkey):
-                            k = k.lower()
-                            if k in ["m", "k"]:
-                                # save active message callback for later restore
-                                cb = mqtt_session.message_callback()
-                                # Buffer messages to prevent scrolling during display
-                                mqtt_session.message_callback(self.buffer_message)
-                                self.pause_output = True
-                                await self.loop.run_in_executor(None, self.print_menu)
-                                self.pause_output = False
-                                # print buffered messages and restore previous callback
-                                await self.print_buffer(cb)
-                                mqtt_session.message_callback(cb)
-                            elif k == "u":
-                                CONSOLE.info(
-                                    f"{Color.RED}\nUnsubscribing all topics...{Color.OFF}"
-                                )
-                                topics.clear()
-                                activetopic = None
-                                if mqtt_session.message_callback() == self.print_values:
-                                    # clear last message from screen and show active subscription
-                                    await asyncio.sleep(6)
-                                    self.print_values(
-                                        session=mqtt_session,
-                                        topic="",
-                                        message=None,
-                                        data=None,
-                                        model=device_pn,
-                                    )
-                            elif k == "s":
-                                CONSOLE.info(
-                                    f"{Color.GREEN}\nSubscribing root topics...{Color.OFF}"
-                                )
-                                topics.clear()
-                                activetopic = None
-                                topics.add(f"{prefix}#")
-                                topics.add(f"{cmd_prefix}#")
-                            elif k == "t":
-                                if tl := list(self.found_topics):
-                                    index = (
-                                        tl.index(activetopic)
-                                        if activetopic in tl
-                                        else -1
-                                    )
-                                    activetopic = tl[
-                                        index + 1 if index + 1 < len(tl) else 0
-                                    ]
-                                    CONSOLE.info(
-                                        f"{Color.YELLOW}\nToggling subscription to topic {activetopic}...{Color.OFF}"
-                                    )
-                                    topics.clear()
-                                    topics.add(f"{activetopic}")
-                                else:
-                                    CONSOLE.info(
-                                        f"{Color.RED}\nNo topics received yet for toggling!{Color.OFF}"
-                                    )
-                            elif k == "r":
-                                if realtime:
-                                    CONSOLE.info(
-                                        f"{Color.RED}\nDisabling real time data trigger, messages will reduce after max. 60 seconds...{Color.OFF}"
-                                    )
-                                    realtime = False
-                                    rt_devices.discard(device_sn)
-                                else:
-                                    CONSOLE.info(
-                                        f"{Color.GREEN}\nEnabling real time data trigger, message frequency should increase shortly...{Color.OFF}"
-                                    )
-                                    realtime = True
-                                    rt_devices.add(device_sn)
-                            elif k == "o":
-                                # individual real time trigger request
-                                if mqtt_session.realtime_trigger(
-                                    deviceDict=self.device_selected,
-                                    timeout=60,
-                                    wait_for_publish=2,
-                                ).is_published():
-                                    CONSOLE.info(
-                                        f"{Color.CYAN}\nPublished one time real time trigger request, message frequency should appear shortly...{Color.OFF}"
-                                    )
-                            elif k == "i":
-                                # individual status request
-                                if mqtt_session.status_request(
-                                    deviceDict=self.device_selected,
-                                    wait_for_publish=2,
-                                ).is_published():
-                                    CONSOLE.info(
-                                        f"{Color.CYAN}\nPublished status request, status message(s) should appear shortly...{Color.OFF}"
-                                    )
-                            elif k == "c":
-                                # control an MQTT device
-                                # save active message callback for later restore
-                                cb = mqtt_session.message_callback()
-                                # Buffer messages to prevent scrolling during display
-                                mqtt_session.message_callback(self.buffer_message)
-                                self.pause_output = True
-                                CONSOLE.info(
-                                    f"\n{Color.YELLOW}Controlling MQTT device...{Color.OFF}"
-                                )
-                                if mdev:
-                                    if control := common.query_mqtt_command(mdev=mdev):
-                                        CONSOLE.info(
-                                            f"Running command '{Color.CYAN}{control[0]}{Color.OFF}' with provided parameters:\n{json.dumps(control[1], indent=2)}"
-                                        )
-                                        if isinstance(
-                                            response := await mdev.run_command(
-                                                cmd=control[0], parm_map=control[1]
-                                            ),
-                                            dict,
-                                        ):
-                                            CONSOLE.info(
-                                                f"{Color.GREEN}Command published.{Color.OFF}"
-                                            )
-                                            if response:
-                                                CONSOLE.info(
-                                                    f"Mocked states:\n{json.dumps(response, indent=2)}"
-                                                )
-                                        else:
-                                            CONSOLE.error(
-                                                f"{Color.RED}Command failed.{Color.OFF}"
-                                            )
-                                    else:
-                                        CONSOLE.warning(
-                                            f"{Color.YELLOW}MQTT device control aborted{Color.OFF}"
-                                        )
-                                else:
-                                    CONSOLE.error(
-                                        f"{Color.RED}MQTT device could not be created{Color.OFF}"
-                                    )
-                                await self.async_inupt(
-                                    f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
-                                )
-                                self.pause_output = False
-                                # print buffered messages and restore previous callback
-                                await self.print_buffer(cb)
-                                mqtt_session.message_callback(cb)
-                            elif k == "d":
-                                # save active message callback for later restore
-                                cb = mqtt_session.message_callback()
-                                # Buffer messages to prevent scrolling during display
-                                mqtt_session.message_callback(self.buffer_message)
-                                self.pause_output = True
-                                self.print_table()
-                                await self.async_inupt(
-                                    f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
-                                )
-                                self.pause_output = False
-                                # print buffered messages and restore previous callback
-                                await self.print_buffer(cb)
-                                mqtt_session.message_callback(cb)
-                            elif k == "v":
-                                if (
-                                    mqtt_session.message_callback()
-                                    == self.print_message
-                                ):
-                                    CONSOLE.info(
-                                        f"{Color.YELLOW}\nSwitching to Values view...{Color.OFF}"
-                                    )
-                                    mqtt_session.message_callback(
-                                        func=self.print_values
-                                    )
-                                    await asyncio.sleep(1)
-                                    common.clearscreen()
-                                    self.print_table()
-                                else:
-                                    CONSOLE.info(
-                                        f"{Color.YELLOW}\nSwitching to Messages view for next message...{Color.OFF}"
-                                    )
-                                    mqtt_session.message_callback(
-                                        func=self.print_message
-                                    )
-                            elif k in ["esc", "q"]:
-                                CONSOLE.info(
-                                    f"{Color.RED}\nStopping monitor...{Color.OFF}"
+                        try:
+                            # check if client still connected or break otherwise
+                            if not (mqtt_session and mqtt_session.is_connected()):
+                                CONSOLE.error(
+                                    f"{Color.RED}\nMQTT client disconnected, stopping monitor...{Color.OFF}"
                                 )
                                 break
-                            await asyncio.sleep(0.5)
-                        # check if runtime is over
-                        if self.endtime and datetime.now() > self.endtime:
-                            CONSOLE.info(
-                                f"{Color.RED}\nRuntime exceeded, stopping monitor...{Color.OFF}"
-                            )
-                            break
-                finally:
+                            # Check if a key was pressed
+                            if k := await loop.run_in_executor(None, common.getkey):
+                                k = k.lower()
+                                if k in ["m", "k"]:
+                                    # save active message callback for later restore
+                                    cb = mqtt_session.message_callback()
+                                    # Buffer messages to prevent scrolling during display
+                                    mqtt_session.message_callback(self.buffer_message)
+                                    self.pause_output = True
+                                    await self.print_menu()
+                                    self.pause_output = False
+                                    # print buffered messages and restore previous callback
+                                    await self.print_buffer(cb)
+                                    mqtt_session.message_callback(cb)
+                                elif k == "u":
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nUnsubscribing all topics...{Color.OFF}"
+                                    )
+                                    topics.clear()
+                                    activetopic = None
+                                    if (
+                                        mqtt_session.message_callback()
+                                        == self.print_values
+                                    ):
+                                        # clear last message from screen and show active subscription
+                                        await asyncio.sleep(6)
+                                        self.print_values(
+                                            session=mqtt_session,
+                                            topic="",
+                                            message=None,
+                                            data=None,
+                                            model=device_pn,
+                                        )
+                                elif k == "s":
+                                    CONSOLE.info(
+                                        f"{Color.GREEN}\nSubscribing root topics...{Color.OFF}"
+                                    )
+                                    topics.clear()
+                                    activetopic = None
+                                    topics.add(f"{prefix}#")
+                                    topics.add(f"{cmd_prefix}#")
+                                elif k == "t":
+                                    if tl := list(self.found_topics):
+                                        index = (
+                                            tl.index(activetopic)
+                                            if activetopic in tl
+                                            else -1
+                                        )
+                                        activetopic = tl[
+                                            index + 1 if index + 1 < len(tl) else 0
+                                        ]
+                                        CONSOLE.info(
+                                            f"{Color.YELLOW}\nToggling subscription to topic {activetopic}...{Color.OFF}"
+                                        )
+                                        topics.clear()
+                                        topics.add(f"{activetopic}")
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nNo topics received yet for toggling!{Color.OFF}"
+                                        )
+                                elif k == "r":
+                                    if realtime:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nDisabling real time data trigger, messages will reduce after max. 60 seconds...{Color.OFF}"
+                                        )
+                                        realtime = False
+                                        rt_devices.discard(device_sn)
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.GREEN}\nEnabling real time data trigger, message frequency should increase shortly...{Color.OFF}"
+                                        )
+                                        realtime = True
+                                        rt_devices.add(device_sn)
+                                elif k == "o":
+                                    # individual real time trigger request
+                                    if mqtt_session.realtime_trigger(
+                                        deviceDict=self.device_selected,
+                                        timeout=60,
+                                        wait_for_publish=2,
+                                    ).is_published():
+                                        CONSOLE.info(
+                                            f"{Color.CYAN}\nPublished one time real time trigger request, message frequency should appear shortly...{Color.OFF}"
+                                        )
+                                elif k == "i":
+                                    # individual status request
+                                    if mqtt_session.status_request(
+                                        deviceDict=self.device_selected,
+                                        wait_for_publish=2,
+                                    ).is_published():
+                                        CONSOLE.info(
+                                            f"{Color.CYAN}\nPublished status request, status message(s) should appear shortly...{Color.OFF}"
+                                        )
+                                elif k == "c":
+                                    # control an MQTT device
+                                    # save active message callback for later restore
+                                    cb = mqtt_session.message_callback()
+                                    # Buffer messages to prevent scrolling during display
+                                    mqtt_session.message_callback(self.buffer_message)
+                                    self.pause_output = True
+                                    CONSOLE.info(
+                                        f"\n{Color.YELLOW}Controlling MQTT device...{Color.OFF}"
+                                    )
+                                    if mdev:
+                                        control = None
+                                        self.input_task = True
+                                        control = await loop.run_in_executor(
+                                            None, common.query_mqtt_command, mdev
+                                        )
+                                        self.input_task = False
+                                        if control:
+                                            CONSOLE.info(
+                                                f"Running command '{Color.CYAN}{control[0]}{Color.OFF}' with provided parameters:\n{json.dumps(control[1], indent=2)}"
+                                            )
+                                            if isinstance(
+                                                response := await mdev.run_command(
+                                                    cmd=control[0], parm_map=control[1]
+                                                ),
+                                                dict,
+                                            ):
+                                                CONSOLE.info(
+                                                    f"{Color.GREEN}Command published.{Color.OFF}"
+                                                )
+                                                if response:
+                                                    CONSOLE.info(
+                                                        f"Mocked states:\n{json.dumps(response, indent=2)}"
+                                                    )
+                                            else:
+                                                CONSOLE.error(
+                                                    f"{Color.RED}Command failed.{Color.OFF}"
+                                                )
+                                        else:
+                                            CONSOLE.warning(
+                                                f"{Color.YELLOW}MQTT device control aborted{Color.OFF}"
+                                            )
+                                    else:
+                                        CONSOLE.error(
+                                            f"{Color.RED}MQTT device could not be created{Color.OFF}"
+                                        )
+                                    await self.async_inupt(
+                                        f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
+                                    )
+                                    self.pause_output = False
+                                    # print buffered messages and restore previous callback
+                                    await self.print_buffer(cb)
+                                    mqtt_session.message_callback(cb)
+                                elif k == "d":
+                                    # save active message callback for later restore
+                                    cb = mqtt_session.message_callback()
+                                    # Buffer messages to prevent scrolling during display
+                                    mqtt_session.message_callback(self.buffer_message)
+                                    self.pause_output = True
+                                    self.print_table()
+                                    await self.async_inupt(
+                                        f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
+                                    )
+                                    self.pause_output = False
+                                    # print buffered messages and restore previous callback
+                                    await self.print_buffer(cb)
+                                    mqtt_session.message_callback(cb)
+                                elif k == "v":
+                                    if (
+                                        mqtt_session.message_callback()
+                                        == self.print_message
+                                    ):
+                                        CONSOLE.info(
+                                            f"{Color.YELLOW}\nSwitching to Values view...{Color.OFF}"
+                                        )
+                                        mqtt_session.message_callback(
+                                            func=self.print_values
+                                        )
+                                        await asyncio.sleep(1)
+                                        common.clearscreen()
+                                        self.print_table()
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.YELLOW}\nSwitching to Messages view for next message...{Color.OFF}"
+                                        )
+                                        mqtt_session.message_callback(
+                                            func=self.print_message
+                                        )
+                                elif k in ["esc", "q"]:
+                                    CONSOLE.info(
+                                        f"{Color.RED}\nStopping monitor...{Color.OFF}"
+                                    )
+                                    break
+                                await asyncio.sleep(0.5)
+                            # check if runtime is over
+                            if self.endtime and datetime.now() > self.endtime:
+                                CONSOLE.info(
+                                    f"{Color.RED}\nRuntime exceeded, stopping monitor...{Color.OFF}"
+                                )
+                                break
+                        except asyncio.CancelledError, KeyboardInterrupt:
+                            if self.input_task:
+                                CONSOLE.warning(
+                                    f"\n{Color.RED}[Input Cancelled, hit ENTER]{Color.OFF}"
+                                )
+                                if progress_task:
+                                    progress_task.uncancel()
+                                if poller_task:
+                                    poller_task.uncancel()
+                                self.input_task = False
+                                self.pause_output = False
+                                continue
+                            raise
+                except asyncio.CancelledError, KeyboardInterrupt:
+                    if self.input_task:
+                        CONSOLE.warning(
+                            f"\n{Color.RED}[Input Cancelled, hit ENTER]{Color.OFF}"
+                        )
+                        self.input_task = False
+                        self.pause_output = False
                     # Cancel the started tasks
-                    poller_task.cancel()
-                    progress_task.cancel()
-                    # Wait for the tasks to finish cancellation
+                    # Wait for the tasks to finish cancellation if not completed already
                     try:
-                        await poller_task
+                        if poller_task:
+                            poller_task.cancel()
+                            await poller_task
                     except asyncio.CancelledError:
                         CONSOLE.info("MQTT client poller task cancelled.")
                     try:
-                        await progress_task
+                        if progress_task:
+                            progress_task.cancel()
+                            await progress_task
                     except asyncio.CancelledError:
                         CONSOLE.info("Progress printer was cancelled.")
                     if self.api.mqttsession:
@@ -576,6 +616,10 @@ class AnkerSolixMqttMonitor:
             ClientError,
             AnkerSolixError,
         ) as err:
+            if self.input_task:
+                CONSOLE.warning(f"\n{Color.RED}[Input Cancelled, hit ENTER]{Color.OFF}")
+                self.input_task = False
+                self.pause_output = False
             if isinstance(err, ClientError | AnkerSolixError):
                 CONSOLE.error("%s: %s", type(err), err)
                 CONSOLE.info("Api Requests: %s", self.api.request_count)
@@ -592,7 +636,7 @@ class AnkerSolixMqttMonitor:
                     # remove queue file handler again before zipping folder
                     CONSOLE.removeHandler(qh)
 
-    def print_menu(self) -> None:
+    async def print_menu(self) -> None:
         """Print the key menu."""
         CONSOLE.info(f"\n{100 * '-'}")
         CONSOLE.info(f"{Color.YELLOW}MQTT Monitor key menu:{Color.OFF}")
@@ -626,7 +670,7 @@ class AnkerSolixMqttMonitor:
         CONSOLE.info(
             f"[{Color.RED}Q{Color.OFF}]uit, [{Color.RED}ESC{Color.OFF}] or [{Color.RED}CTRL-C{Color.OFF}] to stop MQTT monitor"
         )
-        input(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n")
+        await self.async_inupt(f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n")
 
     async def print_wait_progress(self) -> None:
         """Print dots and minute markers as progress for message monitoring."""
@@ -792,14 +836,10 @@ class AnkerSolixMqttMonitor:
     async def async_inupt(self, prompt: str) -> str:
         """Get interruptable input without blocking the event loop."""
         result = None
-        try:
-            result = await self.loop.run_in_executor(None, input, prompt)
-        except (asyncio.CancelledError, KeyboardInterrupt):
-            # Handle gracefully
-            CONSOLE.warning("\n[Input Cancelled]")
-            raise
-        else:
-            return result
+        self.input_task = True
+        result = await self.loop.run_in_executor(None, input, prompt)
+        self.input_task = False
+        return result
 
 
 class ReplaceFilter(logging.Filter):
@@ -850,8 +890,8 @@ if __name__ == "__main__":
             )
             CONSOLE.info("")
         if not asyncio.run(AnkerSolixMqttMonitor(arg).main(), debug=False):
-            CONSOLE.warning("\nAborted!")
+            CONSOLE.warning("Aborted!")
     except KeyboardInterrupt:
-        CONSOLE.warning("\nAborted!")
+        CONSOLE.warning("Aborted!")
     except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(exception), exception)

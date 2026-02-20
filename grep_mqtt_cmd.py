@@ -27,13 +27,22 @@ CONSOLE: logging.Logger = common.CONSOLE
 screen_width = 180
 # define filename to be verified
 test_file = Path(__file__).parent / "mqttdumps" / "A1763" / "CMD.AC.Smart.Modus.txt"
-#test_file = Path(__file__).parent / "mqttdumps" / "A17C0_mqtt_dump_2025_14_02__22_14_35.txt"
+# test_file = Path(__file__).parent / "mqttdumps" / "A17C0_mqtt_dump_2025_14_02__22_14_35.txt"
 # define messages that should not be printed
-excluded_msgs = ["0421","0900", "0057", "0040", "0857", "0901", "0902", "0903"] # A1763
-#excluded_msgs = ["405", "0057", "0040", "0857"] # Solarbank
+excluded_msgs = [
+    "0421",
+    "0900",
+    "0057",
+    "0040",
+    "0857",
+    "0901",
+    "0902",
+    "0903",
+]  # A1763
+# excluded_msgs = ["405", "0057", "0040", "0857"] # Solarbank
 # define status message types that should be compared after a printed message
 compare_msg = "0421"
-#compare_msg = "0405"
+# compare_msg = "0405"
 # define words in lines that should be excluded in found differences
 skip_diff_words = ["fd  ", "fe  ", "timestamp"]
 

@@ -335,7 +335,7 @@ async def poll_sites(  # noqa: C901
                     # Mark SB1 cascaded if other SB types in system
                     cascaded = (
                         sb_count != len(sb_list)
-                        and solarbank.get("device_pn") in ["A17C0"]
+                        and solarbank.get("device_pn") == "A17C0"
                     ) or None
 
                     # Work around for weird charging power fields in SB totals and device list: They have same names, but completely different usage
@@ -822,7 +822,7 @@ async def poll_site_details(
                     )
                     await api.get_device_pv_price(deviceSn=deviceSn, fromFile=fromFile)
         # Fetch solarbank data that works for member or admin sites
-        if site.get("site_type") in [SolixDeviceType.SOLARBANK.value]:
+        if site.get("site_type") == SolixDeviceType.SOLARBANK.value:
             # First fetch details that only work for site admins
             if site.get("site_admin", False):
                 # Fetch site price and CO2 settings
@@ -847,7 +847,7 @@ async def poll_site_details(
                 )
                 await api.get_co2_ranking(siteId=site_id, fromFile=fromFile)
             # Fetch AI EMS runtime stats for sites supporting it
-            if site.get("power_site_type") in [12]:
+            if site.get("power_site_type") == 12:
                 api._logger.debug(
                     "Getting api %s AI EMS runtime",
                     api.apisession.nickname,
@@ -861,7 +861,7 @@ async def poll_site_details(
                         "current_site_device_models"
                     )
                     or []
-                    if m in ["A17C5"]
+                    if m == "A17C5"
                 }:
                     # fetch provider list for supported models only once per day
                     if (datetime.now().strftime("%Y-%m-%d")) != (

@@ -16,8 +16,8 @@ _LOGGER: logging.Logger = logging.getLogger(__name__)
 CONSOLE: logging.Logger = common.CONSOLE
 FOLDER = None
 # Specify FOLDER with system export including MQTT messages for testing from files
-#FOLDER = Path(__file__).parent / "exports" / "Mqtt_C1000_Gen2"
-#FOLDER = Path(__file__).parent / "exports" / "Mqtt_C1000_Expansion"
+# FOLDER = Path(__file__).parent / "exports" / "Mqtt_C1000_Gen2"
+# FOLDER = Path(__file__).parent / "exports" / "Mqtt_C1000_Expansion"
 
 
 async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
@@ -86,7 +86,9 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                     CONSOLE.info("✗ MQTT not connected - cannot force device update")
                 # Wait for data to be collected (shorter timeout since we forced update)
                 max_wait = 30
-                CONSOLE.info(f"Waiting for MQTT data collection (up to {max_wait} seconds)...")
+                CONSOLE.info(
+                    f"Waiting for MQTT data collection (up to {max_wait} seconds)..."
+                )
                 for i in range(max_wait):
                     await asyncio.sleep(1)
 
@@ -97,7 +99,9 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
 
                     # Show progress every 5 seconds
                     if i % 5 == 4:
-                        CONSOLE.info(f"  Still waiting for data... ({i + 1}/{max_wait})")
+                        CONSOLE.info(
+                            f"  Still waiting for data... ({i + 1}/{max_wait})"
+                        )
                         if mqtt_session.mqtt_stats:
                             msg_count = mqtt_session.mqtt_stats.dev_messages.get(
                                 "count", 0

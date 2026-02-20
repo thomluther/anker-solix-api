@@ -1691,7 +1691,7 @@ class SolixVehicle:
         d = asdict(self)
         if skip_empty:
             keys = d.keys()
-            for key in [key for key in keys if not d[key] or key in ["id"]]:
+            for key in [key for key in keys if not d[key] or key == "id"]:
                 d.pop(key, None)
         return d
 

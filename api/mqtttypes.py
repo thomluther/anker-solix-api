@@ -319,7 +319,7 @@ class DeviceHexDataField:
                     else ""
                 )
             else:
-                if typ in [DeviceHexDataTypes.json.name]:
+                if typ == DeviceHexDataTypes.json.name:
                     # uile = f"{json.dumps(self.json, separators=(',', ':')):<15}"
                     # field will be printed by DeviceHexData class with model type decoding
                     uile = ""

@@ -143,7 +143,7 @@ class AnkerSolixBaseApi:
                     and value
                 ):
                     # dynamic price related updates should always be triggered if customized, independent of existing keys
-                    if key in ["dynamic_price"]:
+                    if key == "dynamic_price":
                         # convert a provider string to dict
                         if isinstance(value, str):
                             customized[key] = SolixPriceProvider(
@@ -158,7 +158,7 @@ class AnkerSolixBaseApi:
                             )
                         },
                     )
-                elif key in ["pv_forecast_details"] and value:
+                elif key == "pv_forecast_details" and value:
                     # update whole solar forecast in energy details
                     self.extractSolarForecast(siteId=id)
                 elif key in (data.get("site_details") or {}):
@@ -179,7 +179,7 @@ class AnkerSolixBaseApi:
                     self._update_dev(devData={"device_sn": id, key: data[key]})
                     # Ensure to update main device capacity as well if sub device was customized
                     if (
-                        key in ["battery_capacity"]
+                        key == "battery_capacity"
                         and value
                         and data.get("is_subdevice")
                         and (main := data.get("main_sn"))
@@ -400,7 +400,7 @@ class AnkerSolixBaseApi:
                     #
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
                     #
-                    if key in ["device_sw_version"] and value:
+                    if key == "device_sw_version" and value:
                         # Example for key name conversion when value is given
                         device.update({"sw_version": str(value)})
                     elif key in [
@@ -415,11 +415,9 @@ class AnkerSolixBaseApi:
                         "wireless_type",
                         "ota_version",
                     ] or (
+                        # Example for key with string values that should only be updated if value returned
                         key
-                        in [
-                            # Example for key with string values that should only be updated if value returned
-                            "wifi_name",
-                        ]
+                        == "wifi_name"
                         and value
                     ):
                         device.update({key: str(value)})
@@ -530,12 +528,14 @@ class AnkerSolixBaseApi:
                                 "week_end_time",
                                 "weekend_start_time",
                                 "weekend_end_time",
+                                "load_balance_monitor_device",
+                                "solar_evcharge_monitor_device",
                             ]
                             and value is not None
                         ):
                             device_mqtt.update({key: str(value)})
                             value_updated = bool(
-                                key not in ["wifi_name"] and not key.endswith("_sn")
+                                key != "wifi_name" and not key.endswith("_sn")
                             )
                         elif (
                             key
@@ -879,7 +879,7 @@ class AnkerSolixBaseApi:
                                     calc_capacity = True
                         elif key in ["output_cutoff_data", "min_soc"]:
                             device_mqtt["power_cutoff"] = str(value)
-                        elif key in ["last_message"]:
+                        elif key == "last_message":
                             device_mqtt["last_update"] = str(value)
                             value_updated = False
                         else:
@@ -1812,7 +1812,7 @@ class AnkerSolixBaseApi:
         data["price"] = (
             float(price) if isinstance(price, float | int) else details.get("price")
         )
-        data["site_price_unit"] = unit if unit else details.get("site_price_unit")
+        data["site_price_unit"] = unit or details.get("site_price_unit")
         data["site_co2"] = (
             float(co2) if isinstance(co2, float | int) else details.get("site_co2")
         )
@@ -1821,7 +1821,7 @@ class AnkerSolixBaseApi:
                 decimals if decimals is not None else details.get("accuracy")
             )
         if "price_type" in details or price_type:
-            data["price_type"] = price_type if price_type else details.get("price_type")
+            data["price_type"] = price_type or details.get("price_type")
         if "dynamic_price" in details or provider:
             data["dynamic_price"] = (
                 provider.asdict() if provider else details.get("dynamic_price")

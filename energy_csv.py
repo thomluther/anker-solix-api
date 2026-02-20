@@ -23,7 +23,7 @@ from pathlib import Path
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
 from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from api.apitypes import SolixDeviceType  # pylint: disable=no-name-in-module
+from api.apitypes import Color, SolixDeviceType  # pylint: disable=no-name-in-module
 from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
 import common
 
@@ -38,6 +38,8 @@ JSONFOLDER = ""  # Path(__file__).parent / "examples" / "MI80_Standalone"
 async def main() -> bool:
     """Run main to export energy history from cloud."""
     CONSOLE.info("Exporting daily Energy data for Anker Solarbank:")
+    loop = asyncio.get_running_loop()
+    input_task = False
     try:
         async with ClientSession() as websession:
             if JSONFOLDER:
@@ -53,6 +55,7 @@ async def main() -> bool:
                 use_file = True
             else:
                 CONSOLE.info("\nTrying authentication...")
+                input_task = True
                 myapi = AnkerSolixApi(
                     common.user(),
                     common.password(),
@@ -60,6 +63,7 @@ async def main() -> bool:
                     websession,
                     CONSOLE,
                 )
+                input_task = False
                 if await myapi.async_authenticate():
                     CONSOLE.info("OK")
                 else:
@@ -102,8 +106,11 @@ async def main() -> bool:
                     else "Balcony Power",
                 )
                 try:
-                    daystr = input(
-                        "Enter start day for daily energy data (yyyy-mm-dd) or enter to skip site: "
+                    input_task = True
+                    daystr = await loop.run_in_executor(
+                        None,
+                        input,
+                        "Enter start day for daily energy data (yyyy-mm-dd) or enter to skip site: ",
                     )
                     if daystr == "":
                         CONSOLE.info(
@@ -111,21 +118,31 @@ async def main() -> bool:
                         )
                         continue
                     startday = datetime.fromisoformat(daystr)
-                    numdays = int(input("How many days to query (1-366): "))
+                    numdays = int(
+                        await loop.run_in_executor(
+                            None, input, "How many days to query (1-366): "
+                        )
+                    )
                     if inverter:
                         daytotals = False
                     else:
-                        daytotals = input(
-                            "Do you want to include daily total data (e.g. battery charge, grid import/export) which may require several API queries per day? (Y/N): "
+                        daytotals = await loop.run_in_executor(
+                            None,
+                            input,
+                            "Do you want to include daily total data (e.g. battery charge, grid import/export) which may require several API queries per day? (Y/N): ",
                         )
                     daytotals = str(daytotals).upper() in ["Y", "YES", "TRUE", 1]
-                    prefix = input(
-                        f"CSV filename prefix for export ({site_name.replace(' ', '_')}_daily_energy_{daystr}): "
+                    prefix = await loop.run_in_executor(
+                        None,
+                        input,
+                        f"CSV filename prefix for export ({site_name.replace(' ', '_')}_daily_energy_{daystr}): ",
                     )
                     if prefix == "":
                         prefix = f"{site_name.replace(' ', '_')}_daily_energy_{daystr}"
                     filename = f"{prefix}_{site_name}.csv"
+                    input_task = False
                 except ValueError:
+                    input_task = False
                     return False
                 # delay requests, endpoint limit appears to be around 25 per minute
                 # As of Feb 2025, endpoint limit appears to be reduced to 10-12 per minute
@@ -238,6 +255,11 @@ async def main() -> bool:
             CONSOLE.error("%s: %s", type(err), err)
             CONSOLE.info("Api Requests: %s", myapi.request_count)
             CONSOLE.info(myapi.request_count.get_details(last_hour=True))
+        elif isinstance(err, asyncio.CancelledError):
+            if input_task:
+                CONSOLE.warning(f"\n{Color.RED}[Input cancelled, hit ENTER]{Color.OFF}")
+            else:
+                CONSOLE.info(f"{Color.YELLOW}Export process was cancelled.{Color.OFF}")
         return False
 
 
@@ -246,5 +268,7 @@ if __name__ == "__main__":
     try:
         if not asyncio.run(main(), debug=False):
             CONSOLE.warning("Aborted!")
+    except KeyboardInterrupt:
+        CONSOLE.warning("Aborted!")
     except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
         CONSOLE.exception("%s: %s", type(exception), exception)

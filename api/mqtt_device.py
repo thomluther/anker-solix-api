@@ -22,14 +22,16 @@ from .mqttcmdmap import (
     VALUE_DEFAULT,
     VALUE_FOLLOWS,
     VALUE_MAX,
+    VALUE_MAX_STATE,
     VALUE_MIN,
+    VALUE_MIN_STATE,
     VALUE_OPTIONS,
     VALUE_STATE,
     VALUE_STEP,
     SolixMqttCommands,
 )
 from .mqttmap import SOLIXMQTTMAP
-from .mqtttypes import MqttCmdValidator
+from .mqtttypes import MqttCmdValidator, convert_time
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -123,6 +125,8 @@ class SolixMqttDevice:
                                     in [
                                         VALUE_MIN,
                                         VALUE_MAX,
+                                        VALUE_MIN_STATE,
+                                        VALUE_MAX_STATE,
                                         VALUE_STEP,
                                         VALUE_STATE,
                                         VALUE_OPTIONS,
@@ -184,7 +188,7 @@ class SolixMqttDevice:
                         # check if control is a single number control
                         control["is_number"] = bool(required_number)
                         self.controls[cmd] = control
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         self._logger.error(
                             "MQTT device %s (%s) control setup error - Command '%s' has invalid description for parameter '%s': %s",
                             self.sn,
@@ -380,8 +384,12 @@ class SolixMqttDevice:
             return None
         # use default if value not provided
         value = desc.get(VALUE_DEFAULT) if value is None else value
-        # lookup state if default is string
-        if (
+        # if value is string make further conversions to get the actual value
+        if desc.get(STATE_NAME, "").endswith("_time"):
+            # special case for fields indicating (seconds), minutes, hours per byte
+            value = value if isinstance(convert_time(value), bytes) else None
+        # lookup state if value is string
+        elif (
             isinstance(value, str)
             and str(val := self.get_status(fromFile=True).get(value))
             .replace("-", "", 1)
@@ -412,6 +420,7 @@ class SolixMqttDevice:
                     options=desc.get(VALUE_OPTIONS),
                 ).check(value)
                 if value != desc.get(VALUE_DEFAULT)
+                and not desc.get(STATE_NAME, "").endswith("_time")
                 else value
             )
         except (ValueError, TypeError) as err:

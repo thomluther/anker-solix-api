@@ -743,7 +743,7 @@ class AnkerSolixApiExport:
                     admin=admin,
                 )
                 # Additional exports for site types support AI mode
-                if power_site_type in [12]:
+                if power_site_type == 12:
                     self._logger.info("Exporting site forecast schedule...")
                     await self.query(
                         endpoint=API_ENDPOINTS["get_forecast_schedule"],
@@ -1618,8 +1618,8 @@ class AnkerSolixApiExport:
         val = str(val)
         randomstr = self._randomdata.get(val, "")
         # generate new random string
-        if not randomstr and val and key not in ["device_name"]:
-            if "_sn" in key or "Sn" in key or key in ["sn"]:
+        if not randomstr and val and key != "device_name":
+            if "_sn" in key or "Sn" in key or key == "sn":
                 randomstr = "".join(
                     random.choices(string.ascii_uppercase + string.digits, k=len(val))
                 )
@@ -1692,30 +1692,33 @@ class AnkerSolixApiExport:
             if isinstance(v, list):
                 v = [self._check_keys(i) for i in v]
             # Randomize value for certain keys
-            if any(
-                x in k
-                for x in [
-                    "_sn",
-                    "Sn",
-                    "site_id",
-                    "station_id",
-                    "stationId",
-                    "user_id",
-                    "member_id",
-                    "vehicle_id",
-                    "trace_id",
-                    "bt_ble_",
-                    "wifi_name",
-                    "ssid",
-                    "home_load_data",
-                    "param_data",
-                    "device_name",
-                    "token",
-                    "email",
-                    "_password",
-                    "_mac",
-                ]
-            ) or k in ["sn"]:
+            if (
+                any(
+                    x in k
+                    for x in [
+                        "_sn",
+                        "Sn",
+                        "site_id",
+                        "station_id",
+                        "stationId",
+                        "user_id",
+                        "member_id",
+                        "vehicle_id",
+                        "trace_id",
+                        "bt_ble_",
+                        "wifi_name",
+                        "ssid",
+                        "home_load_data",
+                        "param_data",
+                        "device_name",
+                        "token",
+                        "email",
+                        "_password",
+                        "_mac",
+                    ]
+                )
+                or k == "sn"
+            ):
                 if isinstance(v, list):
                     # randomize individual string elements in list
                     data[k] = [

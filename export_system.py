@@ -68,6 +68,8 @@ async def main() -> bool:
     randomize: bool = True
     mqttdata: bool = True
     services: set = set()
+    loop = asyncio.get_running_loop()
+    input_task = True
     try:
         user = common.user()
         async with ClientSession() as websession:
@@ -81,11 +83,12 @@ async def main() -> bool:
                 CONSOLE.info(
                     "Authentication: CACHED"
                 )  # Login validation will be done during first API call
-
-            resp = input(
+            resp = await loop.run_in_executor(
+                None,
+                input,
                 f"INPUT: Which Api endpoint services do you want to export? [{Color.CYAN}A{Color.OFF}]ll / "
                 f"[{Color.CYAN}P{Color.OFF}]ower / [{Color.CYAN}C{Color.OFF}]harging / [{Color.CYAN}H{Color.OFF}]es / "
-                f"[{Color.CYAN}M{Color.OFF}]qtt only / [{Color.YELLOW}D{Color.OFF}]iscover (default): "
+                f"[{Color.CYAN}M{Color.OFF}]qtt only / [{Color.YELLOW}D{Color.OFF}]iscover (default): ",
             )
             if resp != "" or not isinstance(services, set):
                 if resp.upper() in ["A", "LL"]:
@@ -102,21 +105,25 @@ async def main() -> bool:
                     # default to discover required services
                     services = set()
             CONSOLE.info(
-                f"Exporting following services: {Color.YELLOW}{services if services else 'Discover automatically'}{Color.OFF}"
+                f"Exporting following services: {Color.YELLOW}{services or 'Discover automatically'}{Color.OFF}"
             )
-            resp = input(
+            resp = await loop.run_in_executor(
+                None,
+                input,
                 f"INPUT: Do you want to change Api endpoint request limit for proper throttling of same endpoint requests? "
-                f"[{Color.CYAN}0{Color.OFF}] = disabled / [{Color.YELLOW}{myapi.endpointLimit()!s}{Color.OFF}] = default: "
+                f"[{Color.CYAN}0{Color.OFF}] = disabled / [{Color.YELLOW}{myapi.endpointLimit()!s}{Color.OFF}] = default: ",
             )
             if resp.isdigit() and int(resp) >= 0:
                 myapi.endpointLimit(limit=int(resp))
             CONSOLE.info(
                 f"Api endpoint limit: {Color.YELLOW}{myapi.endpointLimit()!s}{Color.OFF}"
             )
-            resp = input(
+            resp = await loop.run_in_executor(
+                None,
+                input,
                 f"INPUT: Do you want to randomize unique IDs and SNs in exported files? "
                 f"[{Color.YELLOW if randomize else Color.CYAN}Y{Color.OFF}]es{' (default)' if randomize else ''} / "
-                f"[{Color.YELLOW if not randomize else Color.CYAN}N{Color.OFF}]o{' (default)' if not randomize else ''}: "
+                f"[{Color.YELLOW if not randomize else Color.CYAN}N{Color.OFF}]o{' (default)' if not randomize else ''}: ",
             )
             if resp != "" or not isinstance(randomize, bool):
                 randomize = resp.upper() in ["Y", "YES", "TRUE", 1]
@@ -126,10 +133,12 @@ async def main() -> bool:
             if "mqtt_only" in services:
                 mqttdata = True
             else:
-                resp = input(
+                resp = await loop.run_in_executor(
+                    None,
+                    input,
                     f"INPUT: Do you want to export optional MQTT device data? These may not be completely randomized and export will take > 5 minutes. "
                     f"[{Color.YELLOW if mqttdata else Color.CYAN}Y{Color.OFF}]es{' (default)' if mqttdata else ''} / "
-                    f"[{Color.YELLOW if not mqttdata else Color.CYAN}N{Color.OFF}]o{' (default)' if not mqttdata else ''}: "
+                    f"[{Color.YELLOW if not mqttdata else Color.CYAN}N{Color.OFF}]o{' (default)' if not mqttdata else ''}: ",
                 )
                 if resp != "" or not isinstance(mqttdata, bool):
                     mqttdata = resp.upper() in ["Y", "YES", "TRUE", 1]
@@ -139,8 +148,10 @@ async def main() -> bool:
             nickname = myapi.apisession.nickname.replace(
                 "*", "x"
             )  # avoid filesystem problems with * in user nicknames
-            folder = input(
-                f"INPUT: Subfolder for export (default: {Color.YELLOW}{nickname}{Color.OFF}): "
+            folder = await loop.run_in_executor(
+                None,
+                input,
+                f"INPUT: Subfolder for export (default: {Color.YELLOW}{nickname}{Color.OFF}): ",
             )
             if folder == "":
                 if nickname == "":
@@ -149,14 +160,16 @@ async def main() -> bool:
             CONSOLE.info(f"Subfolder for export: {Color.YELLOW}{folder!s}{Color.OFF}")
 
             zipped: bool = True
-            resp = input(
+            resp = await loop.run_in_executor(
+                None,
+                input,
                 f"INPUT: Do you want to zip the output folder? "
-                f"[{Color.YELLOW}Y{Color.OFF}]es (default) / [{Color.CYAN}N{Color.OFF}]o: "
+                f"[{Color.YELLOW}Y{Color.OFF}]es (default) / [{Color.CYAN}N{Color.OFF}]o: ",
             )
             if resp != "":
                 zipped = resp.upper() not in ["N", "NO", "FALSE", 0]
             CONSOLE.info(f"Zip output folder: {Color.YELLOW}{zipped!s}{Color.OFF}")
-
+            input_task = False
             myexport = AnkerSolixApiExport(
                 client=myapi,
                 logger=CONSOLE,
@@ -183,6 +196,11 @@ async def main() -> bool:
     ) as err:
         if isinstance(err, ClientError | AnkerSolixError):
             CONSOLE.error("%s: %s", type(err), err)
+        elif isinstance(err, asyncio.CancelledError):
+            if input_task:
+                CONSOLE.warning(f"\n{Color.RED}[Input cancelled, hit ENTER]{Color.OFF}")
+            else:
+                CONSOLE.info("Export process was cancelled.")
         return False
 
 

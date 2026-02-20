@@ -35,6 +35,22 @@ FEATURES = {
     SolixMqttCommands.usbc_4_port_switch: MODELS,
     SolixMqttCommands.usba_port_switch: MODELS,
     SolixMqttCommands.ev_auto_start_switch: MODELS,
+    SolixMqttCommands.ev_auto_charge_restart_switch: MODELS,
+    SolixMqttCommands.ev_random_delay_switch: MODELS,
+    SolixMqttCommands.ev_max_charge_current: MODELS,
+    SolixMqttCommands.ev_load_balancing: MODELS,
+    SolixMqttCommands.ev_solar_charging: MODELS,
+    SolixMqttCommands.main_breaker_limit: MODELS,
+    SolixMqttCommands.ev_charger_schedule_settings: MODELS,
+    SolixMqttCommands.ev_charger_schedule_times: MODELS,
+    SolixMqttCommands.ev_charger_mode_select: MODELS,
+    SolixMqttCommands.device_power_mode: MODELS,
+    SolixMqttCommands.light_brightness: MODELS,
+    SolixMqttCommands.light_off_schedule: MODELS,
+    SolixMqttCommands.smart_touch_mode_select: MODELS,
+    SolixMqttCommands.swipe_up_mode_select: MODELS,
+    SolixMqttCommands.swipe_down_mode_select: MODELS,
+    SolixMqttCommands.modbus_switch: MODELS,
 }
 
 

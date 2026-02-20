@@ -309,7 +309,7 @@ async def get_device_parm(
                     "schedule": paramData,
                 }
             )
-    elif paramType in [SolixParmType.SOLARBANK_STATION.value]:
+    elif paramType == SolixParmType.SOLARBANK_STATION.value:
         # make station updates if parm data is received
         if paramData:
             # get existing station SN for reuse
@@ -411,7 +411,7 @@ async def set_device_parm(
     sb_info = (self.sites.get(siteId) or {}).get("solarbank_info") or {}
     if toFile:
         # Write updated response to file for testing purposes
-        if paramType in [SolixParmType.SOLARBANK_STATION.value]:
+        if paramType == SolixParmType.SOLARBANK_STATION.value:
             # get old settings from cache and modify for file as required
             filedata = ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
                 "station_settings"
@@ -478,7 +478,7 @@ async def set_device_parm(
             return False
     # update the data in api dict
     respdata: dict = {}
-    if paramType in [SolixParmType.SOLARBANK_STATION.value]:
+    if paramType == SolixParmType.SOLARBANK_STATION.value:
         respdata = await self.get_device_parm(
             siteId=siteId, paramType=paramType, deviceSn=deviceSn, fromFile=toFile
         )
@@ -2024,13 +2024,13 @@ async def set_sb2_home_load(  # noqa: C901
     )
     if mode_type in iter(SolarbankUsageMode) and price_type:
         if (
-            mode_type in [SolarbankUsageMode.use_time.value]
+            mode_type == SolarbankUsageMode.use_time.value
             and price_type != SolixPriceTypes.USE_TIME.value
             and schedule.get(SolarbankRatePlan.use_time)
         ):
             new_price_type = SolixPriceTypes.USE_TIME.value
         elif (
-            mode_type in [SolarbankUsageMode.time_slot.value]
+            mode_type == SolarbankUsageMode.time_slot.value
             and price_type != SolixPriceTypes.DYNAMIC.value
             and provider
         ):
@@ -2942,7 +2942,7 @@ async def set_sb2_use_time(  # noqa: C901
     new_price_type = None
     if mode_type in iter(SolarbankUsageMode) and price_type:
         if (
-            mode_type in [SolarbankUsageMode.use_time.value]
+            mode_type == SolarbankUsageMode.use_time.value
             and schedule.get(SolarbankRatePlan.use_time)
             and price_type != SolixPriceTypes.USE_TIME.value
         ):

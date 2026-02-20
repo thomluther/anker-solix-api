@@ -122,13 +122,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             if len(dev_type) > 1:
                                 device.update({"generation": int(dev_type[1])})
                         # define virtual powerpanel capacity from one F3800
-                        if str(value) in ["A17B1"] and hasattr(
+                        if str(value) == "A17B1" and hasattr(
                             SolixDeviceCapacity, "A1790"
                         ):
                             device["battery_capacity"] = str(SolixDeviceCapacity.A1790)
-                    elif key in ["alias_name"] and value:
+                    elif key == "alias_name" and value:
                         device.update({"alias": str(value)})
-                    elif key in ["status"]:
+                    elif key == "status":
                         device.update({"status": str(value)})
                         # decode the status into a description
                         description = SolixDeviceStatus.unknown.name
@@ -137,31 +137,23 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 description = status.name
                                 break
                         device.update({"status_desc": description})
-                    elif key in ["battery_capacity"] and str(value).isdigit():
+                    elif key == "battery_capacity" and str(value).isdigit():
                         # This is used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
                         calc_capacity = True
-                    elif key in ["average_power"] and value:
+                    elif key == "average_power" and value:
                         # calculate remaining capacity for new SOC
                         calc_capacity |= (device.get("average_power") or {}).get(
                             "state_of_charge"
                         ) != value.get("state_of_charge")
                         device[key] = value
-                    elif key in [
-                        # Examples for boolean key values
-                        "auto_upgrade",
-                    ]:
+                    # Examples for boolean key values
+                    elif key == "auto_upgrade":
                         device.update({key: bool(value)})
-                    elif key in [
-                        # key with string values
-                        "wireless_type",
-                    ] or (
-                        key
-                        in [
-                            # Example for key with string values that should only be updated if value returned
-                            "wifi_name",
-                        ]
-                        and value
+                    # key with string values
+                    elif key == "wireless_type" or (
+                        # Example for key with string values that should only be updated if value returned
+                        key == "wifi_name" and value
                     ):
                         device.update({key: str(value)})
                     # generate extra values when certain conditions are met
