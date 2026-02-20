@@ -561,7 +561,7 @@ class AnkerSolixMqttMonitor:
                                     f"{Color.RED}\nRuntime exceeded, stopping monitor...{Color.OFF}"
                                 )
                                 break
-                        except asyncio.CancelledError, KeyboardInterrupt:
+                        except (asyncio.CancelledError, KeyboardInterrupt):
                             if self.input_task:
                                 CONSOLE.warning(
                                     f"\n{Color.RED}[Input Cancelled, hit ENTER]{Color.OFF}"
@@ -574,7 +574,7 @@ class AnkerSolixMqttMonitor:
                                 self.pause_output = False
                                 continue
                             raise
-                except asyncio.CancelledError, KeyboardInterrupt:
+                except (asyncio.CancelledError, KeyboardInterrupt):
                     if self.input_task:
                         CONSOLE.warning(
                             f"\n{Color.RED}[Input Cancelled, hit ENTER]{Color.OFF}"

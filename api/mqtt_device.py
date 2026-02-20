@@ -188,7 +188,7 @@ class SolixMqttDevice:
                         # check if control is a single number control
                         control["is_number"] = bool(required_number)
                         self.controls[cmd] = control
-                    except ValueError, TypeError:
+                    except (ValueError, TypeError):
                         self._logger.error(
                             "MQTT device %s (%s) control setup error - Command '%s' has invalid description for parameter '%s': %s",
                             self.sn,

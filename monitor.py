@@ -319,7 +319,7 @@ class AnkerSolixApiMonitor:
             )
             await self.input_task
             control = self.input_task.result()
-        except asyncio.CancelledError, KeyboardInterrupt:
+        except (asyncio.CancelledError, KeyboardInterrupt):
             # Handle gracefully
             CONSOLE.warning(f"\n{Color.RED}[Input Cancelled - Hit Enter]{Color.OFF}")
         finally:
