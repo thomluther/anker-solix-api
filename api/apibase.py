@@ -66,7 +66,7 @@ class AnkerSolixBaseApi:
         self.account: dict[str, dict] = {}
         self.sites: dict[str, dict] = {}
         self.devices: dict[str, dict] = {}
-        self._device_callbacks: dict[str, set] = {}
+        self._device_callbacks: dict[str, dict] = {}
 
     def testDir(self, subfolder: str | None = None) -> str:
         """Get or set the subfolder for local API test files in the api session."""
@@ -112,7 +112,7 @@ class AnkerSolixBaseApi:
         """Clear the api cache dictionaries."""
         # check callbacks and notify registered devices about removal from cache
         for callbacks in self._device_callbacks.values():
-            for func in callbacks:
+            for func in callbacks.get("functions", set()):
                 if callable(func):
                     func(device={})
         self._device_callbacks = {}
@@ -225,7 +225,8 @@ class AnkerSolixBaseApi:
         for dev in rem_devices:
             self.devices.pop(dev, None)
             # check callbacks and notify registered devices about removal from cache
-            for func in self._device_callbacks.pop(dev, set()):
+            cbs = self._device_callbacks.pop(dev, {})
+            for func in cbs.get("functions", set()):
                 if callable(func):
                     func(device={})
 
@@ -237,18 +238,21 @@ class AnkerSolixBaseApi:
                 self.sites.pop(site, None)
 
     def register_device_callback(
-        self, deviceSn: str, func: DeviceCacheCallback
+        self, deviceSn: str, func: DeviceCacheCallback, dynamic_descriptions: dict
     ) -> None:
         """Register a device callback function to notify about Api cache object changes."""
         # register callback if callable
         if callable(func):
-            dev_callbacks = self._device_callbacks.get(deviceSn) or set()
-            dev_callbacks.add(func)
-            self._device_callbacks[deviceSn] = dev_callbacks
+            cbs = self._device_callbacks.get(deviceSn, {})
+            f = cbs.get("functions", set())
+            f.add(func)
+            cbs["functions"] = f
+            cbs["dynamic_descriptions"] = dynamic_descriptions
+            self._device_callbacks[deviceSn] = cbs
 
     def notify_device(self, deviceSn: str) -> None:
         """Notify all callbacks that are registered for a device."""
-        for func in self._device_callbacks.get(deviceSn, set()):
+        for func in self._device_callbacks.get(deviceSn, {}).get("functions", set()):
             if callable(func):
                 func(device=self.devices.get(deviceSn, {}))
 
@@ -416,9 +420,7 @@ class AnkerSolixBaseApi:
                         "ota_version",
                     ] or (
                         # Example for key with string values that should only be updated if value returned
-                        key
-                        == "wifi_name"
-                        and value
+                        key == "wifi_name" and value
                     ):
                         device.update({key: str(value)})
                     else:
@@ -465,6 +467,7 @@ class AnkerSolixBaseApi:
         This will consolidate various device related mqtt key values under a common set of device keys.
         """
         updated = False
+        dyn_desc = False
         if self.mqttsession:
             for sn, device in [
                 (sn, device)
@@ -971,8 +974,18 @@ class AnkerSolixBaseApi:
                             api._update_dev({"device_sn": sn, "battery_capacity": cap})  # noqa: SLF001
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
-                    # notify registered devices if new mqtt data cache was generated
-                    if oldsize == 0:
+                    # notify registered devices if new mqtt data cache was generated or dynamic description state changed
+                    descs = self._device_callbacks.get(deviceSn, {}).get(
+                        "dynamic_descriptions", {}
+                    )
+                    for key, value in descs.items():
+                        if (v := mqtt.get(key)) is not None and v != value.get(
+                            "last_value"
+                        ):
+                            value["last_value"] = v
+                            # flag to trigger update if dynamic description value changed
+                            dyn_desc = True
+                    if oldsize == 0 or dyn_desc:
                         self.notify_device(deviceSn=sn)
 
             # update MQTT statistic in account cache, convert datetime to json compatible format

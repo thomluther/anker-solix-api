@@ -149,9 +149,18 @@ _A1722_0405 = {
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
 }
 
+_A1728_0401 = {
+    # C300(X) DC param info
+    TOPIC: "param_info",
+    "a2": {NAME: "unknown_switch_0401?"},
+    "a3": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "a4": {NAME: "display_switch"},  # Off (0) or On (1)
+}
+
 _A1728_0405 = {
     # C300(X) DC param info
     TOPIC: "param_info",
+    "a2": {NAME: "dc_output_timeout_seconds"},  # Timeout seconds, custom range: 0-86100
     "a3": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},
     "a4": {NAME: "usbc_1_power"},  # USB-C left output power
     "a5": {NAME: "usbc_2_power"},  # USB-C center output power
@@ -159,10 +168,10 @@ _A1728_0405 = {
     "a7": {NAME: "usbc_4_power"},  # USB-C solar output power
     "a8": {NAME: "usba_1_power"},  # USB-A left output power
     "a9": {NAME: "usba_2_power"},  # USB-A right output power
-    "aa": {NAME: "dc_input_power?"},  # DC input power 12V car charging?
+    "aa": {NAME: "dc_12v_1_power"},  # DC input power 12V car charging
     "ab": {NAME: "photovoltaic_power"},  # Solar input
-    "ac": {NAME: "dc_input_power_total?"},  # DC input power (solar + car charging)?
-    "ad": {NAME: "output_power_total?"},  # Total DC output power for all ports?
+    "ac": {NAME: "input_power_total"},  # DC input power (solar + car charging)
+    "ad": {NAME: "output_power_total"},  # Total DC output power for all ports
     "b5": {NAME: "temperature", SIGNED: True},  # In Celsius
     "b6": {
         NAME: "charging_status",  # Publishes the raw integer value (0-3): Inactive (0), Solar (1), DC Input (2), Both (3)
@@ -187,14 +196,27 @@ _A1728_0405 = {
     "be": {
         NAME: "usba_2_status"
     },  # USB-A right status: Inactive (0), Discharging (1), Charging (2)
-    "bf": {NAME: "light_switch"},  # Off (0), On (1)
-    "c4": {
-        NAME: "dc_output_timeout_seconds?"
-    },  # Timeout seconds, custom range: 0-10800???
+    "bf": {
+        NAME: "dc_12v_1_status"
+    },  # DC 12V status: Inactive (0), Discharging (1), Charging (2)
+    "c3": {NAME: "device_sn"},
+    "c4": {NAME: "device_timeout_minutes"},  # Timeout minutes, custom range: 0-1440
     "c5": {
-        NAME: "display_timeout_seconds?"
-    },  # Display timeout: 20, 30, 60, 300, 1800 seconds???
+        NAME: "display_timeout_seconds"
+    },  # Display timeout: 20, 30, 60, 300, 1800 seconds
     "c8": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "c9": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
+    "ca": {NAME: "display_switch"},  # Off (0) or On (1)
+    "cb": {NAME: "light_timeout_minutes?"},  # Timeout minutes, custom range: 0-1440
+    "cd": {NAME: "charging_status"},  # Inactive (0), Solar (1)
+    "f8": {
+        BYTES: {
+            "00": {
+                NAME: "dc_12v_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
 }
 
@@ -1882,9 +1904,8 @@ _EV_CHARGER_0405 = {
     # V1 status message
     TOPIC: "param_info",
     "a2": {NAME: "unknown_limit?"},
-    "a3": {
-        NAME: "ocpp_connect_status?"
-    },  # disconnected(0), connecting(1), connected(2)
+    # "a3": {NAME: "ocpp_connect_status?"},  # disconnected(0), connecting(1), connected(2)
+    "a3": {NAME: "plug_lock_switch"},  # Off(1), On(2)
     "a4": {NAME: "auto_start_switch"},  # Off (0), On (1)
     "a8": {
         NAME: "max_evcharge_current",
@@ -1917,11 +1938,13 @@ _EV_CHARGER_0405 = {
     "d9": {NAME: "solar_evcharge_mode"},  # solar & grid (0), solar only (1)
     "da": {NAME: "solar_evcharge_min_current"},  # 6 - rated_current (32 A), step 1 A
     "db": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
-    "dc": {
-        NAME: "auto_phase_switch?"
+    "dc": {NAME: "solar_evcharge_monitoring_mode?"},
+    "dd": {
+        NAME: "auto_phase_switch"
     },  # Off (0), On (1), only awailable in 3 phase mode
-    "dd": {NAME: "solar_evcharge_monitoring_mode?"},  # System monitoring (1)
-    "de": {NAME: "solar_evcharge_monitor_device"},
+    "de": {NAME: "solar_evcharge_monitor_device"},  # monitoring device sn
+    "e0": {NAME: "cp_signal_status"},
+    # A=12V(0), B1=9V(3), B2=9V(4), C1=6V(5), C2=6V(6), Error(7), D1=3V(8), D2=3V(9),  E=0V(10), F=-12(11),
     "e3": {NAME: "ev_charger_status"},
     # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
     "e6": {NAME: "schedule_switch"},  # on (1), off (2)
@@ -1949,7 +1972,9 @@ _EV_CHARGER_0410 = {
     "a8": {NAME: "charging_power"},
     "a9": {NAME: "charging_duration_seconds"},
     "aa": {NAME: "charging_energy", "factor": 0.001},
-    "ac": {NAME: "charging_mode"},  # off (0) / start (1) / stop (2) / boost (3) ?
+    "ac": {
+        NAME: "charging_mode?"
+    },  # off (0) / start (1) / stop (2) / boost (3) / pv_charge (7) ?
     "ab": {NAME: "charging_start_timestamp"},
     "ad": {NAME: "plug_countdown_seconds"},
     "ae": {NAME: "start_countdown_seconds?"},
@@ -1961,13 +1986,13 @@ _EV_CHARGER_0410 = {
     "b4": {NAME: "charging_energy_p2", "factor": 0.001},
     "b5": {NAME: "charging_energy_p3", "factor": 0.001},
     "b6": {NAME: "order_id?"},
-    # "b7": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
+    "b7": {NAME: "evcharge_boost?"},  # disabled (0), enabled (1)
+    # "b7": {NAME: "ev_plug_status?"},  # not connected (0), connected (1)?
     "b8": {NAME: "ocpp_connect_status"},
     # disconnected (0), Connecting (1), Connected (2)
-    # "b7": {NAME: "ev_plug_status?"},  # not connected (0), connected (1)?
-    "b9": {NAME: "cp_signal_status?"},
+    # "b9": {NAME: "cp_signal_status?"},
     # A=12V(0), B1=9V(3), B2=9V(4), C1=6V(5), C2=6V(6), Error(7), D1=3V(8), D2=3V(9),  E=0V(10), F=-12(11),
-    "ba": {NAME: "evcharge_boost?"},  # disabled (0), enabled (1)
+    "ba": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
     "bb": {NAME: "ev_charger_status"},
     # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
 }
@@ -2097,6 +2122,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
+        "0401": _A1728_0401,
         "0405": _A1728_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
@@ -2109,6 +2135,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
+        "0401": _A1728_0401,
         "0405": _A1728_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
@@ -2800,14 +2827,6 @@ SOLIXMQTTMAP: Final[dict] = {
     # Prime Charger 250W
     "A2345": {
         "0200": CMD_STATUS_REQUEST,  # Device status request for message 0a00
-        # Special realtime trigger for this device, with 10 seconds timeout fix, sending a 0303 message per second
-        "020b": {
-            k: v for k, v in CMD_REALTIME_TRIGGER.items() if k not in ["a2", "a3"]
-        },
-        # Interval: ~1 second, but only with realtime trigger. Consumption data, all data fields are also in 0a00 message
-        "0303": _A2345_0303,
-        # Interval: only with status request command. Contains all settings and consumption data
-        "0a00": _A2345_0a00,
         "0207": {
             # USB port switch command. Same command, but selected port is a parameter
             COMMAND_LIST: [
@@ -2873,6 +2892,20 @@ SOLIXMQTTMAP: Final[dict] = {
                 },
             },
         },
+        # Special realtime trigger for this device, with 10 seconds timeout fix, sending a 0303 message per second
+        "020b": {
+            k: v for k, v in CMD_REALTIME_TRIGGER.items() if k not in ["a2", "a3"]
+        },
+        # Interval: Upon change of the referred port toggle, usable by data extractor to adjust correct port state
+        "0302": {
+            "a2": {NAME: "set_port_switch_select"},
+            "a3": {NAME: "set_port_switch"},
+            "fe": {NAME: "msg_timestamp"},
+        },
+        # Interval: ~1 second, but only with realtime trigger. Consumption data, all data fields are also in 0a00 message
+        "0303": _A2345_0303,
+        # Interval: only with status request command. Contains all settings and consumption data
+        "0a00": _A2345_0a00,
     },
     # Power Panel
     "A17B1": {

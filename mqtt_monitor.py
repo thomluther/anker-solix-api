@@ -337,14 +337,14 @@ class AnkerSolixMqttMonitor:
                     )
                     # Start the background poller with subscriptions and update trigger
                     poller_task = self.loop.create_task(
-                            mqtt_session.message_poller(
-                                topics=topics,
-                                trigger_devices=rt_devices,
-                                msg_callback=self.print_values
-                                if self.value_display
-                                else self.print_message,
-                                timeout=60,
-                            )
+                        mqtt_session.message_poller(
+                            topics=topics,
+                            trigger_devices=rt_devices,
+                            msg_callback=self.print_values
+                            if self.value_display
+                            else self.print_message,
+                            timeout=60,
+                        )
                     )
                     # Start the wait progress printer in background
                     progress_task = self.loop.create_task(self.print_wait_progress())

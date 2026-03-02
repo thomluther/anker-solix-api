@@ -66,11 +66,16 @@ class SolixMqttDevice:
         self.controls: dict = {}
         self._map: dict = {}
         self._filedata: dict = {}
+        self.dynamic_descriptions: dict = {}
         self._logger = api_instance.logger()
         # initialize device data
         self.update_device(device=self.api.devices.get(self.sn) or {})
         # register callback for Api
-        self.api.register_device_callback(deviceSn=self.sn, func=self.update_device)
+        self.api.register_device_callback(
+            deviceSn=self.sn,
+            func=self.update_device,
+            dynamic_descriptions=self.dynamic_descriptions,
+        )
         # create list of supported commands and options
         self._setup_controls()
 
@@ -176,6 +181,21 @@ class SolixMqttDevice:
                                     )
                                     # add descriptors
                                     parameters[name] = descriptors
+                                    # save reference to descriptor for dynamic updates if state was found
+                                    if (
+                                        state_name := descriptors.get(VALUE_MIN_STATE)
+                                    ) is not None:
+                                        self.dynamic_descriptions[state_name] = {
+                                            "key": VALUE_MIN,
+                                            "desc": descriptors,
+                                        }
+                                    elif (
+                                        state_name := descriptors.get(VALUE_MAX_STATE)
+                                    ) is not None:
+                                        self.dynamic_descriptions[state_name] = {
+                                            "key": VALUE_MAX,
+                                            "desc": descriptors,
+                                        }
                         control["parameters"] = parameters
                         # check if control is a switch with only "on" and "off" in single required option
                         control["is_switch"] = bool(
@@ -206,6 +226,10 @@ class SolixMqttDevice:
                 self.pn = pn
                 self.device = device
                 self.mqttdata = device.get("mqtt_data", {})
+                # update dynamic descriptions if state values are changed
+                for state_name, d in self.dynamic_descriptions.items():
+                    if (state := self.mqttdata.get(state_name)) is not None:
+                        d["desc"][d["key"]] = state
             else:
                 self._logger.error(
                     "Device %s (%s) is not in supported models %s for MQTT control",

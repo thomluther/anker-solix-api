@@ -454,11 +454,11 @@ CMD_USB_PORT_SWITCH = CMD_COMMON | {
         NAME: "set_port_switch_select",
         TYPE: DeviceHexDataTypes.ui.value,
         VALUE_OPTIONS: {
-            "C1": 0,
-            "C2": 1,
-            "C3": 2,
-            "C4": 3,
-            "A": 4,
+            "usbc_1_switch": 0,
+            "usbc_2_switch": 1,
+            "usbc_3_switch": 2,
+            "usbc_4_switch": 3,
+            "usba_switch": 4,
         },
     },
     "a3": {
@@ -1162,7 +1162,7 @@ CMD_EV_LOAD_BALANCING = CMD_COMMON | {
 
 CMD_EV_SOLAR_CHARGING = CMD_COMMON | {
     # Command: EV Charger solar charge settings
-    COMMAND_NAME: SolixMqttCommands.ev_load_balancing,
+    COMMAND_NAME: SolixMqttCommands.ev_solar_charging,
     "a2": {
         NAME: "set_solar_evcharge_switch",  # Off (0), On (1)
         TYPE: DeviceHexDataTypes.ui.value,
@@ -1196,17 +1196,17 @@ CMD_EV_SOLAR_CHARGING = CMD_COMMON | {
         VALUE_OPTIONS: {"one_phase": 1, "three_phase": 3},
     },
     "a6": {
+        NAME: "set_solar_evcharge_monitoring_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "solar_evcharge_monitoring_mode",
+        VALUE_STATE: "solar_evcharge_monitoring_mode",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+    "a7": {
         NAME: "set_auto_phase_switch",  # Off (0), On (1)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "auto_phase_switch",
         VALUE_STATE: "auto_phase_switch",
-        VALUE_OPTIONS: {"off": 0, "on": 1},
-    },
-    "a7": {
-        NAME: "set_solar_evcharge_monitoring_mode",  # Off (0), On (1)
-        TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "solar_evcharge_monitoring_mode",
-        VALUE_STATE: "solar_evcharge_monitoring_mode",
         VALUE_OPTIONS: {"off": 0, "on": 1},
     },
     "a8": {

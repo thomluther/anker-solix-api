@@ -180,9 +180,24 @@ class AnkerSolixMqttSession:
                 device = self.mqtt_data.get(device_sn) or {}
                 topics = set(device.get("topics") or [])
                 topics.add(msg.topic)
+                extracted = hd.values()
+                # update A2345 port state based on toggle command or confirmation msg to ensure proper cache update
+                if "set_port_switch_select" in extracted:
+                    if (
+                        switch_name := {
+                            0: "usbc_1_switch",
+                            1: "usbc_2_switch",
+                            2: "usbc_3_switch",
+                            3: "usbc_4_switch",
+                            4: "usba_switch",
+                        }.get(extracted["set_port_switch_select"])
+                    ) and (
+                        switch_value := extracted.get("set_port_switch")
+                    ) is not None:
+                        extracted[switch_name] = switch_value
                 self.mqtt_data[device_sn] = (
                     device
-                    | hd.values()
+                    | extracted
                     | {"last_message": timestamp, "topics": list(topics)}
                 )
                 valueupdate = True
