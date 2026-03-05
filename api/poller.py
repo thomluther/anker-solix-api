@@ -676,7 +676,10 @@ async def poll_sites(  # noqa: C901
                     cp = dict(cp).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in cp:
-                        cp.update({"alias_name": cp.pop("device_name")})
+                        cp["alias_name"] = cp.pop("device_name")
+                    # work around to merge various EV charger field names
+                    cp["ev_charger_status"] = cp.pop("operating_state", None)
+                    cp["charging_power"] = cp.pop("power", "")
                     if sn := api._update_dev(
                         cp,
                         devType=SolixDeviceType.EV_CHARGER.value,

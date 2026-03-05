@@ -152,7 +152,7 @@ class AnkerSolixMqttSession:
             message,
             msg.topic,
         )
-        valueupdate = False
+        extracted_values = {}
         # Update data stats
         if isinstance(data, bytes):
             hd = None
@@ -180,27 +180,12 @@ class AnkerSolixMqttSession:
                 device = self.mqtt_data.get(device_sn) or {}
                 topics = set(device.get("topics") or [])
                 topics.add(msg.topic)
-                extracted = hd.values()
-                # update A2345 port state based on toggle command or confirmation msg to ensure proper cache update
-                if "set_port_switch_select" in extracted:
-                    if (
-                        switch_name := {
-                            0: "usbc_1_switch",
-                            1: "usbc_2_switch",
-                            2: "usbc_3_switch",
-                            3: "usbc_4_switch",
-                            4: "usba_switch",
-                        }.get(extracted["set_port_switch_select"])
-                    ) and (
-                        switch_value := extracted.get("set_port_switch")
-                    ) is not None:
-                        extracted[switch_name] = switch_value
+                extracted_values = hd.values()
                 self.mqtt_data[device_sn] = (
                     device
-                    | extracted
+                    | extracted_values
                     | {"last_message": timestamp, "topics": list(topics)}
                 )
-                valueupdate = True
         elif data:
             # no encoded data in payload, print object whatever it is
             self._logger.debug(
@@ -213,7 +198,7 @@ class AnkerSolixMqttSession:
         # call message callback if defined
         if callable(self._message_callback):
             self._message_callback(
-                self, msg.topic, message, data, model, device_sn, valueupdate
+                self, msg.topic, message, data, model, device_sn, extracted_values
             )
 
     def on_disconnect(
@@ -337,9 +322,15 @@ class AnkerSolixMqttSession:
         command: str = SolixMqttCommands.realtime_trigger,
         parameters: dict | None = None,
         model: str | None = None,
+        dynamic_descriptions: dict | None = None,
     ) -> str | None:
         """Compose the hex data for MQTT publish payload to Anker Solix devices."""
-        if hexdata := generate_mqtt_command(command, parameters, model):
+        if hexdata := generate_mqtt_command(
+            command=command,
+            parameters=parameters,
+            model=model,
+            dynamic_descriptions=dynamic_descriptions,
+        ):
             self._logger.debug(
                 "Api %s MQTT session generated hexdata for device%s command %s:\n%s",
                 self.apisession.nickname,
@@ -639,12 +630,12 @@ class AnkerSolixMqttSession:
     ) -> None:
         """Run MQTT message poller and optional device update trigger in background.
 
-        topics must be a shared mutable object containing the topics be subscribed for MQTT message updates.
-        real_time_devices must be a shared mutable object containing the device serials which should trigger real time updates.
+        Topics must be a shared mutable object containing the topics to be subscribed for MQTT message updates.
+        Real_time_devices must be a shared mutable object containing the device serials which should trigger real time updates.
         The update trigger will be refreshed automatically while poller is running.
         msg_callback is the function that will be called back upon received mqtt data with following parameters:
+            topic: str, message: Any, data: bytes, model: str
         Optional timeout specifies how long devices should publish real time updates before trigger must be resent.
-        topic: str, message: Any, data: bytes, model: str
         """
         try:
             # register message callback function
@@ -987,6 +978,7 @@ def generate_mqtt_command(
     command: str = SolixMqttCommands.realtime_trigger,
     parameters: dict | None = None,
     model: str | None = None,
+    dynamic_descriptions: dict | None = None,
 ) -> DeviceHexData | None:
     r"""Compose the hex data for MQTT publish payload to Anker Solix devices.
 
@@ -1014,6 +1006,8 @@ def generate_mqtt_command(
     fields = {}
     if not isinstance(parameters, dict):
         parameters = {}
+    if not isinstance(dynamic_descriptions, dict):
+        dynamic_descriptions = {}
     # get defined message type and description for command if model provided
     if isinstance(model, str) and (pn_map := SOLIXMQTTMAP.get(model)):
         msgtype, fields = (
@@ -1055,7 +1049,8 @@ def generate_mqtt_command(
                             value=value,
                             name=field,
                             fieldtype=desc.get(TYPE),
-                            desc=desc,
+                            desc=desc
+                            | dynamic_descriptions.get(name, {}),
                         )
                     )
     elif command == SolixMqttCommands.realtime_trigger:

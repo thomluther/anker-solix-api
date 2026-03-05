@@ -185,16 +185,28 @@ class SolixMqttDevice:
                                     if (
                                         state_name := descriptors.get(VALUE_MIN_STATE)
                                     ) is not None:
+                                        desc = self.dynamic_descriptions.get(
+                                            state_name, {}
+                                        )
                                         self.dynamic_descriptions[state_name] = {
                                             "key": VALUE_MIN,
-                                            "desc": descriptors,
+                                            "desc": [
+                                                *desc.get("desc", []),
+                                                descriptors,
+                                            ],
                                         }
-                                    elif (
+                                    if (
                                         state_name := descriptors.get(VALUE_MAX_STATE)
                                     ) is not None:
+                                        desc = self.dynamic_descriptions.get(
+                                            state_name, {}
+                                        )
                                         self.dynamic_descriptions[state_name] = {
                                             "key": VALUE_MAX,
-                                            "desc": descriptors,
+                                            "desc": [
+                                                *desc.get("desc", []),
+                                                descriptors,
+                                            ],
                                         }
                         control["parameters"] = parameters
                         # check if control is a switch with only "on" and "off" in single required option
@@ -226,10 +238,26 @@ class SolixMqttDevice:
                 self.pn = pn
                 self.device = device
                 self.mqttdata = device.get("mqtt_data", {})
-                # update dynamic descriptions if state values are changed
+                # update dynamic descriptions and controls if state values are changed
                 for state_name, d in self.dynamic_descriptions.items():
-                    if (state := self.mqttdata.get(state_name)) is not None:
-                        d["desc"][d["key"]] = state
+                    if (state := self.mqttdata.get(state_name)) is not None and str(
+                        state
+                    ) != str(d.get("last_value")):
+                        key = d["key"]
+                        if (
+                            key in [VALUE_MIN, VALUE_MAX, VALUE_STEP]
+                            and str(state)
+                            .replace("-", "", 1)
+                            .replace(".", "", 1)
+                            .isdigit()
+                        ):
+                            # update all dependent parameter descriptors
+                            for desc in d.get("desc", []):
+                                desc[key] = round_by_factor(
+                                    float(state), desc.get(VALUE_STEP, 1)
+                                )
+                            # save applied state
+                            d["last_value"] = state
             else:
                 self._logger.error(
                     "Device %s (%s) is not in supported models %s for MQTT control",
@@ -469,7 +497,7 @@ class SolixMqttDevice:
 
         Args:
             self: The API instance
-            command: Command name for get_command_data
+            command: Command name
             parameters: Command parameters
             description: Human-readable description for logging
             toFile: If True, skip publish and print decoded command (for testing compatibility)
@@ -479,7 +507,14 @@ class SolixMqttDevice:
 
         """
         # Generate command hex data
-        if not (hexdata := generate_mqtt_command(command, parameters, self.pn)):
+        if not (
+            hexdata := generate_mqtt_command(
+                command=command,
+                parameters=parameters,
+                model=self.pn,
+                dynamic_descriptions=self.get_cmd_parms(cmd=command, all=True),
+            )
+        ):
             self._logger.error(
                 "MQTT device %s (%s) failed to generate hex data for command %s",
                 self.sn,

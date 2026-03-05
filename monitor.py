@@ -45,6 +45,7 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
     SolixPriceProvider,
     SolixPriceTypes,
     SolixScheduleWeekendMode,
+    SolixSiteType,
     SolixSmartTouchMode,
     SolixSwitchMode,
     SolixSwitchModeV2,
@@ -1321,15 +1322,15 @@ class AnkerSolixApiMonitor:
                     f"{'Group':<{col1}}: {(dev.get('group_info') or '-------')!s:<{col2}} "
                     f"{'Access Group':<{col3}}: {integrated.get('access_group')!s}"
                 )
-                m1 = c and str(mqtt.get("ev_charger_status", ""))
-                m2 = cm and str(mqtt.get("evcharge_boost", ""))
+                m1 = cm and str(mqtt.get("ev_charger_status", ""))
+                m2 = cm and mqtt.get("boost_status", "")
                 code = (c and m1) or str(dev.get("ev_charger_status"))
                 desc = get_enum_name(
                     SolixEvChargerStatus, code, "unknown" if code else "-------"
                 )
                 CONSOLE.info(
                     f"{'Charger Status':<{col1}}: {m1 and (c or cm)}{desc.capitalize() + ' (' + (code or '-') + ')':<{col2}}{co} "
-                    f"{'Charge Boost':<{col3}}: {m2 and cm}{get_enum_name(SolixSwitchMode, m2, m2 or '---').upper()}{co} "
+                    f"{'Boost Status':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper()}{co} "
                 )
                 if str(m1 := cm and mqtt.get("charging_start_timestamp", "")):
                     m1 = datetime.fromtimestamp(m1).strftime("%Y-%m-%d %H:%M:%S")
@@ -1342,12 +1343,12 @@ class AnkerSolixApiMonitor:
                         f"{'Charge Started':<{col1}}: {m1 and (c or cm)}{m1 or '----.--.-- --:--:--':<{col2}}{co} "
                         f"{'Charge Duration':<{col3}}: {m2 and (c or cm)}{(str(m2)) or '- D --:--:--'}{co} "
                     )
-                m1 = str(cm and mqtt.get("charging_mode", ""))
+                m1 = cm and mdev.ev_charger_mode_state()
                 m2 = str(cm and mqtt.get("plug_countdown_seconds", ""))
                 m3 = str(cm and mqtt.get("start_countdown_seconds", ""))
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Charging Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixEvChargerWipeMode, m1, m1 or '-------').replace('_', ' ').capitalize() + ' (' + (m3 or '---') + ' Sec)':<{col2}}{co} "
+                        f"{'Charging Mode':<{col1}}: {m1 and (c or cm)}{str(m1 or '-------').replace('_', ' ').capitalize() + ' (' + (m3 or '---') + ' Sec)':<{col2}}{co} "
                         f"{'Plug Countdown':<{col3}}: {m2 and (c or cm)}{m2 or '---'} Sec{co} "
                     )
                 m1 = str(cm and mqtt.get("phase_operating_mode", ""))
@@ -1355,15 +1356,16 @@ class AnkerSolixApiMonitor:
                     m2 = timedelta(seconds=int(m2))
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Phase Op. Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPhaseMode, m1, m1 or '-------').replace('_', ' ').capitalize():<{col2}} "
-                        f"({m1 or '-'})"
-                        f"{'Charge Window':<{col3}}: {m2 and (c or cm)}{str(m2) or '--:--:--'}{co} "
+                        f"{'Phase Op. Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPhaseMode, m1, m1 or '-------').replace('_', ' ').capitalize() + ' (' + (m1 or '-') + ')':<{col2}}{co} "
+                        f"{'Charge Window':<{col3}}: {m2 and (c or cm)}{str(m2) or '--:--:--'}{co}"
                     )
-                m1 = cm and mqtt.get("charging_power", "")
+                m1 = (c and mqtt.get("charging_power", "")) or dev.get(
+                    "charging_power", ""
+                )
                 m2 = cm and mqtt.get("charging_energy", "")
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Charging Power':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>7} {'W':<{col2 - 8}}{co} "
+                        f"{'Charging Power':<{col1}}: {m1 and c}{m1 or '-----':>7} {'W':<{col2 - 8}}{co} "
                         f"{'Charging Energy':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>8} kWh{co}"
                     )
                 m1 = cm and mqtt.get("charging_power_p1", "")
@@ -1440,6 +1442,12 @@ class AnkerSolixApiMonitor:
                         f"{'Autostart Sw.':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} "
                         f"{'':<{col2 - 4}}{co} "
                         f"{'Auto Restart':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
+                    )
+                m1 = cm and mqtt.get("plug_lock_switch", "")
+                if str(m1):
+                    CONSOLE.info(
+                        f"{'Plug Lock Sw.':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1 - 1, str(m1) or '---').upper():>3} "
+                        f"{'':<{col2 - 4}}{co} "
                     )
                 m1 = cm and mqtt.get("random_delay_switch", "")
                 m2 = cm and mqtt.get("auto_phase_switch", "")
@@ -2341,10 +2349,7 @@ class AnkerSolixApiMonitor:
                                         [
                                             str(s.get("site_id")),
                                             str(s.get("site_name")),
-                                            "Type: "
-                                            + str(
-                                                s.get("power_site_type") or "unknown"
-                                            ),
+                                            f"Type: {((t:=s.get('power_site_type')) or 'unknown')!s} ({getattr(SolixSiteType, 't_' + str(t),'unknown')})"
                                         ]
                                     )
                                 )
@@ -2502,7 +2507,8 @@ class AnkerSolixApiMonitor:
                                         [
                                             str(d.get("device_sn")),
                                             str(d.get("name")),
-                                            f"Type: {d.get('device_pn')} - {d.get('type') or 'unknown'}",
+                                            f"Type: {d.get('device_pn')} ({d.get('type') or 'unknown'})",
+                                            f"System: {d.get('site_id')}",
                                         ]
                                     )
                                 )

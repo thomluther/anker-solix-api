@@ -45,7 +45,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.5.1.1"
+VERSION: str = "3.5.3.0"
 
 
 class AnkerSolixApiExport:
@@ -1921,25 +1921,25 @@ class AnkerSolixApiExport:
                         )
                         for dev in mqttdevices:
                             sn = dev.get("device_sn")
-                            if sn not in request_devices:
-                                resp = mqttsession.realtime_trigger(
-                                    deviceDict=dev,
-                                    timeout=60,
-                                    wait_for_publish=2,
+                            # if sn not in request_devices: # RT trigger only for devices without Status Request description
+                            resp = mqttsession.realtime_trigger(
+                                deviceDict=dev,
+                                timeout=60,
+                                wait_for_publish=2,
+                            )
+                            if resp.is_published():
+                                self._logger.info(
+                                    "Published MQTT Real Time trigger message for device %s",
+                                    self._randomize(sn, "device_sn"),
                                 )
-                                if resp.is_published():
-                                    self._logger.info(
-                                        "Published MQTT Real Time trigger message for device %s",
-                                        self._randomize(sn, "device_sn"),
-                                    )
-                                    mqttsession.triggered_devices.add(sn)
-                                else:
-                                    self._logger.warning(
-                                        "Failed to publish Real Time trigger message for device %s",
-                                        self._randomize(sn, "device_sn"),
-                                    )
-                                    mqttsession.triggered_devices.discard(sn)
-                    # wait for the RT trigger to timeout and publish requests for required devices
+                                mqttsession.triggered_devices.add(sn)
+                            else:
+                                self._logger.warning(
+                                    "Failed to publish Real Time trigger message for device %s",
+                                    self._randomize(sn, "device_sn"),
+                                )
+                                mqttsession.triggered_devices.discard(sn)
+                    # wait for the RT trigger to timeout and publish status requests for described devices
                     for _ in range(12):
                         for sn in request_devices:
                             resp = mqttsession.status_request(

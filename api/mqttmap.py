@@ -34,6 +34,7 @@ from .mqttcmdmap import (
     CMD_MAIN_BREAKER_LIMIT,
     CMD_MODBUS_SWITCH,
     CMD_PLUG_DELAYED_TOGGLE,
+    CMD_PLUG_LOCK_SWITCH,
     CMD_PLUG_SCHEDULE,
     CMD_PORT_MEMORY_SWITCH,
     CMD_REALTIME_TRIGGER,
@@ -1894,7 +1895,7 @@ _DOCK_0500 = {
 _EV_CHARGER_0403 = {
     # V1 status message
     TOPIC: "param_info",
-    "a5": {NAME: "charging_window_seconds?"},
+    "a5": {NAME: "charging_window_seconds"},
     "a6": {
         NAME: "solar_evcharge_min_current?"
     },  # 6 - max_current_limit (32 A), step 1 A
@@ -1937,12 +1938,13 @@ _EV_CHARGER_0405 = {
     "d8": {NAME: "solar_evcharge_switch"},  # Off (0), On (1)
     "d9": {NAME: "solar_evcharge_mode"},  # solar & grid (0), solar only (1)
     "da": {NAME: "solar_evcharge_min_current"},  # 6 - rated_current (32 A), step 1 A
-    "db": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
+    "db": {NAME: "phase_operating_mode"},  # 1 phase (1), 3 phase (3) ???
     "dc": {NAME: "solar_evcharge_monitoring_mode?"},
     "dd": {
         NAME: "auto_phase_switch"
     },  # Off (0), On (1), only awailable in 3 phase mode
     "de": {NAME: "solar_evcharge_monitor_device"},  # monitoring device sn
+    "df": {NAME: "boost_status"},  # Off (0), On (1)
     "e0": {NAME: "cp_signal_status"},
     # A=12V(0), B1=9V(3), B2=9V(4), C1=6V(5), C2=6V(6), Error(7), D1=3V(8), D2=3V(9),  E=0V(10), F=-12(11),
     "e3": {NAME: "ev_charger_status"},
@@ -1974,11 +1976,11 @@ _EV_CHARGER_0410 = {
     "aa": {NAME: "charging_energy", "factor": 0.001},
     "ac": {
         NAME: "charging_mode?"
-    },  # off (0) / start (1) / stop (2) / boost (3) / pv_charge (7) ?
+    },  # off (0) / grid_charge (1) ? / pv_charge (7) ?
     "ab": {NAME: "charging_start_timestamp"},
     "ad": {NAME: "plug_countdown_seconds"},
-    "ae": {NAME: "start_countdown_seconds?"},
-    "af": {NAME: "charging_window_seconds?"},
+    "ae": {NAME: "start_countdown_seconds"},
+    "af": {NAME: "charging_window_seconds"},
     "b0": {NAME: "charging_power_p1"},
     "b1": {NAME: "charging_power_p2"},
     "b2": {NAME: "charging_power_p3"},
@@ -1986,13 +1988,12 @@ _EV_CHARGER_0410 = {
     "b4": {NAME: "charging_energy_p2", "factor": 0.001},
     "b5": {NAME: "charging_energy_p3", "factor": 0.001},
     "b6": {NAME: "order_id?"},
-    "b7": {NAME: "evcharge_boost?"},  # disabled (0), enabled (1)
+    "b7": {NAME: "unknown_b7?"},  #  (0),  (1)
     # "b7": {NAME: "ev_plug_status?"},  # not connected (0), connected (1)?
-    "b8": {NAME: "ocpp_connect_status"},
-    # disconnected (0), Connecting (1), Connected (2)
+    "b8": {NAME: "ocpp_connect_status"}, # disconnected (0), Connecting (1), Connected (2)
     # "b9": {NAME: "cp_signal_status?"},
     # A=12V(0), B1=9V(3), B2=9V(4), C1=6V(5), C2=6V(6), Error(7), D1=3V(8), D2=3V(9),  E=0V(10), F=-12(11),
-    "ba": {NAME: "phase_operating_mode?"},  # 1 phase (1), 3 phase (3)
+    "ba": {NAME: "phase_operating_mode"},  # 1 phase (1), 3 phase (3) ?
     "bb": {NAME: "ev_charger_status"},
     # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
 }
@@ -2942,6 +2943,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0100": {
             # EV command group
             COMMAND_LIST: [
+                SolixMqttCommands.plug_lock_switch,  # field a3
                 SolixMqttCommands.ev_auto_start_switch,  # field a4
                 SolixMqttCommands.ev_max_charge_current,  # field a8
                 SolixMqttCommands.light_brightness,  # field aa
@@ -2953,6 +2955,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.light_off_schedule,  # field b4, b5, b6
                 SolixMqttCommands.modbus_switch,  # field b7
             ],
+            SolixMqttCommands.plug_lock_switch: CMD_PLUG_LOCK_SWITCH,  # Off (1), On (2) !
             SolixMqttCommands.ev_auto_start_switch: CMD_EV_AUTO_START_SWITCH,  # Off (0), On (1)
             SolixMqttCommands.ev_max_charge_current: CMD_EV_MAX_CHARGE_CURRENT,  # min limit to max limit (e.g. 6-32 A, step 1 A)
             SolixMqttCommands.ev_auto_charge_restart_switch: CMD_EV_AUTO_CHARGE_RESTART_SWITCH,  # Off (0), On (1)
@@ -2968,7 +2971,7 @@ SOLIXMQTTMAP: Final[dict] = {
             COMMAND_LIST: [
                 SolixMqttCommands.ev_charger_mode_select,  # field a4
             ],
-            SolixMqttCommands.ev_charger_mode_select: CMD_EV_CHARGER_MODE,  # Start(1), Stop(2), Boost(4)
+            SolixMqttCommands.ev_charger_mode_select: CMD_EV_CHARGER_MODE,  # Start(1), Stop(2), Skip Delay (3), Boost(4)
         },
         "0106": {
             COMMAND_LIST: [
@@ -2982,7 +2985,7 @@ SOLIXMQTTMAP: Final[dict] = {
             COMMAND_LIST: [
                 SolixMqttCommands.device_power_mode,  # field a2
             ],
-            SolixMqttCommands.device_power_mode: CMD_DEVICE_POWER_MODE,  # Start(1), Stop(2), Boost(4)
+            SolixMqttCommands.device_power_mode: CMD_DEVICE_POWER_MODE,  # Restart(5)
         },
         "010c": {
             COMMAND_LIST: [
@@ -3013,5 +3016,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0410": _EV_CHARGER_0410,
         # Interval: once requested via status request command, same as 0405
         "0840": _EV_CHARGER_0405,
+        # Interval: Control change confirmation message
+        "0900": _EV_CHARGER_0405,
     },
 }

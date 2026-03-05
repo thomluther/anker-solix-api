@@ -131,11 +131,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if siteId:
                 device["site_id"] = str(siteId)
             if isAdmin is not None:
+                # always update admin flag if passed as parameter
                 device["is_admin"] = isAdmin
-            elif (
-                device.get("is_admin") is None
-                and (value := devData.get("ms_device_type")) is not None
-            ):
+            elif (value := devData.get("ms_device_type")) is not None:
+                # update admin flag if recognizable from provided devData
                 # Update admin based on ms device type for standalone devices
                 device["is_admin"] = value in [0, 1]
                 # member devices should only be listed in bind_device query and return owner_user_id
@@ -934,6 +933,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 ),
                             }
                         )
+
+                    # EV charger specific keys
+                    elif key == "ev_charger_status":
+                        device[key] = value
 
                     # hes specific keys
                     elif key == "hes_data" and isinstance(value, dict):

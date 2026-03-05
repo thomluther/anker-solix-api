@@ -113,6 +113,7 @@ class SolixMqttCommands:
     plug_delayed_toggle: str = "plug_delayed_toggle"
 
     device_power_mode: str = "device_power_mode"
+    plug_lock_switch: str = "plug_lock_switch"
     ev_charger_mode_select: str = "ev_charger_mode_select"
     ev_auto_start_switch: str = "ev_auto_start_switch"
     ev_auto_charge_restart_switch: str = "ev_auto_charge_restart_switch"
@@ -952,9 +953,9 @@ CMD_EV_CHARGER_MODE = CMD_COMMON | {
     COMMAND_NAME: SolixMqttCommands.ev_charger_mode_select,
     # Charger Status: Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
     "a2": {
-        NAME: "set_ev_charger_mode",  # Start(1), Stop(2), Boost(4)
+        NAME: "set_ev_charger_mode",  # Start(1), Stop(2), Skip Delay (3), Boost(4)
         TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {"start_charge": 1, "stop_charge": 2, "boost_charge": 4},
+        VALUE_OPTIONS: {"start_charge": 1, "stop_charge": 2, "skip_delay": 3, "boost_charge": 4},
     },
 }
 
@@ -966,6 +967,17 @@ CMD_DEVICE_POWER_MODE = CMD_COMMON | {
         TYPE: DeviceHexDataTypes.ui.value,
         VALUE_OPTIONS: {"restart": 5},
         VALUE_DEFAULT: 5,
+    },
+}
+
+CMD_PLUG_LOCK_SWITCH = CMD_COMMON | {
+    # Command: EV Charger plug lock switch setting
+    COMMAND_NAME: SolixMqttCommands.plug_lock_switch,
+    "a3": {
+        NAME: "set_plug_lock_switch",  # Off (1), On (2) !
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "plug_lock_switch",
+        VALUE_OPTIONS: {"off": 1, "on": 2},
     },
 }
 
