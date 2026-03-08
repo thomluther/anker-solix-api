@@ -320,7 +320,7 @@ class AnkerSolixApiMonitor:
             )
             await self.input_task
             control = self.input_task.result()
-        except asyncio.CancelledError, KeyboardInterrupt:
+        except (asyncio.CancelledError, KeyboardInterrupt):
             # Handle gracefully
             CONSOLE.warning(f"\n{Color.RED}[Input Cancelled - Hit Enter]{Color.OFF}")
         finally:
@@ -3052,7 +3052,7 @@ class AnkerSolixApiMonitor:
                                         self.next_refr = datetime.now().astimezone()
                                         wait_task.cancel()
                                     await asyncio.sleep(0.5)
-                            except asyncio.CancelledError, KeyboardInterrupt:
+                            except (asyncio.CancelledError, KeyboardInterrupt):
                                 if self.input_task:
                                     self.input_task.cancel()
                                     try:
@@ -3071,7 +3071,7 @@ class AnkerSolixApiMonitor:
                                     continue
                                 # Raise error if no input task was cancelled
                                 raise
-                    except asyncio.CancelledError, KeyboardInterrupt:
+                    except (asyncio.CancelledError, KeyboardInterrupt):
                         if self.input_task:
                             self.input_task.cancel()
                             try:
