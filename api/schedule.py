@@ -1426,8 +1426,7 @@ async def set_sb2_home_load(  # noqa: C901
     if no weekdays are provided.
     If rate_plan is specified, the changes will be applied to the given plan, otherwise the active plan according to active or provided usage mode will be modified.
     custom_rate_plan: Used for the Manual usage mode
-    blend_plan: Used for the Smart Plug usage mode
-    custom_rate_plan: Used for smart plug mode to define additional base load
+    blend_plan: Used for smart plug mode to define additional base load
     manual_backup: Used for SB2 AC emergency charge, use method set_sb2_ac_charge for changes
     use_time: Used for SB2 AC Usage Time mode, use method set_sb2_use_time for changes
 

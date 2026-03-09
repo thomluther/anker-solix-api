@@ -99,7 +99,11 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
             options.add(state)
             if state == SolixEvChargerMode.start_charge.name:
                 options.add(SolixEvChargerMode.stop_charge.name)
-                if status == SolixEvChargerStatus.preparing.name:
+                # Allow skip option if random delay enabled or wait time > 0
+                if status == SolixEvChargerStatus.preparing.name and (
+                    self.mqttdata.get("plug_countdown_seconds", 0) > 0
+                    or self.mqttdata.get("random_delay_switch")
+                ):
                     options.add(SolixEvChargerMode.skip_delay.name)
                 else:
                     options.add(SolixEvChargerMode.boost_charge.name)

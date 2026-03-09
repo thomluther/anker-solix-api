@@ -1940,7 +1940,7 @@ class AnkerSolixApiExport:
                                 )
                                 mqttsession.triggered_devices.discard(sn)
                     # wait for the RT trigger to timeout and publish status requests for described devices
-                    for _ in range(12):
+                    for _ in range(6):
                         for sn in request_devices:
                             resp = mqttsession.status_request(
                                 deviceDict=self.api_power.devices.get(sn, {}),
@@ -1956,7 +1956,30 @@ class AnkerSolixApiExport:
                                     "Failed to publish MQTT Status Request message for device %s",
                                     self._randomize(sn, "device_sn"),
                                 )
-                        await asyncio.sleep(5)
+                        await asyncio.sleep(10)
+                    # Cycle through ALL devices and publish a status request to verify response
+                    if mqttsession.is_connected():
+                        self._logger.info(
+                            "Publish last Status Request and waiting for messages..."
+                        )
+                        for dev in mqttdevices:
+                            sn = dev.get("device_sn")
+                            resp = mqttsession.status_request(
+                                deviceDict=self.api_power.devices.get(sn, {}),
+                                wait_for_publish=2,
+                            )
+                            if resp.is_published():
+                                self._logger.info(
+                                    "Published Status Request message for device %s",
+                                    self._randomize(sn, "device_sn"),
+                                )
+                                mqttsession.triggered_devices.add(sn)
+                            else:
+                                self._logger.warning(
+                                    "Failed to publish Status Request message for device %s",
+                                    self._randomize(sn, "device_sn"),
+                                )
+                                mqttsession.triggered_devices.discard(sn)
                     mqttsession.triggered_devices.clear()
                     # wait another 3 minutes to get all standard messages in 5 minute interval
                     for i in range(3, 0, -1):

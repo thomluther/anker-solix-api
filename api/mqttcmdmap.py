@@ -32,6 +32,7 @@ COMMAND_NAME: Final[str] = (
 COMMAND_LIST: Final[str] = (
     "command_list"  # specifies the nested commands to describe multiple commands per message type
 )
+COMMAND_ENCODING: Final[str] = "command_encoding" # encoding_type for command message
 STATE_NAME: Final[str] = (
     "state_name"  # extracted value name that represents the current state of the control
 )
@@ -192,17 +193,18 @@ TIME_VAR = {
     VALUE_STEP: 1,
 }
 
-CMD_COMMON = {
-    # Common command pattern seen in most of the commands
+CMD_HEADER = {
+    # Common command pattern without timestamp
     TOPIC: "req",
     "a1": {NAME: "pattern_22"},  # Bytes composed automatically based on name and field
-} | TIMESTAMP_FE
+}
 
-CMD_COMMON_V2 = {
-    # Common command pattern V2 seen in most of the commands for newer devices with timestamp in ms
-    TOPIC: "req",
-    "a1": {NAME: "pattern_22"},  # Bytes composed automatically based on name and field
-} | TIMESTAMP_FD
+# Common command pattern seen in most of the commands
+CMD_COMMON = CMD_HEADER | TIMESTAMP_FE
+
+# Common command pattern V2 seen in most of the commands for newer devices with timestamp in ms
+CMD_COMMON_V2 = CMD_HEADER | TIMESTAMP_FD
+
 
 CMD_STATUS_REQUEST = CMD_COMMON | {
     # Command: Device status request
@@ -951,17 +953,24 @@ CMD_PLUG_DELAYED_TOGGLE = CMD_COMMON | {
 CMD_EV_CHARGER_MODE = CMD_COMMON | {
     # Command: EV Charger mode selection
     COMMAND_NAME: SolixMqttCommands.ev_charger_mode_select,
+    COMMAND_ENCODING: 2, # encoding_type 2 seems to be required for this command message
     # Charger Status: Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
     "a2": {
         NAME: "set_ev_charger_mode",  # Start(1), Stop(2), Skip Delay (3), Boost(4)
         TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {"start_charge": 1, "stop_charge": 2, "skip_delay": 3, "boost_charge": 4},
+        VALUE_OPTIONS: {
+            "start_charge": 1,
+            "stop_charge": 2,
+            "skip_delay": 3,
+            "boost_charge": 4,
+        },
     },
 }
 
 CMD_DEVICE_POWER_MODE = CMD_COMMON | {
     # Command: EV Charger device power mode
     COMMAND_NAME: SolixMqttCommands.device_power_mode,
+    COMMAND_ENCODING: 2, # encoding_type 2 may be required for this command message
     "a2": {
         NAME: "set_device_power_mode",  # Restart(5)
         TYPE: DeviceHexDataTypes.ui.value,

@@ -9,7 +9,7 @@ from functools import partial
 import json
 import os
 from pathlib import Path
-from random import randint
+import secrets
 import ssl
 import tempfile
 from typing import Any
@@ -347,6 +347,7 @@ class AnkerSolixMqttSession:
         hexbytes: bytearray | bytes | str,
         cmd: int = 17,
         sessId: str = "1234-5678",
+        encoding_type: int | None = None,
     ) -> tuple[str, mqtt.MQTTMessageInfo]:
         """Publish an MQTT message with provided bytes and device data.
 
@@ -361,7 +362,9 @@ class AnkerSolixMqttSession:
                 "client_id": f"android-{self.mqtt_info.get('app_name')}-{self.mqtt_info.get('user_id')}-{self.mqtt_info.get('certificate_id')}",
                 "sess_id": sessId,  # eg "5681-3252", can this be fix, or can it be obtained from client connection?
                 "msg_seq": 1,
-                "seed": 1,
+                "seed": secrets.token_hex(16)
+                if isinstance(encoding_type, int)
+                else 1,  # random 16 Bytes seed if any encoding type provided
                 "timestamp": int(datetime.now().timestamp()),
                 "cmd_status": 2,
                 "cmd": cmd,
@@ -373,13 +376,19 @@ class AnkerSolixMqttSession:
             },
             "payload": json.dumps(
                 {
+                    "device_sn": sn,
                     # use device owner for member devices if available
                     "account_id": deviceDict.get("owner_user_id")
                     or self.mqtt_info.get("user_id"),
-                    "device_sn": sn,
                     # data field in payload must be b64 encoded
                     "data": b64encode(hexbytes or b"").decode("utf-8"),
-                },
+                }
+                # add encoding type field to payload if provided
+                | (
+                    {"encoding_type": encoding_type}
+                    if isinstance(encoding_type, int)
+                    else {}
+                ),
                 separators=(",", ":"),
             ),
         }
@@ -499,7 +508,7 @@ class AnkerSolixMqttSession:
             # Create client instance
             self.client = mqtt.Client(
                 callback_api_version=CallbackAPIVersion.VERSION2,
-                client_id=f"{self.mqtt_info.get('thing_name')}_{randint(1, 10000):05}",
+                client_id=f"{self.mqtt_info.get('thing_name')}_{secrets.randbelow(99999):05}",
                 clean_session=True,
             )
             # Set userdata for client
@@ -1049,8 +1058,7 @@ def generate_mqtt_command(
                             value=value,
                             name=field,
                             fieldtype=desc.get(TYPE),
-                            desc=desc
-                            | dynamic_descriptions.get(name, {}),
+                            desc=desc | dynamic_descriptions.get(name, {}),
                         )
                     )
     elif command == SolixMqttCommands.realtime_trigger:

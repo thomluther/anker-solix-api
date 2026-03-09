@@ -29,6 +29,7 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
     SolarbankUsageMode,
     SolixBatteryStatus,
     SolixChargerPortStatus,
+    SolixConnectionStatus,
     SolixCpSignalStatus,
     SolixDeviceType,
     SolixEvChargerSolarMode,
@@ -320,7 +321,7 @@ class AnkerSolixApiMonitor:
             )
             await self.input_task
             control = self.input_task.result()
-        except asyncio.CancelledError, KeyboardInterrupt:
+        except (asyncio.CancelledError, KeyboardInterrupt) as _:
             # Handle gracefully
             CONSOLE.warning(f"\n{Color.RED}[Input Cancelled - Hit Enter]{Color.OFF}")
         finally:
@@ -1344,12 +1345,13 @@ class AnkerSolixApiMonitor:
                         f"{'Charge Duration':<{col3}}: {m2 and (c or cm)}{(str(m2)) or '- D --:--:--'}{co} "
                     )
                 m1 = cm and mdev.ev_charger_mode_state()
-                m2 = str(cm and mqtt.get("plug_countdown_seconds", ""))
+                m2 = str(cm and mqtt.get("plug_status", ""))
                 m3 = str(cm and mqtt.get("start_countdown_seconds", ""))
+                m4 = str(cm and mqtt.get("plug_countdown_seconds", ""))
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Charging Mode':<{col1}}: {m1 and (c or cm)}{str(m1 or '-------').replace('_', ' ').capitalize() + ' (' + (m3 or '---') + ' Sec)':<{col2}}{co} "
-                        f"{'Plug Countdown':<{col3}}: {m2 and (c or cm)}{m2 or '---'} Sec{co} "
+                        f"{'Plug Status':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixConnectionStatus, m2, m2 or '-------').capitalize()} ({m4 or '---'} Sec){co} "
                     )
                 m1 = str(cm and mqtt.get("phase_operating_mode", ""))
                 if str(m2 := cm and mqtt.get("charging_window_seconds", "")).isdigit():
@@ -3052,7 +3054,7 @@ class AnkerSolixApiMonitor:
                                         self.next_refr = datetime.now().astimezone()
                                         wait_task.cancel()
                                     await asyncio.sleep(0.5)
-                            except asyncio.CancelledError, KeyboardInterrupt:
+                            except (asyncio.CancelledError, KeyboardInterrupt) as _:
                                 if self.input_task:
                                     self.input_task.cancel()
                                     try:
@@ -3071,7 +3073,7 @@ class AnkerSolixApiMonitor:
                                     continue
                                 # Raise error if no input task was cancelled
                                 raise
-                    except asyncio.CancelledError, KeyboardInterrupt:
+                    except (asyncio.CancelledError, KeyboardInterrupt) as _:
                         if self.input_task:
                             self.input_task.cancel()
                             try:

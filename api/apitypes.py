@@ -1453,6 +1453,14 @@ class SolixOcppConnectionStatus(StrEnum):
     unknown = "unknown"
 
 
+class SolixConnectionStatus(StrEnum):
+    """Str Enumeration for generic connection status."""
+
+    disconnected = "0"
+    connected = "1"
+    unknown = "unknown"
+
+
 class SolixCpSignalStatus(StrEnum):
     """Str Enumeration for CP Signal status."""
 

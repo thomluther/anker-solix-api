@@ -14,6 +14,7 @@ from .apitypes import SolixDefaults
 from .helpers import round_by_factor
 from .mqtt import generate_mqtt_command
 from .mqttcmdmap import (
+    COMMAND_ENCODING,
     COMMAND_LIST,
     COMMAND_NAME,
     NAME,
@@ -220,7 +221,7 @@ class SolixMqttDevice:
                         # check if control is a single number control
                         control["is_number"] = bool(required_number)
                         self.controls[cmd] = control
-                    except ValueError, TypeError:
+                    except (ValueError, TypeError) as _:
                         self._logger.error(
                             "MQTT device %s (%s) control setup error - Command '%s' has invalid description for parameter '%s': %s",
                             self.sn,
@@ -541,7 +542,11 @@ class SolixMqttDevice:
                         )
                         return None
                 # Publish MQTT command
-                _, mqtt_info = self.api.mqttsession.publish(self.device, hexdata.hex())
+                _, mqtt_info = self.api.mqttsession.publish(
+                    deviceDict=self.device,
+                    hexbytes=hexdata.hex(),
+                    encoding_type=self.controls.get(command, {}).get(COMMAND_ENCODING),
+                )
                 # Wait for publish completion with timeout
                 with contextlib.suppress(ValueError, RuntimeError):
                     mqtt_info.wait_for_publish(timeout=5)

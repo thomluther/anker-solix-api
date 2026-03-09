@@ -806,6 +806,7 @@ class AnkerSolixBaseApi:
                                 "boost_status",
                                 "ocpp_connect_status",
                                 "cp_signal_status",
+                                "plug_status",
                             ]
                             and value is not None
                         ):
@@ -902,9 +903,6 @@ class AnkerSolixBaseApi:
                                 switch_value := values.get("set_port_switch")
                             ) is not None:
                                 device_mqtt[switch_name] = switch_value
-                        # elif key == "last_message":
-                        #     device_mqtt["last_update"] = str(value)
-                        #     value_updated = False
                         else:
                             value_updated = False
                         updated = updated or value_updated

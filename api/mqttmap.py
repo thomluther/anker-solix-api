@@ -153,9 +153,17 @@ _A1722_0405 = {
 _A1728_0401 = {
     # C300(X) DC param info
     TOPIC: "param_info",
-    "a2": {NAME: "unknown_switch_0401?"},
-    "a3": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "a2": {NAME: "dc_12v_1_status"},  # DC 12V status: Inactive (0), Discharging (1)
+    "a3": {
+        NAME: "light_mode"
+    },  # LED light mode: Off (0), Low (1), Medium (2), High (3)
     "a4": {NAME: "display_switch"},  # Off (0) or On (1)
+}
+
+_A1728_0404 = {
+    # C300(X) DC param info
+    TOPIC: "param_info",
+    "a2": {NAME: "dc_output_timeout_seconds"},  # Timeout seconds, custom range: 0-86100
 }
 
 _A1728_0405 = {
@@ -164,52 +172,71 @@ _A1728_0405 = {
     "a2": {NAME: "dc_output_timeout_seconds"},  # Timeout seconds, custom range: 0-86100
     "a3": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},
     "a4": {NAME: "usbc_1_power"},  # USB-C left output power
-    "a5": {NAME: "usbc_2_power"},  # USB-C center output power
-    "a6": {NAME: "usbc_3_power"},  # USB-C right output power
-    "a7": {NAME: "usbc_4_power"},  # USB-C solar output power
+    "a5": {NAME: "usbc_2_power"},  # USB-C center input/output power
+    "a6": {NAME: "usbc_3_power"},  # USB-C right input/output power
+    "a7": {NAME: "usbc_4_power"},  # USB-C top output power
     "a8": {NAME: "usba_1_power"},  # USB-A left output power
     "a9": {NAME: "usba_2_power"},  # USB-A right output power
-    "aa": {NAME: "dc_12v_1_power"},  # DC input power 12V car charging
+    "aa": {NAME: "dc_12v_1_power"},  # DC output power 12V
     "ab": {NAME: "photovoltaic_power"},  # Solar input
-    "ac": {NAME: "input_power_total"},  # DC input power (solar + car charging)
+    "ac": {NAME: "input_power_total"},  # DC input power (solar + USB-C)
     "ad": {NAME: "output_power_total"},  # Total DC output power for all ports
+    "af": {NAME: "battery_soc_mah"},  # Battery SOC (mAh)
+    "b0": {NAME: "sw_version", "values": 1},  # Main firmware version
+    # "b1": {NAME: "version1?", "values": 1},  # Version?
+    # "b2": {NAME: "version2?", "values": 1},  # Version?
+    # "b3": {NAME: "version3?", "values": 1},  # Same as main firmware version
+    # "b4": {NAME: "version4?", "values": 1},  # Same as main firmware version
     "b5": {NAME: "temperature", SIGNED: True},  # In Celsius
     "b6": {
-        NAME: "charging_status",  # Publishes the raw integer value (0-3): Inactive (0), Solar (1), DC Input (2), Both (3)
+        NAME: "charging_status",  # Total status: Inactive (0), Discharging (1), Charging (2)
     },
     "b7": {NAME: "battery_soc"},  # Battery SOC
     "b8": {NAME: "battery_soh"},  # Battery health
     "b9": {
         NAME: "usbc_1_status"
-    },  # USB-C left status: Inactive (0), Discharging (1), Charging (2)
+    },  # USB-C left status: Inactive (0), Discharging (1)
     "ba": {
         NAME: "usbc_2_status"
     },  # USB-C center status: Inactive (0), Discharging (1), Charging (2)
     "bb": {
         NAME: "usbc_3_status"
-    },  # USB-C right status: Inactive (0), Discharging (1), Charging (2)
+    },  # USB-C right status: Inactive (0), Discharging (1)
     "bc": {
         NAME: "usbc_4_status"
-    },  # USB-C solar status: Inactive (0), Discharging (1), Charging (2)
+    },  # USB-C top status: Inactive (0), Discharging (1)
     "bd": {
         NAME: "usba_1_status"
-    },  # USB-A left status: Inactive (0), Discharging (1), Charging (2)
+    },  # USB-A left status: Inactive (0), Discharging (1)
     "be": {
         NAME: "usba_2_status"
-    },  # USB-A right status: Inactive (0), Discharging (1), Charging (2)
+    },  # USB-A right status: Inactive (0), Discharging (1)
     "bf": {
         NAME: "dc_12v_1_status"
     },  # DC 12V status: Inactive (0), Discharging (1), Charging (2)
+    "c1": {
+        NAME: "overload_event"
+    },  # Overload event for port: None (0), USB-C1 (8), USB-C2 (9), USB-C3 (10), ...?
     "c3": {NAME: "device_sn"},
-    "c4": {NAME: "device_timeout_minutes"},  # Timeout minutes, custom range: 0-1440
+    "c4": {
+        NAME: "device_timeout_minutes"
+    },  # Device timeout: never, 30, 60, 120, 240, 360, 720, 1440 minutes
     "c5": {
         NAME: "display_timeout_seconds"
     },  # Display timeout: 20, 30, 60, 300, 1800 seconds
-    "c8": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "c7": {NAME: "display_mode"},  # Brightness: Low (1), Medium (2), High (3)
+    "c8": {
+        NAME: "light_mode"
+    },  # LED light mode: Off (0), Low (1), Medium (2), High (3)
     "c9": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
     "ca": {NAME: "display_switch"},  # Off (0) or On (1)
-    "cb": {NAME: "light_timeout_minutes?"},  # Timeout minutes, custom range: 0-1440
+    "cb": {
+        NAME: "light_timeout_minutes"
+    },  # Light timeout: never, 30, 60, 120, 240, 360, 720, 1440 minutes
     "cd": {NAME: "charging_status"},  # Inactive (0), Solar (1)
+    "f7": {
+        NAME: "dc_12v_auto_on"
+    },  # Off (0), Last state (1) - as soon as the battery is charged to 10% again
     "f8": {
         BYTES: {
             "00": {
@@ -1947,6 +1974,7 @@ _EV_CHARGER_0405 = {
     "df": {NAME: "boost_status"},  # Off (0), On (1)
     "e0": {NAME: "cp_signal_status"},
     # A=12V(0), B1=9V(3), B2=9V(4), C1=6V(5), C2=6V(6), Error(7), D1=3V(8), D2=3V(9),  E=0V(10), F=-12(11),
+    "e2": {NAME: "plug_status"},  # Disconnected (0), Connected (1)
     "e3": {NAME: "ev_charger_status"},
     # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
     "e6": {NAME: "schedule_switch"},  # on (1), off (2)
@@ -1976,7 +2004,7 @@ _EV_CHARGER_0410 = {
     "aa": {NAME: "charging_energy", "factor": 0.001},
     "ac": {
         NAME: "charging_mode?"
-    },  # off (0) / grid_charge (1) ? / pv_charge (7) ?
+    },  # off/paused (0) / grid_charge (1) ? / unplugged (7)
     "ab": {NAME: "charging_start_timestamp"},
     "ad": {NAME: "plug_countdown_seconds"},
     "ae": {NAME: "start_countdown_seconds"},
@@ -1989,8 +2017,9 @@ _EV_CHARGER_0410 = {
     "b5": {NAME: "charging_energy_p3", "factor": 0.001},
     "b6": {NAME: "order_id?"},
     "b7": {NAME: "unknown_b7?"},  #  (0),  (1)
-    # "b7": {NAME: "ev_plug_status?"},  # not connected (0), connected (1)?
-    "b8": {NAME: "ocpp_connect_status"}, # disconnected (0), Connecting (1), Connected (2)
+    "b8": {
+        NAME: "ocpp_connect_status"
+    },  # disconnected (0), Connecting (1), Connected (2)
     # "b9": {NAME: "cp_signal_status?"},
     # A=12V(0), B1=9V(3), B2=9V(4), C1=6V(5), C2=6V(6), Error(7), D1=3V(8), D2=3V(9),  E=0V(10), F=-12(11),
     "ba": {NAME: "phase_operating_mode"},  # 1 phase (1), 3 phase (3) ?
@@ -2117,29 +2146,39 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS C300 DC
     "A1726": {
-        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Custom Range 0-10800 seconds
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC  # DC output timeout: Custom Range 0-86100 seconds
+        | {
+            "a2": {
+                **CMD_DC_OUTPUT_TIMEOUT_SEC["a2"],
+                VALUE_MAX: 86100,
+            },
+        },
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        # Interval: ~3-5 seconds, but only with realtime trigger
-        "0401": _A1728_0401,
-        "0405": _A1728_0405,
-        # Interval: Irregular, triggered on app actions, no fixed interval
-        "0830": _PPS_VERSIONS_0830,
+        "0401": _A1728_0401,  # Interval: Irregular, triggered on app/device actions, no fixed interval
+        "0404": _A1728_0404,  # Interval: Irregular, triggered on app action, no fixed interval
+        "0405": _A1728_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
+        "0830": _PPS_VERSIONS_0830,  # Interval: Irregular, triggered on app actions, no fixed interval
     },
     # PPS C300X DC
     "A1728": {
-        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: Custom Range 0-10800 seconds
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC  # DC output timeout: Custom Range 0-86100 seconds
+        | {
+            "a2": {
+                **CMD_DC_OUTPUT_TIMEOUT_SEC["a2"],
+                VALUE_MAX: 86100,
+            },
+        },
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        # Interval: ~3-5 seconds, but only with realtime trigger
-        "0401": _A1728_0401,
-        "0405": _A1728_0405,
-        # Interval: Irregular, triggered on app actions, no fixed interval
-        "0830": _PPS_VERSIONS_0830,
+        "0401": _A1728_0401,  # Interval: Irregular, triggered on app/device actions, no fixed interval
+        "0404": _A1728_0404,  # Interval: Irregular, triggered on app action, no fixed interval
+        "0405": _A1728_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
+        "0830": _PPS_VERSIONS_0830,  # Interval: Irregular, triggered on app actions, no fixed interval
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
