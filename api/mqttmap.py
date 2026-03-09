@@ -416,7 +416,7 @@ _A1763_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "ac_output_power",  # AC Ausgangsleistung
+                NAME: "ac_output_power",  # AC Output power
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "04": {
@@ -596,6 +596,214 @@ _A1780_0408 = {
     "a6": {NAME: "discharged_energy?", FACTOR: 0.001},  # in kWh
     "a7": {NAME: "charged_energy?", FACTOR: 0.001},  # in kWh
     "ac": {NAME: "main_battery_soc"},  # in %
+}
+
+_A1782_0421 = {
+    "a2": {
+        BYTES: {
+            "01": {
+                NAME: "device_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "20": {
+                NAME: "device_pn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "a3": {
+        BYTES: {
+            "04": {
+                NAME: "ac_input_limit_max",  # Max supported charge limit, seems fix
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "a4": {
+        BYTES: {
+            "00": {
+                NAME: "ac_output_timeout_seconds?",  # disable (0), min:0, max: 86400, step 300
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+            },
+            "04": {
+                NAME: "ac_input_limit?",  # AC charge limit: 100-1200 W, step: 100
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "07": {
+                NAME: "ac_output_mode?",  # Normal (0), Smart (1) - auto-off below 14W
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "dc_output_timeout_seconds?",  # disable (0), min:0, max: 86400, step 300
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+            },
+            "12": {
+                NAME: "dc_12v_output_mode?",  # Normal (0), Smart (1) - auto-off below 3W
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "13": {
+                NAME: "device_timeout_minutes?",  # 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "15": {
+                NAME: "display_timeout_seconds?",  # 0 (Never), 10, 30, 60, 300, 1800
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "17": {
+                NAME: "display_mode?",  # Low (1), Medium (2), High (3)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "20": {
+                NAME: "ac_fast_charge_switch?",  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                NAME: "display_switch?",  # Off (0), On (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "22": {
+                NAME: "port_memory_switch?",  # Output Port Memory switch: Disabled (0) or Enabled (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "a5": {
+        BYTES: {
+            "00": {
+                NAME: "temperature?",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "battery_soc?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "a6": {
+        BYTES: {
+            "00": {
+                NAME: "output_power_total?",  # Output power total
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "02": {
+                NAME: "ac_input_power?",  # Input power total charge
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        },
+    },
+    "a7": {
+        BYTES: {
+            "00": {
+                NAME: "ac_output_power_switch?",  # Off (0), On (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "ac_output_power?",  # AC Output power
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "a8": {
+        BYTES: {
+            "00": {
+                NAME: "dc_input_power_switch?",  # Off (0), On (1)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "dc_input_power_total?",  # DC input power (solar + car charging)
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "aa": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_1_status?",  # USB-C 1 status: Inactive (0), Discharging (1), Charging (2)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usbc_1_power?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "ab": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_2_status?",  # USB-C 2 status: Inactive (0), Discharging (1), Charging (2)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usbc_2_power?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "ac": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_3_status?",  # USB-C 3 status: Inactive (0), Discharging (1), Charging (2)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usbc_3_power?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "ad": {
+        BYTES: {
+            "00": {
+                NAME: "usbc_4_status?",  # USB-C 3 status: Inactive (0), Discharging (1), Charging (2)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usbc_4_power?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "ae": {
+        BYTES: {
+            "00": {
+                NAME: "usba_1_status?",  # USB-A 1 status: Inactive (0), Discharging (1), Charging (2)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usba_1_power?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "af": {
+        BYTES: {
+            "00": {
+                NAME: "usba_2_status?",  # USB-A 1 status: Inactive (0), Discharging (1), Charging (2)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usba_2_power?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
+    "d9": {
+        BYTES: {
+            "03": {
+                NAME: "max_soc?",  # max_soc: 80, 85, 90, 95, 100 % ?
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "min_soc?",  # min_soc: 1, 5, 10, 15, 20 % ?
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "fd": {NAME: "unknown_fd_timestamp"},
+    "fe": {NAME: "msg_timestamp"},
 }
 
 _A1790_0405 = {
@@ -2473,6 +2681,12 @@ SOLIXMQTTMAP: Final[dict] = {
         "0830": _PPS_VERSIONS_0830,
         # Interval: ??
         "0840": _A1790_0405,
+    },
+    # Solarbank PPS F3000
+    "A1782": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0421": _A1782_0421,
     },
     # Solarbank 1 E1600
     "A17C0": {

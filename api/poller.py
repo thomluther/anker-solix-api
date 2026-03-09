@@ -627,9 +627,9 @@ async def poll_sites(  # noqa: C901
                         isAdmin=admin,
                     ):
                         api._site_devices.add(sn)
-                if (sb_pps_info := mysite.get("solarbank_pps_info") or {}):
-                    charge=sb_pps_info.get("")
-                    discharge=sb_pps_info.get("")
+                if sb_pps_info := mysite.get("solarbank_pps_info") or {}:
+                    charge = sb_pps_info.get("")
+                    discharge = sb_pps_info.get("")
                     # "total_charging_power": "0",
                     # "total_output_power": "98",
                     # "total_battery_power": "78",

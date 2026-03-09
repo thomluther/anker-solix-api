@@ -422,7 +422,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device[key] = str(value)
                         # TODO: Use proper status definitions once all state descriptions are known
                         description = get_enum_name(
-                            SolarbankPpsStatus, str(value), SolarbankPpsStatus.unknown.name
+                            SolarbankPpsStatus,
+                            str(value),
+                            SolarbankPpsStatus.unknown.name,
                         )
                         device["charging_status_desc"] = description
                     elif key == "charging_status":
