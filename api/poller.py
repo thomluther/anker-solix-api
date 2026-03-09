@@ -581,7 +581,7 @@ async def poll_sites(  # noqa: C901
                     grid = dict(grid).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in grid:
-                        grid.update({"alias_name": grid.pop("device_name")})
+                        grid["alias_name"] = grid.pop("device_name")
                     if sn := api._update_dev(
                         grid
                         | {
@@ -602,10 +602,10 @@ async def poll_sites(  # noqa: C901
                 smartplug_info = mysite.get("smart_plug_info") or {}
                 for smartplug in smartplug_info.get("smartplug_list") or []:
                     # work around for device_name which is actually the device_alias in scene info
+                    smartplug = dict(smartplug).copy()
                     if "device_name" in smartplug:
                         # modify only a copy of the device dict to prevent changing the scene info dict
-                        smartplug = dict(smartplug).copy()
-                        smartplug.update({"alias_name": smartplug.pop("device_name")})
+                        smartplug["alias_name"] = smartplug.pop("device_name")
                     if sn := api._update_dev(
                         smartplug,
                         devType=SolixDeviceType.SMARTPLUG.value,
@@ -619,7 +619,7 @@ async def poll_sites(  # noqa: C901
                     pps = dict(pps).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in pps:
-                        pps.update({"alias_name": pps.pop("device_name")})
+                        pps["alias_name"] = pps.pop("device_name")
                     if sn := api._update_dev(
                         pps,
                         devType=SolixDeviceType.PPS.value,
@@ -627,13 +627,32 @@ async def poll_sites(  # noqa: C901
                         isAdmin=admin,
                     ):
                         api._site_devices.add(sn)
-                sb_pps_info = mysite.get("solarbank_pps_info") or {}
+                if (sb_pps_info := mysite.get("solarbank_pps_info") or {}):
+                    charge=sb_pps_info.get("")
+                    discharge=sb_pps_info.get("")
+                    # "total_charging_power": "0",
+                    # "total_output_power": "98",
+                    # "total_battery_power": "78",
+                    # "total_pv_input_power": "261",
+                    # "total_home_load_power": "359",
+                    # "total_grid_to_battery": "0",
+
                 for sbpps in sb_pps_info.get("pps_list") or []:
                     # modify only a copy of the device dict to prevent changing the scene info dict
                     sbpps = dict(sbpps).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in sbpps:
-                        sbpps.update({"alias_name": sbpps.pop("device_name")})
+                        sbpps["alias_name"] = sbpps.pop("device_name")
+                    # Work around to avoid mix and map device keys to solarbank keys
+                    sbpps["photovoltaic_power"] = sbpps.pop("pv_power", "")
+                    charge = sbpps.pop("charging_power", "")
+                    discharge = sbpps.pop("discharging_power", "")
+                    sbpps["bat_charge_power"] = charge
+                    sbpps["bat_discharge_power"] = discharge
+                    if str(charge).isdigit() and str(discharge).isdigit():
+                        # calculate the signed battery power as used for Solarbank
+                        sbpps["charging_power"] = str(int(charge) - int(discharge))
+                    sbpps["to_home_load"] = sbpps.pop("home_load_power", "")
                     if sn := api._update_dev(
                         sbpps,
                         devType=SolixDeviceType.SOLARBANK_PPS.value,
@@ -651,7 +670,7 @@ async def poll_sites(  # noqa: C901
                     cb = dict(cb).copy()
                     # work around for device_name which is actually the device_alias in scene info
                     if "device_name" in cb:
-                        cb.update({"alias_name": cb.pop("device_name")})
+                        cb["alias_name"] = cb.pop("device_name")
                     cb.update({"set_load_power": total_preset})
                     # as time progressed, update actual schedule slot presets from a cached schedule if available
                     if schedule := (api.devices.get(cb.get("device_sn", ""), {})).get(

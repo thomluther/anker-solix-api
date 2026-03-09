@@ -18,6 +18,7 @@ from .apitypes import (
     SmartmeterStatus,
     SolarbankAiemsRuntimeStatus,
     SolarbankDeviceMetrics,
+    SolarbankPpsStatus,
     SolarbankRatePlan,
     SolarbankStatus,
     SolarbankUsageMode,
@@ -282,6 +283,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "time_zone",
                             "grid_export_limit",
                             "owner_user_id",
+                            "phase",
                         ]
                         and value
                     ):
@@ -412,6 +414,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 ),
                             }
                         )
+                    elif (
+                        key == "charging_status"
+                        and device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+                    ):
+                        # handle Solarbank PPS charging status
+                        device[key] = str(value)
+                        # TODO: Use proper status definitions once all state descriptions are known
+                        description = get_enum_name(
+                            SolarbankPpsStatus, str(value), SolarbankPpsStatus.unknown.name
+                        )
+                        device["charging_status_desc"] = description
                     elif key == "charging_status":
                         device[key] = str(value)
                         # decode the charging status into a description
@@ -933,6 +946,20 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 ),
                             }
                         )
+
+                    # Solarbank PPS specific keys, map them to solarbank keys where applicable
+                    elif key == "pv_high_power":
+                        device["solar_power_1"] = str(value)
+                    elif key == "pv_low_power":
+                        device["solar_power_2"] = str(value)
+                    elif key == "pv_high_name":
+                        device["pv_name"] = (device.get("pv_name") or {}) | {
+                            "pv1_name": str(value)
+                        }
+                    elif key == "pv_low_name":
+                        device["pv_name"] = (device.get("pv_name") or {}) | {
+                            "pv2_name": str(value)
+                        }
 
                     # EV charger specific keys
                     elif key == "ev_charger_status":

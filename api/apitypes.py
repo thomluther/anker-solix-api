@@ -1100,7 +1100,6 @@ class SolarbankDeviceMetrics:
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
         "sub_package_num",
-        "bat_charge_power",
         "solar_power_1",
         "solar_power_2",
         "ac_power",
@@ -1127,7 +1126,6 @@ class SolarbankDeviceMetrics:
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {
         "sub_package_num",
-        "bat_charge_power",
         "solar_power_1",
         "solar_power_2",
         "solar_power_3",
@@ -1141,6 +1139,17 @@ class SolarbankDeviceMetrics:
         "pv_power_limit",
         "ac_input_limit",
         "power_limit_option",
+    }
+    # SOLIX Solarbank PPS F3000, with 2 MPPT channels
+    A1782: ClassVar[set[str]] = {
+        "sub_package_num",
+        "solar_power_1",
+        "solar_power_2",
+        "to_home_load",
+        "grid_to_battery_power",
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
     }
     # Inverter Output Settings
     INVERTER_OUTPUT_OPTIONS: ClassVar[dict[str, Any]] = {
@@ -1262,6 +1271,16 @@ class SolarbankStatus(StrEnum):
     standby = "7"
     unknown = "unknown"
     # TODO(SB3): Is there a new mode for AC charging? Can it be distinguished from existing values?
+
+
+class SolarbankPpsStatus(StrEnum):
+    """Str Enumeration for Anker Solix Solarbank PPS status."""
+
+    # 0: Standby?; 1: Discharge; 2: Charge
+    standby = "0"
+    discharge = "1"
+    charge = "2"
+    unknown = "unknown"
 
 
 class SolarbankLightMode(StrEnum):

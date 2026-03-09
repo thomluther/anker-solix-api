@@ -590,11 +590,15 @@ class AnkerSolixApiMonitor:
                         f"{'Energy Time':<{col1}}: {'----.--.-- --:--:--' if offset is None else (datetime.now() + timedelta(seconds=offset)).strftime('%Y-%m-%d %H:%M:%S'):<{col2}} "
                         f"{'Last Check':<{col3}}: {site.get('energy_offset_check') or '----.--.-- --:--:--'}"
                     )
-                    if (sb := site.get("solarbank_info") or {}) and len(
-                        sb.get("solarbank_list", [])
-                    ) > 0:
-                        # print solarbank totals
-                        soc = f"{int(float(sb.get('total_battery_power') or 0) * 100)!s:>4} %"
+                    if (
+                        (sb := site.get("solarbank_info") or {})
+                        and len(sb.get("solarbank_list", [])) > 0
+                    ) or (
+                        (sb := site.get("solarbank_pps_info") or {})
+                        and len(sb.get("pps_list", [])) > 0
+                    ):
+                        # print solarbank or solarbank_pps totals
+                        soc = f"{int(float(sb.get('total_battery_power') or 0) * (1 if site.get('site_type') == SolixDeviceType.SOLARBANK_PPS.value else 100))!s:>4} %"
                         unit = sb.get("power_unit") or "W"
                         update_time = sb.get("updated_time") or "Unknown"
                         CONSOLE.info(
@@ -606,16 +610,16 @@ class AnkerSolixApiMonitor:
                             f"{'Dischrg Pwr Tot':<{col3}}: {sb.get('battery_discharge_power', '----'):>4} {unit}"
                         )
                         CONSOLE.info(
-                            f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power', '----'):>4} {unit:<{col2 - 5}} "
+                            f"{'Solar  Pwr Tot':<{col1}}: {sb.get('total_photovoltaic_power') or sb.get('total_pv_input_power') or '----'!s:>4} {unit:<{col2 - 5}} "
                             f"{'Battery Pwr Tot':<{col3}}: {str(sb.get('total_charging_power')).split('.', maxsplit=1)[0]:>4} W"
                         )
                         CONSOLE.info(
                             f"{'Output Pwr Tot':<{col1}}: {str(sb.get('total_output_power', '----')).split('.', maxsplit=1)[0]:>4} {unit:<{col2 - 5}} "
-                            f"{'Home Load Tot':<{col3}}: {sb.get('to_home_load') or '----':>4} W"
+                            f"{'Home Load Tot':<{col3}}: {sb.get('to_home_load') or sb.get('total_home_load_power') or '----':>4} W"
                         )
                         if "third_party_pv" in site:
                             CONSOLE.info(
-                                f"{'Ext PV Surplus':<{col1}}: {site.get('third_party_pv', '----')!s:>4} {unit:<{col2 - 5}} "
+                                f"{'Ext PV Surplus':<{col1}}: {site.get('third_party_pv') or '----'!s:>4} {unit:<{col2 - 5}} "
                                 f"{'Switch 0W':<{col3}}: {'ON' if site.get('switch_0w') else 'OFF'}"
                             )
                         # System config and power limit
@@ -850,7 +854,10 @@ class AnkerSolixApiMonitor:
                     # print schedule
                     common.print_schedule(dev.get("schedule") or {})
 
-            elif devtype == SolixDeviceType.SOLARBANK.value:
+            elif devtype in [
+                SolixDeviceType.SOLARBANK.value,
+                SolixDeviceType.SOLARBANK_PPS.value,
+            ]:
                 unit = dev.get("power_unit", "W")
                 CONSOLE.info(
                     f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} "
@@ -868,7 +875,10 @@ class AnkerSolixApiMonitor:
                 if m3 := cm and mqtt.get("battery_soh", ""):
                     m3 = f"{float(m3):6.2f}"
                 soc = f"{m1 or dev.get('battery_soc', '---'):>4} %"
-                if dev.get("generation", 0) > 1:
+                if (
+                    dev.get("generation", 0) > 1
+                    or devtype == SolixDeviceType.SOLARBANK_PPS.value
+                ):
                     CONSOLE.info(
                         f"{'Battery SoC/SoH':<{col1}}: {m1 and c}{soc} /{m3 and (c or cm)}{m3 or ' --.--':>4} {'%':<{col2 - 15}}{co} "
                         f"{'Min SoC':<{col3}}: {m2 and c}{m2 or (dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} %{co}"
@@ -891,7 +901,10 @@ class AnkerSolixApiMonitor:
                         f"{'Capacity':<{col3}}: {cc}{customized.get('battery_capacity') or dev.get('battery_capacity', '----')!s:>4} Wh{co}"
                     )
                 unit = dev.get("power_unit", "W")
-                if dev.get("generation", 0) > 1:
+                if (
+                    dev.get("generation", 0) > 1
+                    or devtype == SolixDeviceType.SOLARBANK_PPS.value
+                ):
                     m1 = c and str(mqtt.get("expansion_packs", ""))
                     CONSOLE.info(
                         f"{'Exp. Batteries':<{col1}}: {m1 and c}{m1 or dev.get('sub_package_num', '-'):>4} {'Pcs':<{col2 - 5}}{co} "
@@ -975,7 +988,7 @@ class AnkerSolixApiMonitor:
                 m4 = cm and mqtt.get("output_energy", "")
                 CONSOLE.info(
                     f"{'Solar Power':<{col1}}: {m1 and c}{m1 or dev.get('input_power', '---'):>4} {unit}{m3 and (c or cm)}{((' (' + m3 + ' kWh)') if m3 else ''):<{col2 - 6}}{co} "
-                    f"{'Output Power':<{col3}}: {m2 and c}{m2 or dev.get('output_power', '---'):>4} {unit}{m4 and (c or cm)}{((' (' + m4 + ' kWh)') if m4 else '')}{co}"
+                    f"{'Output Power':<{col3}}: {m2 and c}{m2 or dev.get('output_power') or dev.get('to_home_load') or '---'!s:>4} {unit}{m4 and (c or cm)}{((' (' + m4 + ' kWh)') if m4 else '')}{co}"
                 )
                 # show PV and battery voltage if available
                 if m1 := cm and mqtt.get("pv_1_voltage", ""):
@@ -1048,9 +1061,16 @@ class AnkerSolixApiMonitor:
                     f"{'Battery Power':<{col1}}: {m1 and c}{m1 or dev.get('charging_power', '---'):>4} {unit:<{col2 - 5}}{co} "
                     f"{'Device Preset':<{col3}}: {m2 and c}{m2 or preset:>4} {unit}{co}"
                 )
-                if dev.get("generation", 0) > 1:
+                if (
+                    dev.get("generation", 0) > 1
+                    or devtype == SolixDeviceType.SOLARBANK_PPS.value
+                ):
                     demand = site.get("home_load_power") or ""
-                    load = (site.get("solarbank_info") or {}).get("to_home_load") or ""
+                    load = (
+                        (site.get("solarbank_info") or {}).get("to_home_load")
+                        or (site.get("solarbank_pps_info") or {}).get("total_home_load_power")
+                        or ""
+                    )
                     diff = ""
                     if m1 := c and str(mqtt.get("home_demand", "")):
                         demand = m1
@@ -1124,8 +1144,8 @@ class AnkerSolixApiMonitor:
                 m3 = cm and mqtt.get("grid_import_energy", "")
                 m4 = cm and mqtt.get("grid_export_energy", "")
                 CONSOLE.info(
-                    f"{'Grid Import':<{col1}}: {m1 and (c or cm)}{m1 or dev.get('grid_to_home_power', '----'):>4} {unit}{m3 and (c or cm)}{(' (' + m3 + ' kWh)' if m3 else ''):<{col2 - 6}}{co} "
-                    f"{'Grid Export':<{col3}}: {m2 and (c or cm)}{m2 or dev.get('photovoltaic_to_grid_power', '----'):>4} {unit}{m4 and (c or cm)}{(' (' + m4 + ' kWh)' if m4 else '')}{co}"
+                    f"{'Grid Import':<{col1}}: {m1 and (c or cm)}{m1 or dev.get('grid_to_home_power') or '----':>4} {unit}{m3 and (c or cm)}{(' (' + m3 + ' kWh)' if m3 else ''):<{col2 - 6}}{co} "
+                    f"{'Grid Export':<{col3}}: {m2 and (c or cm)}{m2 or dev.get('photovoltaic_to_grid_power') or '----':>4} {unit}{m4 and (c or cm)}{(' (' + m4 + ' kWh)' if m4 else '')}{co}"
                 )
 
             elif devtype == SolixDeviceType.SMARTPLUG.value:
@@ -2351,7 +2371,7 @@ class AnkerSolixApiMonitor:
                                         [
                                             str(s.get("site_id")),
                                             str(s.get("site_name")),
-                                            f"Type: {((t:=s.get('power_site_type')) or 'unknown')!s} ({getattr(SolixSiteType, 't_' + str(t),'unknown')})"
+                                            f"Type: {((t := s.get('power_site_type')) or 'unknown')!s} ({getattr(SolixSiteType, 't_' + str(t), 'unknown')})",
                                         ]
                                     )
                                 )
