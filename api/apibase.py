@@ -636,6 +636,7 @@ class AnkerSolixBaseApi:
                             in [
                                 # keys with value that should be saved as rounded 3 decimal float string
                                 "battery_soh",
+                                "battery_soc_ah",
                                 "voltage",
                                 "pv_1_voltage",
                                 "pv_2_voltage",

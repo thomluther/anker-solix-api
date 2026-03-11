@@ -1690,8 +1690,10 @@ class AnkerSolixApiMonitor:
                     )
                 energy = f"{dev.get('battery_energy', '----'):>4} Wh"
                 if "battery_capacity" in dev:
+                    if m1 := cm and mqtt.get("battery_soc_ah", ""):
+                        m1 = f" ({m1 or '-.---'} Ah)"
                     CONSOLE.info(
-                        f"{'Battery Energy':<{col1}}: {cc}{energy:<{col2}}{co} "
+                        f"{'Battery Energy':<{col1}}: {cc}{energy}{co}{m1 and (c or cm)}{m1:{col2-len(energy)}}{co} "
                         f"{'Capacity':<{col3}}: {cc}{customized.get('battery_capacity') or dev.get('battery_capacity', '----')!s:>4} Wh{co}"
                     )
                 unit = "W"

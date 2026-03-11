@@ -181,7 +181,7 @@ _A1728_0405 = {
     "ab": {NAME: "photovoltaic_power"},  # Solar input
     "ac": {NAME: "input_power_total"},  # DC input power (solar + USB-C)
     "ad": {NAME: "output_power_total"},  # Total DC output power for all ports
-    "af": {NAME: "battery_soc_mah"},  # Battery SOC (mAh)
+    "af": {NAME: "battery_soc_ah", FACTOR: 0.001},  # Battery SOC (Ah)
     "b0": {NAME: "sw_version", "values": 1},  # Main firmware version
     # "b1": {NAME: "version1?", "values": 1},  # Version?
     # "b2": {NAME: "version2?", "values": 1},  # Version?

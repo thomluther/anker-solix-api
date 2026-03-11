@@ -832,7 +832,7 @@ class DeviceHexData:
                 f"{' Fields ':-^12}|{'- Value (Hex/Decode Options)':-<67}"
             )
             if self.msg_fields:
-                s += f"\n{'Fld':<3}{'Len':>4} {'Typ':<5} {'uIntLe/var':>15} {'sIntLe':>15} {'floatLe':>15} {'dblLe/4int':>15}"
+                s += f"\n{'Fld':<3}{'Len':>4} {'Type':<5} {'uIntLe/var':>15} {'sIntLe':>15} {'floatLe':>15} {'dblLe/4int':>15}"
                 fieldmap = self._get_fieldmap()
                 if cmd_list := fieldmap.get(COMMAND_LIST):
                     # extract the maps from all nested commands, they should not have duplicate field names
