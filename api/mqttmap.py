@@ -2336,7 +2336,13 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS C300 AC
     "A1722": {
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
-        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE  # LED mode: Off (0), Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_LIGHT_MODE["a2"],
+                VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
+            },
+        },
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
@@ -2346,6 +2352,15 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS C300X AC
     "A1723": {
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004f": CMD_LIGHT_MODE  # LED mode: Off (0), Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_LIGHT_MODE["a2"],
+                VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
+            },
+        },
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1722_0405,
@@ -2362,7 +2377,13 @@ SOLIXMQTTMAP: Final[dict] = {
             },
         },
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
-        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE  # LED mode: Off (0), Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_LIGHT_MODE["a2"],
+                VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
+            },
+        },
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0401": _A1728_0401,  # Interval: Irregular, triggered on app/device actions, no fixed interval
@@ -2380,7 +2401,13 @@ SOLIXMQTTMAP: Final[dict] = {
             },
         },
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
-        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE  # LED mode: Off (0), Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_LIGHT_MODE["a2"],
+                VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
+            },
+        },
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0401": _A1728_0401,  # Interval: Irregular, triggered on app/device actions, no fixed interval
