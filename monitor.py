@@ -1381,8 +1381,8 @@ class AnkerSolixApiMonitor:
                         f"{'Phase Op. Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPhaseMode, m1, m1 or '-------').replace('_', ' ').capitalize() + ' (' + (m1 or '-') + ')':<{col2}}{co} "
                         f"{'Charge Window':<{col3}}: {m2 and (c or cm)}{str(m2) or '--:--:--'}{co}"
                     )
-                m1 = (c and mqtt.get("charging_power", "")) or dev.get(
-                    "charging_power", ""
+                m1 = (c and mqtt.get("bat_charge_power", "")) or dev.get(
+                    "bat_charge_power", ""
                 )
                 m2 = cm and mqtt.get("charging_energy", "")
                 if m1 or m2:
@@ -1628,6 +1628,11 @@ class AnkerSolixApiMonitor:
                         f"{get_enum_name(SolixPpsOutputModeV2 if v2 else SolixPpsOutputMode, m3, 'unknown').capitalize().split('_', maxsplit=1)[0] + ' (' + (m3 or '-') + ')':<{col2 - 6}}{co} "
                         f"{'DC Out Ctrl':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3} / "
                         f"{get_enum_name(SolixPpsOutputModeV2 if v2 else SolixPpsOutputMode, m4, 'unknown').capitalize().split('_', maxsplit=1)[0] + ' (' + (m4 or '-') + ')'}{co}"
+                    )
+                m1 = cm and mqtt.get("dc_12v_auto_on", "")
+                if str(m1):
+                    CONSOLE.info(
+                        f"{'DC 12V Auto On':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} "
                     )
                 if m1 := cm and (mqtt.get("battery_soc", "")):
                     m2 = cm and mqtt.get("power_cutoff", "")

@@ -2197,7 +2197,7 @@ _EV_CHARGER_0410 = {
     "a5": {NAME: "current_l1", "factor": 0.1},
     "a6": {NAME: "current_l2", "factor": 0.1},
     "a7": {NAME: "current_l3", "factor": 0.1},
-    "a8": {NAME: "charging_power"},
+    "a8": {NAME: "bat_charge_power"},
     "a9": {NAME: "charging_duration_seconds"},
     "aa": {NAME: "charging_energy", "factor": 0.001},
     "ac": {

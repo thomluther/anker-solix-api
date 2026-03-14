@@ -710,7 +710,7 @@ async def poll_sites(  # noqa: C901
                             cp["alias_name"] = cp.pop("device_name")
                         # work around to merge various EV charger field names
                         cp["ev_charger_status"] = cp.pop("operating_state", None)
-                        cp["charging_power"] = cp.pop("power", "")
+                        cp["bat_charge_power"] = cp.pop("power", "")
                         if sn := api._update_dev(
                             cp,
                             devType=SolixDeviceType.EV_CHARGER.value,
