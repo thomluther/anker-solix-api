@@ -1390,53 +1390,53 @@ class AnkerSolixApiMonitor:
                         f"{'Charging Power':<{col1}}: {m1 and c}{m1 or '-----':>7} {'W':<{col2 - 8}}{co} "
                         f"{'Charging Energy':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>8} kWh{co}"
                     )
-                m1 = cm and mqtt.get("charging_power_p1", "")
-                m2 = cm and mqtt.get("charging_energy_p1", "")
+                m1 = cm and mqtt.get("power_l1", "")
+                m2 = cm and mqtt.get("charging_energy_l1", "")
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Ch. Power P1':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>7} {'W':<{col2 - 8}}{co} "
-                        f"{'Ch. Energy P1':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>8} kWh{co}"
+                        f"{'Power L1':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>7} {'W':<{col2 - 8}}{co} "
+                        f"{'Ch. Energy L1':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>8} kWh{co}"
                     )
-                m1 = cm and mqtt.get("charging_power_p2", "")
-                m2 = cm and mqtt.get("charging_energy_p2", "")
+                m1 = cm and mqtt.get("power_l2", "")
+                m2 = cm and mqtt.get("charging_energy_l2", "")
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Ch. Power P2':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>7} {'W':<{col2 - 8}}{co} "
-                        f"{'Ch. Energy P2':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>8} kWh{co}"
+                        f"{'Power L2':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>7} {'W':<{col2 - 8}}{co} "
+                        f"{'Ch. Energy L2':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>8} kWh{co}"
                     )
-                m1 = cm and mqtt.get("charging_power_p3", "")
-                m2 = cm and mqtt.get("charging_energy_p3", "")
+                m1 = cm and mqtt.get("power_l3", "")
+                m2 = cm and mqtt.get("charging_energy_l3", "")
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Ch. Power P3':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>7} {'W':<{col2 - 8}}{co} "
-                        f"{'Ch. Energy P3':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>8} kWh{co}"
+                        f"{'Power L3':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>7} {'W':<{col2 - 8}}{co} "
+                        f"{'Ch. Energy L3':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>8} kWh{co}"
                     )
-                if (m1 := cm and mqtt.get("current_p1", "")) and "." in m1:
+                if (m1 := cm and mqtt.get("current_l1", "")) and "." in m1:
                     m1 = f"{float(m1):>6.3f}"
-                if (m2 := cm and mqtt.get("voltage_p1", "")) and "." in m2:
+                if (m2 := cm and mqtt.get("voltage_l1", "")) and "." in m2:
                     m2 = f"{float(m2):>6.2f}"
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Current P1':<{col1}}: {m1 and (c or (c or cm))}{m1 or '---.---':>7} {'A':<{col2 - 8}}{co} "
-                        f"{'Voltage P1':<{col3}}: {m2 and (c or (c or cm))}{m2 or '----.--':>7} V{co}"
+                        f"{'Current L1':<{col1}}: {m1 and (c or (c or cm))}{m1 or '---.---':>7} {'A':<{col2 - 8}}{co} "
+                        f"{'Voltage L1':<{col3}}: {m2 and (c or (c or cm))}{m2 or '----.--':>7} V{co}"
                     )
-                if (m1 := cm and mqtt.get("current_p2", "")) and "." in m1:
+                if (m1 := cm and mqtt.get("current_l2", "")) and "." in m1:
                     m1 = f"{float(m1):>6.3f}"
-                if (m2 := cm and mqtt.get("voltage_p2", "")) and "." in m2:
+                if (m2 := cm and mqtt.get("voltage_l2", "")) and "." in m2:
                     m2 = f"{float(m2):>6.2f}"
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Current P2':<{col1}}: {m1 and (c or (c or cm))}{m1 or '---.---':>7} {'A':<{col2 - 8}}{co} "
-                        f"{'Voltage P2':<{col3}}: {m2 and (c or (c or cm))}{m2 or '----.--':>7} V{co}"
+                        f"{'Current L2':<{col1}}: {m1 and (c or (c or cm))}{m1 or '---.---':>7} {'A':<{col2 - 8}}{co} "
+                        f"{'Voltage L2':<{col3}}: {m2 and (c or (c or cm))}{m2 or '----.--':>7} V{co}"
                     )
-                if (m1 := cm and mqtt.get("current_p3", "")) and "." in m1:
+                if (m1 := cm and mqtt.get("current_l3", "")) and "." in m1:
                     m1 = f"{float(m1):>6.3f}"
-                if (m2 := cm and mqtt.get("voltage_p3", "")) and "." in m2:
+                if (m2 := cm and mqtt.get("voltage_l3", "")) and "." in m2:
                     m2 = f"{float(m2):>6.2f}"
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Current P3':<{col1}}: {m1 and (c or (c or cm))}{m1 or '---.---':>7} {'A':<{col2 - 8}}{co} "
-                        f"{'Voltage P3':<{col3}}: {m2 and (c or (c or cm))}{m2 or '----.--':>7} V{co}"
+                        f"{'Current L3':<{col1}}: {m1 and (c or (c or cm))}{m1 or '---.---':>7} {'A':<{col2 - 8}}{co} "
+                        f"{'Voltage L3':<{col3}}: {m2 and (c or (c or cm))}{m2 or '----.--':>7} V{co}"
                     )
                 if stats := dev.get("total_stats"):
                     if str(m4 := stats.get("charge_time", "")).isdigit():
