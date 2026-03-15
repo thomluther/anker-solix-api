@@ -3174,7 +3174,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 NAME: "charging_status"
             },  # charge_status: 0=idle, 1=discharging, 2=charging
             "a5": {NAME: "temperature", SIGNED: True},
-            "a6": {NAME: "main_battery_soc?"},
+            "a6": {NAME: "battery_soc?"},
             "a7": {NAME: "sw_version?", "values": 4},
             "a8": {NAME: "sw_controller?", "values": 4},
             "a9": {NAME: "sw_expansion?", "values": 4},  # Expansion firmware version

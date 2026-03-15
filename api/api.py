@@ -1075,7 +1075,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     # recalculate capacity if required
                     if cap_change and str(size).isdigit() and str(exp).isdigit():
                         # NOTE: Expansions for SB2 + 3 can have mixed capacity, which cannot be identified
-                        device["battery_capacity"] = f"{size * (1 + exp):.0f}"
+                        # NOTE: E10 controller has no battery, but needs 1-5 battery expansions
+                        controller_bat = 0 if device.get("device_pn") == "A17E1" else 1
+                        device["battery_capacity"] = (
+                            f"{size * (controller_bat + exp):.0f}"
+                        )
                     cap = device.get("battery_capacity")
                     # get total SOC, prefer value depending on overlay
                     soc = (

@@ -641,7 +641,7 @@ A17A2  Powered Cooler 50                        Powered Cooler
 A17A3  SOLIX Everfrost 2 23L                    Powered Cooler
 A17A4  SOLIX Everfrost 2 40L                    Powered Cooler
 A17A5  SOLIX Everfrost 2 58L                    Powered Cooler
-A17B1  SOLIX Home Power Panel                   Power Solution
+A17B1  SOLIX Home Power Panel                   Home Backup System
 A17C0  Solarbank E1600                          Balcony Solar Power System
 A17C1  Solarbank 2 E1600 Pro                    Balcony Solar Power System
 A17C2  Solarbank 2 E1600 AC                     Balcony Solar Power System
@@ -668,6 +668,9 @@ AE100  SOLIX Power Dock                         Balcony Solar Power System
 AE1R0  Anker SOLIX P1 Meter                     Accessory
 AS100  C1000 Gen 2 LE                           Portable Power Station
 AX1S0  Power Dock Pro                           Residential Storage System
+AX170  Power Dock                               Home Backup System
+A17E1  Anker SOLIX E10                          Home Backup System
+A7320  SOLIX Smart Generator 5500               Smart Generator
 ----------------------------------------------------------------------------------------------------
 """
 
@@ -714,6 +717,7 @@ class SolixDeviceType(Enum):
     POWERCOOLER = "powercooler"
     HES = "hes"
     HOME_BACKUP = "home_backup"
+    GENERATOR = "generator"
     SOLARBANK_PPS = "solarbank_pps"
     CHARGER = "charger"
     POWERBANK = "powerbank"
@@ -925,6 +929,7 @@ class SolixDeviceCapacity:
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
     A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
+    A17E1: int = 6144  # SOLIX E10 Battery module, Controller has no battery?
 
 
 @dataclass(frozen=True)
@@ -948,9 +953,9 @@ class SolixSiteType:
     )  # Main A17C5 SB3 Pro, including power dock option for SB3 multisystems
     t_13 = SolixDeviceType.SOLARBANK_PPS.value  # Main A1782 SOLIX F3000 Portable Power Station (Solarbank PPS) with Smart Meter support for US market
     t_14 = SolixDeviceType.EV_CHARGER.value  # Main A5191 Smart EV Charger
-    # t_15 = ???  # Main A17E1 & A17X7US Smart Meter for US market
+    t_15 = SolixDeviceType.HOME_BACKUP.value  # Main E10 A17E1 & A17X7US Smart Meter for US market
     # t_16 = ???  # Main A1903 Charging base & 4 each A110A, A110B, A110G, A1341
-    # t_17 = ??? # Only AX170
+    t_17 = SolixDeviceType.HOME_BACKUP.value # Only AX170: Power Dock US market to connect multiple E10
     t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, SHEM3, SHEMP3, A17X8, SHPPS, A5191
 
 
@@ -1036,10 +1041,6 @@ class SolixDeviceCategory:
     A1785: str = (
         SolixDeviceType.PPS.value
     )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
-    A17E1: str = (
-        SolixDeviceType.HOME_BACKUP.value
-    )  # SOLIX Home Backup system E10 Power Module (US Market)
-
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
     # Home Power Panels
@@ -1077,6 +1078,10 @@ class SolixDeviceCategory:
     )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
     # EV Charger
     A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
+    # Home Backup devices
+    A17E1: str = (
+        SolixDeviceType.HOME_BACKUP.value
+    )  # SOLIX Home Backup system E10 Power Module (US Market)
 
 
 @dataclass(frozen=True)
