@@ -2826,6 +2826,29 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: ~3-5 seconds, but only with realtime trigger
         "040a": _A17C1_040a,
     },
+    # Anker SOLIX E10
+    "A17E1": {
+        "0057": CMD_REALTIME_TRIGGER,
+        "0405": {
+            # E10 param_info - validated 2026-03-14 via controlled PV on/off tests
+            # charge_status: 0=idle, 1=discharging, 2=charging
+            # tou_period: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
+            TOPIC: "param_info",
+            "a2": {NAME: "device_sn"},
+            "a3": {NAME: "battery_soc"},
+            "a4": {NAME: "charge_status"},
+            "a5": {NAME: "battery_temperature", SIGNED: True},
+            "a6": {NAME: "battery_soh?"},
+            "ab": {NAME: "pv_1_power"},
+            "ac": {NAME: "battery_power"},
+            "ad": {NAME: "inverter_ac_output?"},
+            "ae": {NAME: "inverter_dc_load?"},
+            "c3": {NAME: "tou_period?"},
+            "c4": {NAME: "grid_power"},
+            "c5": {NAME: "home_load_power"},
+            "c6": {NAME: "photovoltaic_power"},
+        },
+    },
     # Solarbank 2 E1600 AC
     "A17C2": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
