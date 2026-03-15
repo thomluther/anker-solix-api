@@ -713,6 +713,7 @@ class SolixDeviceType(Enum):
     POWERPANEL = "powerpanel"
     POWERCOOLER = "powercooler"
     HES = "hes"
+    HOME_BACKUP = "home_backup"
     SOLARBANK_PPS = "solarbank_pps"
     CHARGER = "charger"
     POWERBANK = "powerbank"
@@ -1030,14 +1031,14 @@ class SolixDeviceCategory:
         SolixDeviceType.SOLARBANK_PPS.value
     )  # SOLIX F3000 Portable Power Station with SM support (US Market)
     A1783: str = (
-        SolixDeviceType.SOLARBANK_PPS.value
+        SolixDeviceType.PPS.value
     )  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
     A1785: str = (
-        SolixDeviceType.SOLARBANK_PPS.value
+        SolixDeviceType.PPS.value
     )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
     A17E1: str = (
-        SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX Solarbank Prime E10 Power Module (US Market)
+        SolixDeviceType.HOME_BACKUP.value
+    )  # SOLIX Home Backup system E10 Power Module (US Market)
 
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station

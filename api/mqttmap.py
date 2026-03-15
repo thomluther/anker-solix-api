@@ -1551,6 +1551,164 @@ _A17C5_040a = (
     }
 )
 
+_A17E1_040a = {
+    # Home Backup System E10 Expansion data
+    TOPIC: "param_info",
+    "a2": {NAME: "expansion_packs"},
+    "a3": {NAME: "main_battery_soc"},  # main battery SOC
+    "a4": {
+        BYTES: {
+            "00": {
+                NAME: "exp_1_sn",
+                LENGTH: 17,
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "17": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "26": {
+                NAME: "exp_1_temperature",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+            },
+            "28": {
+                NAME: "exp_1_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "29": {
+                NAME: "exp_1_soh",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "a5": {
+        BYTES: {
+            "00": {
+                NAME: "exp_2_sn",
+                LENGTH: 17,
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "17": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "26": {
+                NAME: "exp_2_temperature",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+            },
+            "28": {
+                NAME: "exp_2_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "29": {
+                NAME: "exp_2_soh",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "a6": {
+        BYTES: {
+            "00": {
+                NAME: "exp_3_sn",
+                LENGTH: 17,
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "17": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "26": {
+                NAME: "exp_3_temperature",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+            },
+            "28": {
+                NAME: "exp_3_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "29": {
+                NAME: "exp_3_soh",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "a7": {
+        BYTES: {
+            "00": {
+                NAME: "exp_4_sn",
+                LENGTH: 17,
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "17": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "26": {
+                NAME: "exp_4_temperature",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+            },
+            "28": {
+                NAME: "exp_4_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "29": {
+                NAME: "exp_4_soh",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "a8": {
+        BYTES: {
+            "00": {
+                NAME: "exp_5_sn",
+                LENGTH: 17,
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "17": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "26": {
+                NAME: "exp_5_temperature",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+            },
+            "28": {
+                NAME: "exp_5_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "29": {
+                NAME: "exp_5_soh",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    "fe": {NAME: "msg_timestamp"},
+}
+
 # 250W Prime Charger
 _A2345_0303 = {
     TOPIC: "state_info",
@@ -2826,29 +2984,6 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: ~3-5 seconds, but only with realtime trigger
         "040a": _A17C1_040a,
     },
-    # Anker SOLIX E10
-    "A17E1": {
-        "0057": CMD_REALTIME_TRIGGER,
-        "0405": {
-            # E10 param_info - validated 2026-03-14 via controlled PV on/off tests
-            # charge_status: 0=idle, 1=discharging, 2=charging
-            # tou_period: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
-            TOPIC: "param_info",
-            "a2": {NAME: "device_sn"},
-            "a3": {NAME: "battery_soc"},
-            "a4": {NAME: "charge_status"},
-            "a5": {NAME: "battery_temperature", SIGNED: True},
-            "a6": {NAME: "battery_soh?"},
-            "ab": {NAME: "pv_1_power"},
-            "ac": {NAME: "battery_power"},
-            "ad": {NAME: "inverter_ac_output?"},
-            "ae": {NAME: "inverter_dc_load?"},
-            "c3": {NAME: "tou_period?"},
-            "c4": {NAME: "grid_power"},
-            "c5": {NAME: "home_load_power"},
-            "c6": {NAME: "photovoltaic_power"},
-        },
-    },
     # Solarbank 2 E1600 AC
     "A17C2": {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
@@ -3026,6 +3161,63 @@ SOLIXMQTTMAP: Final[dict] = {
         "0428": _DOCK_0428,
         # Interval: ~300 seconds
         "0500": _DOCK_0500,
+    },
+    # Anker SOLIX E10
+    "A17E1": {
+        "0057": CMD_REALTIME_TRIGGER,
+        "0405": {
+            # Interval: ~3-5 seconds, but only with realtime trigger
+            TOPIC: "param_info",
+            "a2": {NAME: "device_sn"},
+            "a3": {NAME: "battery_soc"},
+            "a4": {
+                NAME: "charging_status"
+            },  # charge_status: 0=idle, 1=discharging, 2=charging
+            "a5": {NAME: "temperature", SIGNED: True},
+            "a6": {NAME: "main_battery_soc?"},
+            "a7": {NAME: "sw_version?", "values": 4},
+            "a8": {NAME: "sw_controller?", "values": 4},
+            "a9": {NAME: "sw_expansion?", "values": 4},  # Expansion firmware version
+            "ab": {NAME: "photovoltaic_power"},
+            "ac": {NAME: "battery_power"},
+            "ad": {NAME: "ac_output_power?"},  # inverter AC output
+            "ae": {NAME: "dc_output_power?"},  # inverter PV/Battery input
+            "b0": {NAME: "bypass_energy?"},
+            "b1": {NAME: "charged_energy?"},
+            "b2": {NAME: "consumed_energy?"},
+            "b3": {NAME: "discharged_energy?"},
+            "b4": {NAME: "pv_yield?"},
+            "b8": {NAME: "usage_mode?"},
+            "bf": {NAME: "unknown_timestamp_0405_bf?"},
+            "c0": {NAME: "unknown_timestamp_0405_c0?"},
+            "c3": {
+                NAME: "use_time_band?"
+            },  # use_time_band: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
+            "c4": {NAME: "grid_power"},  # signed?
+            "c5": {NAME: "home_demand"},
+            "c6": {NAME: "pv_1_power?"},
+            "c7": {NAME: "pv_2_power?"},
+            "cb": {NAME: "expansion_packs?"},  # number of expansion batteries
+            "fe": {NAME: "msg_timestamp"},
+        },
+        "0408": {
+            # Interval: ??? seconds
+            TOPIC: "param_info",
+            "a2": {NAME: "device_sn"},
+            "a3": {NAME: "unknown_timestamp_0408_a3?"},
+            "a4": {NAME: "unknown_timestamp_0408_a4?"},
+            "a7": {NAME: "battery_soc?"},
+            "a8": {NAME: "expansion_packs?"},  # number of expansion batteries
+            "a9": {NAME: "usage_mode?"},
+            "ac": {NAME: "bypass_energy?"},  # same as 0405 b0
+            "b2": {NAME: "unknown_energy_0408_b2?"},
+            "b7": {NAME: "charged_energy?"},  # same as 0405 b1
+            "b8": {NAME: "consumed_energy?"},  # same as 0405 b2
+            "be": {NAME: "pv_yield?"},  # same as 0405 b4
+            "cc": {NAME: "temperature", SIGNED: True},
+        },
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "040a": _A17E1_040a,
     },
     # Anker Solarbank Smartmeter
     "A17X7": {
