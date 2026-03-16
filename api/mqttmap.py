@@ -3440,7 +3440,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "c3": {
                 NAME: "use_time_band?"
             },  # use_time_band: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
-            "c4": {NAME: "grid_power"},  # signed?
+            "c4": {NAME: "grid_power"},  # positive=import, negative=export confirmed
             "c5": {NAME: "home_demand"},
             "c6": {NAME: "pv_1_power?"},
             "c7": {NAME: "pv_2_power?"},
@@ -3450,10 +3450,10 @@ SOLIXMQTTMAP: Final[dict] = {
                     "02": {
                         NAME: "storm_guard_switch",
                         TYPE: DeviceHexDataTypes.ui.value,
-                    },  # 0=off, 1=on
+                    },  # 128=off, 129=on (bit 0 of byte, base value 128)
                 }
             },
-            "c2": {NAME: "generator_output_power_total?"},  # total generator AC output W
+            "c2": {NAME: "ac_input_power_total?"},  # total AC input power from all sources (solar, generator etc)
             "cb": {NAME: "expansion_packs?"},  # number of expansion batteries
             "d5": {NAME: "generator_to_battery_power?"},  # generator AC charging battery W
             "dc": {NAME: "grid_status"},  # 0=grid-connected, 2=off-grid/backup
