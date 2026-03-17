@@ -2279,6 +2279,52 @@ _PLUG_TIMER_STATUS = {
     }
 }
 
+_AX170_0405 = {
+    # AX170 Power Dock runtime message for Home Backup systems
+    # Validated 2026-03-16 by @nic-southern (Power Dock + 2x6kWh batteries)
+    # Circuit loads confirmed: circuit_01+circuit_02 sum = home_load_power
+    TOPIC: "param_info",
+    "a2": {NAME: "device_sn"},
+    "a6": {NAME: "battery_soc"},           # confirmed: drops with battery discharge
+    "b7": {NAME: "battery_charge"},        # charge limit or status, stays at 100
+    "b9": {NAME: "main_panel_amps?"},      # 200 = 200A main panel setting (not watts)
+    "c3": {NAME: "use_time_band?"},        # 1=peak, 3=off-peak (same as A17E1)
+    "c4": {NAME: "grid_power"},            # positive=import, negative=export
+    "c5": {NAME: "home_load_power"},       # total home consumption W
+    "dd": {NAME: "display_timeout_seconds"},
+    "e4": {
+        BYTES: {
+            "00": {NAME: "circuit_01_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "04": {NAME: "circuit_02_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "08": {NAME: "circuit_03_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "12": {NAME: "circuit_04_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "16": {NAME: "circuit_05_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "20": {NAME: "circuit_06_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "24": {NAME: "circuit_07_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "28": {NAME: "circuit_08_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "32": {NAME: "circuit_09_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "36": {NAME: "circuit_10_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "40": {NAME: "circuit_11_load", TYPE: DeviceHexDataTypes.sfle.value},
+            "44": {NAME: "circuit_12_load", TYPE: DeviceHexDataTypes.sfle.value},
+        }
+    },
+    "e8": {
+        BYTES: {
+            "01": {
+                NAME: "attached_device_pn",
+                LENGTH: 5,
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "12": {
+                NAME: "attached_device_sn",
+                LENGTH: 18,
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "fe": {NAME: "msg_timestamp"},
+}
+
 _DOCK_0405 = {
     # multisystem message
     TOPIC: "param_info",
@@ -3453,7 +3499,9 @@ SOLIXMQTTMAP: Final[dict] = {
                     },  # 128=off, 129=on (bit 0 of byte, base value 128)
                 }
             },
-            "c2": {NAME: "ac_input_power_total?"},  # total AC input power from all sources (solar, generator etc)
+            "c2": {
+                NAME: "ac_output_power_total?"
+            },  # total AC output power to home from all sources (solar, battery, generator, grid)
             "cb": {NAME: "expansion_packs?"},  # number of expansion batteries
             "d5": {NAME: "generator_to_battery_power?"},  # generator AC charging battery W
             "dc": {NAME: "grid_status"},  # 0=grid-connected, 2=off-grid/backup
@@ -3561,6 +3609,12 @@ SOLIXMQTTMAP: Final[dict] = {
             TOPIC: "param_info",
             "a2": _PLUG_TIMER_STATUS,
         },
+    },
+    # Anker SOLIX Power Dock (Home Backup System - US market)
+    # power_site_type: 17, E10 data routed via 0666 wrapper messages
+    "AX170": {
+        "0057": CMD_REALTIME_TRIGGER,
+        "0405": _AX170_0405,
     },
     # Anker Power Dock
     "AE100": {
