@@ -45,7 +45,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.5.3.0"
+VERSION: str = "3.5.4.0"
 
 
 class AnkerSolixApiExport:
@@ -1179,7 +1179,12 @@ class AnkerSolixApiExport:
                 )
                 # check if valid charging data available for site and skip if not enforced
                 if not (
-                    is_charging := len(site.get("powerpanel_list") or []) > 0
+                    is_charging := site.get("site_type")
+                    in [
+                        api.SolixDeviceType.SOLARBANK_PPS.value,
+                        api.SolixDeviceType.POWERPANEL.value,
+                        api.SolixDeviceType.HOME_BACKUP.value,
+                    ]
                 ) and not self.export_services & {ApiEndpointServices.charging}:
                     self._logger.info(
                         "No system for %s endpoint data found, skipping remaining site queries...",
@@ -1264,10 +1269,13 @@ class AnkerSolixApiExport:
                 siteId = device.get("site_id", "")
                 admin = device.get("is_admin")
 
-                # run only for main power panel devices for site owner
-                if (
-                    dev_type := device.get("type")
-                ) == api.SolixDeviceType.POWERPANEL.value:
+                # run only for appropriate devices and site owner
+                if (dev_type := device.get("type")) in [
+                    api.SolixDeviceType.POWERPANEL.value,
+                    api.SolixDeviceType.HOME_BACKUP.value,
+                    api.SolixDeviceType.COMBINER_BOX.value,
+                    api.SolixDeviceType.GENERATOR.value,
+                ]:
                     self._logger.info("Exporting %s monetary units...", dev_type)
                     # works only for site owners
                     await self.query(
@@ -1312,10 +1320,13 @@ class AnkerSolixApiExport:
                         admin=admin,
                     )
 
-                # run for power panel or pps devices for site owner
+                # run for proper device types if site owner
                 if dev_type in [
                     api.SolixDeviceType.POWERPANEL.value,
                     api.SolixDeviceType.PPS.value,
+                    api.SolixDeviceType.HOME_BACKUP.value,
+                    api.SolixDeviceType.COMBINER_BOX.value,
+                    api.SolixDeviceType.GENERATOR.value,
                 ]:
                     self._logger.info("Exporting %s wifi info...", dev_type)
                     # works only for site owners
@@ -1565,7 +1576,11 @@ class AnkerSolixApiExport:
                 admin = device.get("is_admin")
 
                 # queries for HES devices
-                if device.get("type") == api.SolixDeviceType.HES.value:
+                if device.get("type") in [
+                    api.SolixDeviceType.HES.value,
+                    api.SolixDeviceType.COMBINER_BOX.value,
+                    api.SolixDeviceType.GENERATOR.value,
+                ]:
                     self._logger.info("Exporting HES device wifi info...")
                     # works only for site owners
                     await self.query(

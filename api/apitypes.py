@@ -980,7 +980,9 @@ class SolixDeviceCategory:
         SolixDeviceType.SOLARBANK.value + "_3"
     )  # SOLIX Solarbank 3 E2700 Pro, generation 3
     # Station
-    AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock
+    AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock Solarbanks
+    AX1S0: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Pro HES system
+    AX170: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Home Backup
     # Inverter
     A5140: str = SolixDeviceType.INVERTER.value  # MI60 Inverter
     A5143: str = SolixDeviceType.INVERTER.value  # MI80 Inverter
@@ -1032,9 +1034,6 @@ class SolixDeviceCategory:
         SolixDeviceType.PPS.value
     )  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767)
     A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
-    A1782: str = (
-        SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX F3000 Portable Power Station with SM support (US Market)
     A1783: str = (
         SolixDeviceType.PPS.value
     )  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
@@ -1043,10 +1042,18 @@ class SolixDeviceCategory:
     )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
     A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
     A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
-    # Home Power Panels
+    # Solarbank PPS devices
+    A1782: str = (
+        SolixDeviceType.SOLARBANK_PPS.value
+    )  # SOLIX F3000 Portable Power Station with SM support (US Market)
+    # Power Panels (Home_backup)
     A17B1: str = (
         SolixDeviceType.POWERPANEL.value
     )  # SOLIX Home Power Panel for SOLIX F3800
+    # Home Backup devices
+    A17E1: str = (
+        SolixDeviceType.HOME_BACKUP.value
+    )  # SOLIX Home Backup system E10 Power Module (US Market)
     # Home Energy System (HES)
     A5101: str = SolixDeviceType.HES.value  # SOLIX X1 P6K US
     A5102: str = SolixDeviceType.HES.value  # SOLIX X1 Energy module 1P H(3.68~6)K
@@ -1055,7 +1062,6 @@ class SolixDeviceCategory:
     A5220: str = SolixDeviceType.HES.value  # SOLIX X1 Battery module
     A5341: str = SolixDeviceType.HES.value  # SOLIX X1 Backup Controller
     A5450: str = SolixDeviceType.HES.value  # SOLIX X1 Zigbee Dongle
-    AX1S0: str = SolixDeviceType.HES.value  # SOLIX Power Dock Pro
     # Power Cooler
     A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
     A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
@@ -1078,10 +1084,8 @@ class SolixDeviceCategory:
     )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
     # EV Charger
     A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
-    # Home Backup devices
-    A17E1: str = (
-        SolixDeviceType.HOME_BACKUP.value
-    )  # SOLIX Home Backup system E10 Power Module (US Market)
+    # Smart Generators
+    A7320: str = SolixDeviceType.GENERATOR.value  # SOLIX Smart Generator 5500
 
 
 @dataclass(frozen=True)

@@ -2578,12 +2578,12 @@ _EV_CHARGER_0405 = {
     "cc": {NAME: "tcp_timeout_seconds"},  # Modbus TCP timeout
     "ce": {NAME: "max_current_limit", FACTOR: 0.1},  # rated A limit for model
     "cf": {NAME: "tcp_port"},  # Modbus TCP port
-    "d0": {NAME: "ip_address"},
+    "d0": {NAME: "ip_address"},  # device IP address
     "d3": {NAME: "load_balance_switch"},  # Off (0), On (1)
     "d4": {NAME: "main_breaker_limit"},  # 10-500 A, step 1 A
     "d5": {NAME: "load_balance_setting_d5"},  # System monitoring (1)
     "d6": {NAME: "load_balance_setting_d6"},  # 1 if SM monitored?
-    "d7": {NAME: "load_balance_monitor_device"},
+    "d7": {NAME: "load_balance_monitor_device"},  # SN of monitoring device
     "d8": {NAME: "solar_evcharge_switch"},  # Off (0), On (1)
     "d9": {NAME: "solar_evcharge_mode"},  # solar & grid (0), solar only (1)
     "da": {NAME: "solar_evcharge_min_current"},  # 6 - rated_current (32 A), step 1 A
@@ -2591,7 +2591,7 @@ _EV_CHARGER_0405 = {
     "dc": {NAME: "solar_evcharge_monitoring_mode"},
     "dd": {
         NAME: "auto_phase_switch"
-    },  # Off (0), On (1), only awailable in 3 phase mode
+    },  # Off (0), On (1), only available in 3 phase models
     "de": {NAME: "solar_evcharge_monitor_device"},  # monitoring device sn
     "df": {NAME: "boost_status"},  # Off (0), On (1)
     "e0": {NAME: "cp_signal_status"},
@@ -3480,7 +3480,9 @@ SOLIXMQTTMAP: Final[dict] = {
             "b2": {NAME: "consumed_energy?"},
             "b3": {NAME: "discharged_energy?"},
             "b4": {NAME: "pv_yield?"},
-            "b8": {NAME: "usage_mode?"},  # 2=self-consume, 4=manual-backup, 5=time-of-use, 8=backup/emergency
+            "b8": {
+                NAME: "usage_mode?"
+            },  # 2=self-consume, 4=manual-backup, 5=time-of-use, 8=backup/emergency
             "bf": {NAME: "unknown_timestamp_0405_bf?"},
             "c0": {NAME: "unknown_timestamp_0405_c0?"},
             "c3": {
@@ -3490,7 +3492,9 @@ SOLIXMQTTMAP: Final[dict] = {
             "c5": {NAME: "home_demand"},
             "c6": {NAME: "pv_1_power?"},
             "c7": {NAME: "pv_2_power?"},
-            "af": {NAME: "generator_to_home_power?"},  # generator AC input power to home
+            "af": {
+                NAME: "generator_to_home_power?"
+            },  # generator AC input power to home
             "ba": {
                 BYTES: {
                     "02": {
@@ -3501,9 +3505,11 @@ SOLIXMQTTMAP: Final[dict] = {
             },
             "c2": {
                 NAME: "ac_output_power_total?"
-            },  # total AC output power to home from all sources (solar, battery, generator, grid)
+            },  # total AC output power to home from all sources in W (solar, battery, generator, grid)
             "cb": {NAME: "expansion_packs?"},  # number of expansion batteries
-            "d5": {NAME: "generator_to_battery_power?"},  # generator AC charging battery W
+            "d5": {
+                NAME: "generator_to_battery_power?"
+            },  # generator AC charging battery W
             "dc": {NAME: "grid_status"},  # 0=grid-connected, 2=off-grid/backup
             "fe": {NAME: "msg_timestamp"},
         },
