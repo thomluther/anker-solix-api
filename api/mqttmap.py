@@ -62,6 +62,7 @@ from .mqttcmdmap import (
     CMD_TIMER_REQUEST,
     CMD_USB_PORT_SWITCH,
     COMMAND_LIST,
+    COMMAND_ENCODING,
     COMMAND_NAME,
     FACTOR,
     LENGTH,
@@ -1929,30 +1930,134 @@ _A17E1_040a = {
     "fe": {NAME: "msg_timestamp"},
 }
 
+_AX170_0666_EMBEDDED_040A = {
+    "16": {NAME: "expansion_packs", TYPE: DeviceHexDataTypes.ui.value},
+    "20": {NAME: "main_battery_soc", TYPE: DeviceHexDataTypes.ui.value},
+    "24": {
+        NAME: "exp_1_sn",
+        LENGTH: 17,
+        TYPE: DeviceHexDataTypes.str.value,
+    },
+    "49": {NAME: "exp_1_index", TYPE: DeviceHexDataTypes.ui.value},
+    "50": {
+        NAME: "exp_1_temperature",
+        TYPE: DeviceHexDataTypes.ui.value,
+        SIGNED: True,
+    },
+    "52": {NAME: "exp_1_soc", TYPE: DeviceHexDataTypes.ui.value},
+    "53": {NAME: "exp_1_soh", TYPE: DeviceHexDataTypes.ui.value},
+    "60": {
+        NAME: "exp_2_sn",
+        LENGTH: 17,
+        TYPE: DeviceHexDataTypes.str.value,
+    },
+    "85": {NAME: "exp_2_index", TYPE: DeviceHexDataTypes.ui.value},
+    "86": {
+        NAME: "exp_2_temperature",
+        TYPE: DeviceHexDataTypes.ui.value,
+        SIGNED: True,
+    },
+    "88": {NAME: "exp_2_soc", TYPE: DeviceHexDataTypes.ui.value},
+    "89": {NAME: "exp_2_soh", TYPE: DeviceHexDataTypes.ui.value},
+    "96": {
+        NAME: "embedded_040a_timestamp",
+        LENGTH: 4,
+        TYPE: DeviceHexDataTypes.var.value,
+    },
+}
+
+_AX170_0666_EMBEDDED_0405 = {
+    "16": {
+        NAME: "attached_device_sn",
+        TYPE: DeviceHexDataTypes.str.value,
+    },
+    "36": {NAME: "attached_device_soc", TYPE: DeviceHexDataTypes.ui.value},
+    "40": {
+        NAME: "attached_device_expansion_packs?",
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    # "44": {
+    #     NAME: "attached_device_0405_a8?",
+    #     LENGTH: 4,
+    #     TYPE: DeviceHexDataTypes.var.value,
+    # },
+    # "51": {
+    #     NAME: "attached_device_0405_a9?",
+    #     LENGTH: 4,
+    #     TYPE: DeviceHexDataTypes.var.value,
+    # },
+    # "58": {
+    #     NAME: "attached_device_0405_aa?",
+    #     TYPE: DeviceHexDataTypes.sile.value,
+    # },
+    # "63": {
+    #     NAME: "attached_device_0405_ba?",
+    #     LENGTH: 4,
+    #     TYPE: DeviceHexDataTypes.var.value,
+    # },
+    # "70": {NAME: "attached_device_status_0405?", TYPE: DeviceHexDataTypes.ui.value},
+    "81": {
+        NAME: "embedded_0405_timestamp",
+        LENGTH: 4,
+        TYPE: DeviceHexDataTypes.var.value,
+    },
+}
+
 # AX170 Power dock for home backup systems A17E1
+_AX170_0666 = {
+    # AX170 power dock attached-device expansion/runtime snapshot.
+    TOPIC: "state_info",
+    "a2": {NAME: "attached_device_sn"},
+    "a3": {NAME: "attached_device_pn"},
+    "a4": {
+        "embedded_messages": {
+            "040a": _AX170_0666_EMBEDDED_040A,
+            "0405": _AX170_0666_EMBEDDED_0405,
+        }
+    },
+}
+
 _AX170_0405 = {
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
     "a6": {NAME: "battery_soc_total"},  # Average SOC of all devices in system
-    "ab": {NAME: "pv_1_power"},
-    "ac": {NAME: "battery_power"},
-    "ad": {NAME: "solar_to_home_power?"},
-    "ae": {NAME: "solar_to_home_power_inv?"},
-    "b5": {NAME: "backup_soc_limit?"},
-    "b7": {NAME: "max_soc_limit?"},
-    "b9": {NAME: "home_load_preset?"},
+    "ab": {NAME: "pv_power_total"}, # Total PV power from all devices in system? Only verified with 1 E10 Module
+    "ac": {NAME: "battery_power"}, # Power draw from battery. Negative is charging, positive is discharging.
+    "ad": {NAME: "solar_to_home_power?"}, # Power from solar to home? Not verified code editor has no AC solar set up.
+    "b5": {NAME: "backup_soc_limit"}, # Preset setting for Self Consumption reserve power. Battery will stay charged to this level unless discharged from grid fault. PV will charge battery.
+    "b7": {NAME: "max_soc_limit?"},  # Maybe battery health??
+    "b9": {NAME: "home_amp_panel_preset?"}, #It's 200 on tests, so its a good chance its the 200AMP? 
     "bf": {NAME: "timestamp_0405_bf?"},
     "c0": {NAME: "timestamp_0405_c0?"},
+    "c2": {NAME: "non_battery_input_power_total"}, # Seems to be sum of grid + PV power + generator
     "c3": {
         NAME: "use_time_band?"
     },  # use_time_band: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
-    "c4": {NAME: "grid_power_signed"},  # positive=import, negative=export
+    "c4": {NAME: "grid_power_total"},  # positive=import, negative=export
     "c5": {NAME: "home_load?"},
-    "c6": {NAME: "pv_1_power?"},
-    "c7": {NAME: "pv_2_power?"},
-    "cd": {NAME: "home_demand?"},
+    "ca": {
+        BYTES: {
+            "00": {NAME: "ca_byte_01?", TYPE: DeviceHexDataTypes.ui.value},
+            "01": {NAME: "ca_byte_02?", TYPE: DeviceHexDataTypes.ui.value},
+            "02": {NAME: "ca_byte_03?", TYPE: DeviceHexDataTypes.ui.value},
+            "03": {NAME: "ca_byte_04?", TYPE: DeviceHexDataTypes.ui.value},
+        }
+    },
+    "cc": {
+        BYTES: {
+            "00": {NAME: "power_dock_state_code", TYPE: DeviceHexDataTypes.ui.value}, # Not very reliable, not sure what the setting is exactly.
+            "01": {NAME: "power_dock_state_group", TYPE: DeviceHexDataTypes.ui.value}, # 64 == discharging, 48 == charging, 32 charged -- more reliable..
+            # "02": {NAME: "power_dock_state_reserved_1?", TYPE: DeviceHexDataTypes.ui.value},
+            # "03": {NAME: "power_dock_state_reserved_2?", TYPE: DeviceHexDataTypes.ui.value},
+        }
+    },
+    "cd": {NAME: "home_demand_total?"},
+    "ce": {NAME: "dc_generator_plugged_in"},  
     "dd": {NAME: "display_timeout_seconds"},
-    "de": {NAME: "max_load_limit_total?"},
+    "de": {NAME: "unknown_float?"}, # shows 4800 in monitoring. Not sure what this is. 
+    
+    
+    "d6": {NAME: "dc_generator_input_power"},
     "e4": {
         BYTES: {
             "00": {
@@ -2005,78 +2110,431 @@ _AX170_0405 = {
             },
         }
     },
+    # "e5": {
+    #     BYTES: {
+    #         "00": {NAME: "e5_byte_01?", TYPE: DeviceHexDataTypes.ui.value},
+    #         "01": {NAME: "e5_byte_02?", TYPE: DeviceHexDataTypes.ui.value},
+    #     }
+    # },
     "e8": {
         BYTES: {
-            "00": {
+            "01": {
                 NAME: "device_1_pn",
+                LENGTH: 5,
                 TYPE: DeviceHexDataTypes.str.value,
             },
-            "11": {
+            "12": {
                 NAME: "device_1_sn",
+                LENGTH: 18,
                 TYPE: DeviceHexDataTypes.str.value,
+            },
+            "41": {
+                NAME: "device_1_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "42": {
+                NAME: "device_1_pv_1_power",
+                LENGTH: 4,
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "46": {
+                NAME: "device_1_pv_2_power",
+                LENGTH: 4,
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "58": {
+                NAME: "device_1_battery_power",
+                LENGTH: 4,
+                TYPE: DeviceHexDataTypes.var.value,
             },
         }
     },
     "e9": {
         BYTES: {
-            "00": {
+            "01": {
                 NAME: "device_2_pn",
+                LENGTH: 5,
                 TYPE: DeviceHexDataTypes.str.value,
             },
-            "11": {
+            "12": {
                 NAME: "device_2_sn",
+                LENGTH: 18,
                 TYPE: DeviceHexDataTypes.str.value,
+            },
+            "41": {
+                NAME: "device_2_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "42": {
+                NAME: "device_2_pv_1_power",
+                LENGTH: 4,
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "46": {
+                NAME: "device_2_pv_2_power",
+                LENGTH: 4,
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "58": {
+                NAME: "device_2_battery_power",
+                LENGTH: 4,
+                TYPE: DeviceHexDataTypes.var.value,
             },
         }
     },
     "ea": {
         BYTES: {
-            "00": {
+            "01": {
                 NAME: "device_3_pn",
+                LENGTH: 5,
                 TYPE: DeviceHexDataTypes.str.value,
             },
-            "11": {
+            "12": {
                 NAME: "device_3_sn",
+                LENGTH: 18,
                 TYPE: DeviceHexDataTypes.str.value,
+            },
+            "41": {
+                NAME: "device_3_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "42": {
+                NAME: "device_3_pv_1_power",
+                LENGTH: 4,
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "46": {
+                NAME: "device_3_pv_2_power",
+                LENGTH: 4,
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "58": {
+                NAME: "device_3_battery_power",
+                LENGTH: 4,
+                TYPE: DeviceHexDataTypes.var.value,
             },
         }
     },
-    "eb": {
+    # Commenting out 4-6, as we can only have 3 units as of right now.
+    # "eb": {
+    #     BYTES: {
+    #         "01": {
+    #             NAME: "device_4_pn",
+    #             LENGTH: 5,
+    #             TYPE: DeviceHexDataTypes.str.value,
+    #         },
+    #         "12": {
+    #             NAME: "device_4_sn",
+    #             LENGTH: 18,
+    #             TYPE: DeviceHexDataTypes.str.value,
+    #         },
+    #         "41": {
+    #             NAME: "device_4_soc",
+    #             TYPE: DeviceHexDataTypes.ui.value,
+    #         },
+    #         "42": {
+    #             NAME: "device_4_pv_1_power",
+    #             LENGTH: 4,
+    #             TYPE: DeviceHexDataTypes.var.value,
+    #         },
+    #         "46": {
+    #             NAME: "device_4_pv_2_power",
+    #             LENGTH: 4,
+    #             TYPE: DeviceHexDataTypes.var.value,
+    #         },
+    #         "58": {
+    #             NAME: "device_4_battery_power",
+    #             LENGTH: 4,
+    #             TYPE: DeviceHexDataTypes.var.value,
+    #         },
+    #     }
+    # },
+    # "ec": {
+    #     BYTES: {
+    #         "01": {
+    #             NAME: "device_5_pn",
+    #             LENGTH: 5,
+    #             TYPE: DeviceHexDataTypes.str.value,
+    #         },
+    #         "12": {
+    #             NAME: "device_5_sn",
+    #             LENGTH: 18,
+    #             TYPE: DeviceHexDataTypes.str.value,
+    #         },
+    #         "41": {
+    #             NAME: "device_5_soc",
+    #             TYPE: DeviceHexDataTypes.ui.value,
+    #         },
+    #         "42": {
+    #             NAME: "device_5_pv_1_power",
+    #             LENGTH: 4,
+    #             TYPE: DeviceHexDataTypes.var.value,
+    #         },
+    #         "46": {
+    #             NAME: "device_5_pv_2_power",
+    #             LENGTH: 4,
+    #             TYPE: DeviceHexDataTypes.var.value,
+    #         },
+    #         "58": {
+    #             NAME: "device_5_battery_power",
+    #             LENGTH: 4,
+    #             TYPE: DeviceHexDataTypes.var.value,
+    #         },
+    #     }
+    # },
+    # "ed": {
+    #     BYTES: {
+    #         "01": {
+    #             NAME: "device_6_pn",
+    #             LENGTH: 5,
+    #             TYPE: DeviceHexDataTypes.str.value,
+    #         },
+    #         "12": {
+    #             NAME: "device_6_sn",
+    #             LENGTH: 18,
+    #             TYPE: DeviceHexDataTypes.str.value,
+    #         },
+    #         "41": {
+    #             NAME: "device_6_soc",
+    #             TYPE: DeviceHexDataTypes.ui.value,
+    #         },
+    #         "42": {
+    #             NAME: "device_6_pv_1_power",
+    #             LENGTH: 4,
+    #             TYPE: DeviceHexDataTypes.var.value,
+    #         },
+    #         "46": {
+    #             NAME: "device_6_pv_2_power",
+    #             LENGTH: 4,
+    #             TYPE: DeviceHexDataTypes.var.value,
+    #         },
+    #         "58": {
+    #             NAME: "device_6_battery_power",
+    #             LENGTH: 4,
+    #             TYPE: DeviceHexDataTypes.var.value,
+    #         },
+    #     }
+    # }, 
+    "fe": {NAME: "msg_timestamp"},
+}
+
+_A7320_0405 = {
+    # SOLIX Smart Generator 5500 runtime message.
+    # a2 is the generator SN, a3 is the paired E10 (A17E1) SN.
+    TOPIC: "param_info",
+    "a2": {NAME: "device_sn"},
+    "a3": {NAME: "paired_device_sn"},
+    "a4": {NAME: "tbd_0405_a4?"},
+    "a5": {
         BYTES: {
             "00": {
-                NAME: "device_4_pn",
-                TYPE: DeviceHexDataTypes.str.value,
+                NAME: "tbd_0405_a5_u16_01?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
             },
-            "11": {
-                NAME: "device_4_sn",
-                TYPE: DeviceHexDataTypes.str.value,
+            "02": {
+                NAME: "ac_dc_mode",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "04": {
+                NAME: "tbd_0405_a5_u16_03?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
             },
         }
     },
-    "ec": {
+    "a7": {NAME: "sw_version?", "values": 4},
+    "aa": {
         BYTES: {
             "00": {
-                NAME: "device_5_pn",
-                TYPE: DeviceHexDataTypes.str.value,
+                NAME: "tbd_0405_aa_u32_01?",
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
             },
-            "11": {
-                NAME: "device_5_sn",
-                TYPE: DeviceHexDataTypes.str.value,
+            "04": {
+                NAME: "tbd_0405_aa_u32_02?",
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+            },
+            "08": {
+                NAME: "tbd_0405_aa_u32_03?",
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+            },
+            "12": {
+                NAME: "tbd_0405_aa_u32_04?",
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+            },
+            "16": {
+                NAME: "tbd_0405_aa_u16_05?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "18": {
+                NAME: "tbd_0405_aa_u16_06?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
             },
         }
     },
-    "ed": {
+    "ac": {
+        BYTES: {
+            "40": {
+                NAME: "tbd_0405_ac_u32_01?",
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+            },
+            "44": {
+                NAME: "lpg_remaining_percent",
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+            },
+            "48": {
+                NAME: "tbd_0405_ac_u32_03?",
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+            },
+            "52": {
+                NAME: "lpg_remaining_lb",
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+                FACTOR: 0.1,
+            },
+            "56": {
+                NAME: "lpg_full_level_lb",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+                FACTOR: 0.1,
+            },
+        }
+    },
+    "ae": {
         BYTES: {
             "00": {
-                NAME: "device_6_pn",
-                TYPE: DeviceHexDataTypes.str.value,
+                NAME: "tbd_0405_ae_u16_01?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
             },
-            "11": {
-                NAME: "device_6_sn",
-                TYPE: DeviceHexDataTypes.str.value,
+            "02": {
+                NAME: "tbd_0405_ae_u16_02?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "04": {
+                NAME: "tbd_0405_ae_u16_03?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "06": {
+                NAME: "tbd_0405_ae_u16_04?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
             },
         }
     },
+    "af": {NAME: "tbd_0405_af?"},
+    "b0": {NAME: "tbd_0405_b0?"},
+    "b2": {NAME: "tbd_0405_b2?"},
+    "b3": {NAME: "tbd_0405_b3?"},
+    "b4": {NAME: "tbd_0405_b4?"},
+    "b5": {NAME: "engine_temp_c?"},
+    "b6": {NAME: "tbd_0405_b6?"},
+    "b7": {NAME: "tbd_0405_b7?"},
+    "b8": {NAME: "tbd_0405_b8?"},
+    "b9": {NAME: "tbd_0405_b9?"},
+    "ba": {NAME: "tbd_0405_ba?"},
+    "bb": {NAME: "tbd_0405_bb?"},
+    "bc": {NAME: "mode_select"},  # 0 = quiet, 1 = eco, 2 = turbo
+    "bd": {NAME: "runtime_hours?"},
+    "be": {NAME: "tbd_0405_be?"},
+    "bf": {NAME: "tbd_0405_bf?"},
+    "c0": {NAME: "tbd_0405_c0?"},
+    "c1": {NAME: "tbd_0405_c1?"},
+    "c2": {NAME: "tbd_0405_c2?"},
+    "c3": {NAME: "tbd_0405_c3?"},
+    "c4": {NAME: "tbd_0405_c4?"},
+    "c5": {NAME: "tbd_0405_c5?"},
+    "c6": {NAME: "tbd_0405_c6?"},
+    "ca": {NAME: "tbd_0405_ca?"},
+    "cb": {NAME: "tbd_0405_cb?"},
+    "fd": {NAME: "tbd_0405_fd?"},
+    "fe": {NAME: "msg_timestamp"},
+}
+
+_A7320_0073 = {
+    TOPIC: "req",
+    COMMAND_NAME: "ac_dc_mode_select",
+    COMMAND_ENCODING: 2,
+    "a1": {NAME: "pattern_22"},
+    "a5": {
+        NAME: "set_ac_dc_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "ac_dc_mode",
+        VALUE_OPTIONS: {"dc": 1, "ac": 3},
+    },
+}
+
+_A7320_0408 = {
+    # SOLIX Smart Generator 5500 extended status message.
+    TOPIC: "param_info",
+    "a2": {NAME: "device_sn"},
+    "a3": {NAME: "paired_device_sn"},
+    "a4": {NAME: "tbd_0408_a4?"},
+    "a5": {
+        BYTES: {
+            "00": {
+                NAME: "tbd_0408_a5_u16_01?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "02": {
+                NAME: "ac_dc_mode",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            }, # 3 = AC, 1 = DC
+            "04": {
+                NAME: "tbd_0408_a5_u16_03?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+        }
+    },
+    # "a7": {NAME: "sw_version_0408?", "values": 4},
+    "ae": {
+        BYTES: {
+            "00": {
+                NAME: "tbd_0408_ae_u16_01?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "02": {
+                NAME: "tbd_0408_ae_u16_02?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "04": {
+                NAME: "tbd_0408_ae_u16_03?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "06": {
+                NAME: "tbd_0408_ae_u16_04?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+        }
+    },
+    "af": {NAME: "tbd_0408_af?"},
+    "b0": {NAME: "tbd_0408_b0?"},
+    "b2": {NAME: "tbd_0408_b2?"},
+    "b3": {NAME: "tbd_0408_b3?"},
+    "b4": {NAME: "tbd_0408_b4?"},
+    "b5": {NAME: "tbd_0408_b5?"},
+    "b6": {NAME: "tbd_0408_b6?"},
+    "b7": {NAME: "tbd_0408_b7?"},
+    "fd": {NAME: "tbd_0408_fd?"},
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -3639,8 +4097,17 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # AX170 Power dock for home backup systems A17E1
     "AX170": {
+        "0040": CMD_STATUS_REQUEST,  # one-time status request
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0666": _AX170_0666,
         "0405": _AX170_0405,
+    },
+    # SOLIX Smart Generator 5500
+    "A7320": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0073": _A7320_0073,
+        "0405": _A7320_0405,
+        "0408": _A7320_0408,
     },
     # Anker Solarbank Smartmeter
     "A17X7": {
