@@ -884,29 +884,33 @@ CMD_PLUG_SCHEDULE = CMD_COMMON | {
     # Command: Smartplug schedule
     COMMAND_NAME: SolixMqttCommands.plug_schedule,
     "a2": {
-        NAME: "set_plug_schedule_a2?",  # 1 - unknown
+        NAME: "set_plug_schedule_action",  # 0=delete, 1=create, 2=modify
         TYPE: DeviceHexDataTypes.ui.value,
         VALUE_DEFAULT: 1,
     },
     "a3": {
-        NAME: "set_plug_schedule_order?",  # 1 - x
+        NAME: "set_plug_schedule_slot",  # schedule slot index, 1-x
         TYPE: DeviceHexDataTypes.ui.value,
         VALUE_MIN: 1,
         VALUE_MAX: 10,
     },
     "a4": {
-        NAME: "set_plug_schedule_a4?",  # 1 - unknown
+        NAME: "set_plug_schedule_enabled",  # 0=disabled, 1=enabled
         TYPE: DeviceHexDataTypes.ui.value,
         VALUE_DEFAULT: 1,
     },
     "a5": TIME_SILE
     | {
-        NAME: "set_plug_schedule_time",  # min;hour
+        NAME: "set_plug_schedule_time",  # min;hour as byte pair
     },
     "a6": {
         NAME: "set_plug_schedule_switch",  # Off (0), On (1)
         TYPE: DeviceHexDataTypes.ui.value,
         VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+    "a7": {
+        NAME: "set_plug_schedule_weekdays",  # day numbers: 1=Mon..7=Sun, variable length (1 byte per day)
+        TYPE: DeviceHexDataTypes.var.value,
     },
 }
 
@@ -914,9 +918,9 @@ CMD_PLUG_DELAYED_TOGGLE = CMD_COMMON | {
     # Command: Smartplug delayed toggle
     COMMAND_NAME: SolixMqttCommands.plug_delayed_toggle,
     "a2": {
-        NAME: "set_toggle_to_switch?",  # Off (0), On (1)
+        NAME: "set_toggle_to_switch?",  # Off (0), On (1), Pause (2)?, Resume (3)? — values 2+3 observed on FW 0.0.2.7
         TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_OPTIONS: {"off": 0, "on": 1, "pause": 2, "resume": 3},
     },
     "a3": {
         # NAME: "set_toggle_to_delay?",  # 3 bytes: Seconds:Minutes:Hours
