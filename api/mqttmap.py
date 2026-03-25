@@ -1305,6 +1305,13 @@ _A17C0_0407 = _0407 | {
 
 _A17C1_0405 = {
     # Solarbank 2 param info
+    # Verified on A17C1 (SB2 Pro, FW 1.0.6.10) via mqtt_monitor 2026-03-25:
+    # - a7 sw_controller? confirmed: distinct firmware version (0.0.6.49 vs a6 sw_version 1.0.6.10)
+    # - 0080 max_load cmd verified: type=0 from iOS app sets actual watt value (600/800W),
+    #   while 005a from cloud sends set_max_load=0 with type=3 (auto/parallel sync)
+    # - 0067 cutoff cmd verified: a2=output(10|5), a3=lowpower(5|4), a4=input(10|5)
+    # - 0068 LED cmd verified: a2=light_mode(0|1), a3=light_off_switch(0=on,1=off)
+    # - 0500 BMS cell data received (549 bytes, not previously mapped for A17C1)
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
     "a3": {NAME: "main_battery_soc"},  # controller battery only
@@ -3389,6 +3396,14 @@ SOLIXMQTTMAP: Final[dict] = {
         # Expansion data
         # Interval: ~3-5 seconds, but only with realtime trigger
         "040a": _A17C1_040a,
+        # BMS cell-level battery data: 549 bytes, binary packed
+        # Verified on A17C1 (SB2 Pro, FW 1.0.6.10) via mqtt_monitor 2026-03-25
+        # Contains: a0=pack_count(2), a2=main battery cell data (101 bytes bin),
+        # a3=main BMS status (88 bytes bin), a4=main battery detail (164 bytes bin,
+        # includes BMS SN at end as 17-char string e.g. Y25040601014XXXX),
+        # a5=expansion battery detail (165 bytes bin, includes expansion SN at end
+        # e.g. APCDJF42F22100702), aa=unknown (4 bytes bin)
+        "0500": _DOCK_0500,
     },
     # Solarbank 2 E1600 AC
     "A17C2": {
