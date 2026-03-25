@@ -780,12 +780,12 @@ CMD_SB_USAGE_MODE = (
         # The field names also vary, this command must not be enabled in the Mqtt device class for solarbanks
         # Verified on A17C1 (SB2 Pro, FW 1.0.6.10) via mqtt_monitor 2026-03-25:
         # Mode 1 (SmartHome) and Mode 3 (Volleinspeisung) observed via iOS app.
-        # For modes 1+3, a3 is schedule_enabled(1), followed by 7 weekday schedule slots (a4-be).
+        # For modes 1+3, a3 was always 1 (possibly schedule_enabled), followed by 7 weekday schedule slots (a4-be).
         # Each slot is 8 bytes LE: start_min(2B):end_min(2B):home_load_W(2B):soc_reserve_%(2B)
         # Example observed: 00:00-24:00, 220W, 80% SOC = 00:00:a0:05:dc:00:50:00
         # Mode switch 1->3: load changed from 140W to 220W. Mode switch 3->1: back to 140W.
         # Schedule update within mode 1: load changed from 140W to 90W without mode change.
-        # Field a3 is NOT a timestamp — it is schedule_enabled(1) for modes 1 and 3.
+        # Note: a3 may behave differently for other modes (e.g. use_time, time_slot).
         COMMAND_NAME: SolixMqttCommands.sb_usage_mode,
         "a2": {
             NAME: "set_usage_mode",
