@@ -1305,12 +1305,17 @@ _A17C0_0407 = _0407 | {
 
 _A17C1_0405 = {
     # Solarbank 2 param info
-    # Verified on A17C1 (SB2 Pro, FW 1.0.6.10) via mqtt_monitor 2026-03-25:
-    # - a7 sw_controller? confirmed: distinct firmware version (0.0.6.49 vs a6 sw_version 1.0.6.10)
-    # - 0080 max_load cmd verified: type=0 from iOS app sets actual watt value (600/800W),
-    #   while 005a from cloud sends set_max_load=0 with type=3 (auto/parallel sync)
-    # - 0067 cutoff cmd verified: a2=output(10|5), a3=lowpower(5|4), a4=input(10|5)
-    # - 0068 LED cmd verified: a2=light_mode(0|1), a3=light_off_switch(0=on,1=off)
+    # Verified on A17C1 (SB2 Pro, FW 1.0.6.10) via mqtt_monitor 2026-03-25 (3 sessions):
+    # Command verifications:
+    # - 0050 temp unit: a2=0(Celsius)/1(Fahrenheit), state tracked in a9
+    # - 005e usage mode + schedule: a2=mode(1=SmartHome,3=Volleinspeisung), a3=schedule_enabled(1),
+    #   a4-be=7 weekday slots, each 8 bytes LE: start_min(2B):end_min(2B):load_W(2B):soc_%(2B)
+    #   Example: 00:00-24:00, 220W load, 80% SOC = 00:00:a0:05:dc:00:50:00
+    # - 0067 cutoff: a2=output(10|5), a3=lowpower(5|4), a4=input(10|5)
+    # - 0068 LED: a2=light_mode(0|1), a3=light_off_switch(0=on,1=off)
+    # - 0080 max_load: a2=watt(600/800), a3=type(0=manual). Note: 005a from cloud
+    #   sends set_max_load=0/type=3 (query/parallel sync), different from 0080
+    # - a7 sw_controller? confirmed as distinct FW (0.0.6.49 vs 1.0.6.10)
     # - 0500 BMS cell data received (549 bytes, not previously mapped for A17C1)
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
