@@ -557,6 +557,7 @@ class AnkerSolixBaseApi:
                                 "battery_to_home_power",
                                 "device_output_power_signed_total",
                                 "ac_socket_power",
+                                "ac_frequency",
                                 "heating_power",
                                 "grid_to_battery_power",
                                 "generator_to_battery_power",

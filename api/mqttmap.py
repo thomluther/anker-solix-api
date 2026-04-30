@@ -356,6 +356,7 @@ _A1761_0405 = {
     "d3": {NAME: "display_timeout_seconds"},  # Options: 20, 30, 60, 300, 1800 seconds
     "d8": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d9": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "da": {NAME: "ac_frequency"},  # 60 / 50 Hz
     "dc": {
         NAME: "light_mode"
     },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
@@ -854,12 +855,11 @@ _A1780_0405 = {
         NAME: "exp_1_temperature",
         SIGNED: True,
     },  # Expansion battery 1 temperature (°C)
-    "c0": {NAME: "expansion_packs_a?"},
     "c1": {NAME: "main_battery_soc"},  # Main battery state of charge (%)
     "c2": {NAME: "exp_1_soc"},  # Expansion battery 1 state of charge (%)
     "c3": {NAME: "battery_soh"},  # Main battery state of health (%)
     "c4": {NAME: "exp_1_soh"},  # Expansion battery 1 state of health (%)
-    "c5": {NAME: "expansion_packs_b?"},
+    "c5": {NAME: "expansion_packs"},
     "d0": {NAME: "device_sn"},
     "d1": {NAME: "ac_input_limit"},  # Maximum charge setting (W)
     "d3": {
@@ -871,6 +871,7 @@ _A1780_0405 = {
     "d7": {NAME: "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d8": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d9": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "da": {NAME: "ac_frequency"},  # 60 / 50 Hz
     "db": {NAME: "energy_saving_mode"},  # Disabled (0) or Enabled (1)
     "dc": {NAME: "light_mode"},  # Off (0), Low (1), Medium (2), High (3), Blinking (4)
     "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
@@ -1459,6 +1460,7 @@ _A1790_0405 = {
     "d5": {
         NAME: "display_mode"
     },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+    "d6": {NAME: "ac_frequency"},  # 60 / 50 Hz
     "d8": {
         NAME: "temp_unit_fahrenheit"
     },  # Temperature unit: Celsius (0) or Fahrenheit (1)
@@ -1672,6 +1674,15 @@ _A1790_0410 = {
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
+            "19": {
+                NAME: "device_1_soc?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "20": {
+                NAME: "device_1_temperature?",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
         }
     },
     "a4": {
@@ -1680,6 +1691,15 @@ _A1790_0410 = {
                 NAME: "device_2_sn?",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
+            },
+            "19": {
+                NAME: "device_2_soc?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "20": {
+                NAME: "device_2_temperature?",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
             },
         }
     },
@@ -1699,6 +1719,11 @@ _0407 = {
     "a2": {NAME: "device_sn"},
     "a3": {NAME: "wifi_name"},
     "a4": {NAME: "wifi_signal"},
+}
+
+_PPS_0407 = _0407 | {
+    # PPS network message
+    "a6": {NAME: "ac_input_limit"},
 }
 
 _A17C0_0407 = _0407 | {
@@ -4379,12 +4404,12 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F2000
     "A1780": {
-        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-2000 W, Step: 100 W
+        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-1800 W??, Step: 100 W???
         | {
             "a2": {
                 **CMD_AC_CHARGE_LIMIT["a2"],
                 VALUE_MIN: 200,
-                VALUE_MAX: 2000,
+                VALUE_MAX: 1800,
                 VALUE_STEP: 100,
             }
         },
@@ -4399,6 +4424,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1780_0405,
+        # Interval: irregular, triggerd by wifi signal change?
+        "0407": _PPS_0407,
         # Interval: ??
         "0408": _A1780_0408,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -4406,12 +4433,12 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F2000 Plus
     "A1780P": {
-        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-2000 W, Step: 100 W
+        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-2200 W, Step: 100 W
         | {
             "a2": {
                 **CMD_AC_CHARGE_LIMIT["a2"],
                 VALUE_MIN: 200,
-                VALUE_MAX: 2000,
+                VALUE_MAX: 2200,
                 VALUE_STEP: 100,
             }
         },
@@ -4426,6 +4453,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1780_0405,
+        # Interval: irregular, triggerd by wifi signal change?
+        "0407": _PPS_0407,
         # Interval: ??
         "0408": _A1780_0408,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -4457,6 +4486,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0079": CMD_PORT_MEMORY_SWITCH,  # Port Memory switch: Disabled (0) or Enabled (1)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1790_0405,
+        # Interval: irregular, triggerd by wifi signal change?
+        "0407": _PPS_0407,
         # Interval: ??
         "040a": _A1790_040a,
         # Interval: ??
@@ -4494,6 +4525,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0079": CMD_PORT_MEMORY_SWITCH,  # Enabled (1), Disabled (0)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1790_0405,
+        # Interval: irregular, triggerd by wifi signal change?
+        "0407": _PPS_0407,
         # Interval: ??
         "040a": _A1790_040a,
         # Interval: ??
@@ -4665,13 +4698,8 @@ SOLIXMQTTMAP: Final[dict] = {
             # aa = max_soc: 80, 85, 90, 95, 100 %
             # ab = min_soc: 1, 5, 10, 15, 20 %
         },
-        # Interval: ~3-5 seconds, but only with realtime trigger
-        "0407": {
-            "a2": {NAME: "device_sn"},
-            "a3": {NAME: "wifi_name"},
-            "a4": {NAME: "wifi_signal?"},  # %
-            "a6": {NAME: "ac_input_limit?"},
-        },
+        # Interval: irregular, triggerd by wifi signal change?
+        "0407": _PPS_0407,
         "0421": _A1782_0421,
         "0502": _A1782_0502,
         # Upon request, followed by 0100 status request command

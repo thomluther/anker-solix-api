@@ -2006,12 +2006,13 @@ class AnkerSolixApiMonitor:
                         f"{'Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("ac_output_power", "")
+                m3 = cm and mqtt.get("ac_frequency", "")
                 m2 = cm and mqtt.get("ac_output_power_total", "")
                 if m4 := cm and str(mqtt.get("ac_output_timeout_seconds", "")):
                     m4 = str(timedelta(seconds=int(m4)))
-                if m1 or m2:
+                if m1 or m2 or m3 or m4:
                     CONSOLE.info(
-                        f"{'AC Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'AC Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3 and (c or cm)}{' / ' + (m3 or '--') + ' Hz':<{col2 - 6}}{co} "
                         f"{'AC Out Tot/Off':<{col3}}: {(m2 or m4) and (c or cm)}{m2 or '----':>4} {unit}{co} / {m4 and (c or cm)}{m4 or '-:--:--'}{co}"
                     )
                 m1 = str(dev.get("phase", ""))
