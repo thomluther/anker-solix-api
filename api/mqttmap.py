@@ -861,7 +861,7 @@ _A1780_0405 = {
     "c4": {NAME: "exp_1_soh"},  # Expansion battery 1 state of health (%)
     "c5": {NAME: "expansion_packs_b?"},
     "d0": {NAME: "device_sn"},
-    "d1": {NAME: "max_load"},  # Maximum load setting (W)
+    "d1": {NAME: "ac_input_limit"},  # Maximum charge setting (W)
     "d3": {
         NAME: "device_timeout_minutes"
     },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
@@ -896,8 +896,8 @@ _A1780_0408 = {
     # F2000(P) state info
     TOPIC: "state_info",
     "a3": {NAME: "device_sn"},
-    "a4": {NAME: "local_timestamp?"},
-    "a5": {NAME: "utc_timestamp?"},
+    "a4": {NAME: "local_timestamp"},
+    "a5": {NAME: "utc_timestamp"},
     "a6": {NAME: "discharged_energy?", FACTOR: 0.001},  # in kWh
     "a7": {NAME: "charged_energy?", FACTOR: 0.001},  # in kWh
     "ac": {NAME: "main_battery_soc"},  # in %
@@ -967,7 +967,7 @@ _A1782_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "18": {
-                NAME: "light_mode", # Off (0), Low (1), Mid (2), Bright (3)
+                NAME: "light_mode",  # Off (0), Low (1), Mid (2), Bright (3)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "20": {
@@ -981,11 +981,7 @@ _A1782_0421 = {
                 NAME: "port_memory_switch",  # Output Port Memory switch: Disabled (0) or Enabled (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
-            "26": {
-                NAME: "region",
-                TYPE: DeviceHexDataTypes.str.value,
-                LENGTH: 2
-            },
+            "26": {NAME: "region", TYPE: DeviceHexDataTypes.str.value, LENGTH: 2},
         }
     },
     "a5": {
@@ -1430,8 +1426,9 @@ _A1790_0405 = {
     "b1": {NAME: "bat_charge_power"},  # Total charging (AC + Solar)
     "b2": {NAME: "output_power"},
     "b4": {NAME: "bat_discharge_power?"},
-    "b5": {NAME: "sw_version?", "values": 1},  # Main firmware version
-    "ba": {NAME: "sw_expansion?", "values": 1},  # Expansion firmware version
+    "b5": {NAME: "sw_version"},  # Main firmware version
+    "ba": {NAME: "sw_expansion"},  # Expansion firmware version
+    "bb": {NAME: "sw_controller"},
     "bc": {
         NAME: "ac_output_power_switch"
     },  # AC output switch: Disabled (0) or Enabled (1)
@@ -1441,9 +1438,7 @@ _A1790_0405 = {
     "be": {NAME: "temperature", SIGNED: True},  # In Celsius
     "bf": {NAME: "display_status"},  # Asleep (0), Manual Off (1), On (2)
     "c0": {NAME: "battery_soc"},  # Total SOC of main + Exp batteries?
-    "c1": {
-        NAME: "max_soc"
-    },  # User Setting (Max SoC %) TODO: What is the command to define SOC max limit?
+    "c1": {NAME: "battery_soh"},
     # TODO: What does USB status mean, is that a toggle setting? If port is used, this should be indicated by power as well
     "c2": {NAME: "usbc_1_status"},
     "c3": {NAME: "usbc_2_status"},
@@ -1454,7 +1449,10 @@ _A1790_0405 = {
         NAME: "dc_output_power_switch"
     },  # 12V DC output switch: Disabled (0) or Enabled (1)
     "cc": {NAME: "device_sn"},
-    "cd": {NAME: "ac_input_limit"},  # User Setting (AC Charge Watts)
+    "cd": {NAME: "ac_input_limit"},  # AC charge limit: 200-1800 W, step: 100
+    "ce": {
+        NAME: "device_timeout_minutes"
+    },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
     "cf": {NAME: "display_timeout_seconds"},  # User Setting (in seconds)
     "d3": {NAME: "ac_output_power_switch_dup?"},  # Duplicate of bc?
     "d4": {NAME: "dc_output_power_switch_dup?"},  # Duplicate of c7?
@@ -1467,7 +1465,17 @@ _A1790_0405 = {
     "d9": {
         NAME: "light_mode"
     },  # LED light mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-    "f6": {NAME: "region?"},  # Value 21333 ("US")
+    "e6": {NAME: "ac_input_limit_max"},  # Maximum value for control
+    "f6": {
+        # sile type that contains 2 chars
+        BYTES: {
+            "00": {
+                NAME: "region",
+                TYPE: DeviceHexDataTypes.str.value,
+                LENGTH: 2
+            },  # Value 21333 ("US")
+        }
+    },
     "f7": {
         NAME: "port_memory_switch"
     },  # Port Memory switch: Disabled (0) or Enabled (1)
@@ -1660,7 +1668,7 @@ _A1790_0410 = {
     "a3": {
         BYTES: {
             "00": {
-                NAME: "pps_1_sn?",
+                NAME: "device_1_sn?",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
@@ -1669,14 +1677,14 @@ _A1790_0410 = {
     "a4": {
         BYTES: {
             "00": {
-                NAME: "pps_2_sn?",
+                NAME: "device_2_sn?",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
         }
     },
-    "a5": {NAME: "pps_1_pn?"},
-    "a6": {NAME: "pps_2_pn?"},
+    "a5": {NAME: "device_1_pn?"},
+    "a6": {NAME: "device_2_pn?"},
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -4371,9 +4379,22 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F2000
     "A1780": {
-        # "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-2000 W, Step: 100 W
+        | {
+            "a2": {
+                **CMD_AC_CHARGE_LIMIT["a2"],
+                VALUE_MIN: 200,
+                VALUE_MAX: 2000,
+                VALUE_STEP: 100,
+            }
+        },
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
@@ -4385,9 +4406,22 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F2000 Plus
     "A1780P": {
-        # "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-2000 W, Step: 100 W
+        | {
+            "a2": {
+                **CMD_AC_CHARGE_LIMIT["a2"],
+                VALUE_MIN: 200,
+                VALUE_MAX: 2000,
+                VALUE_STEP: 100,
+            }
+        },
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
@@ -4399,12 +4433,13 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F3800
     "A1790": {
-        "0044": CMD_DEVICE_MAX_LOAD  # Range: 200-1800 W, Step: 100 W
+        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-1800 W, Step: 100 W
         | {
             "a2": {
-                **CMD_DEVICE_MAX_LOAD["a2"],
+                **CMD_AC_CHARGE_LIMIT["a2"],
                 VALUE_MIN: 200,
                 VALUE_MAX: 1800,
+                VALUE_MAX_STATE: "ac_charge_limit_max",  # adopt limit based on device variant
                 VALUE_STEP: 100,
             }
         },
@@ -4435,12 +4470,13 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F3800 Plus
     "A1790P": {
-        "0044": CMD_DEVICE_MAX_LOAD  # Range: 200-1800 W, Step: 100 W
+        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-1800 W, Step: 100 W
         | {
             "a2": {
-                **CMD_DEVICE_MAX_LOAD["a2"],
+                **CMD_AC_CHARGE_LIMIT["a2"],
                 VALUE_MIN: 200,
                 VALUE_MAX: 1800,
+                VALUE_MAX_STATE: "ac_charge_limit_max",  # adopt limit based on device variant
                 VALUE_STEP: 100,
             }
         },
@@ -4633,7 +4669,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0407": {
             "a2": {NAME: "device_sn"},
             "a3": {NAME: "wifi_name"},
-            "a4": {NAME: "wifi_signal?"}, # %
+            "a4": {NAME: "wifi_signal?"},  # %
             "a6": {NAME: "ac_input_limit?"},
         },
         "0421": _A1782_0421,

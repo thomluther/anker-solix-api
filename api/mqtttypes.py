@@ -417,8 +417,18 @@ class DeviceHexDataField:
                         factor,
                     )
             case DeviceHexDataTypes.sile.value:
+                # sile can also be a 2 byte str for some fields (weird), this should then be described like a binary field
+                if fieldmap.get(BYTES, {}):
+                    # extract found bytes description like DeviceHexDataTypes.bin
+                    values.update(
+                        self.extract_value(
+                            hexdata=hexdata,
+                            fieldtype=DeviceHexDataTypes.bin.value,
+                            fieldmap=fieldmap,
+                        )
+                    )
                 # 2 bytes fix, signed int LE (Base type)
-                if name := fieldmap.get(NAME):
+                elif name := fieldmap.get(NAME):
                     if name.endswith("_time"):
                         # special case for 2 bytes indicating minutes, hours
                         value = convert_time(hexdata) or ""
