@@ -1519,8 +1519,8 @@ class MqttCmdValidator:
                 raise ValueError(
                     f"Provided value is out of range ({self.min!s}-{self.max!s}{', step ' + str(self.step) if self.step not in [0, 1] else ''}), got: {parmvalue!s}"
                 )
-            # round value to step with same decimals
-            if self.step:
+            # round value to step with same decimals if not at limits to support partial last step
+            if self.step and self.min < parmvalue < self.max:
                 parmvalue = round_by_factor(
                     self.step * round(parmvalue / self.step),
                     self.step,

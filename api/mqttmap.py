@@ -862,10 +862,10 @@ _A1780_0405 = {
     "c5": {NAME: "expansion_packs"},
     "d0": {NAME: "device_sn"},
     "d1": {NAME: "ac_input_limit"},  # Maximum charge setting (W)
-    "d3": {
+    "d2": {
         NAME: "device_timeout_minutes"
     },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
-    "d4": {
+    "d3": {
         NAME: "display_timeout_seconds"
     },  # Display timeout: 20, 30, 60, 300, 1800 seconds
     "d7": {NAME: "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
