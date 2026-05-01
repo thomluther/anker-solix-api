@@ -76,7 +76,7 @@ async def get_device_load(
         # The home_load_data is provided as string instead of object...Convert into object for proper handling
         # It must be converted back to a string when passing this as input to set home load
         string_data = (resp.get("data") or {}).get("home_load_data") or {}
-        if isinstance(string_data, str):
+        if string_data and isinstance(string_data, str):
             resp["data"].update({"home_load_data": json.loads(string_data)})
         data = resp.get("data") or {}
         # update schedule also for all device serials found in schedule

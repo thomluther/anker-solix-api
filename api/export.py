@@ -39,6 +39,7 @@ from .apitypes import (
     SolixPriceProvider,
     SolixVehicle,
 )
+from .helpers import get_solix_product_code
 from .mqtt import AnkerSolixMqttSession
 from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
@@ -244,6 +245,7 @@ class AnkerSolixApiExport:
                     "Saved api %s original testfolder",
                     self.client.nickname,
                 )
+                self.api_power.clearCaches()
                 await self.api_power.update_sites(fromFile=True)
                 await self.api_power.update_device_details(fromFile=True)
                 await self.api_power.update_site_details(fromFile=True)
@@ -306,6 +308,7 @@ class AnkerSolixApiExport:
                 )
 
                 # restore real client cache data for re-use of sites and devices in other Api services
+                self.api_power.clearCaches()
                 self.api_power.account = old_account
                 self.api_power.sites = old_sites
                 self.api_power.devices = old_devices
@@ -818,7 +821,7 @@ class AnkerSolixApiExport:
                     "home_usage",
                     "grid",
                     "pps",
-                    "ev_charger"
+                    "ev_charger",
                 ]:
                     self._logger.info(
                         "Exporting site energy data for %s...",
@@ -1718,10 +1721,30 @@ class AnkerSolixApiExport:
         randomstr = self._randomdata.get(val, "")
         # generate new random string
         if not randomstr and val and key != "device_name":
-            if "_sn" in key or "Sn" in key or key == "sn":
-                randomstr = "".join(
-                    random.choices(string.ascii_uppercase + string.digits, k=len(val))
-                )
+            if "_sn" in key or "Sn" in key or key in ["sn", "err_msg"]:
+                # err_msg could be the real SN or empty
+                # avoid randomizing product code in SN
+                # 16-digit SN: characters 4-6 (index 3-5, 3 characters)
+                # 17-digit SN: characters 4-7 (index 3-6, 4 characters)
+                if code := get_solix_product_code(val):
+                    randomstr = "".join(
+                        [
+                            *random.choices(
+                                string.ascii_uppercase + string.digits, k=3
+                            ),
+                            code,
+                            *random.choices(
+                                string.ascii_uppercase + string.digits,
+                                k=len(val) - len(code) - 3,
+                            ),
+                        ],
+                    )
+                else:
+                    randomstr = "".join(
+                        random.choices(
+                            string.ascii_uppercase + string.digits, k=len(val)
+                        )
+                    )
             elif "bt_ble_" in key or "_mac" in key:
                 # Handle values with and without ':'
                 temp = val.replace(":", "")
@@ -1814,6 +1837,7 @@ class AnkerSolixApiExport:
                         "email",
                         "_password",
                         "_mac",
+                        "err_msg",
                     ]
                 )
                 or k == "sn"

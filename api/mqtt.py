@@ -122,7 +122,7 @@ class AnkerSolixMqttSession:
             else 0
         ).strftime("%Y-%m-%d %H:%M:%S")
         # extract message payload
-        payload = json.loads(message.get("payload") or "")
+        payload = json.loads(message.get("payload") or "[]")
         # Third party models not included in payload
         if not (model := payload.get("pn") if isinstance(payload, dict) else None):
             # extract model from received topic

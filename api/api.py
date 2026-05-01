@@ -37,7 +37,7 @@ from .apitypes import (
     SolixRoleStatus,
     SolixTariffTypes,
 )
-from .helpers import get_enum_name
+from .helpers import get_enum_name, get_solix_product_code
 from .hesapi import AnkerSolixHesApi
 from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
@@ -128,6 +128,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if sn := devData.pop("device_sn", None):
             device: dict = self.devices.get(sn) or {}  # lookup old device info if any
             device["device_sn"] = str(sn)
+            # extract device product code once from SN
+            if "device_code" not in device:
+                device["device_code"] = get_solix_product_code(device["device_sn"])
             if siteId:
                 device["site_id"] = str(siteId)
             if isAdmin is not None:
@@ -145,6 +148,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 try:
                     if key in ["product_code", "device_pn"] and value:
                         device["device_pn"] = str(value)
+                        # Get device code features once
+                        if "device_code_features" not in device:
+                            device["device_code_features"] = (
+                                self.account.get("products", {})
+                                .get(str(value), {})
+                                .get("product_codes", {})
+                                .get(device.get("device_code", ""),{})
+                                .get("custom_fields",{})
+                            )
                         # Flag device for supported mqtt trigger if admin and device not passive
                         if (
                             device.get("is_admin") or device.get("owner_user_id")
@@ -380,10 +392,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device[key] = int(value)
                     elif (
                         # Add solarbank int metrics depending on device type or generation
-                        key =="backup_reserve_switch"and key in getattr(
+                        key == "backup_reserve_switch"
+                        and key
+                        in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
-                        )):
-                            device[key] = bool(value)
+                        )
+                    ):
+                        device[key] = bool(value)
                     elif key == "sub_package_num" and str(value).isdigit():
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}

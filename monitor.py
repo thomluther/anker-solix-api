@@ -58,7 +58,10 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
     SolixWorkingStatus,
 )
 from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
-from api.helpers import get_enum_name  # pylint: disable=no-name-in-module
+from api.helpers import (  # pylint: disable=no-name-in-module
+    get_enum_name,
+    get_solix_product_code,
+)
 from api.mqtt_device import SolixMqttDevice  # pylint: disable=no-name-in-module
 from api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
 import common
@@ -379,14 +382,17 @@ class AnkerSolixApiMonitor:
             key = input(
                 f"Enter {Color.CYAN}key{Color.OFF} to be customized in '{Color.YELLOW}{item}{Color.OFF}': "
             )
-            value = json.loads(
+            if value := json.loads(
                 f"{input(f"Enter '{Color.YELLOW}{key}{Color.OFF}' {Color.CYAN}value{Color.OFF} in JSON format: ").replace("'", '"')}"
-            )
-            self.api.customizeCacheId(id=item, key=key, value=value)
-            CONSOLE.info(
-                f"Customized part of {Color.YELLOW}{item}{Color.OFF}:\n"
-                f"{json.dumps(self.api.getCaches().get(item).get('customized') or {}, indent=2)}"
-            )
+                or "{}"
+            ):
+                self.api.customizeCacheId(id=item, key=key, value=value)
+                CONSOLE.info(
+                    f"Customized part of {Color.YELLOW}{item}{Color.OFF}:\n"
+                    f"{json.dumps(self.api.getCaches().get(item).get('customized') or {}, indent=2)}"
+                )
+            else:
+                CONSOLE.info(f"{Color.RED}Invalid value for customization!{Color.OFF}")
             input(f"Hit [{Color.YELLOW}Enter{Color.OFF}] to refresh all data...")
             self.next_dev_refr = 0
             self.next_refr = datetime.now().astimezone()
@@ -712,7 +718,7 @@ class AnkerSolixApiMonitor:
                 f"{'Alias':<{col3}}: {c or Color.MAG}{dev.get('alias', 'Unknown')}{co}"
             )
             CONSOLE.info(
-                f"{'Serialnumber':<{col1}}: {sn:<{col2}} "
+                f"{'Serial [' + (get_solix_product_code(sn) or '----') + ']':<{col1}}: {sn:<{col2}} "
                 f"{'Admin':<{col3}}: {'YES' if admin else 'NO'}"
             )
             if m1 := cm and mqtt.get("local_timestamp", 0):
@@ -832,7 +838,7 @@ class AnkerSolixApiMonitor:
                 if m1 or str(m3):
                     CONSOLE.info(
                         f"{'Min/Backup SoC':<{col1}}: {m1 and (c or cm)}{(m1 or '--')!s:>4}{co} % / "
-                        f"{m3 and (c or cm)}{(str(m3) or dev.get("backup_reserve") or '--')!s:>3} {'%':<{col2 - 13}}{co} "
+                        f"{m3 and (c or cm)}{(str(m3) or dev.get('backup_reserve') or '--')!s:>3} {'%':<{col2 - 13}}{co} "
                         f"{'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4} (Limit {feat2} W)"
                     )
                 unit = "W"
@@ -911,12 +917,12 @@ class AnkerSolixApiMonitor:
                         f"{'AI Status':<{col1}}: {str(get_enum_name(SolarbankAiemsStatus, status, '-----')).capitalize() + ' (' + str(status) + ')':<{col2}} "
                         f"{'AI Enabled':<{col3}}: {'YES' if aiems.get('enable') else 'NO'}"
                     )
-                site_preset = dev.get("set_system_output_power","")
+                site_preset = dev.get("set_system_output_power", "")
                 if "schedule" in dev or site_preset:
                     CONSOLE.info("." * 80)
                     CONSOLE.info(
                         f"{'Schedule  (Now)':<{col1}}: {datetime.now().astimezone().strftime('%H:%M:%S UTC %z'):<{col2}} "
-                        f"{'System Preset':<{col3}}: {str(site_preset).replace('W', '') or "---":>4} W"
+                        f"{'System Preset':<{col3}}: {str(site_preset).replace('W', '') or '---':>4} W"
                     )
                     if admin:
                         # print schedule
@@ -943,13 +949,16 @@ class AnkerSolixApiMonitor:
                 if m3 := cm and mqtt.get("battery_soh", ""):
                     m3 = f"{float(m3):6.2f}"
                 soc = f"{m1 or dev.get('battery_soc', '---'):>4} %"
-                if dev.get("generation", 0) > 1 or devtype == SolixDeviceType.HOME_BACKUP.value:
+                if (
+                    dev.get("generation", 0) > 1
+                    or devtype == SolixDeviceType.HOME_BACKUP.value
+                ):
                     if m4 := c and mqtt.get("backup_soc", ""):
                         m4 = int(m4)
                     CONSOLE.info(
                         f"{'Battery SoC/SoH':<{col1}}: {m1 and c}{soc} /{m3 and (c or cm)}{m3 or ' --.--':>4} {'%':<{col2 - 15}}{co} "
                         f"{'Min/Backup SoC':<{col3}}: {m2 and c}{m2 or (dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} %{co} / "
-                        f"{m4 and (c or cm)}{str(m4) or dev.get("backup_reserve") or '--'} %{co}"
+                        f"{m4 and (c or cm)}{str(m4) or dev.get('backup_reserve') or '--'} %{co}"
                     )
                 else:
                     m4 = cm and mqtt.get("temperature", "")
@@ -1112,8 +1121,8 @@ class AnkerSolixApiMonitor:
                 m3 = cm and mqtt.get("charged_energy", "")
                 m4 = cm and mqtt.get("discharged_energy", "")
                 CONSOLE.info(
-                    f"{'Battery Charge':<{col1}}: {m1 and c}{m1 or dev.get('bat_charge_power') or '---':>4} {unit}{m3 and (c or cm)}{(' (' + m3 + ' kWh)') if m3 else '':<{col2 - 6}}{co} "
-                    f"{'Battery Dischrg':<{col3}}: {m2 and c}{m2 or dev.get('bat_discharge_power') or '---':>4} {unit}{m4 and (c or cm)}{(' (' + m4 + ' kWh)') if m4 else ''}{co}"
+                    f"{'Battery Charge':<{col1}}: {m1 and (c or cm)}{m1 or dev.get('bat_charge_power') or '---':>4} {unit}{m3 and (c or cm)}{(' (' + m3 + ' kWh)') if m3 else '':<{col2 - 6}}{co} "
+                    f"{'Battery Dischrg':<{col3}}: {m2 and (c or cm)}{m2 or dev.get('bat_discharge_power') or '---':>4} {unit}{m4 and (c or cm)}{(' (' + m4 + ' kWh)') if m4 else ''}{co}"
                 )
                 if m1 := cm and mqtt.get("device_efficiency", ""):
                     m1 = f"{float(m1):6.2f}"
@@ -1891,19 +1900,19 @@ class AnkerSolixApiMonitor:
                         f"{'Capacity':<{col3}}: {cc}{customized.get('battery_capacity') or dev.get('battery_capacity', '----')!s:>4} Wh{co}"
                     )
                 unit = "W"
-                m1 = cm and str(mqtt.get("max_load", ""))
+                m1 = cm and str(mqtt.get("max_load", "") or mqtt.get("output_power_limit", ""))
                 m2 = cm and str(mqtt.get("device_timeout_minutes", ""))
                 if m1 or (m2 and devtype != SolixDeviceType.CHARGER.value):
                     CONSOLE.info(
-                        f"{'Max. Load':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Max. Load/Out':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'Device Timeout':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} Min.{co}"
                     )
-                m1 = (c and mqtt.get("photovoltaic_power", "")) or dev.get(
+                m1 = (cm and mqtt.get("photovoltaic_power", "")) or dev.get(
                     "input_power", ""
                 )
                 m2 = (
-                    (c and mqtt.get("output_power", ""))
-                    or (c and mqtt.get("output_power_total", ""))
+                    (cm and mqtt.get("output_power", ""))
+                    or (cm and mqtt.get("output_power_total", ""))
                     or dev.get("output_power", "")
                     or dev.get("to_home_load", "")
                 )
@@ -1913,32 +1922,32 @@ class AnkerSolixApiMonitor:
                     m3 = cm and mqtt.get("pv_yield", "")
                     m4 = cm and mqtt.get("output_energy", "")
                     CONSOLE.info(
-                        f"{'Solar Power':<{col1}}: {m1 and c}{m1 or '----':>4} {unit}{m3 and (c or cm)}{((' (' + m3 + ' kWh)') if m3 else ''):<{col2 - 6}}{co} "
-                        f"{'Output Power':<{col3}}: {m2 and c}{m2 or '----':>4} {unit}{m4 and (c or cm)}{((' (' + m4 + ' kWh)') if m4 else '')}{co}"
+                        f"{'Solar Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3 and (c or cm)}{((' (' + m3 + ' kWh)') if m3 else ''):<{col2 - 6}}{co} "
+                        f"{'Output Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{m4 and (c or cm)}{((' (' + m4 + ' kWh)') if m4 else '')}{co}"
                     )
                 # show each MPPT if available
-                m1 = (c and mqtt.get("pv_1_power", "")) or dev.get("solar_power_1")
-                m2 = (c and mqtt.get("pv_2_power", "")) or dev.get("solar_power_2")
+                m1 = (cm and mqtt.get("pv_1_power", "")) or dev.get("solar_power_1")
+                m2 = (cm and mqtt.get("pv_2_power", "")) or dev.get("solar_power_2")
                 if m1 or m2:
                     names = dev.get("pv_name") or {}
                     name1 = names.get("pv1_name") or ""
                     name2 = names.get("pv2_name") or ""
                     CONSOLE.info(
-                        f"{'Solar Ch_1':<{col1}}: {m1 and c}{m1 or '---':>4} {unit}{co}{(' (' + name1 + ')' if name1 else ''):<{col2 - 6}} "
-                        f"{'Solar Ch_2':<{col3}}: {m2 and c}{m2 or '---':>4} {unit}{co}{(' (' + name2 + ')' if name2 else '')}"
+                        f"{'Solar Ch_1':<{col1}}: {m1 and (c or cm)}{m1 or '---':>4} {unit}{co}{(' (' + name1 + ')' if name1 else ''):<{col2 - 6}} "
+                        f"{'Solar Ch_2':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} {unit}{co}{(' (' + name2 + ')' if name2 else '')}"
                     )
-                m1 = (c and mqtt.get("bat_charge_power", "")) or dev.get(
+                m1 = (cm and mqtt.get("bat_charge_power", "")) or dev.get(
                     "bat_charge_power", ""
                 )
-                m2 = (c and mqtt.get("bat_discharge_power", "")) or dev.get(
+                m2 = (cm and mqtt.get("bat_discharge_power", "")) or dev.get(
                     "bat_discharge_power", ""
                 )
                 if (m1 and devtype != SolixDeviceType.CHARGER.value) or m2:
                     m3 = cm and mqtt.get("charged_energy", "")
                     m4 = cm and mqtt.get("discharged_energy", "")
                     CONSOLE.info(
-                        f"{'Battery Charge':<{col1}}: {m1 and c}{m1 or '---':>4} {unit}{m3 and (c or cm)}{(' (' + m3 + ' kWh)') if m3 else '':<{col2 - 6}}{co} "
-                        f"{'Battery Dischrg':<{col3}}: {m2 and c}{m2 or '---':>4} {unit}{m4 and (c or cm)}{(' (' + m4 + ' kWh)') if m4 else ''}{co}"
+                        f"{'Battery Charge':<{col1}}: {m1 and (c or cm)}{m1 or '---':>4} {unit}{m3 and (c or cm)}{(' (' + m3 + ' kWh)') if m3 else '':<{col2 - 6}}{co} "
+                        f"{'Battery Dischrg':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} {unit}{m4 and (c or cm)}{(' (' + m4 + ' kWh)') if m4 else ''}{co}"
                     )
                 if m1 := cm and mqtt.get("device_efficiency", ""):
                     m1 = f"{float(m1):6.2f}"
@@ -1949,13 +1958,13 @@ class AnkerSolixApiMonitor:
                         f"{'System Eff.':<{col1}}: {cc}{m1 or '  --.--':>7} {'%':<{col2 - 8}}{co} "
                         f"{'Battery Eff.':<{col3}}: {cc}{m2 or '  --.--':>7} %{co}"
                     )
-                m1 = (c and mqtt.get("battery_power_signed", "")) or dev.get(
+                m1 = (cm and mqtt.get("battery_power_signed", "")) or dev.get(
                     "charging_power"
                 )
                 m2 = str(dev.get("sub_pack_temp_alarm", ""))
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Battery Power':<{col1}}: {m1 and c}{m1 or '---':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Battery Power':<{col1}}: {m1 and (c or cm)}{m1 or '---':>4} {unit:<{col2 - 5}}{co} "
                         f"{'Exp Temp Alert':<{col3}}: {m2 or '-'}{co}"
                     )
                 m1 = cm and mqtt.get("photovoltaic_power", "")
@@ -1987,22 +1996,23 @@ class AnkerSolixApiMonitor:
                         f"{'AC Input Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'AC Socket Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
-                m1 = (c and mqtt.get("grid_to_battery_power", "")) or dev.get(
+                m1 = (cm and mqtt.get("grid_to_battery_power", "")) or dev.get(
                     "grid_to_battery_power", ""
                 )
-                m2 = cm and mqtt.get("ac_input_limit", "")
+                m2 = cm and (mqtt.get("ac_input_limit", "") or mqtt.get("charge_power_limit", ""))
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'AC Charge Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                        f"{'AC Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
+                        f"{'Grid Charge Pwr':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("ac_output_power", "")
+                m3 = cm and mqtt.get("ac_frequency", "")
                 m2 = cm and mqtt.get("ac_output_power_total", "")
                 if m4 := cm and str(mqtt.get("ac_output_timeout_seconds", "")):
                     m4 = str(timedelta(seconds=int(m4)))
-                if m1 or m2:
+                if m1 or m2 or m3 or m4:
                     CONSOLE.info(
-                        f"{'AC Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'AC Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3 and (c or cm)}{' / ' + (m3 or '--') + ' Hz':<{col2 - 6}}{co} "
                         f"{'AC Out Tot/Off':<{col3}}: {(m2 or m4) and (c or cm)}{m2 or '----':>4} {unit}{co} / {m4 and (c or cm)}{m4 or '-:--:--'}{co}"
                     )
                 m1 = str(dev.get("phase", ""))
@@ -2160,26 +2170,12 @@ class AnkerSolixApiMonitor:
                         f"{'Temp / Device':<{col1}}: {str(m1) and (c or cm)}{m1 + ' / ' + get_enum_name(SolixSwitchMode, m3, str(m3) or '--').upper():<{col2}}{co} "
                         f"{'Output Ctrl':<{col3}}: {m2 and (c or cm)}{m2 or '????'} - {m4 or '????'} {unit}{co}"
                     )
-                m1 = cm and mqtt.get("output_power", "")
-                m2 = cm and mqtt.get("output_power_limit", "")
-                if m1 or m2:
-                    CONSOLE.info(
-                        f"{'Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                        f"{'Output Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
-                    )
                 m1 = cm and str(mqtt.get("car_battery_type", ""))
                 m2 = cm and str(mqtt.get("car_battery_voltage_type", ""))
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Battery Type':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixBatteryType, m1, str(m1) or '-----').replace('_', ' ').title():<{col2}}{co} "
                         f"{'Start Voltage':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixBatteryVoltageType, m2, str(m2) or '-----').replace('_', ' ').title():>6}{co}"
-                    )
-                m1 = cm and mqtt.get("bat_charge_power", "")
-                m2 = cm and mqtt.get("charge_power_limit", "")
-                if m1 or m2:
-                    CONSOLE.info(
-                        f"{'Charge Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                        f"{'Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 if m1 := cm and mqtt.get("battery_voltage", ""):
                     m1 = f"{float(m1):.1f}"
@@ -3503,7 +3499,9 @@ class AnkerSolixApiMonitor:
                                             CONSOLE.info(
                                                 "Select which device should be filtered in output:"
                                             )
-                                            for idx, devicename in enumerate(self.device_names):
+                                            for idx, devicename in enumerate(
+                                                self.device_names
+                                            ):
                                                 CONSOLE.info(
                                                     f"({Color.YELLOW}{idx}{Color.OFF}) {devicename}"
                                                 )
@@ -3513,7 +3511,9 @@ class AnkerSolixApiMonitor:
                                             if (
                                                 selection
                                                 and selection.isdigit()
-                                                and 1 <= int(selection) < len(self.device_names)
+                                                and 1
+                                                <= int(selection)
+                                                < len(self.device_names)
                                             ):
                                                 self.device_filter = self.device_names[
                                                     int(selection)

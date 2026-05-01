@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime, timedelta
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -556,6 +557,7 @@ class AnkerSolixBaseApi:
                                 "battery_to_home_power",
                                 "device_output_power_signed_total",
                                 "ac_socket_power",
+                                "ac_frequency",
                                 "heating_power",
                                 "grid_to_battery_power",
                                 "generator_to_battery_power",
@@ -672,39 +674,36 @@ class AnkerSolixBaseApi:
                                 ]:
                                     calc_efficiency = True
                         elif (
-                            (
-                                key
-                                in [
-                                    # keys with value being saved unchanged
-                                    "topics",
-                                    "error_code",
-                                    "dc_12v_auto_on",  # missing MQTT control command
-                                    "grid_export_disabled",
-                                    "temp_unit_fahrenheit",
-                                    "tcp_port",
-                                    "ip_address",
-                                    "mode",  # HA missing, HES meaning not clear
-                                    "generator_plug_status",
-                                    "car_battery_type",
-                                    "car_battery_voltage_type",
-                                ]
-                                or (
-                                    str(key).endswith(
-                                        (
-                                            "_status",
-                                            "_mode",
-                                            "_switch",
-                                            "_seconds",
-                                            "_minutes",
-                                            "_hours",
-                                            "_timestamp",
-                                            "_packs",
-                                        )
+                            key
+                            in [
+                                # keys with value being saved unchanged
+                                "topics",
+                                "error_code",
+                                "dc_12v_auto_on",  # missing MQTT control command
+                                "grid_export_disabled",
+                                "temp_unit_fahrenheit",
+                                "tcp_port",
+                                "ip_address",
+                                "mode",  # HA missing, HES meaning not clear
+                                "generator_plug_status",
+                                "car_battery_type",
+                                "car_battery_voltage_type",
+                            ]
+                            or (
+                                str(key).endswith(
+                                    (
+                                        "_status",
+                                        "_mode",
+                                        "_switch",
+                                        "_seconds",
+                                        "_minutes",
+                                        "_hours",
+                                        "_timestamp",
+                                        "_packs",
                                     )
                                 )
                             )
-                            and value is not None
-                        ):
+                        ) and value is not None:
                             device_mqtt[key] = value
                             # determine EV charger model 3 phase capability
                             if key == "charging_duration_seconds":
@@ -928,7 +927,7 @@ class AnkerSolixBaseApi:
                                 api = self.powerpanelApi
                             else:
                                 api = self
-                            api._update_dev({"device_sn": sn, "battery_capacity": cap})  # noqa: SLF001
+                            api._update_dev({"device_sn": sn, "battery_capacity": cap})
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated or dynamic description state changed
@@ -1526,10 +1525,21 @@ class AnkerSolixBaseApi:
             for platform in await self.get_product_platforms_list(fromFile=fromFile):
                 plat_name = platform.get("name") or ""
                 for prod in platform.get("products") or []:
+                    custom_fields = json.loads(prod.get("custom_fields") or "{}")
                     products[prod.get("product_code") or ""] = {
                         "name": str(prod.get("name") or "").strip(),
                         "platform": str(plat_name).strip(),
                         # "img_url": prod.get("img_url"),
+                        "product_codes": {
+                            pc: {
+                                "p_code": pc,
+                                "sku": item.get("sku"),
+                                "custom_fields": custom_fields
+                                | json.loads(item.get("custom_fields") or "{}"),
+                            }
+                            for item in (prod.get("p_codes") or [])
+                            if (pc := item.get("p_code"))
+                        },
                     }
             self._logger.debug(
                 "Getting api %s HES product list",

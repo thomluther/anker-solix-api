@@ -354,7 +354,10 @@ class SolixMqttDevice:
                 start = desc.get(VALUE_MIN, 0)
                 stop = desc.get(VALUE_MAX, 0)
                 step = desc.get(VALUE_STEP, 1)
-                factor = round(1 / step) if step < 1 else 1
+                # get required factor to use range with int
+                factor = 10 ** max(
+                    0, f"{step:.15f}".rstrip("0").rstrip(".")[::-1].find(".")
+                )
                 if (
                     start < stop
                     and len(
@@ -366,7 +369,12 @@ class SolixMqttDevice:
                     )
                     <= limit
                 ):
-                    options = [round_by_factor(v / factor, step) for v in rng] if factor > 1 else rng
+                    # limit last number to stop value
+                    options = (
+                        [round_by_factor(min(v / factor, stop), step) for v in rng]
+                        if factor != 1
+                        else [min(v, stop) for v in rng]
+                    )
             if isinstance(options, dict):
                 return options
             if isinstance(options, list | range):

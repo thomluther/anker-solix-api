@@ -30,7 +30,7 @@ disable = [
 
 [tool.poetry.dependencies]
 aiohttp = ">=3.10.11"
-aiofiles = ">=23.2.0"
+aiofiles = ">=25.1.0"
 cryptography = ">=3.4.8"
 paho-mqtt = ">=2.1.0"
 python-dotenv = ">=1.2.1"

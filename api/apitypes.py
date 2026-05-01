@@ -711,11 +711,13 @@ A17A3  SOLIX Everfrost 2 23L                    Powered Cooler
 A17A4  SOLIX Everfrost 2 40L                    Powered Cooler
 A17A5  SOLIX Everfrost 2 58L                    Powered Cooler
 A17B1  SOLIX Home Power Panel                   Home Backup System
-A17C0  Solarbank E1600                          Balcony Solar Power System
-A17C1  Solarbank 2 E1600 Pro                    Balcony Solar Power System
-A17C2  Solarbank 2 E1600 AC                     Balcony Solar Power System
-A17C3  Solarbank 2 E1600 Plus                   Balcony Solar Power System
-A17C5  Solarbank 3 E2700 Pro                    Balcony Solar Power System
+A17C0  Solarbank E1600                          Plug-in Home Battery
+A17C1  Solarbank 2 E1600 Pro                    Plug-in Home Battery
+A17C2  Solarbank 2 E1600 AC                     Plug-in Home Battery
+A17C3  Solarbank 2 E1600 Plus                   Plug-in Home Battery
+A17C5  Solarbank 3 E2700 Pro                    Plug-in Home Battery
+A17E2  Solarbank Max AC                         Plug-in Home Battery
+XXXXX  Solarbank 4 E5000 Pro                    Plug-in Home Battery
 A17X7  Smart Meter                              Accessory
 A17X8  Smart Plug                               Accessory
 A1903  150W Charging Base                       Charger
@@ -725,22 +727,24 @@ A2687  160W Prime Charger                       Charger
 A5101  X1-P6K-US/S                              Residential Storage System
 A5102  X1-H(3.68~6)K-S                          Residential Storage System
 A5103  X1-H (5~12)K-T                           Residential Storage System
-A5140  MI60 Microinverter                       Balcony Solar Power System
-A5143  MI80 Microinverter(BLE)                  Balcony Solar Power System
+A5140  MI60 Microinverter                       Plug-in Home Battery
+A5143  MI80 Microinverter(BLE)                  Plug-in Home Battery
 A5150  Microinverter                            Residential Storage System
 A5191  V1 Smart EV Charger                      Smart EV Charger
 A5220  X1 Battery Module                        Residential Storage System
 A5341  Backup Controller                        Residential Storage System
 A5450  Zigbee Dongle                            Residential Storage System
 A91B2  240W Charging Station                    Charger
-AE100  SOLIX Power Dock                         Balcony Solar Power System
+AE100  SOLIX Power Dock                         Plug-in Home Battery
 AE1R0  Anker SOLIX P1 Meter                     Accessory
+AE1X0  Smart Meter Gen 2                        Accessory
 AS100  C1000 Gen 2 LE                           Portable Power Station
+AS200  Alternator Charger                       Charger
 AX1S0  Power Dock Pro                           Residential Storage System
 AX170  Power Dock                               Home Backup System
 A17E1  Anker SOLIX E10                          Home Backup System
+A17X7US Smart Meter US                          Accessory
 A7320  SOLIX Smart Generator 5500               Smart Generator
-AS200  Alternator Charger                       Charger
 ----------------------------------------------------------------------------------------------------
 """
 
@@ -770,6 +774,255 @@ LOGIN_RESPONSE: dict = {
     "ap_cloud_user_id": str,
 }
 
+# Define product codes for device model types that may have different features for supported control options
+PRODUCT_CODES: Final[dict] = {
+    "A5191": {
+      "name": "V1 Smart EV Charger",
+      "platform": "Smart EV Charger",
+      "product_codes": {
+        "DK2Z": {
+          "p_code": "DK2Z",
+          "sku": "A5191GZ2",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "socket",
+            "standard": "eu",
+            "ratedPower": 22,
+            "delay_start": False,
+            "ratedCurrent": 32,
+            "tamper_proof": False,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": True,
+            "second_charging_power": False
+          }
+        },
+        "DJRA": {
+          "p_code": "DJRA",
+          "sku": "A5191GZ3",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 22,
+            "delay_start": False,
+            "ratedCurrent": 32,
+            "tamper_proof": False,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": False,
+            "second_charging_power": False
+          }
+        },
+        "DJJN": {
+          "p_code": "DJJN",
+          "sku": "A5191VZ0",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "socket",
+            "standard": "eu",
+            "ratedPower": 7.4,
+            "delay_start": False,
+            "ratedCurrent": 32,
+            "tamper_proof": False,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": True,
+            "second_charging_power": False
+          }
+        },
+        "DK3A": {
+          "p_code": "DK3A",
+          "sku": "A5191VZ1",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 7.4,
+            "delay_start": False,
+            "ratedCurrent": 32,
+            "tamper_proof": False,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": False,
+            "second_charging_power": False
+          }
+        },
+        "DMEY": {
+          "p_code": "DMEY",
+          "sku": "A5191GZ4",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "socket",
+            "standard": "eu",
+            "ratedPower": 11,
+            "delay_start": False,
+            "ratedCurrent": 16,
+            "tamper_proof": False,
+            "certification": [
+              "RoHS",
+              "REACH",
+              "CE"
+            ],
+            "permanent_lock_gun": True,
+            "second_charging_power": False
+          }
+        },
+        "DMEZ": {
+          "p_code": "DMEZ",
+          "sku": "A5191GZ7",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 11,
+            "delay_start": False,
+            "ratedCurrent": 16,
+            "tamper_proof": False,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": False,
+            "second_charging_power": False
+          }
+        },
+        "DL4G": {
+          "p_code": "DL4G",
+          "sku": "A5191VZ2",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "socket",
+            "standard": "uk",
+            "ratedPower": 7.4,
+            "delay_start": True,
+            "ratedCurrent": 32,
+            "tamper_proof": True,
+            "certification": [
+              "UKCA",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": True,
+            "second_charging_power": True
+          }
+        },
+        "DKSH": {
+          "p_code": "DKSH",
+          "sku": "A5191VZ3",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "cable",
+            "standard": "uk",
+            "ratedPower": 7.4,
+            "delay_start": True,
+            "ratedCurrent": 32,
+            "tamper_proof": True,
+            "certification": [
+              "UKCA",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": False,
+            "second_charging_power": True
+          }
+        },
+        "DJRC": {
+          "p_code": "DJRC",
+          "sku": "A51913Z0",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "shutter",
+            "standard": "eu",
+            "ratedPower": 7.4,
+            "delay_start": False,
+            "ratedCurrent": 32,
+            "tamper_proof": False,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": True,
+            "second_charging_power": False
+          }
+        },
+        "DK3C": {
+          "p_code": "DK3C",
+          "sku": "A51913Z1",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "shutter",
+            "standard": "eu",
+            "ratedPower": 22,
+            "delay_start": False,
+            "ratedCurrent": 32,
+            "tamper_proof": False,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": True,
+            "second_charging_power": False
+          }
+        },
+        "DMNM": {
+          "p_code": "DMNM",
+          "sku": "A5191TZ1",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 7.4,
+            "delay_start": False,
+            "ratedCurrent": 32,
+            "tamper_proof": False,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": False,
+            "second_charging_power": False
+          }
+        },
+        "DMNN": {
+          "p_code": "DMNN",
+          "sku": "A5191TZ2",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 22,
+            "delay_start": False,
+            "ratedCurrent": 32,
+            "tamper_proof": False,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": False,
+            "second_charging_power": False
+          }
+        }
+      }
+    },
+}
 
 class SolixDeviceType(Enum):
     """Enumeration for Anker Solix device types."""
@@ -951,6 +1204,8 @@ class SolixDeviceNames:
     SHEMP3: str = "Shelly Pro 3EM"
     SHPPS: str = "Shelly Plus Plug S"
     AE100: str = "Power Dock AE100"
+    ECOIR: str = "EverHome EcoTracker IR"
+
 
 
 @dataclass(frozen=True)
@@ -1003,6 +1258,7 @@ class SolixDeviceCapacity:
     A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
     A17E1: int = 6144  # SOLIX E10 Battery module, Controller has no battery?
+    A17E2: int = 7000 # Solarbank Max AC
 
 
 @dataclass(frozen=True)
@@ -1033,7 +1289,8 @@ class SolixSiteType:
     t_17 = (
         SolixDeviceType.HOME_BACKUP.value
     )  # Only AX170: Power Dock US market to connect multiple E10
-    t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, SHEM3, SHEMP3, A17X8, SHPPS, A5191
+    t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS, A5191
+    t_19 = SolixDeviceType.SOLARBANK.value  # Main A17E2 Solarbank Max AC with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
 
 
 @dataclass(frozen=True)
@@ -1056,6 +1313,9 @@ class SolixDeviceCategory:
     A17C5: str = (
         SolixDeviceType.SOLARBANK.value + "_3"
     )  # SOLIX Solarbank 3 E2700 Pro, generation 3
+    A17E2: str = (
+        SolixDeviceType.SOLARBANK.value + "_4"
+    )  # SOLIX Solarbank Max AC, generation 4
     # Station
     AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock Solarbanks
     AX1S0: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Pro HES system
@@ -1069,8 +1329,10 @@ class SolixDeviceCategory:
     AE1R0: str = SolixDeviceType.SMARTMETER.value  # SOLIX P1 Meter
     SHEM3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Smart Meter
     SHEMP3: str = SolixDeviceType.SMARTMETER.value  # Shelly 3EM Pro Smart Meter
+    ECOIR: str = SolixDeviceType.SMARTMETER.value  # EverHome EcoTracker IR
+    AE1X0: str = SolixDeviceType.SMARTMETER.value  # Smart Meter Gen 2
     # Smart Plug
-    A17X8: str = SolixDeviceType.SMARTPLUG.value  # SOLIX Smart Plug
+    A17X8: str = SolixDeviceType.SMARTPLUG.value  # SOLIX Smart Plug Gen 1/2
     SHPPS: str = SolixDeviceType.SMARTPLUG.value  # Shelly Smart Plug
     # Portable Power Stations (PPS)
     A1720: str = (
