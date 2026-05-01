@@ -4240,7 +4240,23 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F2000
     "A1780": {
-        # "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        "0044": {
+            # AC command group
+            COMMAND_LIST: [
+                SolixMqttCommands.ac_charge_limit,  # field a4
+            ],
+            SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_ac_input_limit",  # in W; min: 100, max: 1440, step: 100
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "ac_input_limit",
+                    VALUE_MIN: 100,
+                    VALUE_MAX: 1440,
+                    VALUE_STEP: 100,
+                },
+            },
+        },
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
@@ -4254,7 +4270,23 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F2000 Plus
     "A1780P": {
-        # "0044": CMD_DEVICE_MAX_LOAD,  # TODO: Add supported values or options/range?
+        "0044": {
+            # AC command group
+            COMMAND_LIST: [
+                SolixMqttCommands.ac_charge_limit,  # field a4
+            ],
+            SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_ac_input_limit",  # in W; min: 100, max: 1440, step: 100
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "ac_input_limit",
+                    VALUE_MIN: 100,
+                    VALUE_MAX: 1440,
+                    VALUE_STEP: 100,
+                },
+            },
+        },
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
@@ -4268,14 +4300,22 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F3800
     "A1790": {
-        "0044": CMD_DEVICE_MAX_LOAD  # Range: 200-1800 W, Step: 100 W
-        | {
-            "a2": {
-                **CMD_DEVICE_MAX_LOAD["a2"],
-                VALUE_MIN: 200,
-                VALUE_MAX: 1800,
-                VALUE_STEP: 100,
-            }
+        "0044": {
+            # AC command group
+            COMMAND_LIST: [
+                SolixMqttCommands.ac_charge_limit,  # field a4
+            ],
+            SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_ac_input_limit",  # in W; min: 100, max: 1800, step: 100
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "ac_input_limit",
+                    VALUE_MIN: 100,
+                    VALUE_MAX: 1800,
+                    VALUE_STEP: 100,
+                },
+            },
         },
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
@@ -4304,14 +4344,22 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F3800 Plus
     "A1790P": {
-        "0044": CMD_DEVICE_MAX_LOAD  # Range: 200-1800 W, Step: 100 W
-        | {
-            "a2": {
-                **CMD_DEVICE_MAX_LOAD["a2"],
-                VALUE_MIN: 200,
-                VALUE_MAX: 1800,
-                VALUE_STEP: 100,
-            }
+        "0044": {
+            # AC command group
+            COMMAND_LIST: [
+                SolixMqttCommands.ac_charge_limit,  # field a4
+            ],
+            SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_ac_input_limit",  # in W; min: 100, max: 1800, step: 100
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "ac_input_limit",
+                    VALUE_MIN: 100,
+                    VALUE_MAX: 1800,
+                    VALUE_STEP: 100,
+                },
+            },
         },
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
