@@ -4404,12 +4404,12 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F2000
     "A1780": {
-        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-1800 W??, Step: 100 W???
+        "0044": CMD_AC_CHARGE_LIMIT  # in W; min: 100, max: 1440, step: 100
         | {
             "a2": {
                 **CMD_AC_CHARGE_LIMIT["a2"],
-                VALUE_MIN: 200,
-                VALUE_MAX: 1800,
+                VALUE_MIN: 100,
+                VALUE_MAX: 1440,
                 VALUE_STEP: 100,
             }
         },
@@ -4433,12 +4433,12 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F2000 Plus
     "A1780P": {
-        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-2200 W, Step: 100 W
+        "0044": CMD_AC_CHARGE_LIMIT  # in W; min: 100, max: 1440, step: 100
         | {
             "a2": {
                 **CMD_AC_CHARGE_LIMIT["a2"],
-                VALUE_MIN: 200,
-                VALUE_MAX: 2200,
+                VALUE_MIN: 100,
+                VALUE_MAX: 1440,
                 VALUE_STEP: 100,
             }
         },
@@ -4462,11 +4462,11 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F3800
     "A1790": {
-        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-1800 W, Step: 100 W
+        "0044": CMD_AC_CHARGE_LIMIT  # Range: 100-1800 W, Step: 100 W
         | {
             "a2": {
                 **CMD_AC_CHARGE_LIMIT["a2"],
-                VALUE_MIN: 200,
+                VALUE_MIN: 100,
                 VALUE_MAX: 1800,
                 VALUE_MAX_STATE: "ac_charge_limit_max",  # adopt limit based on device variant
                 VALUE_STEP: 100,
@@ -4501,11 +4501,11 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS F3800 Plus
     "A1790P": {
-        "0044": CMD_AC_CHARGE_LIMIT  # Range: 200-1800 W, Step: 100 W
+        "0044": CMD_AC_CHARGE_LIMIT  # Range: 100-1800 W, Step: 100 W
         | {
             "a2": {
                 **CMD_AC_CHARGE_LIMIT["a2"],
-                VALUE_MIN: 200,
+                VALUE_MIN: 100,
                 VALUE_MAX: 1800,
                 VALUE_MAX_STATE: "ac_charge_limit_max",  # adopt limit based on device variant
                 VALUE_STEP: 100,
