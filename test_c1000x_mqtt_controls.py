@@ -191,7 +191,7 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                         "sw_controller": "Controller firmware version",
                         "hw_version": "Hardware version",
                         "device_sn": "Device serial number",
-                        "max_load": "Maximum load setting (W)",
+                        "max_charge": "Maximum AC charge setting (W)",
                         "device_timeout_minutes": "Device auto-off timeout (minutes)",
                         "display_timeout_seconds": "Display timeout (seconds)",
                         "exp_1_type": "Expansion battery type identifier",

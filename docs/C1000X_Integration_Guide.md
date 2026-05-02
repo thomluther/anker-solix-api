@@ -143,7 +143,7 @@ async def enable_monitoring(device_sn: str):
 | Controller Version | `sw_controller` | - | Controller firmware version |
 | Expansion Version | `sw_expansion` | - | Expansion firmware version |
 | Hardware Version | `hw_version` | - | Hardware version |
-| Max Load | `max_load` | W | Maximum load capacity |
+| Max AC charge | `ac_input_limit` | W | Maximum AC charge power |
 | Device Timeout | `device_timeout_minutes` | min | Auto-shutoff timeout |
 | Display Timeout | `display_timeout_seconds` | sec | Display auto-off timeout |
 | Device Serial | `device_sn` | - | Device serial number |
@@ -329,7 +329,7 @@ When integrated, the C1000X will create the following entities in Home Assistant
 - `sensor.c1000x_usba_2_power` - USB-A port 2 power
 - `sensor.c1000x_dc_input_power` - DC input charging power
 - `sensor.c1000x_temperature` - Device temperature
-- `sensor.c1000x_max_load` - Maximum load capacity
+- `sensor.c1000x_max_charge` - Maximum AC charge
 
 #### Switches
 - `switch.c1000x_ac_output` - AC output control

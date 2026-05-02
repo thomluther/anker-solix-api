@@ -325,7 +325,7 @@ _A1761_0405 = {
         FACTOR: 0.1,
         SIGNED: False,
     },  # In hours (value * factor)
-    "a5": {NAME: "grid_to_battery_power"},  # AC charging power to battery
+    "a5": {NAME: "ac_input_power"},  # AC charging power to battery
     "a6": {NAME: "ac_output_power"},  # Individual AC outlet power
     "a7": {NAME: "usbc_1_power"},  # USB-C port 1 output power
     "a8": {NAME: "usbc_2_power"},  # USB-C port 2 output power
@@ -349,7 +349,7 @@ _A1761_0405 = {
     "c4": {NAME: "exp_1_soh"},  # Expansion battery 1 state of health (%)
     "c5": {NAME: "expansion_packs"},  # number of expansion batteries
     "d0": {NAME: "device_sn"},  # Device serial number
-    "d1": {NAME: "max_load"},  # Maximum load setting (W)
+    "d1": {NAME: "ac_input_limit"},  # Max AC charge setting (W)
     "d2": {
         NAME: "device_timeout_minutes"
     },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
@@ -835,8 +835,8 @@ _A1780_0405 = {
     # F2000(P) param info
     TOPIC: "param_info",
     "a4": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},  # In hours
-    "a5": {NAME: "grid_to_battery_power"},  # AC charging power to battery
-    "a6": {NAME: "ac_socket_power"},  # Individual AC outlet power
+    "a5": {NAME: "ac_input_power"},  # AC charging power to battery
+    "a6": {NAME: "ac_output_power"},  # AC outlet power
     "a7": {NAME: "usbc_1_power"},  # USB-C port 1 output power
     "a8": {NAME: "usbc_2_power"},  # USB-C port 2 output power
     "a9": {NAME: "usbc_3_power"},  # USB-C port 3 output power
@@ -845,8 +845,8 @@ _A1780_0405 = {
     "ac": {NAME: "dc_12v_1_power"},  # 12V port 1 output power
     "ad": {NAME: "dc_12v_2_power"},  # 12V port 2 output power
     "ae": {NAME: "dc_input_power"},  # DC input power (solar/car charging)
-    "af": {NAME: "ac_input_power"},  # AC input power (230V)
-    "b0": {NAME: "ac_output_power_total"},  # Total output power
+    "af": {NAME: "photovoltaic_power"},  # Solar input
+    "b0": {NAME: "output_power_total"},  # Combined AC DC output power
     "b3": {NAME: "sw_version", "values": 1},  # Main firmware version
     "b9": {NAME: "sw_expansion", "values": 1},  # Expansion firmware version
     "ba": {NAME: "sw_controller", "values": 1},  # Controller firmware version
@@ -1425,7 +1425,7 @@ _A1790_0405 = {
     "af": {NAME: "pv_1_power"},
     "b0": {NAME: "pv_2_power"},
     "b1": {NAME: "bat_charge_power"},  # Total charging (AC + Solar)
-    "b2": {NAME: "output_power"},
+    "b2": {NAME: "output_power_total"},  # Combined AC DC output power
     "b4": {NAME: "bat_discharge_power?"},
     "b5": {NAME: "sw_version"},  # Main firmware version
     "ba": {NAME: "sw_expansion"},  # Expansion firmware version
@@ -4182,12 +4182,12 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
-        "0044": CMD_DEVICE_MAX_LOAD
+        "0044": CMD_AC_CHARGE_LIMIT
         | {
             "a2": {
-                **CMD_DEVICE_MAX_LOAD["a2"],
+                **CMD_AC_CHARGE_LIMIT["a2"],
                 VALUE_MIN: 100,
-                VALUE_MAX: 2000,
+                VALUE_MAX: 1000,
                 VALUE_STEP: 100,
             }
         },

@@ -795,6 +795,7 @@ class AnkerSolixMqttSession:
             self.mqtt_stats = MqttDataStats()
             active_folder: str | None = None
             timestamps = []
+            steps = None
             # merge initial speed options
             if (newspeed := folderdict.get("speed")) and isinstance(
                 newspeed, float | int
@@ -848,13 +849,23 @@ class AnkerSolixMqttSession:
                         + (datetime.now().timestamp() - cycleoffset - speedstart)
                         * speed
                     )
-                    while (
-                        time_idx < len(timestamps) and timestamps[time_idx] <= cycle_now
+                    while time_idx < len(timestamps) and (
+                        (
+                            steps is None
+                            and timestamps[time_idx] <= cycle_now
+                        )
+                        or steps
                     ):
                         # write cycle progress into folderdict
-                        folderdict["progress"] = round(
-                            (timestamps[time_idx] - timestamps[0]) / duration * 100, 2
-                        )
+                        if steps:
+                            folderdict["progress"] = round(
+                                (time_idx + 1) / len(timestamps) * 100, 2
+                            )
+                        else:
+                            folderdict["progress"] = round(
+                                (timestamps[time_idx] - timestamps[0]) / duration * 100,
+                                2,
+                            )
                         # simulate mqtt messages for timestamp
                         for message in active_msgs.get(timestamps[time_idx]) or []:
                             self._logger.debug(
@@ -879,11 +890,19 @@ class AnkerSolixMqttSession:
                             )
                             mqtt_msg.payload = json.dumps(message).encode()
                             self.on_message(client=None, userdata=None, msg=mqtt_msg)
-                        time_idx += 1
+                        if steps:
+                            time_idx += steps
+                            steps = 0
+                            folderdict["steps"] = steps
+                        else:
+                            time_idx += 1
                     # check for cycle reset with 5 sec gap after last message
-                    if (
-                        time_idx >= len(timestamps)
-                        and (cycle_now - timestamps[0]) >= duration + 5
+                    if time_idx >= len(timestamps) and (
+                        steps is not None
+                        or (
+                            steps is None
+                            and (cycle_now - timestamps[0]) >= duration + 5
+                        )
                     ):
                         time_idx = 0
                         # reset cycle offset with 5 sec gap between last and first message
@@ -896,6 +915,14 @@ class AnkerSolixMqttSession:
                         speed = newspeed
                         speedstart = timestamps[max(0, time_idx - 1)]
                         cycleoffset = datetime.now().timestamp() - speedstart
+                    # check steps or playmode change at runtime
+                    if (newsteps := folderdict.get("steps")) and steps != newsteps:
+                        # reset the offset into the cycle
+                        steps = newsteps
+                        if steps is None:
+                            # restart play mode
+                            speedstart = timestamps[max(0, time_idx - 1)]
+                            cycleoffset = datetime.now().timestamp() - speedstart
                 await asyncio.sleep(0.5)
         except asyncio.CancelledError:
             self._logger.info(

@@ -282,7 +282,7 @@ class AnkerSolixApiMonitor:
                 f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/Customi[{Color.YELLOW}Z{Color.OFF}]e cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
                 f"[{Color.YELLOW}N{Color.OFF}]ext/[{Color.YELLOW}P{Color.OFF}]rev/[{Color.YELLOW}O{Color.OFF}]ther folder, "
                 f"s[{Color.YELLOW}I{Color.OFF}]te/A[{Color.YELLOW}L{Color.OFF}]l refresh, "
-                f"MQTT [{Color.YELLOW}S{Color.OFF}]ession ({Color.YELLOW}+{Color.OFF}/{Color.YELLOW}-{Color.OFF}), "
+                f"MQTT [{Color.YELLOW}S{Color.OFF}]ession ({Color.YELLOW}+{Color.OFF}/{Color.YELLOW}-{Color.OFF}/pla{Color.YELLOW}Y{Color.OFF}/step[{Color.YELLOW}1-9{Color.OFF}]), "
                 f"[{Color.YELLOW}M{Color.OFF}]qtt display, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls, "
                 f"[{Color.YELLOW}C{Color.OFF}]ontrol/[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
             )
@@ -484,10 +484,15 @@ class AnkerSolixApiMonitor:
         CONSOLE.info(f"{'-' * 120}")
         # Print MQTT stats
         if self.use_file:
-            CONSOLE.info(
-                f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{Color.OFF}, Message cycle duration: {Color.CYAN}"
-                f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}"
-            )
+            if self.folderdict.get("steps") is None:
+                CONSOLE.info(
+                    f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{Color.OFF}, Message cycle duration: {Color.CYAN}"
+                    f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}"
+                )
+            else:
+                CONSOLE.info(
+                    f"MQTT step mode: {self.folderdict.get('progress', 0):6.2f} %{Color.OFF}"
+                )
         else:
             trigger_sec = (
                 int((self.triggered - datetime.now()).total_seconds())
@@ -1900,7 +1905,9 @@ class AnkerSolixApiMonitor:
                         f"{'Capacity':<{col3}}: {cc}{customized.get('battery_capacity') or dev.get('battery_capacity', '----')!s:>4} Wh{co}"
                     )
                 unit = "W"
-                m1 = cm and str(mqtt.get("max_load", "") or mqtt.get("output_power_limit", ""))
+                m1 = cm and str(
+                    mqtt.get("max_load", "") or mqtt.get("output_power_limit", "")
+                )
                 m2 = cm and str(mqtt.get("device_timeout_minutes", ""))
                 if m1 or (m2 and devtype != SolixDeviceType.CHARGER.value):
                     CONSOLE.info(
@@ -1912,13 +1919,10 @@ class AnkerSolixApiMonitor:
                 )
                 m2 = (
                     (cm and mqtt.get("output_power", ""))
-                    or (cm and mqtt.get("output_power_total", ""))
                     or dev.get("output_power", "")
                     or dev.get("to_home_load", "")
                 )
-                if (m1 and devtype == SolixDeviceType.SOLARBANK_PPS.value) or (
-                    m2 and devtype != SolixDeviceType.CHARGER.value
-                ):
+                if m1 or m2:
                     m3 = cm and mqtt.get("pv_yield", "")
                     m4 = cm and mqtt.get("output_energy", "")
                     CONSOLE.info(
@@ -1967,18 +1971,12 @@ class AnkerSolixApiMonitor:
                         f"{'Battery Power':<{col1}}: {m1 and (c or cm)}{m1 or '---':>4} {unit:<{col2 - 5}}{co} "
                         f"{'Exp Temp Alert':<{col3}}: {m2 or '-'}{co}"
                     )
-                m1 = cm and mqtt.get("photovoltaic_power", "")
-                m2 = cm and mqtt.get("dc_input_power", "")
-                if (m1 and devtype != SolixDeviceType.SOLARBANK_PPS.value) or m2:
-                    CONSOLE.info(
-                        f"{'Solar Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                        f"{'DC Input Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
-                    )
-                m1 = cm and mqtt.get("dc_input_power_total", "")
+                m1 = cm and mqtt.get("dc_input_power", "")
+                m3 = cm and mqtt.get("dc_input_power_total", "")
                 m2 = cm and str(mqtt.get("dc_charging_status", ""))
-                if m1 or m2:
+                if m1 or m2 or m3:
                     CONSOLE.info(
-                        f"{'DC In Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'DC In Pwr/Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{co} / {m3 and (c or cm)}{m3 or '----':>4} {unit:<{col2 - 14}}{co} "
                         f"{'DC Chrg Status':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixPpsDcChargingStatus, m2, 'unknown' if m2 else '----').capitalize() + ' (' + (m2 or '-') + ')'}{co}"
                     )
                 m1 = cm and mqtt.get("dc_output_power_total", "")
@@ -1990,30 +1988,23 @@ class AnkerSolixApiMonitor:
                         f"{'DC Out Timeout':<{col3}}: {m2 and (c or cm)}{m2 or '--:--'}{co}"
                     )
                 m1 = cm and mqtt.get("ac_input_power", "")
-                m2 = cm and mqtt.get("ac_socket_power", "")
+                m2 = cm and (
+                    mqtt.get("ac_input_limit", "") or mqtt.get("charge_power_limit", "")
+                )
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'AC Input Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                        f"{'AC Socket Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
-                    )
-                m1 = (cm and mqtt.get("grid_to_battery_power", "")) or dev.get(
-                    "grid_to_battery_power", ""
-                )
-                m2 = cm and (mqtt.get("ac_input_limit", "") or mqtt.get("charge_power_limit", ""))
-                if m1 or m2:
-                    CONSOLE.info(
-                        f"{'Grid Charge Pwr':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                        f"{'Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
+                        f"{'AC Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("ac_output_power", "")
                 m3 = cm and mqtt.get("ac_frequency", "")
-                m2 = cm and mqtt.get("ac_output_power_total", "")
+                m2 = cm and mqtt.get("output_power_total", "")
                 if m4 := cm and str(mqtt.get("ac_output_timeout_seconds", "")):
                     m4 = str(timedelta(seconds=int(m4)))
                 if m1 or m2 or m3 or m4:
                     CONSOLE.info(
                         f"{'AC Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3 and (c or cm)}{' / ' + (m3 or '--') + ' Hz':<{col2 - 6}}{co} "
-                        f"{'AC Out Tot/Off':<{col3}}: {(m2 or m4) and (c or cm)}{m2 or '----':>4} {unit}{co} / {m4 and (c or cm)}{m4 or '-:--:--'}{co}"
+                        f"{'Out Tot/AC Off':<{col3}}: {(m2 or m4) and (c or cm)}{m2 or '----':>4} {unit}{co} / {m4 and (c or cm)}{m4 or '-:--:--'}{co}"
                     )
                 m1 = str(dev.get("phase", ""))
                 m2 = str(dev.get("branch_ct_number", ""))
@@ -2740,10 +2731,15 @@ class AnkerSolixApiMonitor:
         # Print MQTT stats if session active
         if self.api.mqttsession:
             if self.use_file:
-                CONSOLE.info(
-                    f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{co}, Message cycle duration: {Color.CYAN}"
-                    f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){co}"
-                )
+                if self.folderdict.get("steps") is None:
+                    CONSOLE.info(
+                        f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{co}, Message cycle duration: {Color.CYAN}"
+                        f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){co}"
+                    )
+                else:
+                    CONSOLE.info(
+                        f"MQTT step mode: {self.folderdict.get('progress', 0):6.2f} %{Color.OFF}"
+                    )
             else:
                 trigger_sec = (
                     int((self.triggered - datetime.now()).total_seconds())
@@ -3255,6 +3251,28 @@ class AnkerSolixApiMonitor:
                                         )
                                         self.next_dev_refr = 0
                                         break_refresh = True
+                                    elif (
+                                        k.isdigit()
+                                        and self.use_file
+                                        and self.api.mqttsession
+                                    ):
+                                        CONSOLE.info(
+                                            f"{Color.GREEN}\nStepping {k} MQTT messages...{Color.OFF}"
+                                        )
+                                        self.folderdict["steps"] = int(k)
+                                        await asyncio.sleep(1)
+                                        break
+                                    elif (
+                                        k == "y"
+                                        and self.use_file
+                                        and self.api.mqttsession
+                                    ):
+                                        CONSOLE.info(
+                                            f"{Color.GREEN}\nPlaying MQTT messages...{Color.OFF}"
+                                        )
+                                        self.folderdict.pop("steps", None)
+                                        await asyncio.sleep(1)
+                                        break
                                     elif (
                                         k == "+"
                                         and self.use_file
