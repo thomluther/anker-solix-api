@@ -803,6 +803,26 @@ _A1783_0421 = {
             },
         }
     },
+    "c0": {
+        BYTES: [
+            # Field has flexible byte offsets, depending on SN length
+            {
+                NAME: "exp_1_sn?",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            {
+                NAME: "exp_1_temperature?",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+                OFFSET: 1
+            },
+            {
+                NAME: "exp_1_soc?",
+                TYPE: DeviceHexDataTypes.ui.value,
+                OFFSET: 6,
+            },
+        ]
+    },
     "d9": {
         BYTES: {
             "03": {
@@ -4385,7 +4405,7 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2
             | {
                 "a4": {
-                    NAME: "set_ac_input_limit",  # in W; min: 100, max: 2400, step: 100
+                    NAME: "set_ac_input_limit",  # in W; min: 100, max: 1800-2400, step: 100
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "ac_input_limit",
                     VALUE_MIN: 100,
