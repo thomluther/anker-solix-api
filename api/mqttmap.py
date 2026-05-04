@@ -807,18 +807,23 @@ _A1783_0421 = {
         BYTES: [
             # Field has flexible byte offsets, depending on SN length
             {
-                NAME: "exp_1_sn?",
+                NAME: "exp_1_sn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
             {
-                NAME: "exp_1_temperature?",
+                NAME: "exp_1_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
-                OFFSET: 1
+                OFFSET: 5
             },
             {
-                NAME: "exp_1_soc?",
+                NAME: "exp_1_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
+                OFFSET: 1,
+            },
+            {
+                NAME: "exp_1_type",
+                TYPE: DeviceHexDataTypes.str.value,
                 OFFSET: 6,
             },
         ]
