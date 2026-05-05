@@ -247,7 +247,10 @@ class AnkerSolixApiMonitor:
             )
             if self.use_file:
                 CONSOLE.info(
-                    f"Change MQTT message speed [{Color.YELLOW}+{Color.OFF}] faster / [{Color.YELLOW}-{Color.OFF}] slower"
+                    f"Change MQTT message mode Repla[{Color.YELLOW}Y{Color.OFF}] / Step [{Color.YELLOW}1-9{Color.OFF}] messages"
+                )
+                CONSOLE.info(
+                    f"Change MQTT message replay speed [{Color.YELLOW}+{Color.OFF}] faster / [{Color.YELLOW}-{Color.OFF}] slower"
                 )
                 CONSOLE.info(f"Immediate s[{Color.YELLOW}I{Color.OFF}]te refresh")
                 CONSOLE.info(f"Immediate refresh for a[{Color.YELLOW}L{Color.OFF}]l")
@@ -282,7 +285,7 @@ class AnkerSolixApiMonitor:
                 f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/Customi[{Color.YELLOW}Z{Color.OFF}]e cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
                 f"[{Color.YELLOW}N{Color.OFF}]ext/[{Color.YELLOW}P{Color.OFF}]rev/[{Color.YELLOW}O{Color.OFF}]ther folder, "
                 f"s[{Color.YELLOW}I{Color.OFF}]te/A[{Color.YELLOW}L{Color.OFF}]l refresh, "
-                f"MQTT [{Color.YELLOW}S{Color.OFF}]ession ({Color.YELLOW}+{Color.OFF}/{Color.YELLOW}-{Color.OFF}/pla{Color.YELLOW}Y{Color.OFF}/step[{Color.YELLOW}1-9{Color.OFF}]), "
+                f"MQTT [{Color.YELLOW}S{Color.OFF}]ession ({Color.YELLOW}+{Color.OFF}/{Color.YELLOW}-{Color.OFF}/Repla{Color.YELLOW}Y{Color.OFF}/Step[{Color.YELLOW}1-9{Color.OFF}]), "
                 f"[{Color.YELLOW}M{Color.OFF}]qtt display, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls, "
                 f"[{Color.YELLOW}C{Color.OFF}]ontrol/[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
             )

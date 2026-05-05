@@ -401,7 +401,8 @@ Customi[Z]e an Api cache entry
 [V]iew actual MQTT data cache and extracted device data
 [A]pi call display toggle OFF (default) or ON
 Toggle MQTT [S]ession OFF (default) or ON
-Change MQTT message speed [+] faster / [-] slower
+Change MQTT message mode Repla[Y] / Step [1-9] messages
+Change MQTT message replay speed [+] faster / [-] slower
 Immediate s[I]te refresh
 Immediate refresh for a[L]l
 Select [N]next folder for monitoring
