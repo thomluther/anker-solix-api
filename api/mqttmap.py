@@ -16,7 +16,7 @@ from .mqttcmdmap import (
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
     CMD_DC_OUTPUT_TIMEOUT_SEC,
-    CMD_DEVICE_MAX_LOAD,
+    #CMD_DEVICE_MAX_LOAD,
     CMD_DEVICE_POWER_MODE,
     CMD_DEVICE_SWITCH,
     CMD_DEVICE_TIMEOUT_MIN,
@@ -3929,7 +3929,7 @@ _X1_JSON = {
         "gp": {NAME: "grid_power_signed"},  # 0 W
         "g2bp": {NAME: "grid_to_battery_power"},  # 0 W
         "g2lp": {NAME: "grid_to_home_power"},  # 0 W
-        "lp": {NAME: "home_load"},  # 650 W
+        "lp": {NAME: "ac_output_power"},  # 650 W
         "d2bp": {NAME: "generator_to_battery_power"},
         "d2lp": {NAME: "generator_to_home_power"},
         "dp": {NAME: "generator_power"},
@@ -4008,7 +4008,7 @@ _PP_JSON = {
         "gp": {NAME: "grid_power_signed"},  # 3705 W
         "g2bp": {NAME: "grid_to_battery_power"},  # 2296 W
         "g2lp": {NAME: "grid_to_home_power"},  # 1409 W
-        "lp": {NAME: "home_load"},  # 1409 W
+        "lp": {NAME: "ac_output_power"},  # 1409 W
         "mpp": {NAME: "micro_inverter_power"},  # 0 W
         "op": {NAME: "other_power"},  # 0 W
         "o2lp": {NAME: "other_to_home_power"},  # 0 W

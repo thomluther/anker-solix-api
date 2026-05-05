@@ -1446,10 +1446,10 @@ class AnkerSolixApiMonitor:
                         f"{'Gen -> Bat Pwr':<{col3}}: {m2 and (c or cm)}{m2 or '-':>5} {unit}{co}"
                     )
                 if m1 := cm and mqtt.get("grid_power_signed", ""):
-                    m2 = cm and mqtt.get("home_demand", "")
+                    m2 = cm and mqtt.get("ac_output_power", "")
                     CONSOLE.info(
                         f"{'Grid Power':<{col1}}: {m1 and (c or cm)}{m1:>5} {unit:<{col2 - 6}}{co} "
-                        f"{'Home Demand':<{col3}}: {m2 and (c or cm)}{m2 or '-':>5} {unit}{co}"
+                        f"{'AC Home Pwr':<{col3}}: {m2 and (c or cm)}{m2 or '-':>5} {unit}{co}"
                     )
                 if "battery_capacity" in dev:
                     CONSOLE.info(

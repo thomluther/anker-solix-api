@@ -1492,12 +1492,13 @@ class MqttCmdValidator:
             )
         if self.options:
             if isinstance(self.options, list) and value not in self.options:
+                # check if value is found in list
                 s = "'" if isinstance(value, str) else ""
                 raise ValueError(
                     f"Provided value is no valid option {self.options!s}, got: {s}{value!s}{s}"
                 )
             if isinstance(self.options, dict):
-                # check if value is found in dict or list and get corresponding parameter value
+                # check if value is found in dict and get corresponding parameter value
                 if value in self.options:
                     parmvalue = self.options.get(value)
                 elif isinstance(value, str) and value.lower() in self.options:
@@ -1521,9 +1522,15 @@ class MqttCmdValidator:
                 )
             # round value to step with same decimals if not at limits to support partial last step
             if self.step and self.min < parmvalue < self.max:
-                parmvalue = round_by_factor(
-                    self.step * round(parmvalue / self.step),
-                    self.step,
+                parmvalue = max(
+                    self.min,
+                    min(
+                        self.max,
+                        round_by_factor(
+                            self.step * round(parmvalue / self.step),
+                            self.step,
+                        ),
+                    ),
                 )
         elif self.min or self.max:
             # String value for expected number value

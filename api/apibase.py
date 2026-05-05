@@ -616,6 +616,28 @@ class AnkerSolixBaseApi:
                             # trigger device capacity calculation with SOC updates
                             if key in ["battery_soc", "main_battery_soc"]:
                                 calc_capacity = True
+                            # calculate device PV total if not included in MQTT data
+                            if Any(
+                                key == f"device_{x}_pv_1_power"
+                                and f"device_{x}_pv_power" not in values
+                                for x in range(1, 7)
+                            ):
+                                if (
+                                    str(
+                                        idx := (key.split("_")[1:2] or ["0"])[0]
+                                    ).isdigit()
+                                    and int(idx) > 0
+                                ):
+                                    # accumulate all PV channels
+                                    pv_power = 0
+                                    for i in range(1, 5):
+                                        pv_power += float(
+                                            values.get(f"device_{idx}_pv_{i}_power")
+                                            or 0
+                                        )
+                                    device_mqtt[f"device_{idx}_pv_power"] = (
+                                        f"{pv_power:.0f}"
+                                    )
                         elif (
                             key
                             in [
