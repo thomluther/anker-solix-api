@@ -843,6 +843,8 @@ class AnkerSolixMqttSession:
                             # write cycle progress into folderdict
                             folderdict["progress"] = 0
                             folderdict["duration"] = duration
+                            folderdict["timestamps"] = len(timestamps)
+                            folderdict["ts_index"] = 0
                 if timestamps:
                     cycle_now = (
                         speedstart
@@ -866,6 +868,7 @@ class AnkerSolixMqttSession:
                                 (timestamps[time_idx] - timestamps[0]) / duration * 100,
                                 2,
                             )
+                        folderdict["ts_index"] = time_idx
                         # simulate mqtt messages for timestamp
                         for message in active_msgs.get(timestamps[time_idx]) or []:
                             self._logger.debug(
@@ -916,7 +919,7 @@ class AnkerSolixMqttSession:
                         speedstart = timestamps[max(0, time_idx - 1)]
                         cycleoffset = datetime.now().timestamp() - speedstart
                     # check steps or playmode change at runtime
-                    if (newsteps := folderdict.get("steps")) and steps != newsteps:
+                    if steps != (newsteps := folderdict.get("steps")):
                         # reset the offset into the cycle
                         steps = newsteps
                         if steps is None:

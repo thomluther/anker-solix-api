@@ -617,7 +617,7 @@ class AnkerSolixBaseApi:
                             if key in ["battery_soc", "main_battery_soc"]:
                                 calc_capacity = True
                             # calculate device PV total if not included in MQTT data
-                            if Any(
+                            if any(
                                 key == f"device_{x}_pv_1_power"
                                 and f"device_{x}_pv_power" not in values
                                 for x in range(1, 7)

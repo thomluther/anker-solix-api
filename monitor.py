@@ -487,11 +487,13 @@ class AnkerSolixApiMonitor:
             if self.folderdict.get("steps") is None:
                 CONSOLE.info(
                     f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{Color.OFF}, Message cycle duration: {Color.CYAN}"
-                    f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}"
+                    f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}, "
+                    f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1 :3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
                 )
             else:
                 CONSOLE.info(
-                    f"MQTT step mode: {self.folderdict.get('progress', 0):6.2f} %{Color.OFF}"
+                    f"MQTT step mode: {Color.YELLOW}{self.folderdict.get('progress', 0):6.2f} %{Color.OFF}, "
+                    f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1 :3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
                 )
         else:
             trigger_sec = (
@@ -2734,11 +2736,13 @@ class AnkerSolixApiMonitor:
                 if self.folderdict.get("steps") is None:
                     CONSOLE.info(
                         f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{co}, Message cycle duration: {Color.CYAN}"
-                        f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){co}"
+                        f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}, "
+                        f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1 :3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
                     )
                 else:
                     CONSOLE.info(
-                        f"MQTT step mode: {self.folderdict.get('progress', 0):6.2f} %{Color.OFF}"
+                        f"MQTT step mode: {Color.YELLOW}{self.folderdict.get('progress', 0):6.2f} %{Color.OFF}, "
+                        f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1 :3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
                     )
             else:
                 trigger_sec = (
