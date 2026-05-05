@@ -946,7 +946,7 @@ class AnkerSolixApiMonitor:
                 )
                 m2 = str(c and mqtt.get("charging_status", ""))
                 CONSOLE.info(
-                    f"{'Charge Status':<{col1}}: {str(dev.get('charging_status_desc', '-------')).capitalize():<{col2}} "
+                    f"{'Charge Status':<{col1}}: {m2 and c}{(get_enum_name(SolixPpsPortStatus, m2, m2).title() if devtype == SolixDeviceType.HOME_BACKUP.value else m2) or str(dev.get('charging_status_desc', '-------')).capitalize():<{col2}} "
                     f"{'Status Code':<{col3}}: {m2 and c}{m2 or dev.get('charging_status', '-')!s}{co}"
                 )
                 m1 = c and mqtt.get("battery_soc", "")
@@ -1016,7 +1016,7 @@ class AnkerSolixApiMonitor:
                         m3 = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                     CONSOLE.info(
                         f"{'Main Bat SN':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
-                        f"{'Main SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>3} %{co} / {m3 and (c or cm)}{m3}{co}"
+                        f"{'Main SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} %{co} / {m3 and (c or cm)}{m3}{co}"
                     )
                 for i in range(1, 6):
                     m1 = cm and mqtt.get(f"exp_{i}_sn", "")
@@ -1029,7 +1029,7 @@ class AnkerSolixApiMonitor:
                             m3 = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                         CONSOLE.info(
                             f"{'Exp. ' + str(i) + ' SN':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
-                            f"{'Exp. ' + str(i) + ' SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>3} %{co} / {m3 and (c or cm)}{m3}{co}"
+                            f"{'Exp. ' + str(i) + ' SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} %{co} / {m3 and (c or cm)}{m3}{co}"
                         )
                     else:
                         break

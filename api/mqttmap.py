@@ -2228,7 +2228,7 @@ _A17E1_040a = {
     # Home Backup System E10 Expansion data
     TOPIC: "param_info",
     "a2": {NAME: "expansion_packs"},
-    "a3": {NAME: "main_battery_soc"},  # main battery SOC
+    "a3": {NAME: "battery_soc"},  # battery SOC
     "a4": {
         BYTES: {
             "00": {
@@ -5047,7 +5047,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "a3": {NAME: "battery_soc"},
             "a4": {
                 NAME: "charging_status"
-            },  # charging_status: 0=idle, 1=discharging, 2=charging
+            },  # charging_status: 0=inactive, 1=discharging, 2=charging
             "a5": {NAME: "temperature", SIGNED: True},
             "a6": {NAME: "battery_soc?"},
             "a7": {NAME: "sw_version?", "values": 4},
@@ -5055,8 +5055,8 @@ SOLIXMQTTMAP: Final[dict] = {
             "a9": {NAME: "sw_expansion?", "values": 4},  # Expansion firmware version
             "ab": {NAME: "photovoltaic_power"},
             "ac": {NAME: "battery_power"},
-            "ad": {NAME: "ac_output_power?"},  # inverter AC output
-            "ae": {NAME: "dc_output_power?"},  # inverter PV/Battery input
+            "ad": {NAME: "ac_output_power"},  # inverter AC output
+            "ae": {NAME: "ac_output_power_inverted?"},  # inverter PV/Battery input?
             "b0": {NAME: "bypass_energy?"},
             "b1": {NAME: "charged_energy?"},
             "b2": {NAME: "consumed_energy?"},
@@ -5071,9 +5071,9 @@ SOLIXMQTTMAP: Final[dict] = {
                 NAME: "use_time_band?"
             },  # use_time_band: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
             "c4": {NAME: "grid_power_signed"},  # positive=import, negative=export
-            "c5": {NAME: "home_load?"},
-            "c6": {NAME: "pv_1_power?"},
-            "c7": {NAME: "pv_2_power?"},
+            "c5": {NAME: "home_demand"},
+            "c6": {NAME: "pv_1_power"},
+            "c7": {NAME: "pv_2_power"},
             "af": {
                 NAME: "generator_to_home_power?"
             },  # generator AC input power to home
