@@ -16,7 +16,7 @@ from .mqttcmdmap import (
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
     CMD_DC_OUTPUT_TIMEOUT_SEC,
-    #CMD_DEVICE_MAX_LOAD,
+    # CMD_DEVICE_MAX_LOAD,
     CMD_DEVICE_POWER_MODE,
     CMD_DEVICE_SWITCH,
     CMD_DEVICE_TIMEOUT_MIN,
@@ -411,6 +411,10 @@ _A1763_0421 = {
                 NAME: "ac_input_limit",  # AC charge limit: 100-1200 W, step: 100
                 TYPE: DeviceHexDataTypes.sile.value,
             },
+            "06": {
+                NAME: "ac_frequency",  # 60 / 50 Hz
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "07": {
                 NAME: "ac_output_mode",  # Normal (0), Smart (1) - auto-off below 14W
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -434,6 +438,10 @@ _A1763_0421 = {
             },
             "17": {
                 NAME: "display_mode",  # Low (1), Medium (2), High (3)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "19": {
+                NAME: "temp_unit_fahrenheit",  # Celsius (0) or Fahrenheit (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "20": {
@@ -567,6 +575,31 @@ _A1763_0421 = {
             },
         }
     },
+    "c0": {
+        BYTES: [
+            # Field has flexible byte offsets, depending on SN length
+            {
+                NAME: "exp_1_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            {
+                NAME: "exp_1_temperature",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+                OFFSET: 5,
+            },
+            {
+                NAME: "exp_1_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+                OFFSET: 1,
+            },
+            {
+                NAME: "exp_1_type",
+                TYPE: DeviceHexDataTypes.str.value,
+                OFFSET: 6,
+            },
+        ]
+    },
     "d9": {
         BYTES: {
             "03": {
@@ -623,7 +656,7 @@ _A1783_0421 = {
     "a4": {
         BYTES: {
             "00": {
-                NAME: "ac_output_timeout_seconds?",  # disable (0), min:0, max: 86400, step 300
+                NAME: "ac_output_timeout_seconds",  # disable (0), min:0, max: 86400, step 300
                 TYPE: DeviceHexDataTypes.var.value,
                 LENGTH: 4,
             },
@@ -631,17 +664,21 @@ _A1783_0421 = {
                 NAME: "ac_input_limit",  # AC charge limit: 100-2400 W, step: 100
                 TYPE: DeviceHexDataTypes.sile.value,
             },
+            "06": {
+                NAME: "ac_frequency",  # 60 / 50 Hz
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "07": {
-                NAME: "ac_output_mode?",  # Normal (0), Smart (1) - auto-off below 14W
+                NAME: "ac_output_mode",  # Normal (0), Smart (1) - auto-off below 14W
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "08": {
-                NAME: "dc_output_timeout_seconds?",  # disable (0), min:0, max: 86400, step 300
+                NAME: "dc_output_timeout_seconds",  # disable (0), min:0, max: 86400, step 300
                 TYPE: DeviceHexDataTypes.var.value,
                 LENGTH: 4,
             },
             "12": {
-                NAME: "dc_12v_output_mode?",  # Normal (0), Smart (1) - auto-off below 3W
+                NAME: "dc_12v_output_mode",  # Normal (0), Smart (1) - auto-off below 3W
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "13": {
@@ -653,19 +690,23 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "17": {
-                NAME: "display_mode?",  # Low (1), Medium (2), High (3)
+                NAME: "display_mode",  # Low (1), Medium (2), High (3)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "19": {
+                NAME: "temp_unit_fahrenheit",  # Celsius (0) or Fahrenheit (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "20": {
-                NAME: "ac_fast_charge_switch?",  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
+                NAME: "ac_fast_charge_switch",  # Ultrafast Charge switch: Disabled (0) or Enabled (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "21": {
-                NAME: "display_switch?",  # Off (0), On (1)
+                NAME: "display_switch",  # Off (0), On (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "port_memory_switch?",  # Output Port Memory switch: Disabled (0) or Enabled (1)
+                NAME: "port_memory_switch",  # Output Port Memory switch: Disabled (0) or Enabled (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }
@@ -731,26 +772,14 @@ _A1783_0421 = {
             },
         }
     },
-    "a8": {
-        BYTES: {
-            "00": {
-                NAME: "usbc_1_status?",  # USB-C 1 status: Inactive (0), Discharging (1), Charging (2)
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            "01": {
-                NAME: "usbc_1_power?",
-                TYPE: DeviceHexDataTypes.sile.value,
-            },
-        }
-    },
     "aa": {
         BYTES: {
             "00": {
-                NAME: "usbc_2_status?",  # USB-C 2 status: Inactive (0), Discharging (1), Charging (2)
+                NAME: "usbc_1_status",  # USB-C 1 status: Inactive (0), Discharging (1), Charging (2)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "usbc_2_power?",
+                NAME: "usbc_1_power",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -758,11 +787,11 @@ _A1783_0421 = {
     "ab": {
         BYTES: {
             "00": {
-                NAME: "usbc_3_status?",  # USB-C 3 status: Inactive (0), Discharging (1), Charging (2)
+                NAME: "usbc_2_status",  # USB-C 2 status: Inactive (0), Discharging (1), Charging (2)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "usbc_3_power?",
+                NAME: "usbc_2_power",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -770,11 +799,11 @@ _A1783_0421 = {
     "ac": {
         BYTES: {
             "00": {
-                NAME: "usba_1_status?",  # USB-A 1 status: Inactive (0), Discharging (1), Charging (2)
+                NAME: "usbc_3_status",  # USB-C 3 status: Inactive (0), Discharging (1), Charging (2)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "usba_1_power?",
+                NAME: "usbc_3_power",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -782,11 +811,11 @@ _A1783_0421 = {
     "ae": {
         BYTES: {
             "00": {
-                NAME: "dc_12v_1_status?",  # 12V Car port status: Inactive (0), Discharging (1), Charging (2)
+                NAME: "usba_1_status",  # USB-A 1 status: Inactive (0), Discharging (1), Charging (2)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "dc_12v_1__power?",
+                NAME: "usba_1_power",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -794,11 +823,11 @@ _A1783_0421 = {
     "b2": {
         BYTES: {
             "00": {
-                NAME: "dc_output_power_switch?",  # Off (0), On (1)
+                NAME: "dc_output_power_switch",  # Off (0), On (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "dc_output_power_total?",  # Total Watt DC
+                NAME: "dc_output_power_total",  # Total Watt DC
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -814,7 +843,7 @@ _A1783_0421 = {
                 NAME: "exp_1_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
-                OFFSET: 5
+                OFFSET: 5,
             },
             {
                 NAME: "exp_1_soc",
@@ -1499,7 +1528,7 @@ _A1790_0405 = {
             "00": {
                 NAME: "region",
                 TYPE: DeviceHexDataTypes.str.value,
-                LENGTH: 2
+                LENGTH: 2,
             },  # Value 21333 ("US")
         }
     },
@@ -4405,20 +4434,137 @@ SOLIXMQTTMAP: Final[dict] = {
         "0101": {
             # AC command group
             COMMAND_LIST: [
+                SolixMqttCommands.ac_output_switch,  # field a2
+                SolixMqttCommands.ac_output_timeout_seconds,  # field a3
                 SolixMqttCommands.ac_charge_limit,  # field a4
+                SolixMqttCommands.ac_output_mode_select,  # field a6
             ],
+            SolixMqttCommands.ac_output_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_ac_output_switch",  # Disable (0) | Enable (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_output_power_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
             SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2
             | {
                 "a4": {
-                    NAME: "set_ac_input_limit",  # in W; min: 100, max: 1800-2400, step: 100
+                    NAME: "set_ac_input_limit",  # in W; min: 200, max: 1800-2400, step: 100
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "ac_input_limit",
-                    VALUE_MIN: 100,
+                    VALUE_MIN: 200,
                     VALUE_MAX: 1800,  # lowest limit for all variants
                     VALUE_MAX_STATE: "ac_input_limit_max",  # adopt limit based on device variant
                     VALUE_STEP: 100,
                 },
             },
+            SolixMqttCommands.ac_output_timeout_seconds: CMD_COMMON_V2
+            | {
+                "a3": {
+                    NAME: "set_ac_output_timeout_seconds",  # Timeout seconds, custom range: 0-86400, step 300
+                    TYPE: DeviceHexDataTypes.var.value,
+                    STATE_NAME: "ac_output_timeout_seconds",
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 86400,
+                    VALUE_STEP: 300,
+                },
+            },
+            SolixMqttCommands.ac_output_mode_select: CMD_COMMON_V2
+            | {
+                "a6": {
+                    NAME: "set_ac_output_mode",  # Normal (0), Smart (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_output_mode",
+                    VALUE_OPTIONS: {"normal": 0, "smart": 1},
+                },
+            },
+        },
+        "0102": {
+            # DC command group
+            COMMAND_LIST: [
+                SolixMqttCommands.dc_output_switch,  # field a2
+                SolixMqttCommands.dc_12v_output_mode_select,  # field a4
+            ],
+            SolixMqttCommands.dc_output_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_dc_output_switch",  # Disable (0) | Enable (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "dc_output_power_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+            SolixMqttCommands.dc_12v_output_mode_select: CMD_COMMON_V2
+            | {
+                "a4": {
+                    NAME: "set_dc_12v_output_mode",  # Normal (0), Smart (0)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "dc_12v_output_mode",
+                    VALUE_OPTIONS: {"normal": 0, "smart": 1},
+                },
+            },
+        },
+        "0103": {
+            # Other command group
+            COMMAND_LIST: [
+                SolixMqttCommands.display_switch,  # field a2
+                SolixMqttCommands.display_mode_select,  # field a3
+                SolixMqttCommands.display_timeout_seconds,  # field a4
+                SolixMqttCommands.device_timeout_minutes,  # field a6
+                SolixMqttCommands.port_memory_switch,  # field a8
+                SolixMqttCommands.soc_limits,  # field aa, ab
+            ],
+            SolixMqttCommands.display_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_display_switch",  # Off (0), On (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "display_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+            SolixMqttCommands.display_mode_select: CMD_COMMON_V2
+            | {
+                "a3": {
+                    NAME: "set_display_mode",  # Low (1), Medium (2), High (3)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "display_mode",
+                    VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+                },
+            },
+            SolixMqttCommands.display_timeout_seconds: CMD_COMMON_V2
+            | {
+                "a4": {
+                    NAME: "set_display_timeout_sec",  # 0 (Never), 10, 20, 30, 60, 300, 1800
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "display_timeout_seconds",
+                    VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
+                },
+            },
+            SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
+            | {
+                "a6": {
+                    NAME: "set_device_timeout_min",  # 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "device_timeout_minutes",
+                    VALUE_OPTIONS: [0, 30, 60, 120, 240, 360, 720, 1440],
+                },
+            },
+            SolixMqttCommands.port_memory_switch: CMD_COMMON_V2
+            | {
+                "a8": {
+                    NAME: "set_port_memory_switch",  # Off (0), On (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "port_memory_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+            SolixMqttCommands.soc_limits: CMD_SOC_LIMITS_V2,
+            # Contains fields aa ab for the limits
+            # aa = max_soc: 80, 85, 90, 95, 100 %
+            # ab = min_soc: 1, 5, 10, 15, 20 %
         },
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1783_0421,
@@ -4795,8 +4941,8 @@ SOLIXMQTTMAP: Final[dict] = {
             "b4": {NAME: "discharged_energy", FACTOR: 0.0001},
             "b5": {NAME: "bypass_energy", FACTOR: 0.0001},
             "b6": {NAME: "temperature", SIGNED: True},
-            "b7": {NAME: "pv_1_voltage", FACTOR: 0.01},
-            "b8": {NAME: "pv_2_voltage", FACTOR: 0.01},
+            "b7": {NAME: "pv_voltage", FACTOR: 0.01},
+            "b8": {NAME: "output_voltage", FACTOR: 0.01},
             "b9": {NAME: "battery_voltage", FACTOR: 0.01},
         },
     },

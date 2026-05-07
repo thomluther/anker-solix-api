@@ -1080,11 +1080,12 @@ class AnkerSolixApiMonitor:
                     f"{'Output Power':<{col3}}: {m2 and c}{m2 or dev.get('output_power') or dev.get('to_home_load') or '---'!s:>4} {unit}{m4 and (c or cm)}{((' (' + m4 + ' kWh)') if m4 else '')}{co}"
                 )
                 # show PV and battery voltage if available
-                if m1 := cm and mqtt.get("pv_1_voltage", ""):
-                    m2 = cm and mqtt.get("pv_2_voltage", "")
-                    m3 = cm and mqtt.get("battery_voltage", "")
+                m1 = cm and mqtt.get("pv_voltage", "")
+                m3 = cm and mqtt.get("battery_voltage", "")
+                if m1 or m3:
+                    m2 = cm and mqtt.get("output_voltage", "")
                     CONSOLE.info(
-                        f"{'Voltage Ch 1/2':<{col1}}: {m1 and (c or cm)}{m1 or '-.---':>6} / {m2 or '-.---':>6} {'V':<{col2 - 16}}{co} "
+                        f"{'Voltage In/Out':<{col1}}: {m1 and (c or cm)}{m1 or '-.---':>6} V / {m2 or '-.---':>6} {'V':<{col2 - 18}}{co} "
                         f"{'Voltage Battery':<{col3}}: {m3 and (c or cm)}{m3 or '-.---':>6} V{co}"
                     )
                 # show each MPPT for Solarbank 2+
