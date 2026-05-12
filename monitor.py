@@ -385,10 +385,10 @@ class AnkerSolixApiMonitor:
             key = input(
                 f"Enter {Color.CYAN}key{Color.OFF} to be customized in '{Color.YELLOW}{item}{Color.OFF}': "
             )
-            if value := json.loads(
-                f"{input(f"Enter '{Color.YELLOW}{key}{Color.OFF}' {Color.CYAN}value{Color.OFF} in JSON format: ").replace("'", '"')}"
-                or "{}"
-            ):
+            value = input(
+                f"Enter '{Color.YELLOW}{key}{Color.OFF}' {Color.CYAN}value{Color.OFF} in JSON format: "
+            )
+            if value := json.loads(value.replace("'", '"') or "{}"):
                 self.api.customizeCacheId(id=item, key=key, value=value)
                 CONSOLE.info(
                     f"Customized part of {Color.YELLOW}{item}{Color.OFF}:\n"
@@ -491,12 +491,12 @@ class AnkerSolixApiMonitor:
                 CONSOLE.info(
                     f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{Color.OFF}, Message cycle duration: {Color.CYAN}"
                     f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}, "
-                    f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1 :3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
+                    f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
                 )
             else:
                 CONSOLE.info(
                     f"MQTT step mode: {Color.YELLOW}{self.folderdict.get('progress', 0):6.2f} %{Color.OFF}, "
-                    f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1 :3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
+                    f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
                 )
         else:
             trigger_sec = (
@@ -750,7 +750,7 @@ class AnkerSolixApiMonitor:
                     f"{'Accessory':<{col1}}: {fitting.get('device_name', ''):<{col2}} "
                     f"{'Serialnumber':<{col3}}: {fsn}"
                 )
-            if not dev.get("is_passive"):
+            if not dev.get("is_passive") or mqtt:
                 wt = dev.get("wireless_type") or ""
                 net = (
                     ((dev.get("relate_type") or [])[int(wt) : int(wt) + 1] or [""])[0]
@@ -1014,12 +1014,12 @@ class AnkerSolixApiMonitor:
                 if m1 or m2:
                     m3 = cm and mqtt.get("temperature", "")
                     if m3 and mqtt.get("temp_unit_fahrenheit"):
-                        m3 = f"{float(m3) * 9 / 5 + 32:>4} °F"
+                        tmp = f"{float(m3) * 9 / 5 + 32:>4} °F"
                     else:
-                        m3 = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
+                        tmp = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                     CONSOLE.info(
                         f"{'Main Bat SN':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
-                        f"{'Main SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} %{co} / {m3 and (c or cm)}{m3}{co}"
+                        f"{'Main SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} %{co} / {m3 and (c or cm)}{tmp}{co}"
                     )
                 for i in range(1, 6):
                     m1 = cm and mqtt.get(f"exp_{i}_sn", "")
@@ -1027,12 +1027,12 @@ class AnkerSolixApiMonitor:
                     if m1 or m2:
                         m3 = cm and mqtt.get(f"exp_{i}_temperature", "")
                         if m3 and mqtt.get("temp_unit_fahrenheit"):
-                            m3 = f"{float(m3) * 9 / 5 + 32:>4} °F"
+                            tmp = f"{float(m3) * 9 / 5 + 32:>4} °F"
                         else:
-                            m3 = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
+                            tmp = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                         CONSOLE.info(
                             f"{'Exp. ' + str(i) + ' SN':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
-                            f"{'Exp. ' + str(i) + ' SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} %{co} / {m3 and (c or cm)}{m3}{co}"
+                            f"{'Exp. ' + str(i) + ' SoC/Temp':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} %{co} / {m3 and (c or cm)}{tmp}{co}"
                         )
                     else:
                         break
@@ -2741,12 +2741,12 @@ class AnkerSolixApiMonitor:
                     CONSOLE.info(
                         f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{co}, Message cycle duration: {Color.CYAN}"
                         f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}, "
-                        f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1 :3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
+                        f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
                     )
                 else:
                     CONSOLE.info(
                         f"MQTT step mode: {Color.YELLOW}{self.folderdict.get('progress', 0):6.2f} %{Color.OFF}, "
-                        f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1 :3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
+                        f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
                     )
             else:
                 trigger_sec = (

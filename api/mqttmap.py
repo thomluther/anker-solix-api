@@ -3215,13 +3215,13 @@ _AS200_0421 = {
         BYTES: {
             "00": {NAME: "device_switch", TYPE: DeviceHexDataTypes.ui.value},
             "02": {
-                NAME: "car_battery_type",
+                NAME: "car_battery_type",  # 0=LiFePO4, 1=Lead Acid
                 TYPE: DeviceHexDataTypes.ui.value,
-            },  # 0=LiFePO4, 1=Lead Acid
+            },
             "03": {
-                NAME: "car_battery_voltage_type",
+                NAME: "car_battery_voltage_type",  # 0=12V, 1=24V
                 TYPE: DeviceHexDataTypes.ui.value,
-            },  # 0=12V, 1=24V
+            },
             "05": {
                 NAME: "charge_voltage_limit",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3236,22 +3236,21 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "11": {
-                NAME: "active_device_timeout_minutes",
+                NAME: "active_device_timeout_minutes",  # active device auto-off timeout (minutes): 0 (Never), 720–1440 min in 30 min steps
                 TYPE: DeviceHexDataTypes.sile.value,
             },
-            # active device auto-off timeout (minutes): 0 (Never), 720–1440 min in 30 min steps
             "13": {
                 NAME: "temp_unit_fahrenheit",
                 TYPE: DeviceHexDataTypes.ui.value,
             },  # Celsius (0) or Fahrenheit (1)
-            "14": {
-                NAME: "device_timeout_switch",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },  # Timeout (0) or Off (1)
             "16": {
-                NAME: "device_timeout_minutes",
+                NAME: "device_timeout_minutes",  # Device auto-off timeout control (minutes): 720–1440 min in 30 min steps
                 TYPE: DeviceHexDataTypes.sile.value,
-            },  # Device auto-off timeout control (minutes): 720–1440 min in 30 min steps
+            },
+            "18": {
+                NAME: "device_timeout_switch",  # Timeout (0) or Off (1) = Never timeout
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
         }
     },
     "a6": {

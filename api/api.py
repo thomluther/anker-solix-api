@@ -160,7 +160,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # Flag device for supported mqtt trigger if admin and device not passive
                         if (
                             device.get("is_admin") or device.get("owner_user_id")
-                        ) and not device.get("is_passive"):
+                        ) and not (device.get("is_passive") or devData.get("is_passive")):
                             device["mqtt_supported"] = True
                             # update customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
