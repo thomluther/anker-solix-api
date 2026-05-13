@@ -1474,7 +1474,7 @@ _A1790_0405 = {
     "aa": {NAME: "usba_1_power?"},
     "ab": {NAME: "usba_2_power?"},
     "ac": {NAME: "dc_12v_output_power_switch?"},
-    "ad": {NAME: "main_battery_soc"},  # Main battery SOC?
+    "ad": {NAME: "battery_soc"},  # Total SOC of main + Exp batteries?
     "ae": {NAME: "photovoltaic_power"},  # Total solar input
     "af": {NAME: "pv_1_power"},
     "b0": {NAME: "pv_2_power"},
@@ -1492,7 +1492,7 @@ _A1790_0405 = {
     },
     "be": {NAME: "temperature", SIGNED: True},  # In Celsius
     "bf": {NAME: "display_status"},  # Asleep (0), Manual Off (1), On (2)
-    "c0": {NAME: "battery_soc"},  # Total SOC of main + Exp batteries?
+    "c0": {NAME: "main_battery_soc"},  # Main battery SOC?
     "c1": {NAME: "battery_soh"},
     # TODO: What does USB status mean, is that a toggle setting? If port is used, this should be indicated by power as well
     "c2": {NAME: "usbc_1_status"},
@@ -1542,26 +1542,26 @@ _A1790_0405 = {
 _A1790_040a = {
     # F3800 param info
     TOPIC: "param_info",
-    "a2": {NAME: "expansion_packs?"},
+    "a2": {NAME: "expansion_packs"},
     "a3": {NAME: "main_battery_soc?"},  # main battery SOC
     "a4": {
         BYTES: {
             "00": {
-                NAME: "exp_1_sn?",
+                NAME: "exp_1_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_1_temperature?",
+                NAME: "exp_1_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_1_soc?",
+                NAME: "exp_1_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_1_soh?",
+                NAME: "exp_1_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1574,21 +1574,21 @@ _A1790_040a = {
     "a5": {
         BYTES: {
             "00": {
-                NAME: "exp_2_sn?",
+                NAME: "exp_2_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_2_temperature?",
+                NAME: "exp_2_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_2_soc?",
+                NAME: "exp_2_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_2_soh?",
+                NAME: "exp_2_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1601,21 +1601,21 @@ _A1790_040a = {
     "a6": {
         BYTES: {
             "00": {
-                NAME: "exp_3_sn?",
+                NAME: "exp_3_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_3_temperature?",
+                NAME: "exp_3_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_3_soc?",
+                NAME: "exp_3_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_3_soh?",
+                NAME: "exp_3_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1628,21 +1628,21 @@ _A1790_040a = {
     "a7": {
         BYTES: {
             "00": {
-                NAME: "exp_4_sn?",
+                NAME: "exp_4_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_4_temperature?",
+                NAME: "exp_4_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_4_soc?",
+                NAME: "exp_4_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_4_soh?",
+                NAME: "exp_4_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1655,21 +1655,21 @@ _A1790_040a = {
     "a8": {
         BYTES: {
             "00": {
-                NAME: "exp_5_sn?",
+                NAME: "exp_5_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_5_temperature?",
+                NAME: "exp_5_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_5_soc?",
+                NAME: "exp_5_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_5_soh?",
+                NAME: "exp_5_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
@@ -1682,21 +1682,21 @@ _A1790_040a = {
     "a9": {
         BYTES: {
             "00": {
-                NAME: "exp_6_sn?",
+                NAME: "exp_6_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "exp_6_temperature?",
+                NAME: "exp_6_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
             "21": {
-                NAME: "exp_6_soc?",
+                NAME: "exp_6_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "22": {
-                NAME: "exp_6_soh?",
+                NAME: "exp_6_soh",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
