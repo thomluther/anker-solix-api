@@ -10,12 +10,14 @@ from .mqttcmdmap import (
     CMD_AC_FAST_CHARGE_SWITCH,
     CMD_AC_OUTPUT_MODE,
     CMD_AC_OUTPUT_SWITCH,
+    CMD_AC_OUTPUT_TIMEOUT_SEC,
     CMD_AC_PORT_SWITCH,
     CMD_BATTERY_CHARGE_LIMITS,
     CMD_COMMON_V2,
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
     CMD_DC_OUTPUT_TIMEOUT_SEC,
+    CMD_ENERGY_SAVING_MODE,
     # CMD_DEVICE_MAX_LOAD,
     CMD_DEVICE_POWER_MODE,
     CMD_DEVICE_SWITCH,
@@ -958,6 +960,14 @@ _A1780_0408 = {
     "a6": {NAME: "discharged_energy?", FACTOR: 0.001},  # in kWh
     "a7": {NAME: "charged_energy?", FACTOR: 0.001},  # in kWh
     "ac": {NAME: "main_battery_soc"},  # in %
+}
+
+_A1781_0405 = _A1780_0405 | {
+    # F2600 param info (A1781)
+    # A1781 matches the F2000 telemetry layout, plus a2/a3 carry the
+    # active AC/DC auto-off countdowns (always-zero composite slots on F2000).
+    "a2": {NAME: "ac_output_timeout_seconds"},  # Active AC auto-off countdown in seconds
+    "a3": {NAME: "dc_output_timeout_seconds"},  # Active DC auto-off countdown in seconds
 }
 
 _A1782_0421 = {
@@ -4628,6 +4638,38 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1780_0405,
         # Interval: irregular, triggerd by wifi signal change?
+        "0407": _PPS_0407,
+        # Interval: ??
+        "0408": _A1780_0408,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": _PPS_VERSIONS_0830,
+    },
+    # PPS F2600
+    "A1781": {
+        "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,  # AC output timeout: 0-86400 seconds, step 300
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: 0-86400 seconds, step 300
+        "0044": CMD_AC_CHARGE_LIMIT  # in W; min: 100, max: 1440, step: 100
+        | {
+            "a2": {
+                **CMD_AC_CHARGE_LIMIT["a2"],
+                VALUE_MIN: 100,
+                VALUE_MAX: 1440,
+                VALUE_STEP: 100,
+            }
+        },
+        # 0045 omitted: F2600 reports d2=0 in telemetry but ignores writes
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+        "004e": CMD_ENERGY_SAVING_MODE,  # Power saving mode: Off (0) or On (1)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": _A1781_0405,
+        # Interval: irregular, triggered by wifi signal change?
         "0407": _PPS_0407,
         # Interval: ??
         "0408": _A1780_0408,
