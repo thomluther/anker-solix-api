@@ -17,7 +17,6 @@ from .mqttcmdmap import (
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
     CMD_DC_OUTPUT_TIMEOUT_SEC,
-    CMD_ENERGY_SAVING_MODE,
     # CMD_DEVICE_MAX_LOAD,
     CMD_DEVICE_POWER_MODE,
     CMD_DEVICE_SWITCH,
@@ -25,6 +24,7 @@ from .mqttcmdmap import (
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
     CMD_DISPLAY_TIMEOUT_SEC,
+    CMD_ENERGY_SAVING_SWITCH,
     CMD_EV_AUTO_CHARGE_RESTART_SWITCH,
     CMD_EV_AUTO_START_SWITCH,
     CMD_EV_CHARGE_RANDOM_DELAY_SWITCH,
@@ -930,7 +930,7 @@ _A1780_0405 = {
     "d8": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d9": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
     "da": {NAME: "ac_frequency"},  # 60 / 50 Hz
-    "db": {NAME: "energy_saving_mode"},  # Disabled (0) or Enabled (1)
+    "db": {NAME: "energy_saving_switch"},  # Disabled (0) or Enabled (1)
     "dc": {NAME: "light_mode"},  # Off (0), Low (1), Medium (2), High (3), Blinking (4)
     "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
@@ -4655,7 +4655,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
-        "004e": CMD_ENERGY_SAVING_MODE,  # Power saving mode: Off (0) or On (1)
+        "004e": CMD_ENERGY_SAVING_SWITCH,  # Power saving mode: Off (0) or On (1)
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)

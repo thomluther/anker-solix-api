@@ -1851,7 +1851,7 @@ class AnkerSolixApiMonitor:
                         f"{'Fast charge':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
                     )
                 m1 = cm and mqtt.get("port_memory_switch", "")
-                m2 = cm and mqtt.get("energy_saving_mode", "")
+                m2 = cm and mqtt.get("energy_saving_switch", "")
                 if str(m1) or str(m2):
                     CONSOLE.info(
                         f"{'Port Memory':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2 - 3}}{co} "

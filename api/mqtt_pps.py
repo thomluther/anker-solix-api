@@ -57,7 +57,7 @@ FEATURES = {
     SolixMqttCommands.dc_output_switch: MODELS,
     SolixMqttCommands.dc_12v_output_mode_select: MODELS,
     SolixMqttCommands.dc_output_timeout_seconds: MODELS,
-    SolixMqttCommands.energy_saving_mode: MODELS,
+    SolixMqttCommands.energy_saving_switch: MODELS,
     SolixMqttCommands.display_switch: MODELS,
     SolixMqttCommands.display_mode_select: MODELS,
     SolixMqttCommands.display_timeout_seconds: MODELS,
