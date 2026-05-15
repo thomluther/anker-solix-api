@@ -817,65 +817,18 @@ class AnkerSolixBaseApi:
                             )
                         # use expansion values only if installed
                         elif (
-                            (
+                            any(
                                 key
                                 in [
-                                    "exp_1_soc",
-                                    "exp_1_temperature",
-                                    "exp_1_soh",
+                                    f"exp_{x}_soc",
+                                    f"exp_{x}_temperature",
+                                    f"exp_{x}_soh",
                                 ]
                                 and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 1
-                                    or float(mqtt.get("exp_1_soc", 0)) > 0
+                                    float(mqtt.get("expansion_packs", 0)) >= x
+                                    or float(mqtt.get(f"exp_{x}_soc", 0)) > 0
                                 )
-                            )
-                            or (
-                                key
-                                in [
-                                    "exp_2_soc",
-                                    "exp_2_temperature",
-                                    "exp_2_soh",
-                                ]
-                                and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 1
-                                    or float(mqtt.get("exp_2_soc", 0)) > 0
-                                )
-                            )
-                            or (
-                                key
-                                in [
-                                    "exp_3_soc",
-                                    "exp_3_temperature",
-                                    "exp_3_soh",
-                                ]
-                                and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 1
-                                    or float(mqtt.get("exp_3_soc", 0)) > 0
-                                )
-                            )
-                            or (
-                                key
-                                in [
-                                    "exp_4_soc",
-                                    "exp_4_temperature",
-                                    "exp_4_soh",
-                                ]
-                                and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 1
-                                    or float(mqtt.get("exp_4_soc", 0)) > 0
-                                )
-                            )
-                            or (
-                                key
-                                in [
-                                    "exp_5_soc",
-                                    "exp_5_temperature",
-                                    "exp_5_soh",
-                                ]
-                                and (
-                                    float(mqtt.get("expansion_packs", 0)) >= 1
-                                    or float(mqtt.get("exp_5_soc", 0)) > 0
-                                )
+                                for x in range(1, 7)
                             )
                         ) and str(value).replace("-", "", 1).replace(
                             ".", "", 1
