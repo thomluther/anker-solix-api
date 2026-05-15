@@ -962,14 +962,6 @@ _A1780_0408 = {
     "ac": {NAME: "main_battery_soc"},  # in %
 }
 
-_A1781_0405 = _A1780_0405 | {
-    # F2600 param info (A1781)
-    # A1781 matches the F2000 telemetry layout, plus a2/a3 carry the
-    # active AC/DC auto-off countdowns (always-zero composite slots on F2000).
-    "a2": {NAME: "ac_output_timeout_seconds"},  # Active AC auto-off countdown in seconds
-    "a3": {NAME: "dc_output_timeout_seconds"},  # Active DC auto-off countdown in seconds
-}
-
 _A1782_0421 = {
     # F3000 param info
     TOPIC: "param_info",
@@ -4652,6 +4644,7 @@ SOLIXMQTTMAP: Final[dict] = {
         | {
             "a2": {
                 **CMD_AC_CHARGE_LIMIT["a2"],
+                # Note: App only supports from 200 W, but F2600 and App support 100 W as MQTT command
                 VALUE_MIN: 100,
                 VALUE_MAX: 1440,
                 VALUE_STEP: 100,
@@ -4668,7 +4661,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
-        "0405": _A1781_0405,
+        "0405": _A1780_0405,
         # Interval: irregular, triggered by wifi signal change?
         "0407": _PPS_0407,
         # Interval: ??
