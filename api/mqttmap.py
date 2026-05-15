@@ -888,6 +888,8 @@ _A1783_0421 = {
 _A1780_0405 = {
     # F2000(P) param info
     TOPIC: "param_info",
+    "a2": {NAME: "ac_output_timeout_seconds"},  # Active AC auto-off countdown in seconds
+    "a3": {NAME: "dc_output_timeout_seconds"},  # Active DC auto-off countdown in seconds
     "a4": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},  # In hours
     "a5": {NAME: "ac_input_power"},  # AC charging power to battery
     "a6": {NAME: "ac_output_power"},  # AC outlet power
@@ -1465,6 +1467,8 @@ _A1782_0502 = {
 _A1790_0405 = {
     # F3800 param info
     TOPIC: "param_info",
+    "a2": {NAME: "ac_output_timeout_seconds"},  # Active AC auto-off countdown in seconds
+    "a3": {NAME: "dc_output_timeout_seconds"},  # Active DC auto-off countdown in seconds
     "a4": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},  # In hours
     "a5": {NAME: "ac_input_power"},
     "a6": {NAME: "ac_output_power"},
