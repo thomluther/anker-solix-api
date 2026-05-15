@@ -1,7 +1,5 @@
 """Base Class for interacting with the Anker Power / Solix API."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from datetime import datetime, timedelta
 import json

@@ -383,6 +383,11 @@ def query_mqtt_command(  # noqa: C901
     if not isinstance(mdev, SolixMqttDevice):
         CONSOLE.error(f"{Color.YELLOW}No MQTT device provided for control.{Color.OFF}")
         return None
+    if mdev.is_passive():
+        CONSOLE.error(
+            f"{Color.RED}MQTT device {mdev.sn} ({mdev.pn}) does not support any controls while running in local mode.{Color.OFF}"
+        )
+        return None
     # get supported commands, catch keyboard interrupt to allow user to cancel command selection
     try:
         if len(commands := list(mdev.controls.keys())) > 1:

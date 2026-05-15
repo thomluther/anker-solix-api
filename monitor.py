@@ -3236,10 +3236,9 @@ class AnkerSolixApiMonitor:
                                                     CONSOLE.info(
                                                         f"{Color.CYAN}\nSending MQTT status requests for devices...{Color.OFF}"
                                                     )
-                                                    for (
-                                                        mdev
-                                                    ) in self.mqtt_devices.values():
-                                                        await mdev.status_request()
+                                                    for mdev in self.mqtt_devices.values():
+                                                        if not mdev.is_passive():
+                                                            await mdev.status_request()
                                                     await asyncio.sleep(1)
                                                 else:
                                                     CONSOLE.info(
@@ -3471,10 +3470,8 @@ class AnkerSolixApiMonitor:
                                                     CONSOLE.info(
                                                         f"{Color.CYAN}\nTriggering real time MQTT data for {self.rt_timeout} seconds...{Color.OFF}"
                                                     )
-                                                    for (
-                                                        mdev
-                                                    ) in self.mqtt_devices.values():
-                                                        if await mdev.realtime_trigger(
+                                                    for mdev in self.mqtt_devices.values():
+                                                        if not mdev.is_passive() and await mdev.realtime_trigger(
                                                             timeout=self.rt_timeout,
                                                             toFile=self.use_file,
                                                         ):

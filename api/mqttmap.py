@@ -1543,7 +1543,7 @@ _A1790_040a = {
     # F3800 param info
     TOPIC: "param_info",
     "a2": {NAME: "expansion_packs"},
-    "a3": {NAME: "main_battery_soc?"},  # main battery SOC
+    "a3": {NAME: "expansion_soc"},  # total of all expansions
     "a4": {
         BYTES: {
             "00": {
@@ -1715,7 +1715,7 @@ _A1790_0410 = {
     "a2": {
         BYTES: {
             "00": {
-                NAME: "power_panel_sn?",
+                NAME: "power_panel_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
@@ -1724,16 +1724,16 @@ _A1790_0410 = {
     "a3": {
         BYTES: {
             "00": {
-                NAME: "device_1_sn?",
+                NAME: "device_1_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "device_1_soc?",
+                NAME: "device_1_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "20": {
-                NAME: "device_1_temperature?",
+                NAME: "device_1_temperature",
                 SIGNED: True,
                 TYPE: DeviceHexDataTypes.ui.value,
             },
@@ -1742,23 +1742,23 @@ _A1790_0410 = {
     "a4": {
         BYTES: {
             "00": {
-                NAME: "device_2_sn?",
+                NAME: "device_2_sn",
                 LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "19": {
-                NAME: "device_2_soc?",
+                NAME: "device_2_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "20": {
-                NAME: "device_2_temperature?",
+                NAME: "device_2_temperature",
                 SIGNED: True,
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }
     },
-    "a5": {NAME: "device_1_pn?"},
-    "a6": {NAME: "device_2_pn?"},
+    "a5": {NAME: "device_1_pn"},
+    "a6": {NAME: "device_2_pn"},
     "fe": {NAME: "msg_timestamp"},
 }
 
