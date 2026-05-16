@@ -957,8 +957,10 @@ _A1780_0408 = {
     "a3": {NAME: "device_sn"},
     "a4": {NAME: "local_timestamp"},
     "a5": {NAME: "utc_timestamp"},
-    "a6": {NAME: "discharged_energy?", FACTOR: 0.001},  # in kWh
-    "a7": {NAME: "charged_energy?", FACTOR: 0.001},  # in kWh
+    "a6": {NAME: "battery_voltage?", FACTOR: 0.001},
+    "a7": {NAME: "pv_voltage?", FACTOR: 0.001},
+    "aa": {NAME: "ac_output_power_inverted?"},
+    "ab": {NAME: "battery_power_signed?", FACTOR: -1},
     "ac": {NAME: "main_battery_soc"},  # in %
 }
 
