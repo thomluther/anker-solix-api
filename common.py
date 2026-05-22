@@ -17,6 +17,7 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
 from api.helpers import round_by_factor  # pylint: disable=no-name-in-module
 from api.mqtt_device import SolixMqttDevice  # pylint: disable=no-name-in-module
 from api.mqttcmdmap import (  # pylint: disable=no-name-in-module
+    LENGTH,
     STATE_NAME,
     VALUE_DEFAULT,
     VALUE_MAX,
@@ -175,11 +176,17 @@ def print_schedule(schedule: dict) -> None:
             tariffs = ["High", "Medium", "Low", "Valley"]
             for sea in rate_plan:
                 unit = sea.get("unit") or "-"
-                m_start = datetime.date.today().replace(
-                    day=1, month=(sea.get("sea") or {}).get("start_month") or 1
+                m_start = (
+                    datetime.now()
+                    .date()
+                    .replace(
+                        day=1, month=(sea.get("sea") or {}).get("start_month") or 1
+                    )
                 )
-                m_end = datetime.date.today().replace(
-                    day=1, month=(sea.get("sea") or {}).get("end_month") or 1
+                m_end = (
+                    datetime.now()
+                    .date()
+                    .replace(day=1, month=(sea.get("sea") or {}).get("end_month") or 1)
                 )
                 is_same = sea.get("is_same")
                 weekday = sea.get("weekday") or []
@@ -431,6 +438,8 @@ def query_mqtt_command(  # noqa: C901
                 if (v := desc.get(VALUE_STEP)) is not None:
                     step = v
                     value_info += f", step {v}"
+            elif desc.get("is_text"):
+                value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
             # query default parameters only if value has validation descriptors
             if value_info:
                 if (v := desc.get(VALUE_DEFAULT)) is not None:
@@ -447,10 +456,11 @@ def query_mqtt_command(  # noqa: C901
                     # convert string to number
                     if sel.replace("-", "", 1).replace(".", "", 1).isdigit():
                         sel = round_by_factor(float(sel), step)
+                    else:
+                        sel = sel.strip("'\"")
                     if (
-                        mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm)
-                        is not None
-                    ):
+                        sel := mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm)
+                    ) is not None:
                         break
                     # exit loop if input was cancelled
                     if not sel:
@@ -472,6 +482,8 @@ def query_mqtt_command(  # noqa: C901
                 if (v := desc.get(VALUE_STEP)) is not None:
                     step = v
                     value_info += f", step {v}"
+            elif desc.get("is_text"):
+                value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
             # query default parameters only if value has validation descriptors
             if value_info:
                 if (v := desc.get(VALUE_STATE)) is not None and (
@@ -492,10 +504,11 @@ def query_mqtt_command(  # noqa: C901
                     # convert string to number
                     if sel.replace("-", "", 1).replace(".", "", 1).isdigit():
                         sel = round_by_factor(float(sel), step)
+                    else:
+                        sel = sel.strip("'\"")
                     if (
-                        mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm)
-                        is not None
-                    ):
+                        sel := mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm)
+                    ) is not None:
                         break
                     # exit loop if input was cancelled
                     if not sel:

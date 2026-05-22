@@ -3215,6 +3215,7 @@ class AnkerSolixApiMonitor:
                                                 self.api.testDir()
                                             )
                                             self.device_filter = None
+                                            self.site_selected = None
                                             self.device_names = []
                                             self.mqtt_devices = {}
                                             self.next_dev_refr = 0
@@ -3236,7 +3237,9 @@ class AnkerSolixApiMonitor:
                                                     CONSOLE.info(
                                                         f"{Color.CYAN}\nSending MQTT status requests for devices...{Color.OFF}"
                                                     )
-                                                    for mdev in self.mqtt_devices.values():
+                                                    for (
+                                                        mdev
+                                                    ) in self.mqtt_devices.values():
                                                         if not mdev.is_passive():
                                                             await mdev.status_request()
                                                     await asyncio.sleep(1)
@@ -3470,10 +3473,15 @@ class AnkerSolixApiMonitor:
                                                     CONSOLE.info(
                                                         f"{Color.CYAN}\nTriggering real time MQTT data for {self.rt_timeout} seconds...{Color.OFF}"
                                                     )
-                                                    for mdev in self.mqtt_devices.values():
-                                                        if not mdev.is_passive() and await mdev.realtime_trigger(
-                                                            timeout=self.rt_timeout,
-                                                            toFile=self.use_file,
+                                                    for (
+                                                        mdev
+                                                    ) in self.mqtt_devices.values():
+                                                        if (
+                                                            not mdev.is_passive()
+                                                            and await mdev.realtime_trigger(
+                                                                timeout=self.rt_timeout,
+                                                                toFile=self.use_file,
+                                                            )
                                                         ):
                                                             self.api.mqttsession.triggered_devices.add(
                                                                 mdev.sn

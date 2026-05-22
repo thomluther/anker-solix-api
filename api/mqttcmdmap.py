@@ -6,7 +6,9 @@ from typing import Final
 from .apitypes import DeviceHexDataTypes
 
 # common mapping keys to be used for status and command descriptions
-EMBEDDED: Final[str] = "embedded"  # name of the json field that contains the embedded message hex data
+EMBEDDED: Final[str] = (
+    "embedded"  # name of the json field that contains the embedded message hex data
+)
 NAME: Final[str] = "name"  # name of the data field, also used for message descriptions
 TYPE: Final[str] = (
     "type"  # type the data field relevant for de/encoding, must be a byte as defined in DeviceHexDataTypes
@@ -563,7 +565,7 @@ CMD_SB_STATUS_CHECK = (
         "a2": {
             NAME: "device_sn",
             TYPE: DeviceHexDataTypes.str.value,
-            "length": 16,
+            LENGTH: 16,
         },
         "a3": {
             NAME: "charging_status",
@@ -990,42 +992,75 @@ CMD_PLUG_SCHEDULE = (
     }
 )
 
-CMD_PLUG_DELAYED_TOGGLE = CMD_COMMON | {
-    # Command: Smartplug delayed toggle
-    COMMAND_NAME: SolixMqttCommands.plug_delayed_toggle,
-    "a2": {
-        NAME: "set_toggle_to_action",  # Off (0), Start (1), Pause (2), Resume (3)
-        TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {"off": 0, "start": 1, "pause": 1, "resume": 1},
-    },
-    "a3": {
-        TYPE: DeviceHexDataTypes.bin.value,
-        LENGTH: 3,
-        BYTES: {
-            "00": TIME_VAR
-            | {
-                NAME: "set_toggle_to_delay_time",  # 3 bytes: Seconds:Minutes:Hours
-                VALUE_DEFAULT: 0,
+CMD_PLUG_DELAYED_TOGGLE = (
+    CMD_COMMON
+    | {
+        # Command: Smartplug delayed toggle
+        COMMAND_NAME: SolixMqttCommands.plug_delayed_toggle,
+        "a2": {
+            NAME: "set_toggle_delay_status",  # Off (0), Start (1), Pause (2), Resume (3)
+            TYPE: DeviceHexDataTypes.ui.value,
+            STATE_NAME: "toggle_delay_status",
+            VALUE_OPTIONS: {"off": 0, "start": 1, "pause": 2, "resume": 3},
+            VALUE_STATE: "toggle_delay_status",
+        },
+        "a3": {
+            TYPE: DeviceHexDataTypes.bin.value,
+            LENGTH: 3,
+            BYTES: {
+                "00": TIME_VAR
+                | {
+                    NAME: "set_toggle_to_delay_time",  # 3 bytes: Seconds:Minutes:Hours
+                    STATE_NAME: "toggle_to_delay_time",
+                    VALUE_DEFAULT: 0,
+                    VALUE_STATE: "toggle_to_delay_time",
+                },
             },
         },
-    },
-    "a4": {
-        NAME: "set_toggle_back_switch?",  # Off (0), On (1)
-        TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {"off": 0, "on": 1},
-    },
-    "a5": {
-        TYPE: DeviceHexDataTypes.bin.value,
-        LENGTH: 3,
-        BYTES: {
-            "00": TIME_VAR
-            | {
-                NAME: "set_toggle_back_delay_time",  # 3 bytes: Seconds:Minutes:Hours
-                VALUE_DEFAULT: 0,
+        "a4": {
+            NAME: "set_toggle_to_switch",  # State the switch will be toggled to: Off (0), On (1)
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_OPTIONS: {"off": 0, "on": 1},
+            VALUE_STATE: "ac_output_power_switch",
+            STATE_CONVERTER: lambda value, state, cache: (
+                value
+                if value is not None
+                else cache.get(
+                    "set_toggle_to_status",
+                    not cache.get(
+                        "ac_output_power_switch", 0
+                    ),  # default to toggle of state
+                )
+                if state is None
+                else state
+            ),
+        },
+        "a5": {
+            TYPE: DeviceHexDataTypes.bin.value,
+            LENGTH: 3,
+            BYTES: {
+                "00": TIME_VAR
+                | {
+                    NAME: "set_toggle_to_elapsed_time",  # 3 bytes: Seconds:Minutes:Hours
+                    STATE_NAME: "toggle_to_elapsed_time",
+                    VALUE_STATE: "toggle_to_elapsed_time",
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        "00:00:00"
+                        if cache.get(
+                            "set_toggle_to_status",
+                            cache.get("toggle_to_status"),
+                        )
+                        in [0, 1]
+                        and state is None  # reset elapsed time for stop or start
+                        else value
+                        if value is not None
+                        else (state or 0)
+                    ),
+                },
             },
         },
-    },
-}
+    }
+)
 
 CMD_EV_CHARGER_MODE = CMD_COMMON | {
     # Command: EV Charger mode selection
