@@ -46,7 +46,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.6.2.0"
+VERSION: str = "3.6.3.0"
 
 
 class AnkerSolixApiExport:
@@ -802,6 +802,7 @@ class AnkerSolixApiExport:
                     "30",
                     "31",
                     "33",
+                    "34",
                 ]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
@@ -1030,6 +1031,9 @@ class AnkerSolixApiExport:
                             "enable_0w",
                             "ip_region",
                             "regulation_code",
+                            "pps_use_time",
+                            "currency",
+                            "tag",
                         ],
                     },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
