@@ -3345,11 +3345,11 @@ _PLUG_TIMER_STATUS = {
             LENGTH: 3,
         },
         "03": {
-            NAME: "toggle_current_setting?",
+            NAME: "toggle_to_switch", # 0 = toggle off, 1 = toggle on
             TYPE: DeviceHexDataTypes.ui.value,
         },
         "04": {
-            NAME: "toggle_delay_status",  # 03 seen while toggle_to delay running, 00 while inactive
+            NAME: "toggle_timer_mode",  # 3 seen while toggle_to delay running (also after start = 1), 0 inactive, 2 paused
             TYPE: DeviceHexDataTypes.ui.value,
         },
         "05": {

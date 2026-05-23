@@ -998,11 +998,11 @@ CMD_PLUG_DELAYED_TOGGLE = (
         # Command: Smartplug delayed toggle
         COMMAND_NAME: SolixMqttCommands.plug_delayed_toggle,
         "a2": {
-            NAME: "set_toggle_delay_status",  # Off (0), Start (1), Pause (2), Resume (3)
+            NAME: "set_toggle_timer_mode",  # Off (0), Start (1), Pausews (2), Running (3)
             TYPE: DeviceHexDataTypes.ui.value,
-            STATE_NAME: "toggle_delay_status",
-            VALUE_OPTIONS: {"off": 0, "start": 1, "pause": 2, "resume": 3},
-            VALUE_STATE: "toggle_delay_status",
+            STATE_NAME: "toggle_timer_mode",
+            VALUE_OPTIONS: {"off": 0, "start": 1, "paused": 2, "running": 3},
+            VALUE_STATE: "toggle_timer_mode",
         },
         "a3": {
             TYPE: DeviceHexDataTypes.bin.value,
@@ -1021,15 +1021,15 @@ CMD_PLUG_DELAYED_TOGGLE = (
             NAME: "set_toggle_to_switch",  # State the switch will be toggled to: Off (0), On (1)
             TYPE: DeviceHexDataTypes.ui.value,
             VALUE_OPTIONS: {"off": 0, "on": 1},
-            VALUE_STATE: "ac_output_power_switch",
+            VALUE_STATE: "toggle_to_switch",
             STATE_CONVERTER: lambda value, state, cache: (
                 value
                 if value is not None
                 else cache.get(
-                    "set_toggle_to_status",
-                    not cache.get(
-                        "ac_output_power_switch", 0
-                    ),  # default to toggle of state
+                    "set_toggle_to_switch",
+                    cache.get(
+                        "toggle_to_switch", int(not cache.get("ac_output_power_switch"))
+                    ),  # default to toggle state of actual switch
                 )
                 if state is None
                 else state
@@ -1047,8 +1047,8 @@ CMD_PLUG_DELAYED_TOGGLE = (
                     STATE_CONVERTER: lambda value, state, cache: (
                         "00:00:00"
                         if cache.get(
-                            "set_toggle_to_status",
-                            cache.get("toggle_to_status"),
+                            "set_toggle_timer_mode",
+                            cache.get("toggle_timer_mode"),
                         )
                         in [0, 1]
                         and state is None  # reset elapsed time for stop or start

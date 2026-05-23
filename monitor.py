@@ -41,6 +41,7 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
     SolixOcppConnectionStatus,
     SolixPhaseMode,
     SolixPlantStatus,
+    SolixPlugTimerMode,
     SolixPpsChargingStatus,
     SolixPpsDcChargingStatus,
     SolixPpsDisplayMode,
@@ -1354,12 +1355,20 @@ class AnkerSolixApiMonitor:
                         f"{'Plug Switch':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2 - 3}}{co} "
                         f"{'Output Energy':<{col3}}: {m2 and (c or cm)}{m2 or '-.---':>7} kWh{co}"
                     )
+                m1 = cm and str(mqtt.get("toggle_timer_mode", ""))
+                m2 = cm and mqtt.get("toggle_to_switch", "")
+                if m1 or str(m2):
+                    CONSOLE.info(
+                        f"{'Sw. Timer Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPlugTimerMode, m1, 'unknown').capitalize()+ ' (' + (m1 or '-') + ')':<{col2}}{co} "
+                        f"{'Toggle Sw. To':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
+                    )
                 m1 = cm and mqtt.get("toggle_to_delay_time", "")
                 m2 = cm and mqtt.get("toggle_to_elapsed_time", "")
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Toggle Delay':<{col1}}: {m1 and (c or cm)}{m1 or '--:--:--':>8} {'':<{col2 - 8}}{co}"
-                        f"{'Elapsed Time':<{col3}}: {m2 and (c or cm)}{m1 or '--:--:--':>8} {co}"
+                        f"{'Toggle Timer':<{col1}}: {m1 and (c or cm)}{m1 or '--:--:--':>8} {'':<{col2 - 8}}{co}"
+                        f"{'Elapsed/Remain':<{col3}}: {m2 and (c or cm)}{m2 or '--:--:--':>8} "
+                        f"/ {(m1 and m2 and str(datetime.strptime(m1,"%H:%M:%S") - datetime.strptime(m2,"%H:%M:%S"))) or '--:--:--'}{co}"
                     )
 
             elif devtype in [
@@ -3216,6 +3225,7 @@ class AnkerSolixApiMonitor:
                                             )
                                             self.device_filter = None
                                             self.site_selected = None
+                                            site_names = None
                                             self.device_names = []
                                             self.mqtt_devices = {}
                                             self.next_dev_refr = 0

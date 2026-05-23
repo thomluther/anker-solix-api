@@ -1929,6 +1929,16 @@ class SolixBatteryVoltageType(StrEnum):
     unknown = "unknown"
 
 
+class SolixPlugTimerMode(StrEnum):
+    """Str Enumeration for Smart Plug delayed toggle modes."""
+
+    off = "0"
+    start = "1"
+    paused = "2"
+    running = "3"
+    unknown = "unknown"
+
+
 @dataclass
 class SolarbankTimeslot:
     """Dataclass to define customizable attributes of an Anker Solix Solarbank time slot as used for the schedule definition or update."""
