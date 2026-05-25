@@ -1245,6 +1245,7 @@ class SolixSiteType:
     )  # Only AX170: Power Dock US market to connect multiple E10
     t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS, A5191
     t_19 = SolixDeviceType.SOLARBANK.value  # Main A17E2 Solarbank Max AC with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
+    t_20 = SolixDeviceType.SOLARBANK.value  # Main AE103 Solarbank 4 Pro with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
 
 
 @dataclass(frozen=True)
@@ -1508,6 +1509,7 @@ class SolixDefaults:
     # AC tariff settings for Use Time plan
     TARIFF_DEF: int = SolixTariffTypes.OFF_PEAK.value
     TARIFF_PRICE_DEF: str = "0.00"
+    TARIFF_SELL_PRICE_DEF: str = "" # default to nothing in case not supported
     TARIFF_WE_SAME: bool = True
     CURRENCY_DEF: str = "€"
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries

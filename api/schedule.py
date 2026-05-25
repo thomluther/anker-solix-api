@@ -2273,6 +2273,7 @@ async def set_sb2_use_time(  # noqa: C901
     day_type: str | None = None,  # Anker Solix use time day types
     tariff_type: int | str | None = None,  # Any SolixTariffTypes
     tariff_price: float | str | None = None,
+    tariff_sell_price: float | str | None = None,
     currency: str | None = None,
     delete: bool | None = False,
     merge_tariff_slots: bool = True,  # merge time slots with same tariff
@@ -2457,6 +2458,11 @@ async def set_sb2_use_time(  # noqa: C901
         if str(tariff_price).replace(".", "", 1).isdigit()
         else None
     )
+    tariff_sell_price = (
+        f"{float(tariff_sell_price):.2f}"
+        if str(tariff_sell_price).replace(".", "", 1).isdigit()
+        else None
+    )
     currency = str(currency)[0:3] if currency else None
     delete = delete if isinstance(delete, bool) else False
     merge_tariff_slots = (
@@ -2475,6 +2481,7 @@ async def set_sb2_use_time(  # noqa: C901
         or day_type
         or tariff_type
         or tariff_price
+        or tariff_sell_price
         or currency
         or delete
     ):
@@ -2512,7 +2519,7 @@ async def set_sb2_use_time(  # noqa: C901
             delete_scope = "daytype"
         elif start_month or end_month:
             delete_scope = "season"
-        elif not (tariff_price or currency):
+        elif not (tariff_price or tariff_sell_price or currency):
             delete_scope = "plan"
 
     # set defaults if needed
@@ -2547,6 +2554,14 @@ async def set_sb2_use_time(  # noqa: C901
         )
         or SolixDefaults.TARIFF_PRICE_DEF
     )
+    def_tariff_sell_price = (
+        tariff_sell_price
+        or str(
+            ((self.sites.get(siteId) or {}).get("site_details") or {}).get("sell_price")
+            or ""
+        )
+        or SolixDefaults.TARIFF_SELL_PRICE_DEF
+    )
 
     # obtain actual device schedule from internal dict or fetch via api
     if not isinstance(test_schedule, dict):
@@ -2577,10 +2592,18 @@ async def set_sb2_use_time(  # noqa: C901
                     {"start_time": 0, "end_time": 24, "type": def_tariff_type},
                 ],
                 "weekday_price": [
-                    {"price": def_tariff_price, "type": def_tariff_type},
+                    {
+                        "price": def_tariff_price,
+                        "type": def_tariff_type,
+                        "sell_price": def_tariff_sell_price,
+                    },
                 ],
                 "weekend_price": [
-                    {"price": def_tariff_price, "type": def_tariff_type},
+                    {
+                        "price": def_tariff_price,
+                        "type": def_tariff_type,
+                        "sell_price": def_tariff_sell_price,
+                    },
                 ],
                 "unit": def_currency,
                 "is_same": SolixDefaults.TARIFF_WE_SAME,
@@ -2721,7 +2744,9 @@ async def set_sb2_use_time(  # noqa: C901
                         tariff_type
                         and (
                             not (
-                                tariff_price and start_hour is None and end_hour is None
+                                (tariff_price or tariff_sell_price)
+                                and start_hour is None
+                                and end_hour is None
                             )
                             or len(season.get(day) or []) == 1
                         )
@@ -2850,6 +2875,9 @@ async def set_sb2_use_time(  # noqa: C901
                             if tariff_price and tariff == day_tariff_type:
                                 # update price of tariff if specified
                                 price["price"] = tariff_price
+                            if tariff_sell_price and tariff == day_tariff_type:
+                                # update sell price of tariff if specified
+                                price["sell_price"] = tariff_sell_price
                             # remove found tariff to prevent it will be added
                             find_tariff.discard(tariff)
                             prices.append(price)
@@ -2877,6 +2905,8 @@ async def set_sb2_use_time(  # noqa: C901
                             {
                                 "price": tariff_price or def_tariff_price,
                                 "type": tariff,
+                                "sell_price": tariff_sell_price
+                                or def_tariff_sell_price,
                             }
                             for tariff in find_tariff
                         )

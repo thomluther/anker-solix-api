@@ -1771,6 +1771,8 @@ class AnkerSolixBaseApi:
         "current_mode": 7, "use_time": null, "dynamic_price": {
             "country": "DE", "company": "Nordpool", "area": "GER", "pct": null}
         "accuracy": 2}
+        Enhanced base data with sell price in 2026
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"sell_price": 0,"site_co2": 0,"site_price_unit": "\u20ac"}
         """
         siteId = str(siteId) or ""
         decimals = int(decimals) if isinstance(decimals, int | float) else None
@@ -1804,6 +1806,7 @@ class AnkerSolixBaseApi:
         self,
         siteId: str,
         price: float | None = None,
+        sell_price: float | None = None,
         decimals: int | None = 5,
         unit: str | None = None,
         co2: float | None = None,
@@ -1821,6 +1824,8 @@ class AnkerSolixBaseApi:
             "company": "Nordpool",
             "area": "GER",
         }}
+        Enhanced base data with sell price in 2026
+        {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"sell_price": 0,"site_co2": 0,"site_price_unit": "\u20ac"}
         """
         siteId = str(siteId) or ""
         decimals = int(decimals) if isinstance(decimals, int | float) else None
@@ -1848,6 +1853,9 @@ class AnkerSolixBaseApi:
         data: dict = {}
         data["price"] = (
             float(price) if isinstance(price, float | int) else details.get("price")
+        )
+        data["sell_price"] = (
+            float(sell_price) if isinstance(sell_price, float | int) else details.get("sell_price")
         )
         data["site_price_unit"] = unit or details.get("site_price_unit")
         data["site_co2"] = (
