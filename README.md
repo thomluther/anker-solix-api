@@ -87,21 +87,28 @@ poetry run python [...].py
 
 ## Manual requirement installation
 
-To install the dependencies manually consult your favorite package manager, for example:
+1. To install the dependencies manually consult your favorite package manager, for example:
 
-```shell
-sudo pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
-```
-or
-```shell
-sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt python-python-dotenv
-```
+  ```shell
+  sudo pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
+  ```
+  or
+  ```shell
+  sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt python-python-dotenv
+  ```
 
-You should then be able to run programs with:
+1. Install package
 
-```shell
-python [...].py
-```
+  ```
+  pip install .
+  ```
+
+3. Run your scripts
+  You should then be able to run programs with:
+
+  ```shell
+  python [...].py
+  ```
 
 > [!IMPORTANT]
 > The manual method can not check your python version so please make sure that yours is [supported](#python-versions).
@@ -133,7 +140,7 @@ import json
 import logging
 
 from aiohttp import ClientSession
-from api import api, apitypes
+from anker_solix_api import api, apitypes
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -273,7 +280,7 @@ Following is a code snipped how you can utilize the library for easy byte data s
 ```python
 # required additional imports
 from base64 import b64decode
-from api import mqtttypes
+from anker_solix_api import mqtttypes
 
       # hex byte data as received from MQTT or BT
       hexstr = "ff093b0003010f0407a10132xxxxxxxxxxxxxxxxxxxxxxxxxxxa502010128"
