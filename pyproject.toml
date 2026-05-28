@@ -36,5 +36,7 @@ paho-mqtt = ">=2.1.0"
 python-dotenv = ">=1.2.1"
 
 [tool.poetry]
-package-mode = false
 requires-poetry = ">=2.1"
+packages = [
+  { include = "anker_solix_api", from = "src" }
+]

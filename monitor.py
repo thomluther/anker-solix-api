@@ -21,8 +21,8 @@ import sys
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from api.apitypes import (  # pylint: disable=no-name-in-module
+from anker_solix_api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
+from anker_solix_api.apitypes import (  # pylint: disable=no-name-in-module
     Color,
     SolarbankAiemsStatus,
     SolarbankLightMode,
@@ -58,13 +58,13 @@ from api.apitypes import (  # pylint: disable=no-name-in-module
     SolixVehicle,
     SolixWorkingStatus,
 )
-from api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
-from api.helpers import (  # pylint: disable=no-name-in-module
+from anker_solix_api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
+from anker_solix_api.helpers import (  # pylint: disable=no-name-in-module
     get_enum_name,
     get_solix_product_code,
 )
-from api.mqtt_device import SolixMqttDevice  # pylint: disable=no-name-in-module
-from api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
+from anker_solix_api.mqtt_device import SolixMqttDevice  # pylint: disable=no-name-in-module
+from anker_solix_api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
 import common
 
 # use Console logger from common module

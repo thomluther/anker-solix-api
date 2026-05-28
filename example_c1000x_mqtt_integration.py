@@ -5,9 +5,9 @@ import asyncio
 import logging
 
 from aiohttp import ClientSession
-from api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
-from api.mqtt_pps import SolixMqttDevicePps  # pylint: disable=no-name-in-module
+from anker_solix_api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
+from anker_solix_api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
+from anker_solix_api.mqtt_pps import SolixMqttDevicePps  # pylint: disable=no-name-in-module
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)

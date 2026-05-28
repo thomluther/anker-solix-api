@@ -3,7 +3,7 @@
 .pytest*
 *.egg-info
 */build/*
-*/dist/*
+dist/*
 
 # misc
 .coverage

@@ -61,8 +61,8 @@ import logging
 from aiohttp import ClientSession
 
 import common
-from api import api
-from api.mqtt_pps import SolixMqttDevicePps
+from anker_solix_api import api
+from anker_solix_api.mqtt_pps import SolixMqttDevicePps
 
 logger: logging.Logger = logging.getLogger(__name__)
 CONSOLE: logging.Logger = common.CONSOLE
