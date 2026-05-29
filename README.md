@@ -79,6 +79,8 @@ sudo pacman -S python-poetry
 poetry install
 ```
 
+The install will automatically be an editable install, so change to source files will be effective immediately.
+
 **Step 3:** Run programs in this repository with:
 
 ```shell
@@ -89,26 +91,34 @@ poetry run python [...].py
 
 1. To install the dependencies manually consult your favorite package manager, for example:
 
-  ```shell
-  sudo pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
-  ```
-  or
-  ```shell
-  sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt python-python-dotenv
-  ```
+    ```shell
+    sudo pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
+    ```
+    or
+    ```shell
+    sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt python-python-dotenv
+    ```
 
-1. Install package
+1. Install package statically in the environment
 
-  ```
-  pip install .
-  ```
+    ```
+    pip install .
+    ```
 
-3. Run your scripts
-  You should then be able to run programs with:
+    If you want an editable install, so changes to source file will be effective immediately, you shold use an editable install:
 
-  ```shell
-  python [...].py
-  ```
+    ```
+    pip install --editable .
+    ```
+
+1. Run your scripts
+    You should then be able to run programs with:
+
+    ```shell
+    python [...].py
+    ```
+
+
 
 > [!IMPORTANT]
 > The manual method can not check your python version so please make sure that yours is [supported](#python-versions).
@@ -604,30 +614,6 @@ Pull requests are the best way to propose changes to the codebase.
 1. If you've changed something, update the documentation.
 1. Test your contribution.
 1. Issue that pull request!
-
-# Install as local package
-
-When installing the `anker_solix_api` as a local package, use the following steps
-
-1. Set up local environment and use it (optional, if you do not use a system-wide install of `poetry`)
-    ```shell
-    python3 -m venv venv && . venv/bin/active && pip install poetry
-    ```
-
-1. Install dependencies
-    ```shell
-    poetry update
-    ```
-
-1. Build install files
-    ```shell
-    poetry build
-    ```
-
-1. Install package (from different virtual environment if needed but from this project's folder)
-    ```shell
-    pip install .
-    ```
   
 # Acknowledgements / Credits / Additional ressources
 
