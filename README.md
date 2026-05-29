@@ -87,10 +87,15 @@ The install will automatically be an editable install, so change to source files
 poetry run python [...].py
 ```
 
-## Manual requirement installation
+## Manual requirement installation and installation as local package
 
 1. To install the dependencies manually consult your favorite package manager, for example:
 
+    Using a virtual environment (recommended)
+    ```shell
+    python3 -m venv venv && . venv/bin/activate && pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
+    ```
+    or using system-wide packages
     ```shell
     sudo pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
     ```
@@ -105,7 +110,7 @@ poetry run python [...].py
     pip install .
     ```
 
-    If you want an editable install, so changes to source file will be effective immediately, you shold use an editable install:
+    If you want an editable install, so changes to source file will be effective immediately, you should use an editable install:
 
     ```
     pip install --editable .
