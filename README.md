@@ -12,7 +12,7 @@
 ![python badge](https://img.shields.io/badge/Made%20with-Python-orange)
 [![GitHub repo Good Issues for newbies](https://img.shields.io/github/issues/thomluther/anker-solix-api/good%20first%20issue?style=flat&logo=github&logoColor=green&label=Good%20First%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) [![GitHub Help Wanted issues](https://img.shields.io/github/issues/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub Help Wanted PRs](https://img.shields.io/github/issues-pr/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20PRs)](https://github.com/thomluther/anker-solix-api/pulls?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub repo Issues](https://img.shields.io/github/issues/thomluther/anker-solix-api?style=flat&logo=github&logoColor=red&label=Issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen)
 
-This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter, Portable Power Stations etc).
+This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter, Portable Power Stations etc). Currently it is not planned to release the library as a packge on PyPI, however you can [install the package locally](#install-as-local-package) to use it in your own code.
 
 > [!WARNING]
 > 🚨 This is by no means an official Anker Api. It can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
@@ -605,7 +605,30 @@ Pull requests are the best way to propose changes to the codebase.
 1. Test your contribution.
 1. Issue that pull request!
 
+# Install as local package
 
+When installing the `anker_solix_api` as a local package, use the following steps
+
+1. Set up local environment and use it (optional, if you do not use a system-wide install of `poetry`)
+    ```shell
+    python3 -m venv venv && . venv/bin/active && pip install poetry
+    ```
+
+1. Install dependencies
+    ```shell
+    poetry update
+    ```
+
+1. Build install files
+    ```shell
+    poetry build
+    ```
+
+1. Install package (from different virtual environment if needed but from this project's folder)
+    ```shell
+    pip install .
+    ```
+  
 # Acknowledgements / Credits / Additional ressources
 
 - [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
