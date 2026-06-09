@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "support_auto_disaster": true,
+    "support_country_code": [
+      {
+        "code": "US",
+        "google_code": "ChIJCzYy5IS16lQRQrfeQ5K5Oxw"
+      },
+      {
+        "code": "PR",
+        "google_code": "ChIJ-aeSGyaWAowRGpsEGCjsNvM"
+      }
+    ]
+  },
+  "trace_id": "0000000000000000000000000002sample"
+}
