@@ -1686,7 +1686,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         else:
             code = (
                 await self.apisession.request(
-                    "post", API_CHARGING_ENDPOINTS["set_site_device_disaster"], json=data
+                    "post",
+                    API_CHARGING_ENDPOINTS["set_site_device_disaster"],
+                    json=data,
                 )
             ).get("code")
             if not isinstance(code, int) or int(code) != 0:
@@ -1721,7 +1723,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         else:
             code = (
                 await self.apisession.request(
-                    "post", API_CHARGING_ENDPOINTS["set_site_device_disaster"], json=data
+                    "post",
+                    API_CHARGING_ENDPOINTS["set_site_device_disaster"],
+                    json=data,
                 )
             ).get("code")
             if not isinstance(code, int) or int(code) != 0:
