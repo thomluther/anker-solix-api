@@ -215,6 +215,14 @@ API_CHARGING_ENDPOINTS: Final[dict] = {
     "get_configs": "charging_energy_service/get_configs",  # json={"siteId": "SITEID", "sn": "POWERPANELSN", "param_types": []})) # needs owner account, list of parm types not clear
     "get_sns": "charging_energy_service/get_sns",  # json={"main_sn": "POWERPANELSN","macs": ["F38001MAC001","F38002MAC002"]})) # needs owner account, Displays Serial Numbers of attached PPS in Home
     "get_monetary_units": "charging_energy_service/get_world_monetary_unit",  # monetary unit list for system, needs owner account
+    # Power Panel disaster preparedness / backup mode (verified on A17B1 hardware, use type=2)
+    "get_site_device_disaster": "charging_disaster_prepared/get_site_device_disaster",  # {"identifier_id": siteId, "type": 2}
+    "get_site_device_disaster_status": "charging_disaster_prepared/get_site_device_disaster_status",  # {"identifier_id": siteId, "type": 2}
+    "set_site_device_disaster": "charging_disaster_prepared/set_site_device_disaster",  # ON: switch True + manual_disaster_detail; OFF: switch False, omit detail
+    "get_disaster_support_func": "charging_disaster_prepared/get_support_func",  # {"identifier_id": siteId, "type": 2}
+    "quit_disaster_prepare": "charging_disaster_prepared/quit_disaster_prepare",
+    "disaster_clear": "charging_disaster_prepared/clear",
+    "disaster_detail": "charging_disaster_prepared/disaster_detail",
 }
 
 """Following are the Anker Power/Solix Cloud API charging_hes_svc endpoints known so far. They are used for Home Energy Systems like X1."""
