@@ -1,0 +1,20 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "auto_disaster_switch": false,
+    "manual_disaster_switch": true,
+    "disaster_details": [
+      {
+        "uuid": "00000000-0000-0000-0000-000000000001",
+        "disaster_type": 1,
+        "event": "",
+        "start_time": 1780988280,
+        "end_time": 1780991880,
+        "charging_time": 36,
+        "event_key": ""
+      }
+    ]
+  },
+  "trace_id": "0000000000000000000000000000sample"
+}
