@@ -220,9 +220,6 @@ API_CHARGING_ENDPOINTS: Final[dict] = {
     "get_site_device_disaster_status": "charging_disaster_prepared/get_site_device_disaster_status",  # {"identifier_id": siteId, "type": 2}
     "set_site_device_disaster": "charging_disaster_prepared/set_site_device_disaster",  # ON: switch True + manual_disaster_detail; OFF: switch False, omit detail
     "get_disaster_support_func": "charging_disaster_prepared/get_support_func",  # {"identifier_id": siteId, "type": 2}
-    "quit_disaster_prepare": "charging_disaster_prepared/quit_disaster_prepare",
-    "disaster_clear": "charging_disaster_prepared/clear",
-    "disaster_detail": "charging_disaster_prepared/disaster_detail",
 }
 
 """Following are the Anker Power/Solix Cloud API charging_hes_svc endpoints known so far. They are used for Home Energy Systems like X1."""
@@ -627,6 +624,9 @@ API_FILEPREFIXES: Final[dict] = {
     # charging_energy_service endpoint file prefixes
     "charging_get_error_info": "charging_error_info",
     "charging_get_system_running_info": "charging_system_running_info",
+    "charging_get_site_device_disaster": "charging_site_device_disaster",
+    "charging_get_site_device_disaster_status": "charging_site_device_disaster_status",
+    "charging_get_disaster_support_func": "charging_disaster_support_func",
     "charging_energy_solar": "charging_energy_solar",
     "charging_energy_hes": "charging_energy_hes",
     "charging_energy_pps": "charging_energy_pps",
