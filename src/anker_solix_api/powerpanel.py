@@ -1572,3 +1572,83 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         }
                     )
         return entry
+
+    async def get_device_disaster(self, siteId: str, deviceType: int = 2) -> dict:
+        """Get the manual/auto backup (disaster preparedness) configuration of a Power Panel site.
+
+        Verified on A17B1 Home Power Panel. deviceType=2 for power panel sites.
+        Returns: auto_disaster_switch, manual_disaster_switch, disaster_details[].
+        """
+        data = {"identifier_id": siteId, "type": deviceType}
+        resp = await self.apisession.request(
+            "post", API_CHARGING_ENDPOINTS["get_site_device_disaster"], json=data
+        )
+        result = resp.get("data") or {}
+        self._update_site(siteId, {"device_disaster": result})
+        return result
+
+    async def get_device_disaster_status(self, siteId: str, deviceType: int = 2) -> dict:
+        """Get the live backup-preparedness status of a Power Panel site.
+
+        manual_disaster_status: 1 = active/running, 2 = inactive.
+        current_disaster_detail is populated only while a window is active.
+        """
+        data = {"identifier_id": siteId, "type": deviceType}
+        resp = await self.apisession.request(
+            "post", API_CHARGING_ENDPOINTS["get_site_device_disaster_status"], json=data
+        )
+        return resp.get("data") or {}
+
+    async def get_disaster_support(self, siteId: str, deviceType: int = 2) -> dict:
+        """Get backup feature support info (auto disaster support, allowed country codes)."""
+        data = {"identifier_id": siteId, "type": deviceType}
+        resp = await self.apisession.request(
+            "post", API_CHARGING_ENDPOINTS["get_disaster_support_func"], json=data
+        )
+        return resp.get("data") or {}
+
+    async def set_manual_backup(
+        self,
+        siteId: str,
+        start_time: int,
+        end_time: int,
+        disaster_type: int = 4,
+        deviceType: int = 2,
+    ) -> bool:
+        """Enable manual backup mode for a Power Panel site over a time window.
+
+        start_time / end_time are unix epoch seconds.
+        Note (verified): disaster_type 4 is accepted but stored/returned as 1;
+        the server auto-generates the event uuid.
+        """
+        data = {
+            "identifier_id": siteId,
+            "type": deviceType,
+            "manual_disaster_switch": True,
+            "manual_disaster_detail": {
+                "disaster_type": disaster_type,
+                "start_time": int(start_time),
+                "end_time": int(end_time),
+            },
+        }
+        resp = await self.apisession.request(
+            "post", API_CHARGING_ENDPOINTS["set_site_device_disaster"], json=data
+        )
+        return bool((resp.get("data") or {}).get("success"))
+
+    async def disable_manual_backup(self, siteId: str, deviceType: int = 2) -> bool:
+        """Disable manual backup mode for a Power Panel site.
+
+        Note (verified): the OFF payload MUST omit manual_disaster_detail.
+        Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
+        The device ramps power down gradually rather than cutting off instantly.
+        """
+        data = {
+            "identifier_id": siteId,
+            "type": deviceType,
+            "manual_disaster_switch": False,
+        }
+        resp = await self.apisession.request(
+            "post", API_CHARGING_ENDPOINTS["set_site_device_disaster"], json=data
+        )
+        return bool((resp.get("data") or {}).get("success"))
