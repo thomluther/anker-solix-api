@@ -22,9 +22,9 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from anker_solix_api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from anker_solix_api.apitypes import Color, SolixDeviceType  # pylint: disable=no-name-in-module
-from anker_solix_api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
+from anker_solix_api.api import AnkerSolixApi
+from anker_solix_api.apitypes import Color, SolixDeviceType
+from anker_solix_api.errors import AnkerSolixError
 import common
 
 # use Console logger from common module

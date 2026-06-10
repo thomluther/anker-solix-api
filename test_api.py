@@ -8,8 +8,8 @@ import logging
 from pathlib import Path
 
 from aiohttp import ClientSession
-from anker_solix_api import api  # pylint: disable=no-name-in-module
-from anker_solix_api.apitypes import SolixParmType  # pylint: disable=no-name-in-module
+from anker_solix_api import api
+from anker_solix_api.apitypes import SolixParmType
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)

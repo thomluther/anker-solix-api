@@ -22,18 +22,12 @@ from typing import Any
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from anker_solix_api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from anker_solix_api.apitypes import Color  # pylint: disable=no-name-in-module
-from anker_solix_api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
-from anker_solix_api.mqtt import (  # pylint: disable=no-name-in-module
-    AnkerSolixMqttSession,
-    MessageCallback,
-)
-from anker_solix_api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
-from anker_solix_api.mqtttypes import (  # pylint: disable=no-name-in-module
-    DeviceHexData,
-    DeviceJsonData,
-)
+from anker_solix_api.api import AnkerSolixApi
+from anker_solix_api.apitypes import Color
+from anker_solix_api.errors import AnkerSolixError
+from anker_solix_api.mqtt import AnkerSolixMqttSession, MessageCallback
+from anker_solix_api.mqtt_factory import SolixMqttDeviceFactory
+from anker_solix_api.mqtttypes import DeviceHexData, DeviceJsonData
 import common
 
 # use Console logger from common module

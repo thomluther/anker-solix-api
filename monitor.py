@@ -21,8 +21,8 @@ import sys
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from anker_solix_api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from anker_solix_api.apitypes import (  # pylint: disable=no-name-in-module
+from anker_solix_api.api import AnkerSolixApi
+from anker_solix_api.apitypes import (
     Color,
     SolarbankAiemsStatus,
     SolarbankLightMode,
@@ -58,13 +58,10 @@ from anker_solix_api.apitypes import (  # pylint: disable=no-name-in-module
     SolixVehicle,
     SolixWorkingStatus,
 )
-from anker_solix_api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
-from anker_solix_api.helpers import (  # pylint: disable=no-name-in-module
-    get_enum_name,
-    get_solix_product_code,
-)
-from anker_solix_api.mqtt_device import SolixMqttDevice  # pylint: disable=no-name-in-module
-from anker_solix_api.mqtt_factory import SolixMqttDeviceFactory  # pylint: disable=no-name-in-module
+from anker_solix_api.errors import AnkerSolixError
+from anker_solix_api.helpers import get_enum_name, get_solix_product_code
+from anker_solix_api.mqtt_device import SolixMqttDevice
+from anker_solix_api.mqtt_factory import SolixMqttDeviceFactory
 import common
 
 # use Console logger from common module
@@ -1359,7 +1356,7 @@ class AnkerSolixApiMonitor:
                 m2 = cm and mqtt.get("toggle_to_switch", "")
                 if m1 or str(m2):
                     CONSOLE.info(
-                        f"{'Sw. Timer Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPlugTimerMode, m1, 'unknown').capitalize()+ ' (' + (m1 or '-') + ')':<{col2}}{co} "
+                        f"{'Sw. Timer Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPlugTimerMode, m1, 'unknown').capitalize() + ' (' + (m1 or '-') + ')':<{col2}}{co} "
                         f"{'Toggle Sw. To':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
                     )
                 m1 = cm and mqtt.get("toggle_to_delay_time", "")
@@ -1368,7 +1365,7 @@ class AnkerSolixApiMonitor:
                     CONSOLE.info(
                         f"{'Toggle Timer':<{col1}}: {m1 and (c or cm)}{m1 or '--:--:--':>8} {'':<{col2 - 8}}{co}"
                         f"{'Elapsed/Remain':<{col3}}: {m2 and (c or cm)}{m2 or '--:--:--':>8} "
-                        f"/ {(m1 and m2 and str(datetime.strptime(m1,"%H:%M:%S") - datetime.strptime(m2,"%H:%M:%S"))) or '--:--:--'}{co}"
+                        f"/ {(m1 and m2 and str(datetime.strptime(m1, '%H:%M:%S') - datetime.strptime(m2, '%H:%M:%S'))) or '--:--:--'}{co}"
                     )
 
             elif devtype in [

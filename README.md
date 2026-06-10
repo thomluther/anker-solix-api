@@ -20,9 +20,10 @@ This is an experimental Python library for Anker Solix Power devices (Solarbank,
 # Table of contents
 
 1. **[Python Versions](#python-versions)**
-1. **[Required libraries](#usage-terms-and-conditions)**
-   * [Requirement installation via Poetry](#requirement-installation-via-poetry)
-   * [Manual requirement installation](#manual-requirement-installation)
+1. **[Required libraries](#required-libraries)**
+1. **[Installation](#installation)**
+   * [Installation via Poetry](#installation-via-poetry)
+   * [Manual installation](#manual-installation)
 1. **[Anker Account Information](#anker-account-information)**
 1. **[Usage](#usage)**
 1. **[Data polling](#data-polling)**
@@ -58,7 +59,11 @@ The dependencies of this project are `cryptography`, `aiohttp`, `aiofiles` and `
 The tools utilizing the common.py module optionally require `python-dotenv` to support definition of credentials via local `.env` file that can be utilized for loading environment variables at runtime only.
 You can either install the requirements manually (e.g. via a package manager) or use [`poetry`](https://github.com/python-poetry/poetry).
 
-## Requirement installation via Poetry
+# Installation
+
+## Installation via Poetry
+
+Follow the steps below to install the required python libraries as well as the anker_solix_api as local editable package.
 
 **Step 1:** Install `poetry` following the [official documentation](https://python-poetry.org/docs/#installation) or via your favorite package manager,
 for example:
@@ -87,7 +92,9 @@ The install will automatically be an editable install, so change to source files
 poetry run python [...].py
 ```
 
-## Manual requirement installation and installation as local package
+## Manual installation
+
+Follow the steps below to install the required python libraries manually and install the anker_solix_api as static or editable package.
 
 1. To install the dependencies manually consult your favorite package manager, for example:
 
@@ -104,13 +111,13 @@ poetry run python [...].py
     sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt python-python-dotenv
     ```
 
-1. Install package statically in the environment
+1. Install local anker_solix_api package statically in the environment
 
     ```
     pip install .
     ```
 
-    If you want an editable install, so changes to source file will be effective immediately, you should use an editable install:
+    If you want a changeable package install, to allow source file modifications become effective immediately, you should use an editable install:
 
     ```
     pip install --editable .
@@ -619,7 +626,7 @@ Pull requests are the best way to propose changes to the codebase.
 1. If you've changed something, update the documentation.
 1. Test your contribution.
 1. Issue that pull request!
-  
+
 # Acknowledgements / Credits / Additional ressources
 
 - [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)

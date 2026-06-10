@@ -29,10 +29,10 @@ import logging
 
 from aiohttp import ClientSession
 from aiohttp.client_exceptions import ClientError
-from anker_solix_api.api import AnkerSolixApi  # pylint: disable=no-name-in-module
-from anker_solix_api.apitypes import ApiEndpointServices, Color  # pylint: disable=no-name-in-module
-from anker_solix_api.errors import AnkerSolixError  # pylint: disable=no-name-in-module
-from anker_solix_api.export import AnkerSolixApiExport  # pylint: disable=no-name-in-module
+from anker_solix_api.api import AnkerSolixApi
+from anker_solix_api.apitypes import ApiEndpointServices, Color
+from anker_solix_api.errors import AnkerSolixError
+from anker_solix_api.export import AnkerSolixApiExport
 import common
 
 # use Console logger from common module
