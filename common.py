@@ -173,14 +173,14 @@ def print_schedule(schedule: dict) -> None:
             for sea in rate_plan:
                 unit = sea.get("unit") or "-"
                 m_start = (
-                    datetime.now()
+                    datetime.datetime.now()
                     .date()
                     .replace(
                         day=1, month=(sea.get("sea") or {}).get("start_month") or 1
                     )
                 )
                 m_end = (
-                    datetime.now()
+                    datetime.datetime.now()
                     .date()
                     .replace(day=1, month=(sea.get("sea") or {}).get("end_month") or 1)
                 )
