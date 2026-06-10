@@ -1,5 +1,5 @@
 [project]
-name = "Anker-Solix-Api"
+name = "anker_solix_api"
 version = "3.6.3"
 description = "Python library for Anker Solix Power devices (Solarbank, Inverter, PPS etc)"
 readme = "README.md"
@@ -36,5 +36,7 @@ paho-mqtt = ">=2.1.0"
 python-dotenv = ">=1.2.1"
 
 [tool.poetry]
-package-mode = false
 requires-poetry = ">=2.1"
+packages = [
+  { include = "anker_solix_api", from = "src" }
+]

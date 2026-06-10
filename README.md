@@ -12,7 +12,7 @@
 ![python badge](https://img.shields.io/badge/Made%20with-Python-orange)
 [![GitHub repo Good Issues for newbies](https://img.shields.io/github/issues/thomluther/anker-solix-api/good%20first%20issue?style=flat&logo=github&logoColor=green&label=Good%20First%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) [![GitHub Help Wanted issues](https://img.shields.io/github/issues/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub Help Wanted PRs](https://img.shields.io/github/issues-pr/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20PRs)](https://github.com/thomluther/anker-solix-api/pulls?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub repo Issues](https://img.shields.io/github/issues/thomluther/anker-solix-api?style=flat&logo=github&logoColor=red&label=Issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen)
 
-This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter, Portable Power Stations etc).
+This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter, Portable Power Stations etc). Currently it is not planned to release the library as a packge on PyPI, however you can [install the package locally](#install-as-local-package) to use it in your own code.
 
 > [!WARNING]
 > 🚨 This is by no means an official Anker Api. It can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
@@ -79,29 +79,51 @@ sudo pacman -S python-poetry
 poetry install
 ```
 
+The install will automatically be an editable install, so change to source files will be effective immediately.
+
 **Step 3:** Run programs in this repository with:
 
 ```shell
 poetry run python [...].py
 ```
 
-## Manual requirement installation
+## Manual requirement installation and installation as local package
 
-To install the dependencies manually consult your favorite package manager, for example:
+1. To install the dependencies manually consult your favorite package manager, for example:
 
-```shell
-sudo pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
-```
-or
-```shell
-sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt python-python-dotenv
-```
+    Using a virtual environment (recommended)
+    ```shell
+    python3 -m venv venv && . venv/bin/activate && pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
+    ```
+    or using system-wide packages
+    ```shell
+    sudo pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
+    ```
+    or
+    ```shell
+    sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt python-python-dotenv
+    ```
 
-You should then be able to run programs with:
+1. Install package statically in the environment
 
-```shell
-python [...].py
-```
+    ```
+    pip install .
+    ```
+
+    If you want an editable install, so changes to source file will be effective immediately, you should use an editable install:
+
+    ```
+    pip install --editable .
+    ```
+
+1. Run your scripts
+    You should then be able to run programs with:
+
+    ```shell
+    python [...].py
+    ```
+
+
 
 > [!IMPORTANT]
 > The manual method can not check your python version so please make sure that yours is [supported](#python-versions).
@@ -133,7 +155,7 @@ import json
 import logging
 
 from aiohttp import ClientSession
-from api import api, apitypes
+from anker_solix_api import api, apitypes
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -273,7 +295,7 @@ Following is a code snipped how you can utilize the library for easy byte data s
 ```python
 # required additional imports
 from base64 import b64decode
-from api import mqtttypes
+from anker_solix_api import mqtttypes
 
       # hex byte data as received from MQTT or BT
       hexstr = "ff093b0003010f0407a10132xxxxxxxxxxxxxxxxxxxxxxxxxxxa502010128"
@@ -597,8 +619,7 @@ Pull requests are the best way to propose changes to the codebase.
 1. If you've changed something, update the documentation.
 1. Test your contribution.
 1. Issue that pull request!
-
-
+  
 # Acknowledgements / Credits / Additional ressources
 
 - [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)

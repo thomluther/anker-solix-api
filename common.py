@@ -9,14 +9,14 @@ from pathlib import Path
 import select
 import sys
 
-from api.apitypes import (  # pylint: disable=no-name-in-module
+from anker_solix_api.apitypes import (  # pylint: disable=no-name-in-module
     Color,
     SolarbankRatePlan,
     SolarbankUsageMode,
 )
-from api.helpers import round_by_factor  # pylint: disable=no-name-in-module
-from api.mqtt_device import SolixMqttDevice  # pylint: disable=no-name-in-module
-from api.mqttcmdmap import (  # pylint: disable=no-name-in-module
+from anker_solix_api.helpers import round_by_factor  # pylint: disable=no-name-in-module
+from anker_solix_api.mqtt_device import SolixMqttDevice  # pylint: disable=no-name-in-module
+from anker_solix_api.mqttcmdmap import (  # pylint: disable=no-name-in-module
     LENGTH,
     STATE_NAME,
     VALUE_DEFAULT,
