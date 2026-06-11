@@ -1572,3 +1572,164 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         }
                     )
         return entry
+
+    async def get_device_disaster(
+        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get the manual/auto backup (disaster preparedness) configuration of a Power Panel site.
+
+        Verified on A17B1 Home Power Panel, deviceType=2 for power panel sites.
+        Returns: auto_disaster_switch, manual_disaster_switch, disaster_details[].
+        """
+        self._logger.debug(
+            "Getting api %s Power Panel disaster config", self.apisession.nickname
+        )
+        data = {"identifier_id": siteId, "type": deviceType}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_site_device_disaster"], json=data
+            )
+        result = resp.get("data") or {}
+        if result:
+            # cache under site_details so it is included in exports
+            self._update_site(siteId, {"device_disaster": result})
+        return result
+
+    async def get_device_disaster_status(
+        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get the live backup-preparedness status of a Power Panel site.
+
+        manual_disaster_status: 1 = active/running, 2 = inactive.
+        current_disaster_detail is only populated while a window is active.
+        Note: status flips to 1 only once start_time is reached, back to 2 after end_time.
+        """
+        self._logger.debug(
+            "Getting api %s Power Panel disaster status", self.apisession.nickname
+        )
+        data = {"identifier_id": siteId, "type": deviceType}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post",
+                API_CHARGING_ENDPOINTS["get_site_device_disaster_status"],
+                json=data,
+            )
+        return resp.get("data") or {}
+
+    async def get_disaster_support(
+        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get backup feature support info (auto disaster support, allowed country codes)."""
+        data = {"identifier_id": siteId, "type": deviceType}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_disaster_support_func"], json=data
+            )
+        return resp.get("data") or {}
+
+    async def set_manual_backup(
+        self,
+        siteId: str,
+        start_time: int,
+        end_time: int,
+        disaster_type: int = 1,
+        deviceType: int = 2,
+        toFile: bool = False,
+    ) -> dict:
+        """Enable manual backup mode for a Power Panel site over a time window.
+
+        start_time / end_time are unix epoch seconds; end_time must be after start_time.
+        Note (verified): disaster_type other than 1 is accepted but stored/returned as 1;
+        the server auto-generates the event uuid.
+        Returns the refreshed disaster configuration.
+        """
+        start_time, end_time = int(start_time), int(end_time)
+        if end_time <= start_time:
+            self._logger.error(
+                "set_manual_backup: end_time %s must be after start_time %s",
+                end_time,
+                start_time,
+            )
+            return {}
+        data = {
+            "identifier_id": siteId,
+            "type": deviceType,
+            "manual_disaster_switch": True,
+            "manual_disaster_detail": {
+                "disaster_type": disaster_type,
+                "start_time": start_time,
+                "end_time": end_time,
+            },
+        }
+        if toFile:
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{siteId}.json",
+                data={"code": 0, "msg": "success!", "data": data},
+            ):
+                return {}
+        else:
+            code = (
+                await self.apisession.request(
+                    "post",
+                    API_CHARGING_ENDPOINTS["set_site_device_disaster"],
+                    json=data,
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return {}
+        # return refreshed config and update cache
+        return await self.get_device_disaster(
+            siteId=siteId, deviceType=deviceType, fromFile=toFile
+        )
+
+    async def disable_manual_backup(
+        self, siteId: str, deviceType: int = 2, toFile: bool = False
+    ) -> dict:
+        """Disable manual backup mode for a Power Panel site.
+
+        Note (verified): the OFF payload MUST omit manual_disaster_detail.
+        Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
+        The device ramps power down gradually rather than cutting off instantly.
+        Returns the refreshed disaster configuration.
+        """
+        data = {
+            "identifier_id": siteId,
+            "type": deviceType,
+            "manual_disaster_switch": False,
+        }
+        if toFile:
+            if not await self.apisession.saveToFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{siteId}.json",
+                data={"code": 0, "msg": "success!", "data": data},
+            ):
+                return {}
+        else:
+            code = (
+                await self.apisession.request(
+                    "post",
+                    API_CHARGING_ENDPOINTS["set_site_device_disaster"],
+                    json=data,
+                )
+            ).get("code")
+            if not isinstance(code, int) or int(code) != 0:
+                return {}
+        return await self.get_device_disaster(
+            siteId=siteId, deviceType=deviceType, fromFile=toFile
+        )
