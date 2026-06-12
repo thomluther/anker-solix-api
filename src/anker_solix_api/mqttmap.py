@@ -2438,6 +2438,8 @@ _AX170_0405 = {
     "ac": {
         NAME: "battery_power_signed_total"
     },  # Power draw from battery. Negative is charging, positive is discharging.
+    "b2": {NAME: "battery_current?"},
+    "b4": {NAME: "battery_voltage?"},
     "b5": {
         NAME: "backup_soc"
     },  # Minimum Self Consumption reserve %, Not overall reserve. Battery will stay above this level, unless grid fault.
@@ -3252,7 +3254,7 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "11": {
-                NAME: "active_device_timeout_minutes",  # active device auto-off timeout (minutes): 0 (Never), 720–1440 min in 30 min steps
+                NAME: "active_device_timeout_minutes",  # active device auto-off timeout (minutes): 0 (Never), 720-1440 min in 30 min steps
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "13": {
@@ -3260,7 +3262,7 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },  # Celsius (0) or Fahrenheit (1)
             "16": {
-                NAME: "device_timeout_minutes",  # Device auto-off timeout control (minutes): 720–1440 min in 30 min steps
+                NAME: "device_timeout_minutes",  # Device auto-off timeout control (minutes): 720-1440 min in 30 min steps
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "18": {
@@ -3345,7 +3347,7 @@ _PLUG_TIMER_STATUS = {
             LENGTH: 3,
         },
         "03": {
-            NAME: "toggle_to_switch", # 0 = toggle off, 1 = toggle on
+            NAME: "toggle_to_switch",  # 0 = toggle off, 1 = toggle on
             TYPE: DeviceHexDataTypes.ui.value,
         },
         "04": {
@@ -4054,7 +4056,9 @@ _PP_JSON = {
         "g2lp": {NAME: "grid_to_home_power"},  # 1409 W
         "lp": {NAME: "ac_output_power"},  # 1409 W
         "mpp": {NAME: "micro_inverter_power"},  # 0 W
-        "op": {NAME: "other_power"},  # 0 W, 3rd party PV channel, constant 0 when installation_method = 2 (none installed)
+        "op": {
+            NAME: "other_power"
+        },  # 0 W, 3rd party PV channel, constant 0 when installation_method = 2 (none installed)
         "o2lp": {NAME: "other_to_home_power"},  # 0 W
         "o2pp": {NAME: "other_to_pv_power?"},  # 0 W
         "gmp": {NAME: "max_load_power?"},  # 4800 W
@@ -4062,15 +4066,25 @@ _PP_JSON = {
         "dpp": {
             NAME: "disaster_protection_plan_{x}"
         },  # list with next scheduled backup plan(s), e.g. {"start": <epoch>, "end": <epoch>, "type": 1, "soc": 100}, pushed once scheduled in App
-        "dps": {NAME: "disaster_protection_status"},  # 1 while a backup plan is executing, else 0
+        "dps": {
+            NAME: "disaster_protection_status"
+        },  # 1 while a backup plan is executing, else 0
         "dpct": {
             NAME: "charging_time"
         },  # estimated charge time remaining, decreases with rising charge power; same value as charging_time in HTTP responses; 0 without active charge plan
-        "scfg": {NAME: "storm_config?"},  # constant 7 observed; Storm Guard toggles do not change it (cloud side setting)
+        "scfg": {
+            NAME: "storm_config?"
+        },  # constant 7 observed; Storm Guard toggles do not change it (cloud side setting)
         # status
-        "ws": {NAME: "working_status?"},  # 1 = running in 0500/0505; 0502 carries Wi-Fi signal % in same key (see _PP_JSON_0502)
-        "m": {NAME: "mode"},  # 2 = schedule based strategy (TOU plan), 1 = strategy without schedule (self consumption, fixed rate); verified by mode switching
-        "gs": {NAME: "grid_status"},  # 0 = on-grid, 1 = grid outage (verified by breaker test)
+        "ws": {
+            NAME: "working_status?"
+        },  # 1 = running in 0500/0505; 0502 carries Wi-Fi signal % in same key (see _PP_JSON_0502)
+        "m": {
+            NAME: "mode"
+        },  # 2 = schedule based strategy (TOU plan), 1 = strategy without schedule (self consumption, fixed rate); verified by mode switching
+        "gs": {
+            NAME: "grid_status"
+        },  # 0 = on-grid, 1 = grid outage (verified by breaker test)
         "bs": {  # 1: Standby; 2: Charging; 3: Discharging (verified against App); 0 never observed, deep sleep stops 0500 telemetry instead
             NAME: "battery_status"
         },
@@ -4080,11 +4094,15 @@ _PP_JSON = {
         "soc": {NAME: "battery_soc"},  # 62 %
         "b1t": {NAME: "battery_1_temperature"},
         "bc": {NAME: "pps_count?"},  # 2
-        "90s": {NAME: "pps_count"},  # 2 in 0500/0505; 0502 carries an incrementing counter in same key (see _PP_JSON_0502)
+        "90s": {
+            NAME: "pps_count"
+        },  # 2 in 0500/0505; 0502 carries an incrementing counter in same key (see _PP_JSON_0502)
         "bds": {
             NAME: "device_{x}_data"
         },  # list with PPS data dict, eg {"sn": <pps_sn>,"soc":61,"power":-1148,"error":0}
-        "cp": {NAME: "backup_reserve"},  # % SOC reserved for outage (verified: follows App setting changes)
+        "cp": {
+            NAME: "backup_reserve"
+        },  # % SOC reserved for outage (verified: follows App setting changes)
         "pu": {NAME: "power_usage_mode?"},
         "inmt": {
             NAME: "installation_method"
@@ -4095,18 +4113,34 @@ _PP_JSON = {
         "90bacc": {NAME: "device_2_country_code"},  # "US"
         "b1e": {NAME: "battery_1_error?"},  # 0
         "tu": {NAME: "temperature_unit?"},  # 1
-        "ep": {NAME: "ep_unknown?"},  # constant 0 observed, does not change during grid outage
-        "os": {NAME: "os_unknown?"},  # constant 0 observed, does not change during grid outage
-        "ts": {NAME: "ts_unknown?"},  # constant 0 observed, does not change during grid outage
+        "ep": {
+            NAME: "ep_unknown?"
+        },  # constant 0 observed, does not change during grid outage
+        "os": {
+            NAME: "os_unknown?"
+        },  # constant 0 observed, does not change during grid outage
+        "ts": {
+            NAME: "ts_unknown?"
+        },  # constant 0 observed, does not change during grid outage
         "b1s": {NAME: "battery_1_status?"},  # 0502 only, 1 observed
-        "fe": {NAME: "fe_energy?"},  # 0502 only, fluctuates non-monotonic (~268000-272000), possibly alternating per PPS
-        "status": {NAME: "event_status?"},  # observed 1 in event message at grid outage start
-        "code": {NAME: "event_code?"},  # observed 105 in event message at grid outage start
+        "fe": {
+            NAME: "fe_energy?"
+        },  # 0502 only, fluctuates non-monotonic (~268000-272000), possibly alternating per PPS
+        "status": {
+            NAME: "event_status?"
+        },  # observed 1 in event message at grid outage start
+        "code": {
+            NAME: "event_code?"
+        },  # observed 105 in event message at grid outage start
         "mps": {NAME: "micro_power_setting?"},
         "tpp": {NAME: "pv_power_total?"},  # 3045970
-        "tgp": {NAME: "grid_import_energy_total?"},  # cumulative counter, increase rate proportional to grid import power, halts during outage
-        "tlp": {NAME: "home_usage_energy_total?"},  # cumulative counter, increase rate proportional to home load power
-        "tsp": {NAME: "battery_power_total?"},  # 50620729
+        "tgp": {
+            NAME: "grid_import_energy_total?"
+        },  # cumulative counter, increase rate proportional to grid import power, halts during outage
+        "tlp": {
+            NAME: "home_usage_energy_total?"
+        },  # cumulative counter, increase rate proportional to home load power
+        "tsp": {NAME: "battery_power_signed_total?"},  # 50620729
         # daily energies in Wh?
         "pe": {NAME: "pv_yield_today", FACTOR: 0.001},  # 6293 Wh
         "p2le": {NAME: "pv_consumption_today", FACTOR: 0.001},  # 4771 Wh
@@ -4131,16 +4165,6 @@ _PP_JSON = {
         "pae": {NAME: "pv_yield", FACTOR: 0.001},  # 3045970 Wh
         "bac": {NAME: "charged_energy", FACTOR: 0.001},  # 12286143 Wh
         "bad": {NAME: "discharged_energy", FACTOR: 0.001},  # 8033557 Wh
-    },
-}
-
-# 0502 reuses some keys of the shared PP json structure with different meaning,
-# therefore override those mappings to avoid value flapping in merged device data
-_PP_JSON_0502 = _PP_JSON | {
-    "data": _PP_JSON["data"]
-    | {
-        "ws": {NAME: "wifi_signal"},  # Wi-Fi signal quality in %, e.g. 76 (verified against router), run status in 0500/0505
-        "90s": {NAME: "message_count?"},  # incrementing counter per 0502 message, pps_count in 0500/0505
     },
 }
 
@@ -5280,7 +5304,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "a8": {NAME: "sw_controller?", "values": 4},
             "a9": {NAME: "sw_expansion?", "values": 4},  # Expansion firmware version
             "ab": {NAME: "photovoltaic_power"},
-            "ac": {NAME: "battery_power"},
+            "ac": {NAME: "battery_power_signed"},
             "ad": {NAME: "ac_output_power"},  # inverter AC output
             "ae": {NAME: "ac_output_power_inverted?"},  # inverter PV/Battery input?
             "b0": {NAME: "bypass_energy?"},
@@ -5783,7 +5807,7 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
             | {
                 "ae": {
-                    NAME: "set_active_device_timeout_minutes",  # applied setting, 720–1440, step 30 if switch off(1), otherwise 0
+                    NAME: "set_active_device_timeout_minutes",  # applied setting, 720-1440, step 30 if switch off(1), otherwise 0
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "active_device_timeout_minutes",
                     VALUE_FOLLOWS: "set_device_timeout_minutes",  # follow state to ensure converter cache has all dependent states
@@ -5807,7 +5831,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_STEP: 30,
                 },
                 "bb": {
-                    NAME: "set_device_timeout_minutes",  # control setting, 720–1440 step 30
+                    NAME: "set_device_timeout_minutes",  # control setting, 720-1440 step 30
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "device_timeout_minutes",
                     VALUE_STATE: "device_timeout_minutes",
@@ -5851,7 +5875,20 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         "0502": {
             "a2": {
-                "json": _PP_JSON_0502,
+                # 0502 reuses some keys of the shared PP json structure with different meaning,
+                # therefore override those mappings to avoid value flapping in merged device data
+                "json": _PP_JSON
+                | {
+                    "data": _PP_JSON["data"]
+                    | {
+                        "ws": {
+                            NAME: "wifi_signal"
+                        },  # Wi-Fi signal quality in %, e.g. 76 (verified against router), run status in 0500/0505
+                        "90s": {
+                            NAME: "message_count?"
+                        },  # incrementing counter per 0502 message, pps_count in 0500/0505
+                    },
+                }
             }
         },
         "0503": {

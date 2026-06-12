@@ -24,7 +24,8 @@ TESTAPIFROMJSON = True
 JSONFOLDER = "SB2_SM_ManMode_Schedule"
 
 
-def _out(jsondata):
+def _out(jsondata) -> None:
+    """Print json or dictionary data to console logger."""
     CONSOLE.info(json.dumps(jsondata, indent=2))
 
 

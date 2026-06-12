@@ -1,4 +1,5 @@
 """Class for interacting with the Anker Power / Solix API."""
+# ruff: noqa: N806
 
 import contextlib
 from datetime import datetime, timedelta

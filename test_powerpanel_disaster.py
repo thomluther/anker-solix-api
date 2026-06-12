@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 
 from aiohttp import ClientSession
-from anker_solix_api.powerpanel import AnkerSolixPowerpanelApi  # pylint: disable=no-name-in-module
+from anker_solix_api.powerpanel import AnkerSolixPowerpanelApi
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -27,6 +27,7 @@ SITE_ID = "f6a1b2c3-d4e5-6789-abcd-ef0123456789"
 
 
 def _out(jsondata) -> None:
+    """Print json or dictionary data to console logger."""
     CONSOLE.info(json.dumps(jsondata, indent=2))
 
 

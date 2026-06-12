@@ -6,6 +6,7 @@ Optionally the export files will also be zipped.
 They json files can be used as examples for dedicated data extraction from the Api responses.
 Furthermore the API class can use the json files for debugging and testing of various system outputs.
 """
+# ruff: noqa: N806
 
 import asyncio
 from base64 import b64encode
@@ -47,7 +48,6 @@ from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 VERSION: str = "3.6.3.0"
-
 
 class AnkerSolixApiExport:
     """Define the class to handle json export from Anker Solix api instance."""

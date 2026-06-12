@@ -2226,9 +2226,9 @@ class AnkerSolixApiMonitor:
                 f"{Color.BLUE}Electric vehicle details for user '{self.api.account.get('nickname') or 'Unknown'}':{co}"
             )
             keys = set(vehicles.keys())
-            for vehicleId, vehicle in vehicles.items():
+            for vehicleid, vehicle in vehicles.items():
                 CONSOLE.info(
-                    f"{'EV Name':<{col1}}: {Color.BLUE}{vehicle.get('vehicle_name', 'Unknown')}{co}  (Vehicle ID: {vehicleId})"
+                    f"{'EV Name':<{col1}}: {Color.BLUE}{vehicle.get('vehicle_name', 'Unknown')}{co}  (Vehicle ID: {vehicleid})"
                 )
                 ev = SolixVehicle(vehicle=vehicle)
                 CONSOLE.info(
@@ -2247,7 +2247,7 @@ class AnkerSolixApiMonitor:
                     f"{'Is Charging':<{col1}}: {('YES' if vehicle.get('is_smart_charging') else 'NO'):<{col2}} "
                     f"{'Is Default EV':<{col3}}: {('YES' if vehicle.get('is_default_vehicle') else 'NO')}"
                 )
-                keys.discard(vehicleId)
+                keys.discard(vehicleid)
                 if keys:
                     CONSOLE.info("-" * 80)
         # print optional energy details

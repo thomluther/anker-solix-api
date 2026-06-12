@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Extract Anker Solix MQTT command messages from an mqtt_monitor dump file and compare status message before and after the message for differences.
 
 Before using this module, you need to update the definitions below with dump filename and status message types that should be
@@ -128,51 +129,58 @@ def search_for_msg(messagelist: list, t: str) -> str | bool:
     return False
 
 
-# main part
+def main() -> None:
+    """Run the main method."""
 
-with Path.open(test_file, encoding="utf-8") as f:
-    file_text = f.readlines()
+    with Path.open(test_file, encoding="utf-8") as f:
+        file_text = f.readlines()
 
-headers = []
-for line in file_text:
-    ll = line.strip()
-    if " / Header ------" in ll:
-        headers.append(ll[59:63])
-for h in sorted(set(headers)):
-    CONSOLE.info(h)
+    headers = []
+    for line in file_text:
+        ll = line.strip()
+        if " / Header ------" in ll:
+            headers.append(ll[59:63])
+    for h in sorted(set(headers)):
+        CONSOLE.info(h)
 
-messages = []
-message = []
-count = 0
-read = False
-for line in file_text:
-    ll = line.strip()
-    if " / Header ------" in ll:
-        message = [ll]
-        message_type = ll.split("/")[2].strip()
-        read = True
-    elif "Received message on topic:" in ll and len(message) > 1:
-        # remove last extra line
-        if not str(message[-1:]).startswith("----"):
-            message.pop()
-        messages.append(Message(message, message_type, count))
-        read = False
-        count += 1
-    elif read:
-        message.append(ll)
+    messages = []
+    message = []
+    count = 0
+    read = False
+    for line in file_text:
+        ll = line.strip()
+        if " / Header ------" in ll:
+            message = [ll]
+            message_type = ll.split("/")[2].strip()
+            read = True
+        elif "Received message on topic:" in ll and len(message) > 1:
+            # remove last extra line
+            if not str(message[-1:]).startswith("----"):
+                message.pop()
+            messages.append(Message(message, message_type, count))
+            read = False
+            count += 1
+        elif read:
+            message.append(ll)
 
-last_status = False
-for m in messages:
-    t1 = m.type
-    if t1 == compare_msg:
-        last_status = m
-    if t1 not in excluded_msgs:
-        # print messages not excluded
-        CONSOLE.info("\n".join(m.msg))
-        if last_status:
-            next_status = search_for_msg(messages[last_status.count + 1 :], compare_msg)
-            if next_status:
-                CONSOLE.info(f"Found differences in: {compare_msg}")
-                Sdiffer(
-                    screen_width, skip_match=True, skip_words=skip_diff_words
-                ).print_sdiff(last_status.msg[7:], next_status.msg[7:])
+    last_status = False
+    for m in messages:
+        t1 = m.type
+        if t1 == compare_msg:
+            last_status = m
+        if t1 not in excluded_msgs:
+            # print messages not excluded
+            CONSOLE.info("\n".join(m.msg))
+            if last_status:
+                next_status = search_for_msg(
+                    messages[last_status.count + 1 :], compare_msg
+                )
+                if next_status:
+                    CONSOLE.info(f"Found differences in: {compare_msg}")
+                    Sdiffer(
+                        screen_width, skip_match=True, skip_words=skip_diff_words
+                    ).print_sdiff(last_status.msg[7:], next_status.msg[7:])
+
+
+if __name__ == "__main__":
+    main()

@@ -12,8 +12,7 @@ import logging
 from pathlib import Path
 
 from aiohttp import ClientSession
-
-from anker_solix_api.powerpanel import AnkerSolixPowerpanelApi  # pylint: disable=no-name-in-module
+from anker_solix_api.powerpanel import AnkerSolixPowerpanelApi
 import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -30,6 +29,7 @@ PPS_MACS = ["FFB7B7D7A1D6"]
 
 
 def _out(jsondata) -> None:
+    """Print json or dictionary data to console logger."""
     CONSOLE.info(json.dumps(jsondata, indent=2, ensure_ascii=False))
 
 

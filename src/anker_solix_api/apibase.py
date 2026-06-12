@@ -1,4 +1,5 @@
 """Base Class for interacting with the Anker Power / Solix API."""
+# ruff: noqa: N806
 
 from collections.abc import Callable
 from datetime import datetime, timedelta
@@ -367,7 +368,7 @@ class AnkerSolixBaseApi:
         site_details = site.get("site_details") or {}
         # Implement site details update code with key filtering, conversion, consolidation, calculation or dependency updates
         for key, value in details.items():
-            if key in [] and value:
+            if key == "" and value:
                 pass
             else:
                 site_details[key] = value

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """A collection of helper functions for pyscripts."""
 
 import contextlib
