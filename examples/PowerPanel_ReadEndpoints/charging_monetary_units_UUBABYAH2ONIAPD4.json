@@ -1,0 +1,64 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "price_units": [
+      {
+        "price_unit": "$",
+        "is_default": true,
+        "name": "AUD, CAD, USD"
+      },
+      {
+        "price_unit": "\u043b\u0432",
+        "is_default": false,
+        "name": "BGN"
+      },
+      {
+        "price_unit": "CHF",
+        "is_default": false,
+        "name": "CHF"
+      },
+      {
+        "price_unit": "K\u010d",
+        "is_default": false,
+        "name": "CZK"
+      },
+      {
+        "price_unit": "\u20ac",
+        "is_default": false,
+        "name": "EUR"
+      },
+      {
+        "price_unit": "\u00a3",
+        "is_default": false,
+        "name": "GBP"
+      },
+      {
+        "price_unit": "Ft",
+        "is_default": false,
+        "name": "HUF"
+      },
+      {
+        "price_unit": "kr",
+        "is_default": false,
+        "name": "ISK, NOK, SEK"
+      },
+      {
+        "price_unit": "\u00a5",
+        "is_default": false,
+        "name": "JPY"
+      },
+      {
+        "price_unit": "z\u0142",
+        "is_default": false,
+        "name": "PLN"
+      },
+      {
+        "price_unit": "Lei",
+        "is_default": false,
+        "name": "RON"
+      }
+    ]
+  },
+  "trace_id": "c603e8260f64fcf87adc8b65fb70c09f"
+}

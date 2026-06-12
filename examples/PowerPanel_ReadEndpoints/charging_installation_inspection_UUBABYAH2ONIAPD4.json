@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "latest_result": true,
+    "latest_time": 1758515431,
+    "latest_page": "/electricityScene",
+    "need_self_inspection": true
+  },
+  "trace_id": "a4f0bc26b86fa6cd61b01c3efc4b93ab"
+}
