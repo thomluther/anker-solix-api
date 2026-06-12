@@ -211,6 +211,8 @@ API_CHARGING_ENDPOINTS: Final[dict] = {
     "get_wifi_info": "charging_energy_service/get_wifi_info",  # Displays WiFi network connected to Home Power Panel, needs owner account
     "get_installation_inspection": "charging_energy_service/get_installation_inspection",  # appears to say which page last viewed on App, needs owner account
     "get_utility_rate_plan": "charging_energy_service/get_utility_rate_plan",  # needs owner account
+    "preprocess_utility_rate_plan": "charging_energy_service/preprocess_utility_rate_plan",  # needs owner, json={"siteId", "sn", "peak_sessions", "fixed_price"}, returns {"rule": compact tier schedule}
+    "ack_utility_rate_plan": "charging_energy_service/ack_utility_rate_plan",  # needs owner, json={"siteId", "sn", "rule", "peak_sessions", "fixed_price"}, commits the TOU plan (verified reversible on A17B1); rule drops prices, so full peak_sessions + fixed_price must be included
     "report_device_data": "charging_energy_service/report_device_data",  # ctrol [0 1], works but data is null (may need owner account?)
     "get_configs": "charging_energy_service/get_configs",  # json={"siteId": "SITEID", "sn": "POWERPANELSN", "param_types": []})) # needs owner account, list of parm types not clear
     "get_sns": "charging_energy_service/get_sns",  # json={"main_sn": "POWERPANELSN","macs": ["F38001MAC001","F38002MAC002"]})) # needs owner account, Displays Serial Numbers of attached PPS in Home
@@ -485,14 +487,10 @@ Home Energy System related (X1): 6 + 0 used => 6 total
     "charging_hes_dynamic_price_svc/save_dynamic_price", # needs owner
     "charging_hes_dynamic_price_svc/get_third_jump_url"
 
-related to what, seem to work with Power Panel sites: 7 + 0 used => 7 total
-    'charging_disaster_prepared/get_site_device_disaster', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
-    'charging_disaster_prepared/get_site_device_disaster_status', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
-    'charging_disaster_prepared/set_site_device_disaster',
+related to what, seem to work with Power Panel sites: 3 + 4 used => 7 total
     'charging_disaster_prepared/clear',
     'charging_disaster_prepared/quit_disaster_prepare',
-    'charging_disaster_prepared/get_support_func', # {"identifier_id": siteId, "type": 2})) # works with Power panel site and shared account
-    'charging_disaster_prepared/disaster_detail',
+    'charging_disaster_prepared/disaster_detail', # 404 page not found (verified on A17B1)
 
 related to Prime charger models: 22 + 9 used => 31 total
     'mini_power/v1/app/charging/update_charging_mode',
@@ -648,7 +646,6 @@ API_FILEPREFIXES: Final[dict] = {
     "charging_get_configs": "charging_configs",
     "charging_get_sns": "charging_sns",
     "charging_get_monetary_units": "charging_monetary_units",
-    # charging_energy_service endpoint file prefixes
     "hes_get_product_info": "hes_product_info",
     "hes_get_heat_pump_plan": "hes_heat_pump_plan",
     "hes_get_electric_plan_list": "hes_electric_plan",

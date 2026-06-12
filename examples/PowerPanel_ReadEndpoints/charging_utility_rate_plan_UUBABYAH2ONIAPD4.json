@@ -1,0 +1,84 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "peak_sessions": [
+      {
+        "id": 44138,
+        "name": "\u5b63\u82821",
+        "start_time": "2026-01-01 00:00:00",
+        "start_desc": "January",
+        "end_time": "2026-12-01 00:00:00",
+        "end_desc": "December",
+        "type": 2,
+        "peak_valley_prices": [
+          {
+            "id": 280199,
+            "buy": 0.03,
+            "energy_unit": "kWh",
+            "start_time_period": "00:00",
+            "end_time_period": "16:00",
+            "peak_type": 1,
+            "day_type": 2
+          },
+          {
+            "id": 280200,
+            "buy": 0.39,
+            "energy_unit": "kWh",
+            "start_time_period": "16:00",
+            "end_time_period": "21:00",
+            "peak_type": 4,
+            "day_type": 2
+          },
+          {
+            "id": 280201,
+            "buy": 0.15,
+            "energy_unit": "kWh",
+            "start_time_period": "21:00",
+            "end_time_period": "23:00",
+            "peak_type": 3,
+            "day_type": 2
+          },
+          {
+            "id": 280202,
+            "buy": 0.03,
+            "energy_unit": "kWh",
+            "start_time_period": "23:00",
+            "end_time_period": "24:00",
+            "peak_type": 1,
+            "day_type": 2
+          },
+          {
+            "id": 280203,
+            "buy": 0.03,
+            "energy_unit": "kWh",
+            "start_time_period": "00:00",
+            "end_time_period": "07:00",
+            "peak_type": 1,
+            "day_type": 1
+          },
+          {
+            "id": 280204,
+            "buy": 0.09,
+            "energy_unit": "kWh",
+            "start_time_period": "07:00",
+            "end_time_period": "23:00",
+            "peak_type": 2,
+            "day_type": 1
+          },
+          {
+            "id": 280205,
+            "buy": 0.03,
+            "energy_unit": "kWh",
+            "start_time_period": "23:00",
+            "end_time_period": "24:00",
+            "peak_type": 1,
+            "day_type": 1
+          }
+        ]
+      }
+    ],
+    "fixed_price": null
+  },
+  "trace_id": "ac3ee7ebaeaa8ae2eba144676eb3e9f4"
+}

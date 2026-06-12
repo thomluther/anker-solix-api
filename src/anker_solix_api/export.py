@@ -1383,19 +1383,39 @@ class AnkerSolixApiExport:
                         payload={
                             "siteId": siteId,
                             "sn": sn,
-                        },  # TODO: required parameters unknown
+                        },  # payload verified on A17B1 owner account
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                         admin=admin,
                     )
                     self._logger.info("Exporting %s info...", dev_type)
                     # works only for site owners
-                    await self.query(
+                    response = await self.query(
                         endpoint=API_CHARGING_ENDPOINTS["get_device_info"],
                         filename=f"{API_FILEPREFIXES['charging_get_device_info']}_{self._randomize(sn, '_sn')}.json",
                         payload={"siteId": siteId, "sns": [sn]},
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                         admin=admin,
                     )
+                    # resolve serials of attached devices from their mac addresses
+                    if macs := [
+                        str(dev.get("ble_mac"))
+                        for dev in (response or {})
+                        .get("data", {})
+                        .get("device_infos", [])
+                        if dev.get("ble_mac")
+                    ]:
+                        self._logger.info(
+                            "Exporting %s attached device serials...", dev_type
+                        )
+                        # works only for site owners
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS["get_sns"],
+                            filename=f"{API_FILEPREFIXES['charging_get_sns']}_{self._randomize(sn, '_sn')}.json",
+                            payload={"main_sn": sn, "macs": macs},
+                            replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
+                            admin=admin,
+                            randomkeys=True,
+                        )
 
                 # run for proper device types if site owner
                 if dev_type in [
@@ -1421,7 +1441,8 @@ class AnkerSolixApiExport:
                     await self.query(
                         endpoint=API_CHARGING_ENDPOINTS["get_installation_inspection"],
                         filename=f"{API_FILEPREFIXES['charging_get_installation_inspection']}_{self._randomize(sn, '_sn')}.json",
-                        payload={"sn": sn},
+                        # siteId + sn payload verified on A17B1 owner account
+                        payload={"siteId": siteId, "sn": sn} if siteId else {"sn": sn},
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                         admin=admin,
                     )

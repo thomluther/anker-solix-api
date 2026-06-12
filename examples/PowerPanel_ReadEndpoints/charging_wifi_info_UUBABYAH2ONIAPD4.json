@@ -1,0 +1,9 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "ssid": "wifi-network-1",
+    "rssi": 100
+  },
+  "trace_id": "59fddaf719893fa58ebcf1822b8941a6"
+}
