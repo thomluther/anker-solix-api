@@ -1,0 +1,11 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "latest_result": false,
+    "latest_time": 0,
+    "latest_page": "",
+    "need_self_inspection": false
+  },
+  "trace_id": "cfda0eac0cc61dcbdd4afd8139fbae29"
+}

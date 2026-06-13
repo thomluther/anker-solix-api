@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "car_model_list": [
+      {
+        "id": 101423,
+        "brand_name": "Abarth",
+        "model_name": "600e Scorpionissima",
+        "productive_year": 2025,
+        "battery_capacity": 50.8,
+        "ac_max_power": 11,
+        "hundred_fuel_consumption": 18.1
+      }
+    ]
+  },
+  "trace_id": "762fbae97c580e5c839dd9cab7495a01"
+}

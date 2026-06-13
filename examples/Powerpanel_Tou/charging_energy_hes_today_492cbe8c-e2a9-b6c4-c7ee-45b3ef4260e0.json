@@ -1,0 +1,4947 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "totalEnergy": "10.44",
+    "totalEnergyUnit": "KWh",
+    "totalImportedEnergy": "10.32",
+    "totalImportedEnergyUnit": "KWh",
+    "totalExportedEnergy": "10.44",
+    "totalExportedEnergyUnit": "KWh",
+    "power": [
+      {
+        "time": "00:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-2.63"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.98"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.69"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.69"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.68"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.67"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.69"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.68"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.67"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.67"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.68"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.69"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.68"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.68"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.68"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.68"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.67"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.71"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.70"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.69"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.69"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.69"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-2.92"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-6.07"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-5.92"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-3.68"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-5.05"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-4.93"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.47"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.53"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-2.11"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-2.30"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.49"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.51"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.55"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.52"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.48"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.50"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.56"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.57"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.19"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.89"
+          }
+        ]
+      },
+      {
+        "time": "16:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.17"
+          }
+        ]
+      },
+      {
+        "time": "16:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.25"
+          }
+        ]
+      },
+      {
+        "time": "16:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.37"
+          }
+        ]
+      },
+      {
+        "time": "16:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.34"
+          }
+        ]
+      },
+      {
+        "time": "16:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.34"
+          }
+        ]
+      },
+      {
+        "time": "16:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.29"
+          }
+        ]
+      },
+      {
+        "time": "16:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.46"
+          }
+        ]
+      },
+      {
+        "time": "16:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.18"
+          }
+        ]
+      },
+      {
+        "time": "16:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.45"
+          }
+        ]
+      },
+      {
+        "time": "16:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.56"
+          }
+        ]
+      },
+      {
+        "time": "16:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.40"
+          }
+        ]
+      },
+      {
+        "time": "17:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.19"
+          }
+        ]
+      },
+      {
+        "time": "17:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.27"
+          }
+        ]
+      },
+      {
+        "time": "17:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.33"
+          }
+        ]
+      },
+      {
+        "time": "17:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.31"
+          }
+        ]
+      },
+      {
+        "time": "17:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.26"
+          }
+        ]
+      },
+      {
+        "time": "17:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.46"
+          }
+        ]
+      },
+      {
+        "time": "17:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.29"
+          }
+        ]
+      },
+      {
+        "time": "17:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.33"
+          }
+        ]
+      },
+      {
+        "time": "17:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.25"
+          }
+        ]
+      },
+      {
+        "time": "17:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.12"
+          }
+        ]
+      },
+      {
+        "time": "17:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.45"
+          }
+        ]
+      },
+      {
+        "time": "17:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.35"
+          }
+        ]
+      },
+      {
+        "time": "18:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.30"
+          }
+        ]
+      },
+      {
+        "time": "18:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.19"
+          }
+        ]
+      },
+      {
+        "time": "18:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.27"
+          }
+        ]
+      },
+      {
+        "time": "18:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.35"
+          }
+        ]
+      },
+      {
+        "time": "18:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.36"
+          }
+        ]
+      },
+      {
+        "time": "18:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.30"
+          }
+        ]
+      },
+      {
+        "time": "18:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.49"
+          }
+        ]
+      },
+      {
+        "time": "18:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.29"
+          }
+        ]
+      },
+      {
+        "time": "18:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.17"
+          }
+        ]
+      },
+      {
+        "time": "18:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.30"
+          }
+        ]
+      },
+      {
+        "time": "18:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.37"
+          }
+        ]
+      },
+      {
+        "time": "18:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.17"
+          }
+        ]
+      },
+      {
+        "time": "19:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.20"
+          }
+        ]
+      },
+      {
+        "time": "19:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.54"
+          }
+        ]
+      },
+      {
+        "time": "19:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.32"
+          }
+        ]
+      },
+      {
+        "time": "19:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.15"
+          }
+        ]
+      },
+      {
+        "time": "19:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.32"
+          }
+        ]
+      },
+      {
+        "time": "19:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.26"
+          }
+        ]
+      },
+      {
+        "time": "19:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.01"
+          }
+        ]
+      },
+      {
+        "time": "19:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.03"
+          }
+        ]
+      },
+      {
+        "time": "19:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.17"
+          }
+        ]
+      },
+      {
+        "time": "19:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.53"
+          }
+        ]
+      },
+      {
+        "time": "19:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.22"
+          }
+        ]
+      },
+      {
+        "time": "19:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.37"
+          }
+        ]
+      },
+      {
+        "time": "20:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.74"
+          }
+        ]
+      },
+      {
+        "time": "20:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.57"
+          }
+        ]
+      },
+      {
+        "time": "20:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.82"
+          }
+        ]
+      },
+      {
+        "time": "20:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.84"
+          }
+        ]
+      },
+      {
+        "time": "20:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.62"
+          }
+        ]
+      },
+      {
+        "time": "20:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "2.31"
+          }
+        ]
+      },
+      {
+        "time": "20:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.01"
+          },
+          {
+            "type": "hes",
+            "value": "0.16"
+          }
+        ]
+      },
+      {
+        "time": "20:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.04"
+          }
+        ]
+      },
+      {
+        "time": "20:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.01"
+          },
+          {
+            "type": "hes",
+            "value": "0.11"
+          }
+        ]
+      },
+      {
+        "time": "21:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.01"
+          },
+          {
+            "type": "hes",
+            "value": "0.04"
+          }
+        ]
+      },
+      {
+        "time": "21:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "-0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:00",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:05",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:10",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:15",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:20",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:25",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:30",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:35",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:40",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:45",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:50",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:55",
+        "powerInfos": [
+          {
+            "type": "hes",
+            "value": "0.00"
+          },
+          {
+            "type": "hes",
+            "value": "0.00"
+          }
+        ]
+      }
+    ],
+    "powerUnit": "KW",
+    "chargeLevel": [
+      {
+        "value": "56",
+        "time": "00:00"
+      },
+      {
+        "value": "56",
+        "time": "00:05"
+      },
+      {
+        "value": "57",
+        "time": "00:10"
+      },
+      {
+        "value": "58",
+        "time": "00:15"
+      },
+      {
+        "value": "58",
+        "time": "00:20"
+      },
+      {
+        "value": "58",
+        "time": "00:25"
+      },
+      {
+        "value": "58",
+        "time": "00:30"
+      },
+      {
+        "value": "58",
+        "time": "00:35"
+      },
+      {
+        "value": "59",
+        "time": "00:40"
+      },
+      {
+        "value": "59",
+        "time": "00:45"
+      },
+      {
+        "value": "59",
+        "time": "00:50"
+      },
+      {
+        "value": "59",
+        "time": "00:55"
+      },
+      {
+        "value": "60",
+        "time": "01:00"
+      },
+      {
+        "value": "60",
+        "time": "01:05"
+      },
+      {
+        "value": "60",
+        "time": "01:10"
+      },
+      {
+        "value": "60",
+        "time": "01:15"
+      },
+      {
+        "value": "61",
+        "time": "01:20"
+      },
+      {
+        "value": "61",
+        "time": "01:25"
+      },
+      {
+        "value": "61",
+        "time": "01:30"
+      },
+      {
+        "value": "61",
+        "time": "01:35"
+      },
+      {
+        "value": "62",
+        "time": "01:40"
+      },
+      {
+        "value": "62",
+        "time": "01:45"
+      },
+      {
+        "value": "62",
+        "time": "01:50"
+      },
+      {
+        "value": "62",
+        "time": "01:55"
+      },
+      {
+        "value": "63",
+        "time": "02:00"
+      },
+      {
+        "value": "63",
+        "time": "02:05"
+      },
+      {
+        "value": "63",
+        "time": "02:10"
+      },
+      {
+        "value": "64",
+        "time": "02:15"
+      },
+      {
+        "value": "64",
+        "time": "02:20"
+      },
+      {
+        "value": "64",
+        "time": "02:25"
+      },
+      {
+        "value": "64",
+        "time": "02:30"
+      },
+      {
+        "value": "66",
+        "time": "02:35"
+      },
+      {
+        "value": "69",
+        "time": "02:40"
+      },
+      {
+        "value": "72",
+        "time": "02:45"
+      },
+      {
+        "value": "74",
+        "time": "02:50"
+      },
+      {
+        "value": "77",
+        "time": "02:55"
+      },
+      {
+        "value": "78",
+        "time": "03:00"
+      },
+      {
+        "value": "0",
+        "time": "03:05"
+      },
+      {
+        "value": "78",
+        "time": "03:10"
+      },
+      {
+        "value": "78",
+        "time": "03:15"
+      },
+      {
+        "value": "80",
+        "time": "03:20"
+      },
+      {
+        "value": "82",
+        "time": "03:25"
+      },
+      {
+        "value": "82",
+        "time": "03:30"
+      },
+      {
+        "value": "82",
+        "time": "03:35"
+      },
+      {
+        "value": "82",
+        "time": "03:40"
+      },
+      {
+        "value": "82",
+        "time": "03:45"
+      },
+      {
+        "value": "82",
+        "time": "03:50"
+      },
+      {
+        "value": "82",
+        "time": "03:55"
+      },
+      {
+        "value": "83",
+        "time": "04:00"
+      },
+      {
+        "value": "83",
+        "time": "04:05"
+      },
+      {
+        "value": "83",
+        "time": "04:10"
+      },
+      {
+        "value": "83",
+        "time": "04:15"
+      },
+      {
+        "value": "83",
+        "time": "04:20"
+      },
+      {
+        "value": "83",
+        "time": "04:25"
+      },
+      {
+        "value": "84",
+        "time": "04:30"
+      },
+      {
+        "value": "84",
+        "time": "04:35"
+      },
+      {
+        "value": "84",
+        "time": "04:40"
+      },
+      {
+        "value": "84",
+        "time": "04:45"
+      },
+      {
+        "value": "84",
+        "time": "04:50"
+      },
+      {
+        "value": "84",
+        "time": "04:55"
+      },
+      {
+        "value": "84",
+        "time": "05:00"
+      },
+      {
+        "value": "85",
+        "time": "05:05"
+      },
+      {
+        "value": "85",
+        "time": "05:10"
+      },
+      {
+        "value": "85",
+        "time": "05:15"
+      },
+      {
+        "value": "85",
+        "time": "05:20"
+      },
+      {
+        "value": "85",
+        "time": "05:25"
+      },
+      {
+        "value": "85",
+        "time": "05:30"
+      },
+      {
+        "value": "85",
+        "time": "05:35"
+      },
+      {
+        "value": "86",
+        "time": "05:40"
+      },
+      {
+        "value": "86",
+        "time": "05:45"
+      },
+      {
+        "value": "86",
+        "time": "05:50"
+      },
+      {
+        "value": "86",
+        "time": "05:55"
+      },
+      {
+        "value": "86",
+        "time": "06:00"
+      },
+      {
+        "value": "86",
+        "time": "06:05"
+      },
+      {
+        "value": "86",
+        "time": "06:10"
+      },
+      {
+        "value": "87",
+        "time": "06:15"
+      },
+      {
+        "value": "87",
+        "time": "06:20"
+      },
+      {
+        "value": "87",
+        "time": "06:25"
+      },
+      {
+        "value": "87",
+        "time": "06:30"
+      },
+      {
+        "value": "87",
+        "time": "06:35"
+      },
+      {
+        "value": "87",
+        "time": "06:40"
+      },
+      {
+        "value": "87",
+        "time": "06:45"
+      },
+      {
+        "value": "88",
+        "time": "06:50"
+      },
+      {
+        "value": "88",
+        "time": "06:55"
+      },
+      {
+        "value": "88",
+        "time": "07:00"
+      },
+      {
+        "value": "88",
+        "time": "07:05"
+      },
+      {
+        "value": "88",
+        "time": "07:10"
+      },
+      {
+        "value": "88",
+        "time": "07:15"
+      },
+      {
+        "value": "88",
+        "time": "07:20"
+      },
+      {
+        "value": "89",
+        "time": "07:25"
+      },
+      {
+        "value": "89",
+        "time": "07:30"
+      },
+      {
+        "value": "89",
+        "time": "07:35"
+      },
+      {
+        "value": "89",
+        "time": "07:40"
+      },
+      {
+        "value": "89",
+        "time": "07:45"
+      },
+      {
+        "value": "89",
+        "time": "07:50"
+      },
+      {
+        "value": "89",
+        "time": "07:55"
+      },
+      {
+        "value": "90",
+        "time": "08:00"
+      },
+      {
+        "value": "90",
+        "time": "08:05"
+      },
+      {
+        "value": "90",
+        "time": "08:10"
+      },
+      {
+        "value": "90",
+        "time": "08:15"
+      },
+      {
+        "value": "90",
+        "time": "08:20"
+      },
+      {
+        "value": "90",
+        "time": "08:25"
+      },
+      {
+        "value": "90",
+        "time": "08:30"
+      },
+      {
+        "value": "91",
+        "time": "08:35"
+      },
+      {
+        "value": "91",
+        "time": "08:40"
+      },
+      {
+        "value": "91",
+        "time": "08:45"
+      },
+      {
+        "value": "91",
+        "time": "08:50"
+      },
+      {
+        "value": "91",
+        "time": "08:55"
+      },
+      {
+        "value": "91",
+        "time": "09:00"
+      },
+      {
+        "value": "91",
+        "time": "09:05"
+      },
+      {
+        "value": "92",
+        "time": "09:10"
+      },
+      {
+        "value": "92",
+        "time": "09:15"
+      },
+      {
+        "value": "92",
+        "time": "09:20"
+      },
+      {
+        "value": "92",
+        "time": "09:25"
+      },
+      {
+        "value": "92",
+        "time": "09:30"
+      },
+      {
+        "value": "92",
+        "time": "09:35"
+      },
+      {
+        "value": "93",
+        "time": "09:40"
+      },
+      {
+        "value": "93",
+        "time": "09:45"
+      },
+      {
+        "value": "93",
+        "time": "09:50"
+      },
+      {
+        "value": "93",
+        "time": "09:55"
+      },
+      {
+        "value": "93",
+        "time": "10:00"
+      },
+      {
+        "value": "93",
+        "time": "10:05"
+      },
+      {
+        "value": "94",
+        "time": "10:10"
+      },
+      {
+        "value": "94",
+        "time": "10:15"
+      },
+      {
+        "value": "94",
+        "time": "10:20"
+      },
+      {
+        "value": "94",
+        "time": "10:25"
+      },
+      {
+        "value": "94",
+        "time": "10:30"
+      },
+      {
+        "value": "94",
+        "time": "10:35"
+      },
+      {
+        "value": "94",
+        "time": "10:40"
+      },
+      {
+        "value": "95",
+        "time": "10:45"
+      },
+      {
+        "value": "95",
+        "time": "10:50"
+      },
+      {
+        "value": "95",
+        "time": "10:55"
+      },
+      {
+        "value": "95",
+        "time": "11:00"
+      },
+      {
+        "value": "95",
+        "time": "11:05"
+      },
+      {
+        "value": "95",
+        "time": "11:10"
+      },
+      {
+        "value": "96",
+        "time": "11:15"
+      },
+      {
+        "value": "96",
+        "time": "11:20"
+      },
+      {
+        "value": "96",
+        "time": "11:25"
+      },
+      {
+        "value": "96",
+        "time": "11:30"
+      },
+      {
+        "value": "96",
+        "time": "11:35"
+      },
+      {
+        "value": "96",
+        "time": "11:40"
+      },
+      {
+        "value": "96",
+        "time": "11:45"
+      },
+      {
+        "value": "96",
+        "time": "11:50"
+      },
+      {
+        "value": "97",
+        "time": "11:55"
+      },
+      {
+        "value": "97",
+        "time": "12:00"
+      },
+      {
+        "value": "97",
+        "time": "12:05"
+      },
+      {
+        "value": "97",
+        "time": "12:10"
+      },
+      {
+        "value": "97",
+        "time": "12:15"
+      },
+      {
+        "value": "97",
+        "time": "12:20"
+      },
+      {
+        "value": "97",
+        "time": "12:25"
+      },
+      {
+        "value": "97",
+        "time": "12:30"
+      },
+      {
+        "value": "97",
+        "time": "12:35"
+      },
+      {
+        "value": "97",
+        "time": "12:40"
+      },
+      {
+        "value": "97",
+        "time": "12:45"
+      },
+      {
+        "value": "97",
+        "time": "12:50"
+      },
+      {
+        "value": "97",
+        "time": "12:55"
+      },
+      {
+        "value": "97",
+        "time": "13:00"
+      },
+      {
+        "value": "97",
+        "time": "13:05"
+      },
+      {
+        "value": "97",
+        "time": "13:10"
+      },
+      {
+        "value": "97",
+        "time": "13:15"
+      },
+      {
+        "value": "97",
+        "time": "13:20"
+      },
+      {
+        "value": "97",
+        "time": "13:25"
+      },
+      {
+        "value": "99",
+        "time": "13:30"
+      },
+      {
+        "value": "99",
+        "time": "13:35"
+      },
+      {
+        "value": "99",
+        "time": "13:40"
+      },
+      {
+        "value": "99",
+        "time": "13:45"
+      },
+      {
+        "value": "99",
+        "time": "13:50"
+      },
+      {
+        "value": "99",
+        "time": "13:55"
+      },
+      {
+        "value": "99",
+        "time": "14:00"
+      },
+      {
+        "value": "99",
+        "time": "14:05"
+      },
+      {
+        "value": "99",
+        "time": "14:10"
+      },
+      {
+        "value": "99",
+        "time": "14:15"
+      },
+      {
+        "value": "99",
+        "time": "14:20"
+      },
+      {
+        "value": "99",
+        "time": "14:25"
+      },
+      {
+        "value": "99",
+        "time": "14:30"
+      },
+      {
+        "value": "98",
+        "time": "14:35"
+      },
+      {
+        "value": "100",
+        "time": "14:40"
+      },
+      {
+        "value": "100",
+        "time": "14:45"
+      },
+      {
+        "value": "100",
+        "time": "14:50"
+      },
+      {
+        "value": "100",
+        "time": "14:55"
+      },
+      {
+        "value": "100",
+        "time": "15:00"
+      },
+      {
+        "value": "100",
+        "time": "15:05"
+      },
+      {
+        "value": "100",
+        "time": "15:10"
+      },
+      {
+        "value": "100",
+        "time": "15:15"
+      },
+      {
+        "value": "100",
+        "time": "15:20"
+      },
+      {
+        "value": "100",
+        "time": "15:25"
+      },
+      {
+        "value": "100",
+        "time": "15:30"
+      },
+      {
+        "value": "100",
+        "time": "15:35"
+      },
+      {
+        "value": "100",
+        "time": "15:40"
+      },
+      {
+        "value": "100",
+        "time": "15:45"
+      },
+      {
+        "value": "100",
+        "time": "15:50"
+      },
+      {
+        "value": "100",
+        "time": "15:55"
+      },
+      {
+        "value": "100",
+        "time": "16:00"
+      },
+      {
+        "value": "100",
+        "time": "16:05"
+      },
+      {
+        "value": "99",
+        "time": "16:10"
+      },
+      {
+        "value": "97",
+        "time": "16:15"
+      },
+      {
+        "value": "96",
+        "time": "16:20"
+      },
+      {
+        "value": "94",
+        "time": "16:25"
+      },
+      {
+        "value": "93",
+        "time": "16:30"
+      },
+      {
+        "value": "90",
+        "time": "16:35"
+      },
+      {
+        "value": "88",
+        "time": "16:40"
+      },
+      {
+        "value": "88",
+        "time": "16:45"
+      },
+      {
+        "value": "86",
+        "time": "16:50"
+      },
+      {
+        "value": "84",
+        "time": "16:55"
+      },
+      {
+        "value": "83",
+        "time": "17:00"
+      },
+      {
+        "value": "81",
+        "time": "17:05"
+      },
+      {
+        "value": "80",
+        "time": "17:10"
+      },
+      {
+        "value": "77",
+        "time": "17:15"
+      },
+      {
+        "value": "77",
+        "time": "17:20"
+      },
+      {
+        "value": "75",
+        "time": "17:25"
+      },
+      {
+        "value": "74",
+        "time": "17:30"
+      },
+      {
+        "value": "72",
+        "time": "17:35"
+      },
+      {
+        "value": "70",
+        "time": "17:40"
+      },
+      {
+        "value": "69",
+        "time": "17:45"
+      },
+      {
+        "value": "67",
+        "time": "17:50"
+      },
+      {
+        "value": "65",
+        "time": "17:55"
+      },
+      {
+        "value": "64",
+        "time": "18:00"
+      },
+      {
+        "value": "63",
+        "time": "18:05"
+      },
+      {
+        "value": "61",
+        "time": "18:10"
+      },
+      {
+        "value": "59",
+        "time": "18:15"
+      },
+      {
+        "value": "57",
+        "time": "18:20"
+      },
+      {
+        "value": "56",
+        "time": "18:25"
+      },
+      {
+        "value": "55",
+        "time": "18:30"
+      },
+      {
+        "value": "53",
+        "time": "18:35"
+      },
+      {
+        "value": "52",
+        "time": "18:40"
+      },
+      {
+        "value": "50",
+        "time": "18:45"
+      },
+      {
+        "value": "49",
+        "time": "18:50"
+      },
+      {
+        "value": "47",
+        "time": "18:55"
+      },
+      {
+        "value": "46",
+        "time": "19:00"
+      },
+      {
+        "value": "44",
+        "time": "19:05"
+      },
+      {
+        "value": "42",
+        "time": "19:10"
+      },
+      {
+        "value": "41",
+        "time": "19:15"
+      },
+      {
+        "value": "38",
+        "time": "19:20"
+      },
+      {
+        "value": "38",
+        "time": "19:25"
+      },
+      {
+        "value": "36",
+        "time": "19:30"
+      },
+      {
+        "value": "35",
+        "time": "19:35"
+      },
+      {
+        "value": "32",
+        "time": "19:40"
+      },
+      {
+        "value": "32",
+        "time": "19:45"
+      },
+      {
+        "value": "30",
+        "time": "19:50"
+      },
+      {
+        "value": "28",
+        "time": "19:55"
+      },
+      {
+        "value": "27",
+        "time": "20:00"
+      },
+      {
+        "value": "25",
+        "time": "20:05"
+      },
+      {
+        "value": "23",
+        "time": "20:10"
+      },
+      {
+        "value": "21",
+        "time": "20:15"
+      },
+      {
+        "value": "19",
+        "time": "20:20"
+      },
+      {
+        "value": "17",
+        "time": "20:25"
+      },
+      {
+        "value": "17",
+        "time": "20:30"
+      },
+      {
+        "value": "17",
+        "time": "20:35"
+      },
+      {
+        "value": "17",
+        "time": "20:40"
+      },
+      {
+        "value": "17",
+        "time": "20:45"
+      },
+      {
+        "value": "17",
+        "time": "20:50"
+      },
+      {
+        "value": "17",
+        "time": "20:55"
+      },
+      {
+        "value": "17",
+        "time": "21:00"
+      },
+      {
+        "value": "17",
+        "time": "21:05"
+      },
+      {
+        "value": "17",
+        "time": "21:10"
+      },
+      {
+        "value": "17",
+        "time": "21:15"
+      },
+      {
+        "value": "17",
+        "time": "21:20"
+      },
+      {
+        "value": "17",
+        "time": "21:25"
+      },
+      {
+        "value": "0",
+        "time": "21:30"
+      },
+      {
+        "value": "0",
+        "time": "21:35"
+      },
+      {
+        "value": "0",
+        "time": "21:40"
+      },
+      {
+        "value": "0",
+        "time": "21:45"
+      },
+      {
+        "value": "0",
+        "time": "21:50"
+      },
+      {
+        "value": "0",
+        "time": "21:55"
+      },
+      {
+        "value": "0",
+        "time": "22:00"
+      },
+      {
+        "value": "0",
+        "time": "22:05"
+      },
+      {
+        "value": "0",
+        "time": "22:10"
+      },
+      {
+        "value": "0",
+        "time": "22:15"
+      },
+      {
+        "value": "0",
+        "time": "22:20"
+      },
+      {
+        "value": "0",
+        "time": "22:25"
+      },
+      {
+        "value": "0",
+        "time": "22:30"
+      },
+      {
+        "value": "0",
+        "time": "22:35"
+      },
+      {
+        "value": "0",
+        "time": "22:40"
+      },
+      {
+        "value": "0",
+        "time": "22:45"
+      },
+      {
+        "value": "0",
+        "time": "22:50"
+      },
+      {
+        "value": "0",
+        "time": "22:55"
+      },
+      {
+        "value": "0",
+        "time": "23:00"
+      },
+      {
+        "value": "0",
+        "time": "23:05"
+      },
+      {
+        "value": "0",
+        "time": "23:10"
+      },
+      {
+        "value": "0",
+        "time": "23:15"
+      },
+      {
+        "value": "0",
+        "time": "23:20"
+      },
+      {
+        "value": "0",
+        "time": "23:25"
+      },
+      {
+        "value": "0",
+        "time": "23:30"
+      },
+      {
+        "value": "0",
+        "time": "23:35"
+      },
+      {
+        "value": "0",
+        "time": "23:40"
+      },
+      {
+        "value": "0",
+        "time": "23:45"
+      },
+      {
+        "value": "0",
+        "time": "23:50"
+      },
+      {
+        "value": "0",
+        "time": "23:55"
+      }
+    ],
+    "energy": [
+      {
+        "value": "10.44",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0",
+            "to": "10.44",
+            "sourceType": "hes"
+          }
+        ]
+      }
+    ],
+    "energyUnit": "KWh",
+    "aggregates": [
+      {
+        "title": "Photovoltaic power supply",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "solar",
+        "percent": "0%",
+        "imported": true
+      },
+      {
+        "title": "Grid power consumption",
+        "value": "10.32",
+        "unit": "KWh",
+        "type": "grid",
+        "percent": "100%",
+        "imported": true
+      }
+    ],
+    "hasDiesel": false
+  },
+  "trace_id": "b5d5d9a280fb2a2edf6d929e03d9dda0"
+}

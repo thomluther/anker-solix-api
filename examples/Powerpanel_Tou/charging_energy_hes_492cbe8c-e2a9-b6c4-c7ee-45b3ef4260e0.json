@@ -1,0 +1,43 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "totalEnergy": "20.61",
+    "totalEnergyUnit": "KWh",
+    "totalImportedEnergy": "16.18",
+    "totalImportedEnergyUnit": "KWh",
+    "totalExportedEnergy": "20.61",
+    "totalExportedEnergyUnit": "KWh",
+    "power": null,
+    "powerUnit": "",
+    "chargeLevel": null,
+    "energy": [
+      {
+        "value": "10.18",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0",
+            "to": "10.18",
+            "sourceType": "hes"
+          }
+        ]
+      },
+      {
+        "value": "10.44",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0",
+            "to": "10.44",
+            "sourceType": "hes"
+          }
+        ]
+      }
+    ],
+    "energyUnit": "KWh",
+    "aggregates": [],
+    "hasDiesel": false
+  },
+  "trace_id": "43dd3f11cebfbbbacd0a49db4bccf5e7"
+}

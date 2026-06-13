@@ -1,0 +1,62 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_info": {
+      "site_id": "492cbe8c-e2a9-b6c4-c7ee-45b3ef4260e0",
+      "site_name": "16 Saville",
+      "site_img": "",
+      "device_type_list": [
+        5
+      ],
+      "ms_type": 0,
+      "power_site_type": 4,
+      "is_allow_delete": false,
+      "support_device_models": [
+        "A17B1"
+      ],
+      "current_site_device_models": [
+        "A17B1"
+      ],
+      "init_status": 1,
+      "site_device_list": [
+        {
+          "device_model": "A17B1",
+          "device_sn": "UUBABYAH2ONIAPD4",
+          "device_name": "SOLIX Home Power Panel",
+          "device_img": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/product/2024/01/23/iot-admin/Qcjo9ALaRqFzFNeF/picl_A17B1_normal.png",
+          "device_type": 5,
+          "status": 1,
+          "init_status": 0,
+          "create_time": 1758513230,
+          "update_time": 1758513230,
+          "feature": null
+        }
+      ],
+      "is_site_created_by_installer": false
+    },
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": [
+      {
+        "device_pn": "A17B1",
+        "device_sn": "UUBABYAH2ONIAPD4",
+        "device_name": "SOLIX Home Power Panel",
+        "device_img": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/product/2024/01/23/iot-admin/Qcjo9ALaRqFzFNeF/picl_A17B1_normal.png",
+        "create_time": 1758513230,
+        "bind_site_status": "",
+        "status": "",
+        "wireless_type": "",
+        "initial_process": 0
+      }
+    ],
+    "grid_list": [],
+    "smartplug_list": [],
+    "solarbank_pps_list": [],
+    "combiner_box_list": [],
+    "charging_pile_list": [],
+    "home_backup_system_list": []
+  },
+  "trace_id": "dc7bb131ce343b6db24a3317cf3821a9"
+}

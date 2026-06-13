@@ -1,0 +1,391 @@
+{
+  "type": "account",
+  "email": "anonymous-1@domain.com",
+  "nickname": "Ixxxu",
+  "country": "CA",
+  "server": "https://ankerpower-api.anker.com",
+  "currency_list": [
+    {
+      "symbol": "$",
+      "name": "AUD, CAD, USD"
+    },
+    {
+      "symbol": "\u043b\u0432",
+      "name": "BGN"
+    },
+    {
+      "symbol": "CHF",
+      "name": "CHF"
+    },
+    {
+      "symbol": "K\u010d",
+      "name": "CZK"
+    },
+    {
+      "symbol": "\u20ac",
+      "name": "EUR"
+    },
+    {
+      "symbol": "\u00a3",
+      "name": "GBP"
+    },
+    {
+      "symbol": "Ft",
+      "name": "HUF"
+    },
+    {
+      "symbol": "kr",
+      "name": "ISK, NOK, SEK"
+    },
+    {
+      "symbol": "\u00a5",
+      "name": "JPY"
+    },
+    {
+      "symbol": "z\u0142",
+      "name": "PLN"
+    },
+    {
+      "symbol": "Lei",
+      "name": "RON"
+    }
+  ],
+  "default_currency": {
+    "symbol": "$",
+    "name": "AUD, CAD, USD"
+  },
+  "requests_last_min": 169,
+  "requests_last_hour": 170,
+  "mqtt_connection": false,
+  "products": {
+    "A5191": {
+      "name": "V1 Smart EV Charger",
+      "platform": "Smart EV Charger",
+      "product_codes": {
+        "DK2Z": {
+          "p_code": "DK2Z",
+          "sku": "A5191GZ2",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "socket",
+            "standard": "eu",
+            "ratedPower": 22,
+            "delay_start": false,
+            "ratedCurrent": 32,
+            "tamper_proof": false,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": true,
+            "second_charging_power": false
+          }
+        },
+        "DJRA": {
+          "p_code": "DJRA",
+          "sku": "A5191GZ3",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 22,
+            "delay_start": false,
+            "ratedCurrent": 32,
+            "tamper_proof": false,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": false,
+            "second_charging_power": false
+          }
+        },
+        "DJJN": {
+          "p_code": "DJJN",
+          "sku": "A5191VZ0",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "socket",
+            "standard": "eu",
+            "ratedPower": 7.4,
+            "delay_start": false,
+            "ratedCurrent": 32,
+            "tamper_proof": false,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": true,
+            "second_charging_power": false
+          }
+        },
+        "DK3A": {
+          "p_code": "DK3A",
+          "sku": "A5191VZ1",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 7.4,
+            "delay_start": false,
+            "ratedCurrent": 32,
+            "tamper_proof": false,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": false,
+            "second_charging_power": false
+          }
+        },
+        "DMEY": {
+          "p_code": "DMEY",
+          "sku": "A5191GZ4",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "socket",
+            "standard": "eu",
+            "ratedPower": 11,
+            "delay_start": false,
+            "ratedCurrent": 16,
+            "tamper_proof": false,
+            "certification": [
+              "RoHS",
+              "REACH",
+              "CE"
+            ],
+            "permanent_lock_gun": true,
+            "second_charging_power": false
+          }
+        },
+        "DMEZ": {
+          "p_code": "DMEZ",
+          "sku": "A5191GZ7",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 11,
+            "delay_start": false,
+            "ratedCurrent": 16,
+            "tamper_proof": false,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": false,
+            "second_charging_power": false
+          }
+        },
+        "DL4G": {
+          "p_code": "DL4G",
+          "sku": "A5191VZ2",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "socket",
+            "standard": "uk",
+            "ratedPower": 7.4,
+            "delay_start": true,
+            "ratedCurrent": 32,
+            "tamper_proof": true,
+            "certification": [
+              "UKCA",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": true,
+            "second_charging_power": true
+          }
+        },
+        "DKSH": {
+          "p_code": "DKSH",
+          "sku": "A5191VZ3",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "cable",
+            "standard": "uk",
+            "ratedPower": 7.4,
+            "delay_start": true,
+            "ratedCurrent": 32,
+            "tamper_proof": true,
+            "certification": [
+              "UKCA",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": false,
+            "second_charging_power": true
+          }
+        },
+        "DJRC": {
+          "p_code": "DJRC",
+          "sku": "A51913Z0",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "shutter",
+            "standard": "eu",
+            "ratedPower": 7.4,
+            "delay_start": false,
+            "ratedCurrent": 32,
+            "tamper_proof": false,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": true,
+            "second_charging_power": false
+          }
+        },
+        "DK3C": {
+          "p_code": "DK3C",
+          "sku": "A51913Z1",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "shutter",
+            "standard": "eu",
+            "ratedPower": 22,
+            "delay_start": false,
+            "ratedCurrent": 32,
+            "tamper_proof": false,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": true,
+            "second_charging_power": false
+          }
+        },
+        "DMNM": {
+          "p_code": "DMNM",
+          "sku": "A5191TZ1",
+          "custom_fields": {
+            "phase": "single",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 7.4,
+            "delay_start": false,
+            "ratedCurrent": 32,
+            "tamper_proof": false,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": false,
+            "second_charging_power": false
+          }
+        },
+        "DMNN": {
+          "p_code": "DMNN",
+          "sku": "A5191TZ2",
+          "custom_fields": {
+            "phase": "three",
+            "gunType": "cable",
+            "standard": "eu",
+            "ratedPower": 22,
+            "delay_start": false,
+            "ratedCurrent": 32,
+            "tamper_proof": false,
+            "certification": [
+              "CE",
+              "RoHS",
+              "REACH"
+            ],
+            "permanent_lock_gun": false,
+            "second_charging_power": false
+          }
+        }
+      }
+    }
+  },
+  "use_files": true,
+  "sites_poll_time": "2026-06-09 21:31:07",
+  "sites_poll_seconds": 0.008,
+  "vehicle_brands": {
+    "Abarth": {},
+    "Aiways": {},
+    "Alfa Romeo": {},
+    "Alpine": {},
+    "Audi": {},
+    "BMW": {},
+    "BYD": {},
+    "Cadillac": {},
+    "Citroen": {},
+    "CUPRA": {},
+    "Dacia": {},
+    "Dongfeng": {},
+    "DS": {},
+    "e.Go": {},
+    "Elaris": {},
+    "Fiat": {},
+    "Firefly": {},
+    "Fisker": {},
+    "Ford": {},
+    "Genesis": {},
+    "GWM": {},
+    "Honda": {},
+    "Hongqi": {},
+    "Hyundai": {},
+    "JAC": {},
+    "Jaguar": {},
+    "Jeep": {},
+    "KGM": {},
+    "Kia": {},
+    "Lancia": {},
+    "Leapmotor": {},
+    "Lexus": {},
+    "Lightyear": {},
+    "Lotus": {},
+    "Lucid": {},
+    "Lynk&Co": {},
+    "Maserati": {},
+    "Maxus": {},
+    "Mazda": {},
+    "Mercedes-Benz": {},
+    "MG": {},
+    "Mini": {},
+    "Mitsubishi": {},
+    "NIO": {},
+    "Nissan": {},
+    "Omoda": {},
+    "Opel": {},
+    "Ora": {},
+    "Peugeot": {},
+    "Polestar": {},
+    "Porsche": {},
+    "Renault": {},
+    "Rolls-Royce": {},
+    "SEAT": {},
+    "Seres": {},
+    "Skoda": {},
+    "Skywell": {},
+    "Smart": {},
+    "Sono": {},
+    "Subaru": {},
+    "Tesla": {},
+    "Toyota": {},
+    "VinFast": {},
+    "Volkswagen": {},
+    "Volvo": {},
+    "Voyah": {},
+    "XPENG": {},
+    "Zeekr": {},
+    "cached": true
+  },
+  "vehicles_registered": [],
+  "vehicles": {},
+  "details_poll_time": "2026-06-09 21:31:07",
+  "details_poll_seconds": 0.004,
+  "has_unread_msg": false,
+  "system_msg": false,
+  "device_msg": false,
+  "energy_poll_time": "2026-06-09 21:31:07",
+  "energy_poll_seconds": 0.003
+}

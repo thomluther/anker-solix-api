@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "param_data": "{\"price_type\":\"fixed\",\"use_time\":null,\"dynamic_price\":null,\"fixed_price\":{\"price\":\"0\",\"sell_price\":\"\",\"unit\":\"$\",\"accuracy\":0},\"time_slot_data\":null}"
+  },
+  "trace_id": "7ccef989f24aab2cb2f7d7f6e9c5bfb9"
+}

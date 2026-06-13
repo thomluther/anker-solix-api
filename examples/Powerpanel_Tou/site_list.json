@@ -1,0 +1,42 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "492cbe8c-e2a9-b6c4-c7ee-45b3ef4260e0",
+        "site_name": "16 Saville",
+        "site_img": "",
+        "device_type_list": [
+          5
+        ],
+        "ms_type": 1,
+        "power_site_type": 4,
+        "is_allow_delete": true,
+        "support_device_models": [
+          "A17B1"
+        ],
+        "current_site_device_models": [
+          "A17B1"
+        ],
+        "init_status": 1,
+        "site_device_list": [
+          {
+            "device_model": "A17B1",
+            "device_sn": "UUBABYAH2ONIAPD4",
+            "device_name": "SOLIX Home Power Panel",
+            "device_img": "",
+            "device_type": 5,
+            "status": 1,
+            "init_status": 0,
+            "create_time": 0,
+            "update_time": 0,
+            "feature": null
+          }
+        ],
+        "is_site_created_by_installer": false
+      }
+    ]
+  },
+  "trace_id": "9e41bd84b956afbf6ebedc5883ad15c1"
+}

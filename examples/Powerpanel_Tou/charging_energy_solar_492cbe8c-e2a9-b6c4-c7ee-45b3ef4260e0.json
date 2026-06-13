@@ -1,0 +1,68 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "totalEnergy": "0.00",
+    "totalEnergyUnit": "KWh",
+    "totalImportedEnergy": "",
+    "totalImportedEnergyUnit": "",
+    "totalExportedEnergy": "0.00",
+    "totalExportedEnergyUnit": "KWh",
+    "power": null,
+    "powerUnit": "",
+    "chargeLevel": null,
+    "energy": [
+      {
+        "value": "0.00",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0.00",
+            "to": "0.00",
+            "sourceType": "solar"
+          }
+        ]
+      },
+      {
+        "value": "0.00",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0.00",
+            "to": "0.00",
+            "sourceType": "solar"
+          }
+        ]
+      }
+    ],
+    "energyUnit": "KWh",
+    "aggregates": [
+      {
+        "title": "Battery charging capacity",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "hes",
+        "percent": "0%",
+        "imported": false
+      },
+      {
+        "title": "Load power consumption",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "home",
+        "percent": "0%",
+        "imported": false
+      },
+      {
+        "title": "Sold power",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "grid",
+        "percent": "0%",
+        "imported": false
+      }
+    ],
+    "hasDiesel": false
+  },
+  "trace_id": "5fe4aedfcfce2b03fd3d1d6cecb2bb52"
+}

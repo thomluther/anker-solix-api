@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "model_list": [
+      "500e Convertible",
+      "500e Hatchback",
+      "500e Scorpionissima",
+      "600e Scorpionissima",
+      "600e Turismo"
+    ]
+  },
+  "trace_id": "1b45b620e5febf4edcfaea075eafc72a"
+}

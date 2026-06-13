@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "connect_infos": {
+      "UUBABYAH2ONIAPD4": true
+    },
+    "connected": true,
+    "total_system_savings": 592.4,
+    "system_savings_price_unit": "$",
+    "save_carbon_footprint": 0.13,
+    "save_carbon_unit": "kg",
+    "save_carbon_c": 0.997,
+    "total_system_power_generation": 0.13,
+    "system_power_generation_unit": "KWh"
+  },
+  "trace_id": "a29607fcbbdf6e2ffb1c5ae1689e0f42"
+}

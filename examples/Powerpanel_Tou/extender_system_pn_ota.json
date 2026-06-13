@@ -1,0 +1,30 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "extender_system_relation_ota": [
+      {
+        "device_model": "A1782",
+        "versions": {
+          "A1782": "v1.2.1.6",
+          "A7320": "v0.0.6.2"
+        }
+      },
+      {
+        "device_model": "A1790P",
+        "versions": {
+          "A1790P": "v3.7.0",
+          "A7320": "v0.0.6.2"
+        }
+      },
+      {
+        "device_model": "A1790",
+        "versions": {
+          "A1790": "v2.6.5",
+          "A7320": "v0.0.6.8"
+        }
+      }
+    ]
+  },
+  "trace_id": "5ccd5b5e22a6fa4f960efdae2feaade1"
+}

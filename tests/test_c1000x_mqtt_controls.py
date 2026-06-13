@@ -10,7 +10,7 @@ from aiohttp import ClientSession
 from anker_solix_api.api import AnkerSolixApi
 from anker_solix_api.mqtt_factory import SolixMqttDeviceFactory
 from anker_solix_api.mqtt_pps import SolixMqttDevicePps
-import common
+from context import common
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 CONSOLE: logging.Logger = common.CONSOLE

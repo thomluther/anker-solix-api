@@ -1,0 +1,184 @@
+{
+  "UUBABYAH2ONIAPD4": {
+    "device_sn": "UUBABYAH2ONIAPD4",
+    "device_code": "ABY",
+    "site_id": "492cbe8c-e2a9-b6c4-c7ee-45b3ef4260e0",
+    "is_admin": true,
+    "device_pn": "A17B1",
+    "device_code_features": {},
+    "mqtt_supported": true,
+    "mqtt_overlay": false,
+    "mqtt_status_request": false,
+    "type": "powerpanel",
+    "status": "1",
+    "status_desc": "online",
+    "wireless_type": "1",
+    "alias": "SOLIX Home Power Panel",
+    "name": "SOLIX Home Power Panel",
+    "main_sn": "UUBABYAH2ONIAPD4",
+    "is_primary": true,
+    "average_power": {
+      "last_check": "2026-06-09 21:31:07",
+      "valid_time": "2026-06-09 21:29:55",
+      "offset_seconds": -72,
+      "power_unit": "kW",
+      "charge_power_avg": "0.00",
+      "discharge_power_avg": "0.00",
+      "state_of_charge": "17",
+      "solar_power_avg": "0.00",
+      "home_usage_avg": "4.11",
+      "grid_import_avg": "4.11",
+      "grid_export_avg": "0.00"
+    },
+    "battery_capacity": "3840",
+    "battery_energy": "652",
+    "owner_user_id": "34bab2a5fbc5bef03fc7a66aec41f3ee3ef7dbe0",
+    "bt_ble_mac": "FFB7B7D7A1D6",
+    "wifi_online": true,
+    "wifi_name": "wifi-network-1",
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v1.6.3",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "",
+    "intgr_device": null,
+    "wifi_mac": "63C4BEEEBCDE",
+    "time_zone": "EST5EDT,M3.2.0,M11.1.0",
+    "group_info": null,
+    "is_ota_update": false,
+    "ota_version": "v1.6.3"
+  },
+  "9DNBH3D0PLDBLX1Y": {
+    "device_sn": "9DNBH3D0PLDBLX1Y",
+    "device_code": "BH3",
+    "is_admin": true,
+    "owner_user_id": "34bab2a5fbc5bef03fc7a66aec41f3ee3ef7dbe0",
+    "device_pn": "A1790",
+    "device_code_features": {},
+    "mqtt_supported": true,
+    "mqtt_overlay": false,
+    "mqtt_status_request": false,
+    "type": "pps",
+    "bt_ble_mac": "34FBA7172E9E",
+    "name": "SOLIX F3800",
+    "alias": "SOLIX F3800 2",
+    "wifi_online": false,
+    "wifi_name": "wifi-network-1",
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v2.6.5",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "-54",
+    "wifi_signal": "89",
+    "intgr_device": null,
+    "wifi_mac": "8FDFADABFCD2",
+    "time_zone": "EST5EDT,M3.2.0,M11.1.0",
+    "group_info": null,
+    "battery_size": 3840,
+    "expansion_packs": 0,
+    "battery_capacity": "3840",
+    "auto_upgrade": true,
+    "is_ota_update": false,
+    "ota_version": "v2.6.5",
+    "ota_children": [
+      {
+        "device_type": "A1790_A17B2",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.3.0"
+      },
+      {
+        "device_type": "A1790_15Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v4.9.3"
+      },
+      {
+        "device_type": "A1790_esp32_low",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.3.0.5"
+      },
+      {
+        "device_type": "A1790_mcu_low",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v2.6.5"
+      }
+    ]
+  },
+  "QVZBH3EUZB4SZ0II": {
+    "device_sn": "QVZBH3EUZB4SZ0II",
+    "device_code": "BH3",
+    "is_admin": true,
+    "owner_user_id": "34bab2a5fbc5bef03fc7a66aec41f3ee3ef7dbe0",
+    "device_pn": "A1790",
+    "device_code_features": {},
+    "mqtt_supported": true,
+    "mqtt_overlay": false,
+    "mqtt_status_request": false,
+    "type": "pps",
+    "bt_ble_mac": "1DCABD7F5AE7",
+    "name": "SOLIX F3800",
+    "alias": "SOLIX F3800 1",
+    "wifi_online": false,
+    "wifi_name": "wifi-network-2",
+    "relate_type": [
+      "ble",
+      "wifi"
+    ],
+    "charge": false,
+    "bws_surplus": "0",
+    "sw_version": "v2.6.5",
+    "tag": "",
+    "platform_tag": "",
+    "rssi": "-54",
+    "wifi_signal": "89",
+    "intgr_device": null,
+    "wifi_mac": "FFC1BD44FF6A",
+    "time_zone": "EST5EDT,M3.2.0,M11.1.0",
+    "group_info": null,
+    "battery_size": 3840,
+    "expansion_packs": 0,
+    "battery_capacity": "3840",
+    "auto_upgrade": true,
+    "is_ota_update": false,
+    "ota_version": "v2.6.5",
+    "ota_children": [
+      {
+        "device_type": "A1790_A17B2",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.3.0"
+      },
+      {
+        "device_type": "A1790_15Ah",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v4.9.3"
+      },
+      {
+        "device_type": "A1790_esp32_low",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v0.3.0.5"
+      },
+      {
+        "device_type": "A1790_mcu_low",
+        "need_update": false,
+        "force_upgrade": false,
+        "rom_version_name": "v2.6.5"
+      }
+    ]
+  }
+}

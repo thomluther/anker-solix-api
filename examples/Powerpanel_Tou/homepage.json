@@ -1,0 +1,30 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "site_list": [
+      {
+        "site_id": "492cbe8c-e2a9-b6c4-c7ee-45b3ef4260e0",
+        "site_name": "16 Saville",
+        "site_img": "",
+        "device_type_list": [],
+        "ms_type": 0,
+        "power_site_type": 0,
+        "is_allow_delete": false,
+        "support_device_models": null,
+        "current_site_device_models": null,
+        "init_status": 0,
+        "site_device_list": null,
+        "is_site_created_by_installer": false
+      }
+    ],
+    "solar_list": [],
+    "pps_list": [],
+    "solarbank_list": [],
+    "powerpanel_list": [],
+    "solarbank_pps_list": [],
+    "combiner_box_list": [],
+    "charging_pile_list": []
+  },
+  "trace_id": "6e86ebe9ff7d24b777db67776e306a5f"
+}

@@ -1,0 +1,2650 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "totalEnergy": "0.00",
+    "totalEnergyUnit": "KWh",
+    "totalImportedEnergy": "",
+    "totalImportedEnergyUnit": "",
+    "totalExportedEnergy": "0.00",
+    "totalExportedEnergyUnit": "KWh",
+    "power": [
+      {
+        "time": "00:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "00:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "01:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "02:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "04:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "05:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "06:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "07:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "08:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "09:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "10:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "11:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "12:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "13:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "14:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "15:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:00",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:05",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:10",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:15",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:20",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:25",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:30",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:35",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:40",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:45",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:50",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:55",
+        "powerInfos": [
+          {
+            "type": "solar",
+            "value": "0.00"
+          }
+        ]
+      }
+    ],
+    "powerUnit": "KW",
+    "chargeLevel": null,
+    "energy": [
+      {
+        "value": "0.00",
+        "negValue": "0",
+        "rods": [
+          {
+            "from": "0.00",
+            "to": "0.00",
+            "sourceType": "solar"
+          }
+        ]
+      }
+    ],
+    "energyUnit": "KWh",
+    "aggregates": [
+      {
+        "title": "Battery charging capacity",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "hes",
+        "percent": "0%",
+        "imported": false
+      },
+      {
+        "title": "Load power consumption",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "home",
+        "percent": "0%",
+        "imported": false
+      },
+      {
+        "title": "Sold power",
+        "value": "0.00",
+        "unit": "KWh",
+        "type": "grid",
+        "percent": "0%",
+        "imported": false
+      }
+    ],
+    "hasDiesel": false
+  },
+  "trace_id": "c27a1e4ccb9f58afd21dbecf5f2dbe9d"
+}

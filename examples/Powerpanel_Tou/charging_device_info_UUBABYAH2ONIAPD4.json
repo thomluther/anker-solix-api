@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_infos": [
+      {
+        "sn": "UUBABYAH2ONIAPD4",
+        "device_type": "A17B1",
+        "ble_bind_type": 2,
+        "ble_mac": "FFB7B7D7A1D6",
+        "wifi_bind_type": 2,
+        "connect": true,
+        "site_id": "492cbe8c-e2a9-b6c4-c7ee-45b3ef4260e0"
+      }
+    ]
+  },
+  "trace_id": "bdf3881ef10f2ca0809afe767edccfa8"
+}

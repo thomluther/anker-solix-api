@@ -1,0 +1,191 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "update_infos": [
+      {
+        "device_sn": "UUBABYAH2ONIAPD4",
+        "device_type": "A17B1",
+        "need_update": false,
+        "need_rollback": false,
+        "upgrade_type": 0,
+        "lastPackage": {
+          "product_code": "",
+          "product_component": "",
+          "version": "",
+          "is_forced": false,
+          "md5": "",
+          "url": "",
+          "size": 0
+        },
+        "change_log": "",
+        "current_version": "v1.6.3",
+        "children": null,
+        "upgrade_level": 0,
+        "device_relation": null
+      },
+      {
+        "device_sn": "QVZBH3EUZB4SZ0II",
+        "device_type": "A1790",
+        "need_update": false,
+        "need_rollback": false,
+        "upgrade_type": 1,
+        "lastPackage": {
+          "product_code": "A1790",
+          "product_component": "A1790_low",
+          "version": "v2.6.5",
+          "is_forced": false,
+          "md5": "5c852cc80011def1efe534a8be94ae64",
+          "url": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2026/03/24/iot-admin/OWG1YlQsEyd6iSUV/A1790_AllPackets_V2.6.5_20260304_LowVoltage.bin",
+          "size": 869444
+        },
+        "change_log": "",
+        "current_version": "v2.6.5",
+        "children": [
+          {
+            "needUpdate": false,
+            "device_type": "A1790_A17B2",
+            "rom_version_name": "v0.3.0",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2025/06/11/iot-admin/JSlttrPlnsyHiTjS/A1790_AllPackets_V0.3.0_20250609_LowVoltage.bin",
+              "file_size": 812100,
+              "file_md5": "a823d89a7dcaee6e0829a31495f3405d"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A1790_15Ah",
+            "rom_version_name": "v4.9.3",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2026/03/24/iot-admin/wXn9GVsGlOQNWA1b/A1790_AllPackets_V4.9.3_20260304_LowVoltage.bin",
+              "file_size": 869444,
+              "file_md5": "5c852cc80011def1efe534a8be94ae64"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A1790_esp32_low",
+            "rom_version_name": "v0.3.0.5",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2026/03/24/iot-admin/KFsTkEZktBFV5Yrm/A1790_module_v0.3.0.5.bin",
+              "file_size": 1380352,
+              "file_md5": "32809ae9475aa0ca125ce04b70c1b99b"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A1790_mcu_low",
+            "rom_version_name": "v2.6.5",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2026/03/24/iot-admin/mIjsgXv9Oc8PHexL/A1790_AllPackets_V2.6.5_20260304_LowVoltage_OtaTest.bin",
+              "file_size": 869444,
+              "file_md5": "f1efd3f5a342970fff357863c15bcf79"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          }
+        ],
+        "upgrade_level": 1,
+        "device_relation": null
+      },
+      {
+        "device_sn": "9DNBH3D0PLDBLX1Y",
+        "device_type": "A1790",
+        "need_update": false,
+        "need_rollback": false,
+        "upgrade_type": 1,
+        "lastPackage": {
+          "product_code": "A1790",
+          "product_component": "A1790_low",
+          "version": "v2.6.5",
+          "is_forced": false,
+          "md5": "5c852cc80011def1efe534a8be94ae64",
+          "url": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2026/03/24/iot-admin/OWG1YlQsEyd6iSUV/A1790_AllPackets_V2.6.5_20260304_LowVoltage.bin",
+          "size": 869444
+        },
+        "change_log": "",
+        "current_version": "v2.6.5",
+        "children": [
+          {
+            "needUpdate": false,
+            "device_type": "A1790_A17B2",
+            "rom_version_name": "v0.3.0",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2025/06/11/iot-admin/JSlttrPlnsyHiTjS/A1790_AllPackets_V0.3.0_20250609_LowVoltage.bin",
+              "file_size": 812100,
+              "file_md5": "a823d89a7dcaee6e0829a31495f3405d"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A1790_15Ah",
+            "rom_version_name": "v4.9.3",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2026/03/24/iot-admin/wXn9GVsGlOQNWA1b/A1790_AllPackets_V4.9.3_20260304_LowVoltage.bin",
+              "file_size": 869444,
+              "file_md5": "5c852cc80011def1efe534a8be94ae64"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A1790_esp32_low",
+            "rom_version_name": "v0.3.0.5",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2026/03/24/iot-admin/KFsTkEZktBFV5Yrm/A1790_module_v0.3.0.5.bin",
+              "file_size": 1380352,
+              "file_md5": "32809ae9475aa0ca125ce04b70c1b99b"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          },
+          {
+            "needUpdate": false,
+            "device_type": "A1790_mcu_low",
+            "rom_version_name": "v2.6.5",
+            "force_upgrade": false,
+            "full_package": {
+              "file_path": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/ota/2026/03/24/iot-admin/mIjsgXv9Oc8PHexL/A1790_AllPackets_V2.6.5_20260304_LowVoltage_OtaTest.bin",
+              "file_size": 869444,
+              "file_md5": "f1efd3f5a342970fff357863c15bcf79"
+            },
+            "change_log": "",
+            "sub_current_version": "",
+            "upgrade_level": 0
+          }
+        ],
+        "upgrade_level": 1,
+        "device_relation": null
+      }
+    ],
+    "popup_info": {
+      "need_update": false,
+      "sub_need_update": false,
+      "upgrade_level": 0
+    }
+  },
+  "trace_id": "caadceacf0dbe4889b7b8faed03dfe07"
+}

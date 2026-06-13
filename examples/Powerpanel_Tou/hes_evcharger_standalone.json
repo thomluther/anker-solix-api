@@ -1,0 +1,9 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "evChargers": [],
+    "userBindEvChargersCount": 0
+  },
+  "trace_id": "deded0d99793e61777c90cae961a0fbd"
+}

@@ -1,0 +1,60 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "totalEnergy": "156.62",
+    "totalEnergyUnit": "KWh",
+    "totalImportedEnergy": "156.62",
+    "totalImportedEnergyUnit": "KWh",
+    "totalExportedEnergy": "0.00",
+    "totalExportedEnergyUnit": "KWh",
+    "power": null,
+    "powerUnit": "",
+    "chargeLevel": null,
+    "energy": [
+      {
+        "value": "68.14",
+        "negValue": "0.00",
+        "rods": [
+          {
+            "from": "0",
+            "to": "68.14",
+            "sourceType": "grid"
+          }
+        ]
+      },
+      {
+        "value": "88.48",
+        "negValue": "0.00",
+        "rods": [
+          {
+            "from": "0",
+            "to": "88.48",
+            "sourceType": "grid"
+          }
+        ]
+      }
+    ],
+    "energyUnit": "KWh",
+    "aggregates": [
+      {
+        "title": "Battery charging capacity",
+        "value": "16.18",
+        "unit": "KWh",
+        "type": "hes",
+        "percent": "11%",
+        "imported": true
+      },
+      {
+        "title": "Load power consumption",
+        "value": "140.44",
+        "unit": "KWh",
+        "type": "home",
+        "percent": "89%",
+        "imported": true
+      }
+    ],
+    "hasDiesel": false
+  },
+  "trace_id": "8af08bc4fdeeeacfedab1edbef4d1bd8"
+}

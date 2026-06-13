@@ -1,0 +1,79 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "savings": [
+      "77.3",
+      "70.5",
+      "79.4",
+      "73.9",
+      "72.4",
+      "24.7",
+      "0.0",
+      "0.0",
+      "0.0",
+      "0.0",
+      "0.0",
+      "0.0"
+    ],
+    "savingsUnit": "",
+    "saveCarbons": [
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.03",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00"
+    ],
+    "saveCarbonsUnit": "kg",
+    "powerGenerations": [
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.03",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00",
+      "0.00"
+    ],
+    "powerGenerationsUnit": "kWh",
+    "aggregates": [
+      {
+        "title": "Proportion of self-use",
+        "value": "10%",
+        "unit": "",
+        "type": "",
+        "percent": "",
+        "imported": false,
+        "showPercent": "",
+        "subItemList": null
+      }
+    ],
+    "percents": [
+      {
+        "type": "hes",
+        "value": "10%"
+      },
+      {
+        "type": "solar",
+        "value": "0%"
+      },
+      {
+        "type": "grid",
+        "value": "90%"
+      }
+    ],
+    "selfPowerPercent": "10%"
+  },
+  "trace_id": "a19e0f99aeef9cbabce26d8c9494b6ce"
+}

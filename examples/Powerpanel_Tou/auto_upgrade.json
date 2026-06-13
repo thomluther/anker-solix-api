@@ -1,0 +1,26 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "main_switch": true,
+    "device_list": [
+      {
+        "device_sn": "9DNBH3D0PLDBLX1Y",
+        "device_name": "SOLIX F3800",
+        "auto_upgrade": true,
+        "alias_name": "SOLIX F3800 2",
+        "icon": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/product/2023/11/22/iot-admin/bXAgVYcpnksWkU4g/picl_A1790_normal.png",
+        "sub_device_list": []
+      },
+      {
+        "device_sn": "QVZBH3EUZB4SZ0II",
+        "device_name": "SOLIX F3800",
+        "auto_upgrade": true,
+        "alias_name": "SOLIX F3800 1",
+        "icon": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/product/2023/11/22/iot-admin/bXAgVYcpnksWkU4g/picl_A1790_normal.png",
+        "sub_device_list": []
+      }
+    ]
+  },
+  "trace_id": "abf80ba9a0e84a3b5fdf7ea7a9a9e2ad"
+}

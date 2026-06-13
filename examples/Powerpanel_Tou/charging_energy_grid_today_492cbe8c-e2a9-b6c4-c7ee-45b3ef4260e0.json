@@ -1,0 +1,2642 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "totalEnergy": "88.48",
+    "totalEnergyUnit": "KWh",
+    "totalImportedEnergy": "88.48",
+    "totalImportedEnergyUnit": "KWh",
+    "totalExportedEnergy": "0.00",
+    "totalExportedEnergyUnit": "KWh",
+    "power": [
+      {
+        "time": "00:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "6.23"
+          }
+        ]
+      },
+      {
+        "time": "00:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "6.47"
+          }
+        ]
+      },
+      {
+        "time": "00:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.10"
+          }
+        ]
+      },
+      {
+        "time": "00:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.31"
+          }
+        ]
+      },
+      {
+        "time": "00:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.81"
+          }
+        ]
+      },
+      {
+        "time": "00:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.75"
+          }
+        ]
+      },
+      {
+        "time": "00:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.10"
+          }
+        ]
+      },
+      {
+        "time": "00:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.40"
+          }
+        ]
+      },
+      {
+        "time": "00:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.15"
+          }
+        ]
+      },
+      {
+        "time": "00:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.90"
+          }
+        ]
+      },
+      {
+        "time": "00:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.71"
+          }
+        ]
+      },
+      {
+        "time": "00:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.70"
+          }
+        ]
+      },
+      {
+        "time": "01:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.65"
+          }
+        ]
+      },
+      {
+        "time": "01:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.92"
+          }
+        ]
+      },
+      {
+        "time": "01:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.75"
+          }
+        ]
+      },
+      {
+        "time": "01:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.80"
+          }
+        ]
+      },
+      {
+        "time": "01:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.26"
+          }
+        ]
+      },
+      {
+        "time": "01:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.74"
+          }
+        ]
+      },
+      {
+        "time": "01:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.06"
+          }
+        ]
+      },
+      {
+        "time": "01:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.98"
+          }
+        ]
+      },
+      {
+        "time": "01:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.66"
+          }
+        ]
+      },
+      {
+        "time": "01:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.02"
+          }
+        ]
+      },
+      {
+        "time": "01:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.74"
+          }
+        ]
+      },
+      {
+        "time": "01:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.74"
+          }
+        ]
+      },
+      {
+        "time": "02:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.99"
+          }
+        ]
+      },
+      {
+        "time": "02:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.71"
+          }
+        ]
+      },
+      {
+        "time": "02:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.18"
+          }
+        ]
+      },
+      {
+        "time": "02:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.03"
+          }
+        ]
+      },
+      {
+        "time": "02:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.80"
+          }
+        ]
+      },
+      {
+        "time": "02:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.82"
+          }
+        ]
+      },
+      {
+        "time": "02:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.61"
+          }
+        ]
+      },
+      {
+        "time": "02:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.25"
+          }
+        ]
+      },
+      {
+        "time": "02:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "8.15"
+          }
+        ]
+      },
+      {
+        "time": "02:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "8.17"
+          }
+        ]
+      },
+      {
+        "time": "02:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.85"
+          }
+        ]
+      },
+      {
+        "time": "02:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "7.18"
+          }
+        ]
+      },
+      {
+        "time": "03:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "6.99"
+          }
+        ]
+      },
+      {
+        "time": "03:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "03:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.49"
+          }
+        ]
+      },
+      {
+        "time": "03:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.67"
+          }
+        ]
+      },
+      {
+        "time": "03:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.00"
+          }
+        ]
+      },
+      {
+        "time": "03:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.45"
+          }
+        ]
+      },
+      {
+        "time": "03:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.69"
+          }
+        ]
+      },
+      {
+        "time": "03:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.55"
+          }
+        ]
+      },
+      {
+        "time": "03:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.44"
+          }
+        ]
+      },
+      {
+        "time": "03:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.72"
+          }
+        ]
+      },
+      {
+        "time": "03:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.69"
+          }
+        ]
+      },
+      {
+        "time": "03:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "11.34"
+          }
+        ]
+      },
+      {
+        "time": "04:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "14.05"
+          }
+        ]
+      },
+      {
+        "time": "04:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.97"
+          }
+        ]
+      },
+      {
+        "time": "04:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "14.06"
+          }
+        ]
+      },
+      {
+        "time": "04:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "14.15"
+          }
+        ]
+      },
+      {
+        "time": "04:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "14.04"
+          }
+        ]
+      },
+      {
+        "time": "04:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.84"
+          }
+        ]
+      },
+      {
+        "time": "04:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "14.09"
+          }
+        ]
+      },
+      {
+        "time": "04:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.91"
+          }
+        ]
+      },
+      {
+        "time": "04:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.78"
+          }
+        ]
+      },
+      {
+        "time": "04:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.79"
+          }
+        ]
+      },
+      {
+        "time": "04:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.97"
+          }
+        ]
+      },
+      {
+        "time": "04:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.90"
+          }
+        ]
+      },
+      {
+        "time": "05:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.74"
+          }
+        ]
+      },
+      {
+        "time": "05:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.79"
+          }
+        ]
+      },
+      {
+        "time": "05:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.87"
+          }
+        ]
+      },
+      {
+        "time": "05:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "14.10"
+          }
+        ]
+      },
+      {
+        "time": "05:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.83"
+          }
+        ]
+      },
+      {
+        "time": "05:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "13.99"
+          }
+        ]
+      },
+      {
+        "time": "05:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "14.38"
+          }
+        ]
+      },
+      {
+        "time": "05:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "16.02"
+          }
+        ]
+      },
+      {
+        "time": "05:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "16.07"
+          }
+        ]
+      },
+      {
+        "time": "05:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "15.90"
+          }
+        ]
+      },
+      {
+        "time": "05:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "15.87"
+          }
+        ]
+      },
+      {
+        "time": "05:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "15.97"
+          }
+        ]
+      },
+      {
+        "time": "06:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "16.08"
+          }
+        ]
+      },
+      {
+        "time": "06:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "15.67"
+          }
+        ]
+      },
+      {
+        "time": "06:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "15.89"
+          }
+        ]
+      },
+      {
+        "time": "06:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "15.67"
+          }
+        ]
+      },
+      {
+        "time": "06:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "15.76"
+          }
+        ]
+      },
+      {
+        "time": "06:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "15.63"
+          }
+        ]
+      },
+      {
+        "time": "06:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "9.36"
+          }
+        ]
+      },
+      {
+        "time": "06:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.84"
+          }
+        ]
+      },
+      {
+        "time": "06:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.56"
+          }
+        ]
+      },
+      {
+        "time": "06:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.69"
+          }
+        ]
+      },
+      {
+        "time": "06:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.01"
+          }
+        ]
+      },
+      {
+        "time": "06:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "5.24"
+          }
+        ]
+      },
+      {
+        "time": "07:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.90"
+          }
+        ]
+      },
+      {
+        "time": "07:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.39"
+          }
+        ]
+      },
+      {
+        "time": "07:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.79"
+          }
+        ]
+      },
+      {
+        "time": "07:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.76"
+          }
+        ]
+      },
+      {
+        "time": "07:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.18"
+          }
+        ]
+      },
+      {
+        "time": "07:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.29"
+          }
+        ]
+      },
+      {
+        "time": "07:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.47"
+          }
+        ]
+      },
+      {
+        "time": "07:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.48"
+          }
+        ]
+      },
+      {
+        "time": "07:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.60"
+          }
+        ]
+      },
+      {
+        "time": "07:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.46"
+          }
+        ]
+      },
+      {
+        "time": "07:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.59"
+          }
+        ]
+      },
+      {
+        "time": "07:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.38"
+          }
+        ]
+      },
+      {
+        "time": "08:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.50"
+          }
+        ]
+      },
+      {
+        "time": "08:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.49"
+          }
+        ]
+      },
+      {
+        "time": "08:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.57"
+          }
+        ]
+      },
+      {
+        "time": "08:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.77"
+          }
+        ]
+      },
+      {
+        "time": "08:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.76"
+          }
+        ]
+      },
+      {
+        "time": "08:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.72"
+          }
+        ]
+      },
+      {
+        "time": "08:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.59"
+          }
+        ]
+      },
+      {
+        "time": "08:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.67"
+          }
+        ]
+      },
+      {
+        "time": "08:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.65"
+          }
+        ]
+      },
+      {
+        "time": "08:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.63"
+          }
+        ]
+      },
+      {
+        "time": "08:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.48"
+          }
+        ]
+      },
+      {
+        "time": "08:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.51"
+          }
+        ]
+      },
+      {
+        "time": "09:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.63"
+          }
+        ]
+      },
+      {
+        "time": "09:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.64"
+          }
+        ]
+      },
+      {
+        "time": "09:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.54"
+          }
+        ]
+      },
+      {
+        "time": "09:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.52"
+          }
+        ]
+      },
+      {
+        "time": "09:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.86"
+          }
+        ]
+      },
+      {
+        "time": "09:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.53"
+          }
+        ]
+      },
+      {
+        "time": "09:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.42"
+          }
+        ]
+      },
+      {
+        "time": "09:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.38"
+          }
+        ]
+      },
+      {
+        "time": "09:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.44"
+          }
+        ]
+      },
+      {
+        "time": "09:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.47"
+          }
+        ]
+      },
+      {
+        "time": "09:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.62"
+          }
+        ]
+      },
+      {
+        "time": "09:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.46"
+          }
+        ]
+      },
+      {
+        "time": "10:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.95"
+          }
+        ]
+      },
+      {
+        "time": "10:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.61"
+          }
+        ]
+      },
+      {
+        "time": "10:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.67"
+          }
+        ]
+      },
+      {
+        "time": "10:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.55"
+          }
+        ]
+      },
+      {
+        "time": "10:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.54"
+          }
+        ]
+      },
+      {
+        "time": "10:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.68"
+          }
+        ]
+      },
+      {
+        "time": "10:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.36"
+          }
+        ]
+      },
+      {
+        "time": "10:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.10"
+          }
+        ]
+      },
+      {
+        "time": "10:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.58"
+          }
+        ]
+      },
+      {
+        "time": "10:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.58"
+          }
+        ]
+      },
+      {
+        "time": "10:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.57"
+          }
+        ]
+      },
+      {
+        "time": "10:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.67"
+          }
+        ]
+      },
+      {
+        "time": "11:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.71"
+          }
+        ]
+      },
+      {
+        "time": "11:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.66"
+          }
+        ]
+      },
+      {
+        "time": "11:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.54"
+          }
+        ]
+      },
+      {
+        "time": "11:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.48"
+          }
+        ]
+      },
+      {
+        "time": "11:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.81"
+          }
+        ]
+      },
+      {
+        "time": "11:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.52"
+          }
+        ]
+      },
+      {
+        "time": "11:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.53"
+          }
+        ]
+      },
+      {
+        "time": "11:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.53"
+          }
+        ]
+      },
+      {
+        "time": "11:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.72"
+          }
+        ]
+      },
+      {
+        "time": "11:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.67"
+          }
+        ]
+      },
+      {
+        "time": "11:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.25"
+          }
+        ]
+      },
+      {
+        "time": "11:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.02"
+          }
+        ]
+      },
+      {
+        "time": "12:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.56"
+          }
+        ]
+      },
+      {
+        "time": "12:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.86"
+          }
+        ]
+      },
+      {
+        "time": "12:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.62"
+          }
+        ]
+      },
+      {
+        "time": "12:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.85"
+          }
+        ]
+      },
+      {
+        "time": "12:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.83"
+          }
+        ]
+      },
+      {
+        "time": "12:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.83"
+          }
+        ]
+      },
+      {
+        "time": "12:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.83"
+          }
+        ]
+      },
+      {
+        "time": "12:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.05"
+          }
+        ]
+      },
+      {
+        "time": "12:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.80"
+          }
+        ]
+      },
+      {
+        "time": "12:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.71"
+          }
+        ]
+      },
+      {
+        "time": "12:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.65"
+          }
+        ]
+      },
+      {
+        "time": "12:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.48"
+          }
+        ]
+      },
+      {
+        "time": "13:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.41"
+          }
+        ]
+      },
+      {
+        "time": "13:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.47"
+          }
+        ]
+      },
+      {
+        "time": "13:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.59"
+          }
+        ]
+      },
+      {
+        "time": "13:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.39"
+          }
+        ]
+      },
+      {
+        "time": "13:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.61"
+          }
+        ]
+      },
+      {
+        "time": "13:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.61"
+          }
+        ]
+      },
+      {
+        "time": "13:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.29"
+          }
+        ]
+      },
+      {
+        "time": "13:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.72"
+          }
+        ]
+      },
+      {
+        "time": "13:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.13"
+          }
+        ]
+      },
+      {
+        "time": "13:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.64"
+          }
+        ]
+      },
+      {
+        "time": "13:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.60"
+          }
+        ]
+      },
+      {
+        "time": "13:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.72"
+          }
+        ]
+      },
+      {
+        "time": "14:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.58"
+          }
+        ]
+      },
+      {
+        "time": "14:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.59"
+          }
+        ]
+      },
+      {
+        "time": "14:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.90"
+          }
+        ]
+      },
+      {
+        "time": "14:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.75"
+          }
+        ]
+      },
+      {
+        "time": "14:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.73"
+          }
+        ]
+      },
+      {
+        "time": "14:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.92"
+          }
+        ]
+      },
+      {
+        "time": "14:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.37"
+          }
+        ]
+      },
+      {
+        "time": "14:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.64"
+          }
+        ]
+      },
+      {
+        "time": "14:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.09"
+          }
+        ]
+      },
+      {
+        "time": "14:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.91"
+          }
+        ]
+      },
+      {
+        "time": "14:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.07"
+          }
+        ]
+      },
+      {
+        "time": "14:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.98"
+          }
+        ]
+      },
+      {
+        "time": "15:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.06"
+          }
+        ]
+      },
+      {
+        "time": "15:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.78"
+          }
+        ]
+      },
+      {
+        "time": "15:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.92"
+          }
+        ]
+      },
+      {
+        "time": "15:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.04"
+          }
+        ]
+      },
+      {
+        "time": "15:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.94"
+          }
+        ]
+      },
+      {
+        "time": "15:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.92"
+          }
+        ]
+      },
+      {
+        "time": "15:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.04"
+          }
+        ]
+      },
+      {
+        "time": "15:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.02"
+          }
+        ]
+      },
+      {
+        "time": "15:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.93"
+          }
+        ]
+      },
+      {
+        "time": "15:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.87"
+          }
+        ]
+      },
+      {
+        "time": "15:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.11"
+          }
+        ]
+      },
+      {
+        "time": "15:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.02"
+          }
+        ]
+      },
+      {
+        "time": "16:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.79"
+          }
+        ]
+      },
+      {
+        "time": "16:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "16:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "17:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.02"
+          }
+        ]
+      },
+      {
+        "time": "17:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "18:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "19:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.01"
+          }
+        ]
+      },
+      {
+        "time": "20:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "20:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.44"
+          }
+        ]
+      },
+      {
+        "time": "20:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.54"
+          }
+        ]
+      },
+      {
+        "time": "20:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.41"
+          }
+        ]
+      },
+      {
+        "time": "20:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.56"
+          }
+        ]
+      },
+      {
+        "time": "20:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.64"
+          }
+        ]
+      },
+      {
+        "time": "20:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.23"
+          }
+        ]
+      },
+      {
+        "time": "21:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "2.67"
+          }
+        ]
+      },
+      {
+        "time": "21:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.18"
+          }
+        ]
+      },
+      {
+        "time": "21:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.07"
+          }
+        ]
+      },
+      {
+        "time": "21:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.00"
+          }
+        ]
+      },
+      {
+        "time": "21:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "3.97"
+          }
+        ]
+      },
+      {
+        "time": "21:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "4.11"
+          }
+        ]
+      },
+      {
+        "time": "21:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "21:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "22:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:00",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:05",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:10",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:15",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:20",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:25",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:30",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:35",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:40",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:45",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:50",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      },
+      {
+        "time": "23:55",
+        "powerInfos": [
+          {
+            "type": "grid",
+            "value": "0.00"
+          }
+        ]
+      }
+    ],
+    "powerUnit": "KW",
+    "chargeLevel": null,
+    "energy": [
+      {
+        "value": "88.48",
+        "negValue": "0.00",
+        "rods": [
+          {
+            "from": "0",
+            "to": "88.48",
+            "sourceType": "grid"
+          }
+        ]
+      }
+    ],
+    "energyUnit": "KWh",
+    "aggregates": [
+      {
+        "title": "Battery charging capacity",
+        "value": "10.32",
+        "unit": "KWh",
+        "type": "hes",
+        "percent": "12%",
+        "imported": true
+      },
+      {
+        "title": "Load power consumption",
+        "value": "78.16",
+        "unit": "KWh",
+        "type": "home",
+        "percent": "88%",
+        "imported": true
+      }
+    ],
+    "hasDiesel": false
+  },
+  "trace_id": "e3fe5fc742fcf0e1922c12ed2ac52faa"
+}

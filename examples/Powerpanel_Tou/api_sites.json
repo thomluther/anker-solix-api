@@ -1,0 +1,228 @@
+{
+  "492cbe8c-e2a9-b6c4-c7ee-45b3ef4260e0": {
+    "type": "system",
+    "site_info": {
+      "site_id": "492cbe8c-e2a9-b6c4-c7ee-45b3ef4260e0",
+      "site_name": "16 Saville",
+      "site_img": "",
+      "device_type_list": [
+        5
+      ],
+      "ms_type": 1,
+      "power_site_type": 4,
+      "is_allow_delete": true,
+      "support_device_models": [
+        "A17B1"
+      ],
+      "current_site_device_models": [
+        "A17B1"
+      ],
+      "init_status": 1,
+      "site_device_list": [
+        {
+          "device_model": "A17B1",
+          "device_sn": "UUBABYAH2ONIAPD4",
+          "device_name": "SOLIX Home Power Panel",
+          "device_img": "",
+          "device_type": 5,
+          "status": 1,
+          "init_status": 0,
+          "create_time": 0,
+          "update_time": 0,
+          "feature": null
+        }
+      ],
+      "is_site_created_by_installer": false
+    },
+    "site_type": "powerpanel",
+    "site_admin": true,
+    "data_valid": true,
+    "requeries": 0,
+    "home_info": {
+      "home_name": "Home",
+      "home_img": "",
+      "charging_power": "0.00",
+      "power_unit": "W"
+    },
+    "solar_list": [],
+    "pps_info": {
+      "pps_list": [],
+      "total_charging_power": "0.00",
+      "power_unit": "W",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "pps_status": 0
+    },
+    "statistics": [
+      {
+        "type": "1",
+        "total": "0.13",
+        "unit": "kwh"
+      },
+      {
+        "type": "2",
+        "total": "0.13",
+        "unit": "kg"
+      },
+      {
+        "type": "3",
+        "total": "592.4",
+        "unit": "$"
+      }
+    ],
+    "topology_type": "1",
+    "solarbank_info": {
+      "solarbank_list": [],
+      "total_charging_power": "0",
+      "power_unit": "W",
+      "charging_status": "0",
+      "total_battery_power": "0.00",
+      "updated_time": "",
+      "total_photovoltaic_power": "0",
+      "total_output_power": "0.00",
+      "display_set_power": false,
+      "battery_discharge_power": "0",
+      "ac_power": "0",
+      "to_home_load": "0",
+      "is_display_data": false,
+      "solar_power_1": "0",
+      "solar_power_2": "0",
+      "solar_power_3": "0",
+      "solar_power_4": "0",
+      "other_input_power": "0",
+      "micro_inverter_power": "0",
+      "micro_inverter_power_limit": "0",
+      "micro_inverter_low_power_limit": "0",
+      "grid_to_battery_power": "0",
+      "pei_heating_power": "0",
+      "backup_info": {
+        "start_time": 0,
+        "end_time": 0,
+        "full_time": 0
+      },
+      "use_time_excute_info": {
+        "current_band": ""
+      }
+    },
+    "retain_load": "0W",
+    "scene_mode": 0,
+    "home_load_power": "0",
+    "updated_time": "01-01-0001 00:00:00",
+    "power_site_type": 4,
+    "site_id": "492cbe8c-e2a9-b6c4-c7ee-45b3ef4260e0",
+    "powerpanel_list": [
+      {
+        "device_pn": "A17B1",
+        "device_sn": "UUBABYAH2ONIAPD4",
+        "device_name": "SOLIX Home Power Panel",
+        "device_img": "https://public-aiot-ohi-prod.s3.dualstack.us-east-2.amazonaws.com/anker-power/public/product/2024/01/23/iot-admin/Qcjo9ALaRqFzFNeF/picl_A17B1_normal.png",
+        "create_time": 1758513230,
+        "bind_site_status": "",
+        "status": "1",
+        "wireless_type": "1",
+        "initial_process": 0
+      }
+    ],
+    "grid_info": null,
+    "is_downgrade": false,
+    "error_code": 0,
+    "smart_plug_info": null,
+    "feature_switch": {
+      "show_third_party_pv_panel": false
+    },
+    "other_loads_power": "0",
+    "priority_discharge_switch": 0,
+    "display_priority_discharge_tips": 0,
+    "priority_discharge_upgrade_devices": "",
+    "style_id": 0,
+    "is_show_priority_discharge": 0,
+    "solarbank_pps_info": {
+      "pps_list": null,
+      "total_charging_power": "",
+      "total_output_power": "",
+      "total_battery_power": "",
+      "total_pv_input_power": "",
+      "total_home_load_power": "",
+      "total_grid_to_battery": "",
+      "home": null,
+      "grid": null,
+      "system": null
+    },
+    "user_scene_mode": 0,
+    "is_dynamic_price_down_grade": false,
+    "aiems_profit": null,
+    "switch_0w": 0,
+    "err_msg": "",
+    "third_party_pv": "0",
+    "combiner_box_info": {
+      "combiner_box_list": []
+    },
+    "charging_pile_info": {
+      "charging_pile_list": []
+    },
+    "third_part_pv_setting": 2,
+    "custom_charging_type": 0,
+    "total_output_power_v2": 0,
+    "total_input_power_v2": 0,
+    "off_grid_power_v2": 0,
+    "grid_connected_power_v2": 0,
+    "other_load_power_v2": 0,
+    "energy_offset_seconds": -82,
+    "energy_offset_check": "2026-06-09 21:31:07",
+    "energy_offset_tz": 0,
+    "energy_details": {
+      "today": {
+        "date": "2026-06-09",
+        "battery_charge": "10.32",
+        "battery_discharge": "10.44",
+        "solar_production": "0.00",
+        "solar_to_battery": "0.00",
+        "home_usage": "88.60",
+        "battery_to_home": "10.44",
+        "battery_percentage": "0.12",
+        "solar_to_home": "0.00",
+        "solar_percentage": "0.0",
+        "grid_to_home": "78.16",
+        "other_percentage": "0.88",
+        "solar_to_grid": "0.00",
+        "grid_import": "88.48",
+        "grid_to_battery": "10.32"
+      },
+      "last_period": {
+        "date": "2026-06-08",
+        "battery_discharge": "68.14",
+        "battery_charge": "16.18",
+        "home_usage": "72.46",
+        "battery_to_home": "20.61",
+        "battery_percentage": "0.13",
+        "solar_to_home": "0.00",
+        "solar_percentage": "0.0",
+        "grid_to_home": "140.44",
+        "other_percentage": "0.87",
+        "grid_import": "68.14",
+        "solar_to_grid": "0.00",
+        "grid_to_battery": "16.18",
+        "solar_production": "0.00",
+        "solar_to_battery": "0.00"
+      }
+    },
+    "site_details": {
+      "price": 0,
+      "sell_price": 0,
+      "site_co2": 0,
+      "site_price_unit": "$",
+      "price_type": "fixed",
+      "current_mode": 0,
+      "use_time": null,
+      "dynamic_price": null,
+      "accuracy": 2,
+      "co2_ranking": {
+        "ranking": "",
+        "co2": "",
+        "tree": "",
+        "content": "",
+        "level": null
+      }
+    }
+  }
+}

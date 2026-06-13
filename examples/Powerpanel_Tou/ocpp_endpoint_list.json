@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "list": [
+      {
+        "name": "Anker",
+        "address": "wss://charging-ocppproxy-us-prod.anker.com/ocppj",
+        "certificate": "",
+        "icon": "",
+        "source": 0
+      }
+    ]
+  },
+  "trace_id": "1cd4c01ccac6b09cda5fad24fa618bf0"
+}

@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "UUBABYAH2ONIAPD4",
+    "site_id": "",
+    "upgrade_record_list": [
+      {
+        "upgrade_time": "2026-06-09 03:06:15",
+        "upgrade_version": "v1.6.3",
+        "pre_version": "v1.5.7",
+        "upgrade_type": "1",
+        "upgrade_desc": "",
+        "device_sn": "UUBABYAH2ONIAPD4",
+        "device_name": "SOLIX Home Power Panel",
+        "upgrade_record_type": 0,
+        "child_upgrade_records": null
+      }
+    ]
+  },
+  "trace_id": "0d9dfd30b5b9aad07e44792ce5ea62f9"
+}

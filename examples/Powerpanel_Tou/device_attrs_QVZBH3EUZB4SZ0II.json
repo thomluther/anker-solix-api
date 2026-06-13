@@ -1,0 +1,35 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "device_sn": "QVZBH3EUZB4SZ0II",
+    "attributes": {
+      "currency": "$",
+      "enable_0w": 0,
+      "ip_region": "UNKNOWN",
+      "legal_power_limit": 0,
+      "power_limit_option": [
+        350,
+        600,
+        800
+      ],
+      "power_limit_option_real": [
+        350,
+        600,
+        800
+      ],
+      "pps_use_time": "",
+      "pv_power_limit": 3600,
+      "regulation_code": 0,
+      "rssi": "-54",
+      "switch_0w": 1,
+      "tag": {
+        "id": 4,
+        "name": "Living Room",
+        "img": "https://d38dd6169df8my.cloudfront.net/icon/A17X8/living_room.png",
+        "alias": "Living Room"
+      }
+    }
+  },
+  "trace_id": "8ecaece387939e71ef2c7d7accce9a60"
+}

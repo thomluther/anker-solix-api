@@ -1,0 +1,28 @@
+{
+  "code": 0,
+  "msg": "success!",
+  "data": {
+    "power_cutoff_data": [
+      {
+        "id": 1,
+        "is_selected": 1,
+        "output_cutoff_data": 10,
+        "lowpower_input_data": 5,
+        "input_cutoff_data": 10
+      },
+      {
+        "id": 2,
+        "is_selected": 0,
+        "output_cutoff_data": 5,
+        "lowpower_input_data": 4,
+        "input_cutoff_data": 5
+      }
+    ],
+    "charge_upper_limit": 100,
+    "discharge_lower_limit": 10,
+    "backup_reserve": 50,
+    "backup_reserve_switch": 0,
+    "cmd_type": 0
+  },
+  "trace_id": "6c7deab42db9e3149fca345fe8fdd64e"
+}
