@@ -1739,7 +1739,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 "disaster_type": disaster_type,
                 "start_time": start_time,
                 "end_time": end_time,
-            },
+            }
         if toFile:
             # change only relevant parts of existing status
             filedata = self.sites.get(siteId, {}).get("site_details", {}).get("device_disaster") or {}
