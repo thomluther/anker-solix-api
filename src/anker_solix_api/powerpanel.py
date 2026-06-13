@@ -172,13 +172,17 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         device[key] = int(value)
                     # Examples for boolean key values
                     elif key == "auto_upgrade":
-                        device.update({key: bool(value)})
+                        device[key] = bool(value)
                     # key with string values
                     elif key == "wireless_type" or (
                         # Example for keys with string values that should only be updated if value returned
                         key in ["wifi_name", "rssi"] and value
                     ):
                         device.update({key: str(value)})
+                    elif key == "utility_rate_plan":
+                        device[key] = value
+                        # TODO: Add code to extract active slot parameters from plan
+
                     # check that main device is defined for all sub devices
                     if update_main or (
                         device.get("is_subdevice") and not device.get("main_sn")
@@ -1595,30 +1599,64 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     )
         return entry
 
+    async def get_disaster_support(
+        self, siteId: str, deviceType: int = 2, fromFile: bool = False
+    ) -> dict:
+        """Get backup feature support info (auto disaster support, allowed country codes).
+
+        Example data:
+        {"support_auto_disaster": true,"support_country_code": [
+            {"code": "US","google_code": "ChIJCzYy5IS16lQRQrfeQ5K5Oxw"},
+            {"code": "PR","google_code": "ChIJ-aeSGyaWAowRGpsEGCjsNvM"}]}
+        """
+        data = {"identifier_id": siteId, "type": deviceType}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_CHARGING_ENDPOINTS["get_disaster_support_func"], json=data
+            )
+        if result := resp.get("data") or {}:
+            # cache under site_details
+            self._update_site(siteId, {"disaster_support": result})
+        return result
+
     async def get_device_disaster(
         self, siteId: str, deviceType: int = 2, fromFile: bool = False
     ) -> dict:
         """Get the manual/auto backup (disaster preparedness) configuration of a Power Panel site.
 
         Verified on A17B1 Home Power Panel, deviceType=2 for power panel sites.
-        Returns: auto_disaster_switch, manual_disaster_switch, disaster_details[].
+        Example data:
+        {"auto_disaster_switch": false,"manual_disaster_switch": true,"disaster_details": [
+            {"uuid": "00000000-0000-0000-0000-000000000001","disaster_type": 1,"event": "","start_time": 1780988280,
+            "end_time": 1780991880,"charging_time": 36,"event_key": ""}]}
         """
         self._logger.debug(
             "Getting api %s Power Panel disaster config", self.apisession.nickname
         )
         data = {"identifier_id": siteId, "type": deviceType}
         if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{siteId}.json"
-            )
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{siteId}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{siteId}.json"
+                )
         else:
             resp = await self.apisession.request(
                 "post", API_CHARGING_ENDPOINTS["get_site_device_disaster"], json=data
             )
-        result = resp.get("data") or {}
-        if result:
-            # cache under site_details so it is included in exports
+        if result := resp.get("data") or {}:
+            # cache under site_details
             self._update_site(siteId, {"device_disaster": result})
         return result
 
@@ -1630,6 +1668,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         manual_disaster_status: 1 = active/running, 2 = inactive.
         current_disaster_detail is only populated while a window is active.
         Note: status flips to 1 only once start_time is reached, back to 2 after end_time.
+        Example data:
+        {"auto_disaster_status": 2,"manual_disaster_status": 1,"current_disaster_detail": {
+            "uuid": "00000000-0000-0000-0000-000000000001","disaster_type": 1,"event": "","start_time": 1780988280,
+            "end_time": 1780991880,"charging_time": 36,"event_key": ""}}
         """
         self._logger.debug(
             "Getting api %s Power Panel disaster status", self.apisession.nickname
@@ -1646,59 +1688,75 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 API_CHARGING_ENDPOINTS["get_site_device_disaster_status"],
                 json=data,
             )
-        return resp.get("data") or {}
-
-    async def get_disaster_support(
-        self, siteId: str, deviceType: int = 2, fromFile: bool = False
-    ) -> dict:
-        """Get backup feature support info (auto disaster support, allowed country codes)."""
-        data = {"identifier_id": siteId, "type": deviceType}
-        if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{siteId}.json"
-            )
-        else:
-            resp = await self.apisession.request(
-                "post", API_CHARGING_ENDPOINTS["get_disaster_support_func"], json=data
-            )
-        return resp.get("data") or {}
+        if result := resp.get("data") or {}:
+            # cache under site_details
+            self._update_site(siteId, {"device_disaster_status": result})
+        return result
 
     async def set_manual_backup(
         self,
         siteId: str,
-        start_time: int,
-        end_time: int,
+        enable: bool = False,
+        start_time: int | datetime | None = None,
+        end_time: int | datetime | None = None,
         disaster_type: int = 1,
         deviceType: int = 2,
         toFile: bool = False,
     ) -> dict:
-        """Enable manual backup mode for a Power Panel site over a time window.
+        """Disable or enable manual backup mode for a Power Panel site over a time window.
 
+        Notes: When disabled, the device ramps power down gradually rather than cutting off instantly.
+        Disaster_type other than 1 is accepted but stored/returned as 1;
         start_time / end_time are unix epoch seconds; end_time must be after start_time.
-        Note (verified): disaster_type other than 1 is accepted but stored/returned as 1;
-        the server auto-generates the event uuid.
-        Returns the refreshed disaster configuration.
+        The server auto-generates the event uuid.
+        Returns the refreshed disaster configuration or an empty dict upon error
         """
-        start_time, end_time = int(start_time), int(end_time)
-        if end_time <= start_time:
-            self._logger.error(
-                "set_manual_backup: end_time %s must be after start_time %s",
-                end_time,
-                start_time,
-            )
-            return {}
+        if isinstance(start_time, datetime):
+            start_time = int(start_time.timestamp())
+        elif not isinstance(start_time, int):
+            start_time = 0
+        if isinstance(end_time, datetime):
+            end_time = int(end_time.timestamp())
+        elif not isinstance(end_time, int):
+            end_time = 0
         data = {
             "identifier_id": siteId,
             "type": deviceType,
-            "manual_disaster_switch": True,
-            "manual_disaster_detail": {
+            "manual_disaster_switch": bool(enable),
+        }
+        # When disabled, the payload MUST omit manual_disaster_detail.
+        # Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
+        if enable:
+            if end_time <= start_time:
+                self._logger.error(
+                    "Api %s error for set_manual_backup: start_time %s must be before end_time %s",
+                    self.apisession.nickname,
+                    start_time,
+                    end_time,
+                )
+                return {}
+            data["manual_disaster_detail"] = {
                 "disaster_type": disaster_type,
                 "start_time": start_time,
                 "end_time": end_time,
             },
-        }
         if toFile:
+            # change only relevant parts of existing status
+            filedata = self.sites.get(siteId, {}).get("site_details", {}).get("device_disaster") or {}
+            filedata["manual_disaster_switch"] = bool(enable)
+            if details := data.get("manual_disaster_detail"):
+                if (filedetails := filedata.get("disaster_details")) and isinstance(filedetails,list):
+                    filedetails[0].update(details)
+                else:
+                    # Mock the details if it just got enabled without previous information
+                    filedetails = {
+                        "uuid": "00000000-0000-0000-0000-000000000001"
+                    } | details | {
+                        "charging_time": 36,"event_key": ""
+                    }
+                filedata["disaster_details"] = [filedetails]
+            else:
+                filedata["disaster_details"] = []
             if not await self.apisession.saveToFile(
                 Path(self.testDir())
                 / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{siteId}.json",
@@ -1716,42 +1774,6 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             if not isinstance(code, int) or int(code) != 0:
                 return {}
         # return refreshed config and update cache
-        return await self.get_device_disaster(
-            siteId=siteId, deviceType=deviceType, fromFile=toFile
-        )
-
-    async def disable_manual_backup(
-        self, siteId: str, deviceType: int = 2, toFile: bool = False
-    ) -> dict:
-        """Disable manual backup mode for a Power Panel site.
-
-        Note (verified): the OFF payload MUST omit manual_disaster_detail.
-        Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
-        The device ramps power down gradually rather than cutting off instantly.
-        Returns the refreshed disaster configuration.
-        """
-        data = {
-            "identifier_id": siteId,
-            "type": deviceType,
-            "manual_disaster_switch": False,
-        }
-        if toFile:
-            if not await self.apisession.saveToFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_modified_{siteId}.json",
-                data={"code": 0, "msg": "success!", "data": data},
-            ):
-                return {}
-        else:
-            code = (
-                await self.apisession.request(
-                    "post",
-                    API_CHARGING_ENDPOINTS["set_site_device_disaster"],
-                    json=data,
-                )
-            ).get("code")
-            if not isinstance(code, int) or int(code) != 0:
-                return {}
         return await self.get_device_disaster(
             siteId=siteId, deviceType=deviceType, fromFile=toFile
         )
@@ -1778,18 +1800,24 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         )
         data = {"siteId": siteId, "sn": deviceSn}
         if fromFile:
-            resp = await self.apisession.loadFromFile(
-                Path(self.testDir())
-                / f"{API_FILEPREFIXES['charging_get_utility_rate_plan']}_{deviceSn}.json"
-            )
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_utility_rate_plan']}_modified_{deviceSn}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['charging_get_utility_rate_plan']}_{deviceSn}.json"
+                )
         else:
             resp = await self.apisession.request(
                 "post", API_CHARGING_ENDPOINTS["get_utility_rate_plan"], json=data
             )
-        result = resp.get("data") or {}
-        if result:
-            # cache under site_details so it is included in exports
-            self._update_site(siteId, {"utility_rate_plan": result})
+        if (result:= resp.get("data") or {}):
+            # add to device cache
+            self._update_dev({"device_sn": deviceSn, "utility_rate_plan": result})
         return result
 
     async def get_monetary_units(self, deviceSn: str, fromFile: bool = False) -> dict:
@@ -1834,7 +1862,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             resp = await self.apisession.request(
                 "post", API_CHARGING_ENDPOINTS["get_device_info"], json=data
             )
-        return resp.get("data") or {}
+        result = resp.get("data") or {}
+        # update device cache with details
+        for device in result.get("device_infos") or []:
+            devdata = device.copy()
+            devdata["device_sn"] = devdata.pop("sn","")
+            self._update_dev(devdata)
+        return result
 
     async def get_wifi_info(self, deviceSn: str, fromFile: bool = False) -> dict:
         """Get the Wi-Fi network (ssid, rssi) the given device is connected to.
@@ -1954,7 +1988,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 data={
                     "code": 0,
                     "msg": "success!",
-                    "data": {"peak_sessions": peak_sessions, "fixed_price": fixed_price},
+                    "data": {
+                        "peak_sessions": peak_sessions,
+                        "fixed_price": fixed_price,
+                    },
                 },
             ):
                 return {}

@@ -1223,7 +1223,7 @@ class AnkerSolixApiExport:
         return True
 
     async def export_charging_energy_service_data(self) -> bool:
-        """Run functions to export charging_energy_service endpoint data."""
+        """Run functions to export charging_energy_service and charging_disaster_prepared endpoint data."""
 
         self._logger.info(
             "\nQuerying %s endpoint data...", ApiEndpointServices.charging
@@ -1325,6 +1325,30 @@ class AnkerSolixApiExport:
                         payload={"siteIds": [siteId], "ctrol": ctrol, "duration": 300},
                         replace=[(siteId, "<siteId>")],
                     )
+
+                # Get site device disaster information
+                self._logger.info("Exporting Charging site device disaster data...")
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
+                    filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={"identifier_id": siteId, "type": 2}, # Has only been validated with 2 for power panel sites
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
+                    filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={"identifier_id": siteId, "type": 2}, # Has only been validated with 2 for power panel sites
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster_status"],
+                    filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={"identifier_id": siteId, "type": 2}, # Has only been validated with 2 for power panel sites
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
 
             # skip device queries if no charging system found and charging not enforced
             if not has_charging and not self.export_services & {
