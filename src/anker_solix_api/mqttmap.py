@@ -2437,7 +2437,7 @@ _AX170_0405 = {
     },  # Total PV power from all devices in system? Only verified with 1 E10 Module
     "ac": {
         NAME: "battery_power_signed_total"
-    },  # Power draw from battery. Negative is charging, positive is discharging.
+    },  # Power draw from battery. Negative is discharging, positive is charging.
     "b2": {NAME: "battery_current?"},
     "b4": {NAME: "battery_voltage?"},
     "b5": {
@@ -2474,6 +2474,119 @@ _AX170_0405 = {
     "de": {
         NAME: "max_load_limit_total?"
     },  # shows 4800 in monitoring. Not sure what this is.
+    # for e3 decoding see https://github.com/thomluther/anker-solix-api/issues/312#issuecomment-4691257976
+    "e3": {
+        BYTES: {
+            "01": {
+                NAME: "pair_id_circuit_01",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "id_circuit_01",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "04": {
+                NAME: "pair_id_circuit_02",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "05": {
+                NAME: "id_circuit_02",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "07": {
+                NAME: "pair_id_circuit_03",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "id_circuit_03",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "10": {
+                NAME: "pair_id_circuit_04",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "11": {
+                NAME: "id_circuit_04",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "13": {
+                NAME: "pair_id_circuit_05",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "14": {
+                NAME: "id_circuit_05",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "16": {
+                NAME: "pair_id_circuit_06",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "17": {
+                NAME: "id_circuit_06",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "19": {
+                NAME: "pair_id_circuit_07",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "20": {
+                NAME: "id_circuit_07",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "22": {
+                NAME: "pair_id_circuit_08",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "23": {
+                NAME: "id_circuit_08",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "25": {
+                NAME: "pair_id_circuit_09",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "26": {
+                NAME: "id_circuit_09",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "28": {
+                NAME: "pair_id_circuit_10",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "29": {
+                NAME: "id_circuit_10",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "31": {
+                NAME: "pair_id_circuit_11",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "32": {
+                NAME: "id_circuit_11",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False,
+            },
+            "34": {
+                NAME: "pair_id_circuit_12",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "35": {
+                NAME: "id_circuit_12",
+                TYPE: DeviceHexDataTypes.sile.value,
+                SIGNED: False
+            },
+        }
+    },
     "e4": {
         BYTES: {
             "00": {
@@ -2524,6 +2637,10 @@ _AX170_0405 = {
                 NAME: "home_demand_circuit_12",
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
+            "48": {
+                NAME: "device_output_power_signed_total",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
         }
     },
     "e8": {
@@ -2535,6 +2652,11 @@ _AX170_0405 = {
             "11": {
                 NAME: "device_1_sn",
                 TYPE: DeviceHexDataTypes.str.value,
+            },
+            "37": {
+                NAME: "device_1_temperature",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
             },
             "41": {
                 NAME: "device_1_soc",
@@ -2548,9 +2670,13 @@ _AX170_0405 = {
                 NAME: "device_1_pv_2_power",
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
-            "57": {
+            "58": {
+                NAME: "device_1_battery_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "66": {
                 NAME: "device_1_ac_output_power_signed",
-                TYPE: DeviceHexDataTypes.sfle.value,
+                TYPE: DeviceHexDataTypes.sile.value,
             },
         }
     },
@@ -2564,6 +2690,11 @@ _AX170_0405 = {
                 NAME: "device_2_sn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
+            "37": {
+                NAME: "device_2_temperature",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "41": {
                 NAME: "device_2_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -2576,9 +2707,13 @@ _AX170_0405 = {
                 NAME: "device_2_pv_2_power",
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
-            "57": {
+            "58": {
+                NAME: "device_2_battery_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "66": {
                 NAME: "device_2_ac_output_power_signed",
-                TYPE: DeviceHexDataTypes.sfle.value,
+                TYPE: DeviceHexDataTypes.sile.value,
             },
         }
     },
@@ -2592,6 +2727,11 @@ _AX170_0405 = {
                 NAME: "device_3_sn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
+            "37": {
+                NAME: "device_3_temperature",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "41": {
                 NAME: "device_3_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -2604,9 +2744,13 @@ _AX170_0405 = {
                 NAME: "device_3_pv_2_power",
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
-            "57": {
+            "58": {
+                NAME: "device_3_battery_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "66": {
                 NAME: "device_3_ac_output_power_signed",
-                TYPE: DeviceHexDataTypes.sfle.value,
+                TYPE: DeviceHexDataTypes.sile.value,
             },
         }
     },
@@ -2620,6 +2764,11 @@ _AX170_0405 = {
                 NAME: "device_4_sn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
+            "37": {
+                NAME: "device_4_temperature",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "41": {
                 NAME: "device_4_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -2632,9 +2781,13 @@ _AX170_0405 = {
                 NAME: "device_4_pv_2_power",
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
-            "57": {
+            "58": {
+                NAME: "device_4_battery_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "66": {
                 NAME: "device_4_ac_output_power_signed",
-                TYPE: DeviceHexDataTypes.sfle.value,
+                TYPE: DeviceHexDataTypes.sile.value,
             },
         }
     },
@@ -2648,6 +2801,11 @@ _AX170_0405 = {
                 NAME: "device_5_sn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
+            "37": {
+                NAME: "device_5_temperature",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "41": {
                 NAME: "device_5_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -2660,9 +2818,13 @@ _AX170_0405 = {
                 NAME: "device_5_pv_2_power",
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
-            "57": {
+            "58": {
+                NAME: "device_5_battery_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "66": {
                 NAME: "device_5_ac_output_power_signed",
-                TYPE: DeviceHexDataTypes.sfle.value,
+                TYPE: DeviceHexDataTypes.sile.value,
             },
         }
     },
@@ -2676,6 +2838,11 @@ _AX170_0405 = {
                 NAME: "device_6_sn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
+            "37": {
+                NAME: "device_6_temperature",
+                SIGNED: True,
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "41": {
                 NAME: "device_6_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -2688,9 +2855,13 @@ _AX170_0405 = {
                 NAME: "device_6_pv_2_power",
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
-            "57": {
+            "58": {
+                NAME: "device_6_battery_power",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "66": {
                 NAME: "device_6_ac_output_power_signed",
-                TYPE: DeviceHexDataTypes.sfle.value,
+                TYPE: DeviceHexDataTypes.sile.value,
             },
         }
     },

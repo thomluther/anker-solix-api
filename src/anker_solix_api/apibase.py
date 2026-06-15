@@ -2,6 +2,7 @@
 # ruff: noqa: N806
 
 from collections.abc import Callable
+import contextlib
 from datetime import datetime, timedelta
 import json
 import logging
@@ -565,6 +566,7 @@ class AnkerSolixBaseApi:
                     # cycle through all items and extract what is needed for the device type
                     calc_efficiency = False
                     calc_capacity = False
+                    circuits = {}
                     # check only received values or all from mqtt session cache
                     check_values = values or mqtt or {}
                     for key, value in check_values.items():
@@ -802,6 +804,7 @@ class AnkerSolixBaseApi:
                                     )
                                 )
                             )
+                            or (str(key).startswith(("pair_id_circuit_", "id_circuit_")))
                         ) and value is not None:
                             device_mqtt[key] = value
                             # determine EV charger model 3 phase capability
@@ -811,6 +814,9 @@ class AnkerSolixBaseApi:
                                     + int(check_values.get("voltage_l2", 0) > 0)
                                     + int(check_values.get("voltage_l3", 0) > 0)
                                 )
+                            if key.startswith("id_circuit_"):
+                                # assign physical ids to logical ids
+                                circuits[value] = [*circuits.get(value,[]), key[-2:]]
                             value_updated = bool(
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
@@ -938,6 +944,15 @@ class AnkerSolixBaseApi:
                             device_mqtt["battery_efficiency"] = (
                                 f"{min(100, float(discharge) / (float(charge) + max(0, float(consumed) - float(ac_charge))) * 100):.3f}"
                             )
+                    # combine power of paired circuits
+                    # Paired circuits must be consecutive and are limited to 2
+                    for physicals in [p for p in circuits.values() if len(p) > 1 ]:
+                        combined = 0
+                        with contextlib.suppress(ValueError):
+                            combined = int(device_mqtt.get(f"home_demand_circuit_{physicals[0]}", 0))
+                            for p in physicals[1:]:
+                                combined += int(device_mqtt.pop(f"home_demand_circuit_{p}", 0))
+                            device_mqtt[f"home_demand_circuit_{physicals[0]}"] = f"{float(combined):.0f}"
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
                     if calc_capacity and (cap := device.get("battery_capacity")):
@@ -1856,7 +1871,9 @@ class AnkerSolixBaseApi:
             float(price) if isinstance(price, float | int) else details.get("price")
         )
         data["sell_price"] = (
-            float(sell_price) if isinstance(sell_price, float | int) else details.get("sell_price")
+            float(sell_price)
+            if isinstance(sell_price, float | int)
+            else details.get("sell_price")
         )
         data["site_price_unit"] = unit or details.get("site_price_unit")
         data["site_co2"] = (

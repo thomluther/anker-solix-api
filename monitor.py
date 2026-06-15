@@ -838,10 +838,10 @@ class AnkerSolixApiMonitor:
                             or mqtt.get("power_cutoff", "")
                         )
                     )
-                    or dev.get("power_cutoff")
-                    or dev.get("output_cutoff_data")
+                    or dev.get("power_cutoff","")
+                    or dev.get("output_cutoff_data","")
                 )
-                if m3 := c and str(mqtt.get("backup_soc", "")):
+                if m3 := (c or cm) and str(mqtt.get("backup_soc", "")):
                     m3 = int(m3)
                 if m1 or str(m3):
                     CONSOLE.info(
@@ -911,11 +911,14 @@ class AnkerSolixApiMonitor:
                     else:
                         break
                 for i in range(1, 13, 2):
-                    if m1 := cm and mqtt.get(f"home_demand_circuit_{i:02d}", ""):
-                        m2 = cm and mqtt.get(f"home_demand_circuit_{i + 1:02d}", "")
+                    m1 = cm and mqtt.get(f"home_demand_circuit_{i:02d}", "")
+                    m2 = cm and mqtt.get(f"home_demand_circuit_{i + 1:02d}", "")
+                    if m1 or m2:
+                        m3 = cm and str(mqtt.get(f"id_circuit_{i:02d}", ""))
+                        m4 = cm and str(mqtt.get(f"id_circuit_{i+1:02d}", ""))
                         CONSOLE.info(
-                            f"{'Home Circuit ' + str(i):<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                            f"{'Home Circuit ' + str(i + 1):<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
+                            f"{'Home Circuit ' + str(i):<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit} (ID: {(m3 or '--') + ')':<{col2 - 12}}{co} "
+                            f"{'Home Circuit ' + str(i + 1):<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit} (ID: {(m4 or '--')}){co}"
                         )
                     else:
                         break
