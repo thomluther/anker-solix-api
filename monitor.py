@@ -850,13 +850,20 @@ class AnkerSolixApiMonitor:
                         f"{'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4} (Limit {feat2} W)"
                     )
                 unit = "W"
+                m1 = cm and mqtt.get("grid_power_signed", "")
+                m2 = cm and mqtt.get("ac_output_power", "")
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'Grid Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'AC Home Pwr':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
+                    )
                 if m1 := cm and mqtt.get("battery_soc_total", ""):
                     CONSOLE.info(
                         f"{'Battery SoC Tot':<{col1}}: {m1 and (c or cm)}{m1 or '---':>4} {'%':<{col2 - 5}}{co} "
                         f"{'Max Load Legal':<{col3}}: {site.get('site_details', {}).get('legal_power_limit') or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("home_demand_total", "")
-                m2 = cm and mqtt.get("device_output_power_signed_total", "")
+                m2 = cm and (mqtt.get("device_output_power_signed_total", "") or mqtt.get("device_output_power_signed_total", ""))
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Home Demand Tot':<{col1}}:{m1 and (c or cm)}{m1 or '----':>5} {unit:<{col2 - 5}}{co} "
@@ -910,6 +917,13 @@ class AnkerSolixApiMonitor:
                             )
                     else:
                         break
+                m1 = cm and mqtt.get("home_demand_circuit_total", "")
+                m2 = cm and mqtt.get("home_demand_other", "")
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'Circuit Total':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Home Other Load':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
+                    )
                 for i in range(1, 13, 2):
                     m1 = cm and mqtt.get(f"home_demand_circuit_{i:02d}", "")
                     m2 = cm and mqtt.get(f"home_demand_circuit_{i + 1:02d}", "")

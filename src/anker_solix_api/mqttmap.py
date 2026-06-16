@@ -2289,6 +2289,10 @@ _A17E1_040a = {
                 NAME: "separator?",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "25": {
+                NAME: "exp_1_id", # position?
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "26": {
                 NAME: "exp_1_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -2317,6 +2321,10 @@ _A17E1_040a = {
             },
             "21": {
                 NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "25": {
+                NAME: "exp_2_id", # position?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "26": {
@@ -2349,6 +2357,10 @@ _A17E1_040a = {
                 NAME: "separator?",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "25": {
+                NAME: "exp_3_id", # position?
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "26": {
                 NAME: "exp_3_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -2379,6 +2391,10 @@ _A17E1_040a = {
                 NAME: "separator?",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "25": {
+                NAME: "exp_4_id", # position?
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "26": {
                 NAME: "exp_4_temperature",
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -2407,6 +2423,10 @@ _A17E1_040a = {
             },
             "21": {
                 NAME: "separator?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "25": {
+                NAME: "exp_5_id", # position?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "26": {
@@ -2453,7 +2473,7 @@ _AX170_0405 = {
         NAME: "use_time_band?"
     },  # use_time_band: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
     "c4": {NAME: "grid_power_signed"},  # positive=import, negative=export
-    "c5": {NAME: "ac_output_power?"},
+    "c5": {NAME: "home_demand_total"},
     "cc": {
         BYTES: {
             "00": {
@@ -2466,7 +2486,7 @@ _AX170_0405 = {
             },  # 32 idle, 48 = charging, 64 = discharging, Is this only a upper half byte usage?
         }
     },
-    "cd": {NAME: "home_demand_total"},
+    "cd": {NAME: "home_demand_circuit_total"}, # Does not include other load
     "ce": {NAME: "generator_plug_status"},
     "d4": {NAME: "pv_power_3rd_party"},  # Power from external solar to home?
     "d6": {NAME: "generator_power"},  # Power from external DC generator
@@ -2638,7 +2658,7 @@ _AX170_0405 = {
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
             "48": {
-                NAME: "device_output_power_signed_total",
+                NAME: "home_demand_other",
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
         }
@@ -2675,7 +2695,7 @@ _AX170_0405 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "66": {
-                NAME: "device_1_ac_output_power_signed",
+                NAME: "device_1_unknown_power?",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -2712,7 +2732,7 @@ _AX170_0405 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "66": {
-                NAME: "device_2_ac_output_power_signed",
+                NAME: "device_2_unknown_power?",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -2749,7 +2769,7 @@ _AX170_0405 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "66": {
-                NAME: "device_3_ac_output_power_signed",
+                NAME: "device_3_unknown_power?",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -2786,7 +2806,7 @@ _AX170_0405 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "66": {
-                NAME: "device_4_ac_output_power_signed",
+                NAME: "device_4_unknown_power?",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -2823,7 +2843,7 @@ _AX170_0405 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "66": {
-                NAME: "device_5_ac_output_power_signed",
+                NAME: "device_5_unknown_power?",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -2860,12 +2880,108 @@ _AX170_0405 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "66": {
-                NAME: "device_6_ac_output_power_signed",
+                NAME: "device_6_unknown_power?",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
     },
     "fe": {NAME: "msg_timestamp"},
+}
+
+_AX170_0408 = {
+    # AX170 Power dock for home backup systems A17E1
+    TOPIC: "param_info",
+    "a2": {NAME: "device_sn"},
+    "a3": {NAME: "local_timestamp"},
+    "a4": {NAME: "utc_timestamp"},
+    "a7": {NAME: "battery_soc_total"},  # Average SOC of all devices in system
+    "b1": {NAME: "tbd_power_total_b1?"},
+    "b4": {NAME: "tbd_power_signed_total_b4?"},
+    "b6": {
+        NAME: "battery_power_signed_total?"
+    },  # Power draw from battery. Negative is discharging, positive is charging.
+    "ba": {NAME: "pv_power_total_ba?"},
+    "d6": {NAME: "timestamp_0408_d6?"},
+    "f6": {
+        BYTES: {
+            "00": {
+                NAME: "home_demand_circuit_01",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "04": {
+                NAME: "home_demand_circuit_02",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "08": {
+                NAME: "home_demand_circuit_03",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "12": {
+                NAME: "home_demand_circuit_04",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "16": {
+                NAME: "home_demand_circuit_05",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "20": {
+                NAME: "home_demand_circuit_06",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "24": {
+                NAME: "home_demand_circuit_07",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "28": {
+                NAME: "home_demand_circuit_08",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "32": {
+                NAME: "home_demand_circuit_09",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "36": {
+                NAME: "home_demand_circuit_10",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "40": {
+                NAME: "home_demand_circuit_11",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "44": {
+                NAME: "home_demand_circuit_12",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+            "48": {
+                NAME: "home_demand_other",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+        }
+    },
+    "f7": {
+        BYTES: {
+            "00": {
+                NAME: "device_1_pn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "11": {
+                NAME: "device_1_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "29": {
+                NAME: "device_1_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "34": {
+                NAME: "device_1_ac_output_power_signed",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "42": {
+                NAME: "device_1_pv_power?",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+        },
+    },
 }
 
 _A7320_0405 = {
@@ -5509,7 +5625,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "c2": {
                 NAME: "ac_output_power?"
             },  # total AC output power to home from all sources in W (solar, battery, generator, grid)
-            "cb": {NAME: "expansion_packs?"},  # number of expansion batteries
+            "cb": {NAME: "expansion_packs"},  # number of expansion batteries
             "d5": {
                 NAME: "generator_to_battery_power?"
             },  # generator AC charging battery W
@@ -5539,6 +5655,7 @@ SOLIXMQTTMAP: Final[dict] = {
     "AX170": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0405": _AX170_0405,
+        "0408": _AX170_0408,
         "0666": {
             EMBEDDED: "tlv",  # Name of field with embedded hexdata
             "a2": {NAME: "sn"},
