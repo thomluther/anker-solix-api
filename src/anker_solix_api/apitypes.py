@@ -1674,7 +1674,6 @@ class SolarbankGridStatus(StrEnum):
 class SolixGridStatus(StrEnum):
     """Str Enumeration for Anker Solix grid status."""
 
-    # TODO(X1) Update grid status description once known
     ok = "0"  # normal grid state when hes pcu grid status is ok
     unknown = "unknown"
 
@@ -1705,7 +1704,6 @@ class SolixRoleStatus(StrEnum):
     """Str Enumeration for Anker Solix role status of devices."""
 
     # The device role status codes as used for HES devices
-    # TODO(X1): The proper description of those codes has to be confirmed
     primary = "1"  # Master role in Api
     subordinate = "2"  # Slave role in Api
     unknown = "unknown"
@@ -1714,17 +1712,15 @@ class SolixRoleStatus(StrEnum):
 class SolixNetworkStatus(StrEnum):
     """Str Enumeration for Anker Solix HES network status."""
 
-    # TODO(X1): The proper description of those codes has to be confirmed
-    wifi = "1"  # to be confirmed
-    lan = "2"  # this was seen on LAN connected systems
-    mobile = "3"  # HES systems support also 5G connections, code to be confirmed
+    wifi = "1"  # wifi connection
+    lan = "2"  # lan/wired connection
+    mobile = "3"  # mobile/5G connection
     unknown = "unknown"
 
 
 class SolixWorkingStatus(StrEnum):
     """Str Enumeration for Anker Solix HES working status."""
 
-    # TODO(X1): The proper description of those codes has to be confirmed
     standby = "0"
     running = "1"
     unknown = "unknown"
@@ -1733,7 +1729,6 @@ class SolixWorkingStatus(StrEnum):
 class SolixMode(StrEnum):
     """Str Enumeration for Anker Solix HES mode."""
 
-    # TODO(X1): The proper description of those codes has to be confirmed
     off = "0"
     on = "1"
     auto = "2"
