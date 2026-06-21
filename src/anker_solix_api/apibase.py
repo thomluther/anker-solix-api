@@ -622,6 +622,8 @@ class AnkerSolixBaseApi:
                                 "main_battery_soc",
                                 "max_soc",
                                 "backup_soc",
+                                "active_charge_soc",
+                                "active_discharge_soc",
                                 "temperature",
                                 "photovoltaic_power",
                                 "pv_power_3rd_party",

@@ -49,6 +49,7 @@ from .mqtttypes import DeviceHexData
 _LOGGER: logging.Logger = logging.getLogger(__name__)
 VERSION: str = "3.6.3.0"
 
+
 class AnkerSolixApiExport:
     """Define the class to handle json export from Anker Solix api instance."""
 
@@ -108,7 +109,9 @@ class AnkerSolixApiExport:
 
         if not export_path:
             # default to exports self.export_path in parent path of api library
-            self.export_path = (Path(__file__).parent / ".." / "exports").resolve()
+            self.export_path = (
+                Path(__file__).parent.parent.parent / "exports"
+            ).resolve()
             if not (
                 os.access(self.export_path.parent, os.W_OK)
                 or os.access(self.export_path, os.W_OK)
@@ -1332,21 +1335,30 @@ class AnkerSolixApiExport:
                 await self.query(
                     endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
                     filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={"identifier_id": siteId, "type": 2}, # Has only been validated with 2 for power panel sites
+                    payload={
+                        "identifier_id": siteId,
+                        "type": 2,
+                    },  # Has only been validated with 2 for power panel sites
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
                 )
                 await self.query(
                     endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
                     filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={"identifier_id": siteId, "type": 2}, # Has only been validated with 2 for power panel sites
+                    payload={
+                        "identifier_id": siteId,
+                        "type": 2,
+                    },  # Has only been validated with 2 for power panel sites
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
                 )
                 await self.query(
                     endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster_status"],
                     filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(siteId, 'site_id')}.json",
-                    payload={"identifier_id": siteId, "type": 2}, # Has only been validated with 2 for power panel sites
+                    payload={
+                        "identifier_id": siteId,
+                        "type": 2,
+                    },  # Has only been validated with 2 for power panel sites
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
                 )
@@ -2054,7 +2066,9 @@ class AnkerSolixApiExport:
                     # initialize randomized hex serrials
                     if self.randomized:
                         self._hexserials = {
-                            sn.encode().hex(): self._randomize(sn, "device_sn").encode().hex()
+                            sn.encode().hex(): self._randomize(sn, "device_sn")
+                            .encode()
+                            .hex()
                             for sn in self.api_power.devices
                         }
                     for dev in mqttdevices:

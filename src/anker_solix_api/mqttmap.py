@@ -1820,9 +1820,9 @@ _A17C1_0405 = {
     "b1": {NAME: "pv_yield", FACTOR: 0.0001},
     "b3": {NAME: "output_energy", FACTOR: 0.0001},
     "b2": {NAME: "charged_energy", FACTOR: 0.00001},
-    "b4": {NAME: "output_cutoff_data"},
+    "b4": {NAME: "min_soc"},
     "b5": {NAME: "lowpower_input_data"},
-    "b6": {NAME: "input_cutoff_data"},
+    "b6": {NAME: "active_charge_soc"},
     "b7": {NAME: "bat_discharge_power", FACTOR: 0.01},
     "bc": {NAME: "grid_to_home_power", FACTOR: 0.1},
     "bd": {NAME: "pv_to_grid_power", FACTOR: 0.1},
@@ -1843,6 +1843,7 @@ _A17C1_0405 = {
     "e0": {NAME: "grid_status"},  # Grid OK (1), No grid (6), Grid connecting (3)
     "e1": {NAME: "light_off_switch"},  # Light on (0), Light off (1)
     "e8": {NAME: "battery_heating"},  # Not heating (1), heating (3)
+    "eb": {NAME: "max_soc"},
     "fb": {
         BYTES: {
             "00": [{NAME: "grid_export_disabled", MASK: 0x01}],
@@ -5368,7 +5369,15 @@ SOLIXMQTTMAP: Final[dict] = {
             },
         },
         # Interval: ~3-5 seconds with realtime trigger, or immediately with status request
-        "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
+        "0067": {
+            # Old and new SOC limits
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_power_cutoff_select,  # field a2, a3, a4
+                SolixMqttCommands.sb_soc_limits,  # field a2, a5, a6, a7
+            ],
+            SolixMqttCommands.sb_power_cutoff_select: CMD_SB_POWER_CUTOFF,  # Old: SOC reserve selection
+            SolixMqttCommands.sb_soc_limits: CMD_SB_SOC_LIMITS,  # New: min, max and backup soc + switch
+        },
         "0068": {
             # solarbank light command group
             COMMAND_LIST: [
@@ -5420,7 +5429,15 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_DEFAULT: 2,
             },
         },
-        "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
+        "0067": {
+            # Old and new SOC limits
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_power_cutoff_select,  # field a2, a3, a4
+                SolixMqttCommands.sb_soc_limits,  # field a2, a5, a6, a7
+            ],
+            SolixMqttCommands.sb_power_cutoff_select: CMD_SB_POWER_CUTOFF,  # Old: SOC reserve selection
+            SolixMqttCommands.sb_soc_limits: CMD_SB_SOC_LIMITS,  # New: min, max and backup soc + switch
+        },
         "0068": {
             # solarbank light command group
             COMMAND_LIST: [
@@ -5475,7 +5492,15 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_DEFAULT: 2,
             },
         },
-        "0067": CMD_SB_POWER_CUTOFF,  # Complex command with multiple parms
+        "0067": {
+            # Old and new SOC limits
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_power_cutoff_select,  # field a2, a3, a4
+                SolixMqttCommands.sb_soc_limits,  # field a2, a5, a6, a7
+            ],
+            SolixMqttCommands.sb_power_cutoff_select: CMD_SB_POWER_CUTOFF,  # Old: SOC reserve selection
+            SolixMqttCommands.sb_soc_limits: CMD_SB_SOC_LIMITS,  # New: min, max and backup soc + switch
+        },
         "0068": {
             # solarbank light command group
             COMMAND_LIST: [
@@ -5536,7 +5561,13 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.sb_soc_limits,  # field a2, a5, a6, a7
             ],
             SolixMqttCommands.sb_min_soc_select: CMD_SB_MIN_SOC,  # Old: SOC reserve selection
-            SolixMqttCommands.sb_soc_limits: CMD_SB_SOC_LIMITS,  # New: min, max and backup soc + switch
+            SolixMqttCommands.sb_soc_limits: CMD_SB_SOC_LIMITS  # New: min, max and backup soc + switch
+            | {
+                "a2": {
+                    **CMD_SB_SOC_LIMITS["a2"],
+                    VALUE_MIN: 1,  # 1 % for SB3
+                },
+            },
         },
         "0068": {
             # solarbank light command group

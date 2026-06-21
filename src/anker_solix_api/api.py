@@ -1444,8 +1444,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
 
         Example data:
         {'power_cutoff_data': [
-        {'id': 1, 'is_selected': 1, 'output_cutoff_data': 10, 'lowpower_input_data': 5, 'input_cutoff_data': 10},
-        {'id': 2, 'is_selected': 0, 'output_cutoff_data': 5, 'lowpower_input_data': 4, 'input_cutoff_data': 5}]}
+            {'id': 1, 'is_selected': 1, 'output_cutoff_data': 10, 'lowpower_input_data': 5, 'input_cutoff_data': 10},
+            {'id': 2, 'is_selected': 0, 'output_cutoff_data': 5, 'lowpower_input_data': 4, 'input_cutoff_data': 5}]}
+        Example data with new SOC limits:
+        {"power_cutoff_data": [
+            {"id": 1,"is_selected": 1,"output_cutoff_data": 10,"lowpower_input_data": 5,"input_cutoff_data": 10},
+            {"id": 2,"is_selected": 0,"output_cutoff_data": 5,"lowpower_input_data": 4,"input_cutoff_data": 5}],
+        "charge_upper_limit": 91,"discharge_lower_limit": 11,"backup_reserve": 0,"backup_reserve_switch": 0,"cmd_type": 1}
         """
         data = {"site_id": siteId, "device_sn": deviceSn}
         if fromFile:
@@ -1466,37 +1471,64 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             )
         data = resp.get("data") or {}
         # add whole list to device details to provide option selection capabilities
-        details = {
-            "device_sn": deviceSn,
-            "power_cutoff_data": data.get("power_cutoff_data") or [],
-        }
-        for setting in data.get("power_cutoff_data") or []:
+        details = {"device_sn": deviceSn} | data
+        details["power_cutoff_data"] = data.get("power_cutoff_data", None) or []
+        for setting in details.get("power_cutoff_data"):
             if (
                 int(setting.get("is_selected", 0)) > 0
                 and int(setting.get("output_cutoff_data", 0)) > 0
             ):
                 details["power_cutoff"] = int(setting.get("output_cutoff_data"))
+                break
         self._update_dev(details)
         return data
 
     async def set_power_cutoff(
-        self, deviceSn: str, setId: int, toFile: bool = False
+        self,
+        deviceSn: str,
+        setId: int = 1,
+        socMin: float | None = None,
+        socMax: float | None = None,
+        toFile: bool = False,
     ) -> bool | dict:
         """Set power cut off settings.
 
-        Example input:
-        {'device_sn': '9JVB42LJK8J0P5RY', 'cutoff_data_id': 1}
-        The id must be one of the ids listed with the get_power_cutoff endpoint
+        Example input for query:
+        {'device_sn': '9JVB42LJK8J0P5RY', 'cutoff_data_id': 1, 'discharge_lower_limit': 10, 'charge_upper_limit': 90, 'cmd_type': 1}
+        The id must be one of the ids listed with the get_power_cutoff endpoint.
+        SOC min and max require appropriate firmware level of device. SB2 does not support backup_reserve settings
+        NOTE: SB2 models must use this query since site_device_parm query with station parameter does not work for them yet
         """
         data = {
             "device_sn": deviceSn,
-            "cutoff_data_id": setId,
+            "cutoff_data_id": setId,  # required parameter, default to id 1 with 10 %
         }
+        if isinstance(socMin, float | int):
+            data["discharge_lower_limit"] = round(min(20, max(5, socMin)))
+            data["cmd_type"] = 1
+        if isinstance(socMax, float | int):
+            data["charge_upper_limit"] = round(min(100, max(80, socMax)))
+            data["cmd_type"] = 1
         if toFile:
-            filedata = (self.devices.get(deviceSn) or {}).get("power_cutoff_data") or []
+            # For file data, verify first if there is a modified file to be used for testing
+            if not (
+                resp := await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_cutoff']}_modified_{deviceSn}.json"
+                )
+            ):
+                resp = await self.apisession.loadFromFile(
+                    Path(self.testDir())
+                    / f"{API_FILEPREFIXES['get_cutoff']}_{deviceSn}.json"
+                )
+            filedata = resp.get("data") or {}
             # update active setting in filedata
-            for setting in filedata:
+            for setting in filedata.get("power_cutoff_data") or []:
                 setting["is_selected"] = 1 if setting.get("id") == setId else 0
+            if (val := data.get("discharge_lower_limit")) is not None:
+                filedata["discharge_lower_limit"] = val
+            if (val := data.get("charge_upper_limit")) is not None:
+                filedata["charge_upper_limit"] = val
             # Write data file for testing purposes
             if filedata and not await self.apisession.saveToFile(
                 Path(self.testDir())
@@ -1504,7 +1536,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 data={
                     "code": 0,
                     "msg": "success!",
-                    "data": {"power_cutoff_data": filedata},
+                    "data": filedata,
                 },
             ):
                 return False
@@ -1600,7 +1632,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if isinstance(socBackup, float | int) and backup_supported
             else 0
         )
-        socSwitch = socSwitch if isinstance(socSwitch, bool) and backup_supported else None
+        socSwitch = (
+            socSwitch if isinstance(socSwitch, bool) and backup_supported else None
+        )
         if socMin and "discharge_lower_limit" in station_settings:
             data["discharge_lower_limit"] = socMin
         if socMax > socMin and "charge_upper_limit" in station_settings:
@@ -1627,9 +1661,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 ),
             )
         )
-        if data.get("backup_reserve_switch") != 0 and (station_settings.get(
-            "backup_reserve_switch"
-        ) or (socBackup and "backup_reserve" in station_settings)):
+        if data.get("backup_reserve_switch") != 0 and (
+            station_settings.get("backup_reserve_switch")
+            or (socBackup and "backup_reserve" in station_settings)
+        ):
             # backup soc is or should be enabled
             data["backup_reserve"] = backup or 50
             data["backup_reserve_switch"] = 1

@@ -646,7 +646,7 @@ CMD_SB_SOC_LIMITS = CMD_COMMON | {
         NAME: "set_min_soc",
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "power_cutoff",
-        VALUE_MIN: 1,  # 5 % for SB2, 1 %  for SB3
+        VALUE_MIN: 5,  # 5 % for SB2, 1 %  for SB3
         VALUE_MAX: 20,
         VALUE_STATE: "power_cutoff",
     },

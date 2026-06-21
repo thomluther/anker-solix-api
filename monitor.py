@@ -850,11 +850,14 @@ class AnkerSolixApiMonitor:
                         f"{'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4} (Limit {feat2} W)"
                     )
                 m1 = str(c and mqtt.get("backup_soc", "")) or dev.get("backup_reserve","")
-                m2 = (c and mqtt.get("backup_soc_switch", "")) or dev.get("backup_reserve_switch","")
-                if m1 or str(m2):
+                m3 = (c and mqtt.get("backup_soc_switch", "")) or dev.get("backup_reserve_switch","")
+                m2 = str((c or cm) and mqtt.get("active_discharge_soc", ""))
+                m4 = str((c or cm) and mqtt.get("active_charge_soc", ""))
+                if m1 or str(m3):
                     CONSOLE.info(
-                        f"{'Backup SoC':<{col1}}: {m1 and c}{(m1 or '--')!s:>4} {'%':<{col2 - 5}}{co} "
-                        f"{'Backup SoC Sw.':<{col3}}: {str(m2) and c}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
+                        f"{'Backup SoC/Sw.':<{col1}}: {m1 and c}{(m1 or '--')!s:>4} %  "
+                        f"({str(m3) and c}{get_enum_name(SolixSwitchMode, m3, str(m3) or '---').upper():>3}{')':<{col2 - 12}}{co} "
+                        f"{'Act SoC Min/Max':<{col3}}: {m2 and (c or cm)}{(m2 or '--')!s:>4} %{co} / {m4 and (c or cm)}{(m4 or '--')!s:>4} %{co}"
                     )
                 unit = "W"
                 m1 = cm and mqtt.get("grid_power_signed", "")
@@ -993,11 +996,14 @@ class AnkerSolixApiMonitor:
                         f"{m4 and c}{str(m4) or dev.get('charge_upper_limit') or '--'} %{co}"
                     )
                     m1 = str(c and mqtt.get("backup_soc", "")) or dev.get("backup_reserve","")
-                    m2 = (c and mqtt.get("backup_soc_switch", "")) or dev.get("backup_reserve_switch","")
-                    if m1 or str(m2):
+                    m3 = (c and mqtt.get("backup_soc_switch", "")) or dev.get("backup_reserve_switch","")
+                    m2 = str((c or cm) and mqtt.get("active_discharge_soc", ""))
+                    m4 = str((c or cm) and mqtt.get("active_charge_soc", ""))
+                    if m1 or str(m3):
                         CONSOLE.info(
-                            f"{'Backup SoC':<{col1}}: {m1 and c}{(m1 or '--')!s:>4} {'%':<{col2 - 5}}{co} "
-                            f"{'Backup SoC Sw.':<{col3}}: {str(m2) and c}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
+                            f"{'Backup SoC/Sw.':<{col1}}: {m1 and c}{(m1 or '--')!s:>4} %  "
+                            f"({str(m3) and c}{get_enum_name(SolixSwitchMode, m3, str(m3) or '---').upper():>3}{')':<{col2 - 12}}{co} "
+                            f"{'Act SoC Min/Max':<{col3}}: {m2 and (c or cm)}{(m2 or '--')!s:>4} %{co} / {m4 and (c or cm)}{(m4 or '--')!s:>4} %{co}"
                         )
                 else:
                     m4 = cm and mqtt.get("temperature", "")
