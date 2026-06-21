@@ -1038,6 +1038,14 @@ class SolarbankDischargePriorityMode(IntEnum):
     on = 1
 
 
+class SolarbankSchedulePresetType(IntEnum):
+    """Int Enumeration for Anker Solix Solarbank 3 schedule preset power types."""
+
+    unknown = -1
+    supply = 0
+    ac_charge = 1
+
+
 class SolarbankAiemsStatus(IntEnum):
     """Int Enumeration for Anker Solix Solarbank Anker Intelligence status."""
 
@@ -1499,6 +1507,7 @@ class SolixDefaults:
     PRESET_DEF: int = 100
     PRESET_NOSCHEDULE: int = 200
     PRESET_MAX_MULTISYSTEM: int = 3600
+    PRESET_TYPE: int = SolarbankSchedulePresetType.supply.value
     # Export Switch preset for Solarbank schedule timeslot settings
     ALLOW_EXPORT: bool = True
     # Preset power mode for Solarbank schedule timeslot settings

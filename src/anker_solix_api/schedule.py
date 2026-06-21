@@ -452,10 +452,16 @@ async def set_device_parm(
                     if sb.get("site_id") == siteId and sb.get("station_sn") is not None
                 ]:
                     await self.set_power_cutoff(deviceSn=sn, setId=setId, toFile=toFile)
-            if (setting := paramData.get("switch_0w")) is not None:
-                filedata["switch_0w"] = setting
-            if (setting := paramData.get("feed-in_power_limit")) is not None:
-                filedata["feed-in_power_limit"] = setting
+            for key in [
+                "switch_0w",
+                "feed-in_power_limit",
+                "discharge_lower_limit",
+                "charge_upper_limit",
+                "backup_reserve",
+                "backup_reserve_switch",
+            ]:
+                if (setting := paramData.get(key)) is not None:
+                    filedata[key] = setting
         elif paramType in [
             SolixParmType.SOLARBANK_SCHEDULE.value,
             SolixParmType.SOLARBANK_2_SCHEDULE.value,

@@ -847,7 +847,7 @@ class AnkerSolixBaseApi:
                                 # trigger capacity calculation if any soc provided
                                 if "_soc" in key:
                                     calc_capacity = True
-                        elif key in ["output_cutoff_data", "min_soc"]:
+                        elif key in ["output_cutoff_data", "min_soc", "power_cutoff"]:
                             device_mqtt["power_cutoff"] = str(value)
                         elif key in [
                             "set_port_switch_select",

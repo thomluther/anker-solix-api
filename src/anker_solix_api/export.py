@@ -83,6 +83,7 @@ class AnkerSolixApiExport:
         self._randomdata: dict = {}
         self._loop: asyncio.AbstractEventLoop
         self._mqtt_msg_types: set = set()
+        self._hexserials: dict = {}
         self._old_callback: Callable | None = None
 
         # initialize logger for object
@@ -2050,6 +2051,12 @@ class AnkerSolixApiExport:
                         "MQTT session connected, subscribing eligible devices and waiting 70 seconds for messages..."
                     )
                     request_devices = set()
+                    # initialize randomized hex serrials
+                    if self.randomized:
+                        self._hexserials = {
+                            sn.encode().hex(): self._randomize(sn, "device_sn").encode().hex()
+                            for sn in self.api_power.devices
+                        }
                     for dev in mqttdevices:
                         sn = dev.get("device_sn", "")
                         pn = dev.get("device_pn", "") or dev.get("product_code", "")
@@ -2226,20 +2233,8 @@ class AnkerSolixApiExport:
                     msgtype = "json"
                 # randomize potential hex serials of system device serials in hex data
                 if self.randomized:
-                    if siteId := (self.api_power.devices.get(device_sn) or {}).get(
-                        "site_id"
-                    ):
-                        serials = {
-                            sn
-                            for sn, dev in self.api_power.devices.items()
-                            if siteId == dev.get("site_id")
-                        }
-                    else:
-                        serials = {device_sn}
                     datastr = bytes(data).hex()
-                    for sn in serials:
-                        snhex = sn.encode().hex()
-                        randsnhex = self._randomize(sn, "device_sn").encode().hex()
+                    for snhex, randsnhex in self._hexserials.items():
                         datastr = datastr.replace(snhex, randsnhex)
             if isinstance(payload, dict):
                 if datastr:

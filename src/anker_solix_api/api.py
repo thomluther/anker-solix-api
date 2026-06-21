@@ -1525,11 +1525,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         siteId: str | None = None,
         deviceSn: str | None = None,
         socReserve: int | None = None,
+        socMin: int | None = None,
+        socMax: int | None = None,
+        socBackup: int | None = None,
+        socSwitch: bool | None = None,
         gridExport: bool | None = None,
         gridExportLimit: int | None = None,
         toFile: bool = False,
     ) -> bool | dict:
         """Set various parm for the station.
+
+        Note: socMin, socMax socBackup and socSwitch settings depend on firmware level of devices
 
         Example input:
         {'siteId': 'efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c', 'socReserve': 10}
@@ -1581,6 +1587,56 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if socid is None:
                 return False
             data["id"] = socid
+        socMin = (
+            round(min(20, max(1, socMin))) if isinstance(socMin, float | int) else 0
+        )
+        socMax = (
+            round(min(100, max(80, socMax))) if isinstance(socMax, float | int) else 0
+        )
+        # existing 0 backup soc may indicate backup not supported
+        backup_supported = station_settings.get("backup_reserve")
+        socBackup = (
+            round(min(100, max(0, socBackup)))
+            if isinstance(socBackup, float | int) and backup_supported
+            else 0
+        )
+        socSwitch = socSwitch if isinstance(socSwitch, bool) and backup_supported else None
+        if socMin and "discharge_lower_limit" in station_settings:
+            data["discharge_lower_limit"] = socMin
+        if socMax > socMin and "charge_upper_limit" in station_settings:
+            data["charge_upper_limit"] = socMax
+        if isinstance(socSwitch, bool) and "backup_reserve_switch" in station_settings:
+            data["backup_reserve_switch"] = int(socSwitch)
+        # check and adjust new or existing backup value
+        backup = round(
+            min(
+                float(
+                    data.get("charge_upper_limit")
+                    or station_settings.get("charge_upper_limit")
+                    or 0
+                )
+                - 1,
+                max(
+                    float(
+                        data.get("discharge_lower_limit")
+                        or station_settings.get("discharge_lower_limit")
+                        or 0
+                    )
+                    + 1,
+                    socBackup or station_settings.get("backup_reserve") or 0,
+                ),
+            )
+        )
+        if data.get("backup_reserve_switch") != 0 and (station_settings.get(
+            "backup_reserve_switch"
+        ) or (socBackup and "backup_reserve" in station_settings)):
+            # backup soc is or should be enabled
+            data["backup_reserve"] = backup or 50
+            data["backup_reserve_switch"] = 1
+        elif station_settings.get("backup_reserve"):
+            # backup soc is disabled, reset to 50 if it has a value
+            data["backup_reserve"] = 50
+
         if not (data or station_settings):
             return False
         # Remove fields not required for station setting changes

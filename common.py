@@ -15,8 +15,10 @@ from anker_solix_api.helpers import round_by_factor
 from anker_solix_api.mqtt_device import SolixMqttDevice
 from anker_solix_api.mqttcmdmap import (
     LENGTH,
+    STATE_CONVERTER,
     STATE_NAME,
     VALUE_DEFAULT,
+    VALUE_FOLLOWS,
     VALUE_MAX,
     VALUE_MIN,
     VALUE_OPTIONS,
@@ -439,7 +441,17 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
             # query default parameters only if value has validation descriptors
             if value_info:
-                if (v := desc.get(VALUE_DEFAULT)) is not None:
+                if (v := desc.get(VALUE_DEFAULT)) is not None or (
+                    callable(v := desc.get(STATE_CONVERTER))
+                    and (
+                        v := v(
+                            None,
+                            None,
+                            mdev.get_status(fromFile=toFile)
+                        )
+                    )
+                    is not None
+                ):
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
                 while True:
                     sel = input(
@@ -447,7 +459,7 @@ def query_mqtt_command(  # noqa: C901
                     )
                     if sel.upper() in ["C", "CANCEL"]:
                         return None
-                    if not sel and VALUE_DEFAULT in desc:
+                    if not sel and (VALUE_DEFAULT in desc or VALUE_FOLLOWS in desc):
                         sel = None
                         break
                     # convert string to number
@@ -464,8 +476,8 @@ def query_mqtt_command(  # noqa: C901
                         return None
                 if sel is not None:
                     parameters[parm] = sel
-        # get optional states parameters
-        for parm, desc in mdev.get_cmd_parms(cmd=cmd, state_parms=True).items():
+        # get optional states and follow parameters
+        for parm, desc in mdev.get_cmd_parms(cmd=cmd, state_parms=True, follow_parms=True).items():
             value_info = ""
             step = 1
             state = None
@@ -483,10 +495,20 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
             # query default parameters only if value has validation descriptors
             if value_info:
-                if (v := desc.get(VALUE_STATE)) is not None and (
+                if ((v := desc.get(VALUE_STATE)) is not None and (
                     state := mdev.get_status(fromFile=toFile).get(v)
-                ) is not None:
+                ) is not None):
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use last state ({Color.GREEN}{state}{Color.OFF})"
+                elif (v := desc.get(VALUE_FOLLOWS)) is not None:
+                    state = (mdev.get_status(fromFile=toFile)  | parameters).get(v)
+                    # convert state as required
+                    if isinstance(options := desc.get(VALUE_OPTIONS), dict):
+                        # get follow state from option map
+                        state = options.get(state)
+                    elif callable(converter := desc.get(STATE_CONVERTER)):
+                        state = converter(state,None,mdev.get_status(fromFile=toFile))
+                    if state is not None:
+                        value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use follow state ({Color.GREEN}{state}{Color.OFF})"
                 elif (v := desc.get(VALUE_DEFAULT)) is not None:
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
                 while True:

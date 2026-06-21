@@ -725,6 +725,7 @@ class SolixMqttDevice:
             user_parms = {}
             for par, val in parm_map.items():
                 if (
+
                     fieldvalue := self.validate_cmd_value(
                         cmd=cmd, value=val, parm=par or None
                     )
@@ -745,7 +746,7 @@ class SolixMqttDevice:
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
                         state_value = (
-                            converter(fieldvalue, None, self.mqttdata | parameters)
+                            converter(fieldvalue, None, self.get_status(fromFile=True) | parameters)
                             if callable(converter)
                             else fieldvalue
                         )
@@ -753,7 +754,7 @@ class SolixMqttDevice:
                         if (
                             par.endswith("_time")
                             and isinstance(state_value, str)
-                            and (length := len(self.mqttdata.get(state_name, ""))) > 0
+                            and (length := len(self.get_status(fromFile=True).get(state_name, ""))) > 0
                         ):
                             state_fields[state_name] = state_value[:length]
                         else:
@@ -791,7 +792,7 @@ class SolixMqttDevice:
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
                         state_fields[state_name] = (
-                            converter(parameters[par], None, self.mqttdata | parameters)
+                            converter(parameters[par], None, self.get_status(fromFile=True) | parameters)
                             if callable(converter)
                             else parameters[par]
                         )
@@ -807,9 +808,9 @@ class SolixMqttDevice:
                         state = options.get(parameters.get(follows, ""))
                     else:
                         # get follow value from converter
-                        state = parameters.get(follows, "")
+                        state = parameters.get(follows)
                     state = (
-                        converter(state, None, self.mqttdata | parameters)
+                        converter(state, None, self.get_status(fromFile=True) | parameters)
                         if callable(converter)
                         else state
                     )

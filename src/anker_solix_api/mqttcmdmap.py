@@ -108,7 +108,8 @@ class SolixMqttCommands:
     soc_limits: str = "soc_limits"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
-    sb_min_soc_select: str = "sb_min_soc_select"  # Does not change App station wide setting, needs Api request as well
+    sb_min_soc_select: str = "sb_min_soc_select"  # Old command: Does not change App station wide setting, needs Api request as well
+    sb_soc_limits: str = "sb_soc_limits"  # New command: Does not change App station wide setting, needs Api request as well
     sb_inverter_type_select: str = "sb_inverter_type_select"
     sb_max_load: str = "sb_max_load"
     sb_max_load_parallel: str = "sb_max_load_parallel"
@@ -238,7 +239,7 @@ CMD_REALTIME_TRIGGER = CMD_COMMON | {
     "a3": {
         NAME: "trigger_timeout_sec",  # realtime timeout in seconds when enabled
         TYPE: DeviceHexDataTypes.var.value,
-        VALUE_MIN: 60,  # real limit is unknown
+        VALUE_MIN: 30,  # real limit is unknown
         VALUE_MAX: 600,  # real limit is unknown
         VALUE_DEFAULT: 60,
     },
@@ -628,13 +629,62 @@ CMD_SB_POWER_CUTOFF = CMD_COMMON | {
 }
 
 CMD_SB_MIN_SOC = CMD_COMMON | {
-    # Command: Solarbank Set max AC input limit (AC charge)
+    # Command: Solarbank Set SOC reserve for power cutoff
     COMMAND_NAME: SolixMqttCommands.sb_min_soc_select,
     "a2": {
         NAME: "set_min_soc",  # 5 or 10 %
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "power_cutoff",
         VALUE_OPTIONS: [5, 10],
+    },
+}
+
+CMD_SB_SOC_LIMITS = CMD_COMMON | {
+    # Command: Solarbank Set new SOC limits
+    COMMAND_NAME: SolixMqttCommands.sb_soc_limits,
+    "a2": {
+        NAME: "set_min_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "power_cutoff",
+        VALUE_MIN: 1,  # 5 % for SB2, 1 %  for SB3
+        VALUE_MAX: 20,
+        VALUE_STATE: "power_cutoff",
+    },
+    "a5": {
+        NAME: "set_max_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "max_soc",
+        VALUE_MIN: 80,
+        VALUE_MAX: 100,
+        VALUE_STATE: "max_soc",
+    },
+    "a6": {
+        NAME: "set_backup_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "backup_soc",
+        VALUE_MIN: 0,
+        VALUE_MAX: 99,
+        VALUE_FOLLOWS: "backup_soc",
+        STATE_CONVERTER: lambda value, state, cache: (
+            value
+            if value is not None
+            # ensure backup is min < backup < max if not specified
+            else min(
+                int(cache.get("set_max_soc", cache.get("max_soc") or 1)) - 1,
+                max(int(cache.get("set_min_soc", cache.get("power_cutoff") or -1)) + 1, int(cache.get("backup_soc"))),
+            )
+            if cache.get("backup_soc") and state is None
+            else 0
+            if state is None
+            else state
+        ),
+    },
+    "a7": {
+        NAME: "set_backup_soc_switch",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "backup_soc_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_STATE: "backup_soc_switch",
     },
 }
 

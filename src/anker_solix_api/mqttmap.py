@@ -57,6 +57,7 @@ from .mqttcmdmap import (
     CMD_SB_MIN_SOC,
     CMD_SB_POWER_CUTOFF,
     CMD_SB_PV_LIMIT,
+    CMD_SB_SOC_LIMITS,
     CMD_SB_STATUS_CHECK,
     CMD_SB_USAGE_MODE,
     CMD_SMART_TOUCH_MODE,
@@ -2148,6 +2149,7 @@ _A17C5_0405 = {
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
     "a3": {NAME: "main_battery_soc"},
+    "a4": {NAME: "battery_status"},  # 0: Standby; ?: Charging; 2: Charging; ?: Sleep
     "a5": {NAME: "temperature", SIGNED: True},
     "a6": {NAME: "battery_soc"},
     "a7": {NAME: "sw_version", "values": 4},
@@ -2163,10 +2165,7 @@ _A17C5_0405 = {
     "b3": {NAME: "output_energy"},
     "b4": {NAME: "consumed_energy"},
     "b5": {NAME: "min_soc"},
-    "b6": {NAME: "min_soc_exp_1?"},  # Could also be min SOC of Main battery?
-    "b7": {
-        NAME: "min_soc_exp_2?"
-    },  # Could also be min SOC of first Expansion? But why no other expansion SOC in this message?
+    "b7": {NAME: "active_charge_soc"},
     "b8": {NAME: "usage_mode"},
     "b9": {NAME: "home_load_preset"},
     "ba": {
@@ -2211,6 +2210,18 @@ _A17C5_0405 = {
     },  # timeout in 30 min chunks: 0, 30, 60, 120, 240, 360, 720, 1440 minutes
     "d5": {NAME: "pv_limit"},
     "d6": {NAME: "ac_input_limit"},
+    "d8": {
+        BYTES: {
+            "00": {
+                NAME: "max_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "backup_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        },
+    },
     "fb": {
         BYTES: {
             "00": [{NAME: "grid_export_disabled", MASK: 0x01}],
@@ -2255,10 +2266,12 @@ _A17C5_0408 = {
     "dc": {NAME: "max_load"},
     "dd": {NAME: "ac_input_limit"},
     # "de": {NAME: "output_energy"},
-    "e0": {NAME: "min_soc"},
-    "e1": {NAME: "max_soc?"},
+    "e0": {
+        NAME: "active_discharge_soc"
+    },  # active discharge minimum, may be backup soc level
     "e6": {NAME: "pv_limit"},
     "e7": {NAME: "ac_input_limit"},
+    "e8": {NAME: "max_soc"},
     "cc": {NAME: "temperature", SIGNED: True},
 }
 
@@ -2290,7 +2303,7 @@ _A17E1_040a = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "25": {
-                NAME: "exp_1_id", # position?
+                NAME: "exp_1_id",  # position?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "26": {
@@ -2324,7 +2337,7 @@ _A17E1_040a = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "25": {
-                NAME: "exp_2_id", # position?
+                NAME: "exp_2_id",  # position?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "26": {
@@ -2358,7 +2371,7 @@ _A17E1_040a = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "25": {
-                NAME: "exp_3_id", # position?
+                NAME: "exp_3_id",  # position?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "26": {
@@ -2392,7 +2405,7 @@ _A17E1_040a = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "25": {
-                NAME: "exp_4_id", # position?
+                NAME: "exp_4_id",  # position?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "26": {
@@ -2426,7 +2439,7 @@ _A17E1_040a = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "25": {
-                NAME: "exp_5_id", # position?
+                NAME: "exp_5_id",  # position?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "26": {
@@ -2486,7 +2499,7 @@ _AX170_0405 = {
             },  # 32 idle, 48 = charging, 64 = discharging, Is this only a upper half byte usage?
         }
     },
-    "cd": {NAME: "home_demand_circuit_total"}, # Does not include other load
+    "cd": {NAME: "home_demand_circuit_total"},  # Does not include other load
     "ce": {NAME: "generator_plug_status"},
     "d4": {NAME: "pv_power_3rd_party"},  # Power from external solar to home?
     "d6": {NAME: "generator_power"},  # Power from external DC generator
@@ -2603,7 +2616,7 @@ _AX170_0405 = {
             "35": {
                 NAME: "id_circuit_12",
                 TYPE: DeviceHexDataTypes.sile.value,
-                SIGNED: False
+                SIGNED: False,
             },
         }
     },
@@ -5516,7 +5529,15 @@ SOLIXMQTTMAP: Final[dict] = {
             },
         },
         "005e": CMD_SB_USAGE_MODE,  # NOTE: Cmd not supported directly, but description used for msg decoding
-        "0067": CMD_SB_MIN_SOC,  # select SOC reserve
+        "0067": {
+            # Old and new SOC limits
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_min_soc_select,  # field a2
+                SolixMqttCommands.sb_soc_limits,  # field a2, a5, a6, a7
+            ],
+            SolixMqttCommands.sb_min_soc_select: CMD_SB_MIN_SOC,  # Old: SOC reserve selection
+            SolixMqttCommands.sb_soc_limits: CMD_SB_SOC_LIMITS,  # New: min, max and backup soc + switch
+        },
         "0068": {
             # solarbank light command group
             COMMAND_LIST: [
@@ -5703,6 +5724,28 @@ SOLIXMQTTMAP: Final[dict] = {
             "bd": {NAME: "system_output_current_l2"},
             "be": {NAME: "voltage_l1l2_alt?"},
             "fe": {NAME: "msg_timestamp"},
+        },
+    },
+    # Smart Meter P1
+    "AE1R0": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0425 etc
+        "0425": {
+            # Interval: ~5 seconds, but only with realtime trigger
+            TOPIC: "param_info",
+            "a2": {NAME: "device_sn"},
+            "a8": {NAME: "grid_to_home_power?"},
+            "a9": {NAME: "pv_to_grid_power?"},
+            "aa": {NAME: "grid_export_energy", FACTOR: 0.001},
+            "ab": {NAME: "grid_import_energy", FACTOR: 0.001},
+        },
+        "0427": {
+            # Interval: ~300 seconds
+            TOPIC: "state_info",
+            "a4": {
+                NAME: "grid_status?"
+            },  # Grid OK (1), No grid (6)?, Grid connecting (3)?
+            "a5": {NAME: "device_sn"},
+            "a6": {NAME: "wifi_name"},
         },
     },
     # Shello Pro 3 EM
