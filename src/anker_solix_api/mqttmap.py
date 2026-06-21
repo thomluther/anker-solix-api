@@ -1818,8 +1818,8 @@ _A17C1_0405 = {
     "ad": {NAME: "battery_soc"},  # controller + expansions avg
     "b0": {NAME: "bat_charge_power", FACTOR: 0.01},
     "b1": {NAME: "pv_yield", FACTOR: 0.0001},
-    "b3": {NAME: "output_energy", FACTOR: 0.0001},
     "b2": {NAME: "charged_energy", FACTOR: 0.00001},
+    "b3": {NAME: "output_energy", FACTOR: 0.0001},
     "b4": {NAME: "min_soc"},
     "b5": {NAME: "lowpower_input_data"},
     "b6": {NAME: "active_charge_soc"},
@@ -1850,26 +1850,6 @@ _A17C1_0405 = {
         }
     },
     "fe": {NAME: "msg_timestamp"},
-    # "ab": {NAME: "photovoltaic_power"},
-    # "ac": {NAME: "battery_power_signed"},
-    # "ae": {NAME: "ac_output_power_signed?"},
-    # "b2": {NAME: "discharged_energy?"},
-    # "ba": {
-    #     BYTES: {
-    #         "00": [
-    #             {NAME: "light_mode", MASK: 0x40}, # Normal mode (0) or Mood mode (1)
-    #             {NAME: "light_off_switch", MASK: 0x20}, # Enable (0) or disable (1) LEDs
-    #             {NAME: "ac_socket_switch", MASK: 0x08}, # Disable (0) or enable (1) AC socket
-    #             {NAME: "temp_unit_fahrenheit", MASK: 0x01},  # Toggle °C(0) or F(1) unit, this does not change temperature value itself
-    #         ],
-    #     }
-    # },
-    # "bb": {NAME: "heating_power"},
-    # "bc": {NAME: "grid_to_battery_power?"},
-    # "be": {NAME: "max_load_legal"},
-    # "x1": {NAME: "photovoltaic_power"},
-    # "c4": {NAME: "grid_power_signed"},
-    # "c5": {NAME: "home_demand"},
 }
 
 _A17C1_0408 = {
@@ -1879,23 +1859,18 @@ _A17C1_0408 = {
     "a3": {NAME: "local_timestamp"},
     "a4": {NAME: "utc_timestamp"},
     "a8": {NAME: "charging_status"},
-    # "af": {
-    #     BYTES: {
-    #         "00": [
-    #             {NAME: "light_mode", MASK: 0x40}, # Normal mode (0) or Mood mode (1)
-    #             {NAME: "light_off_switch", MASK: 0x20}, # Enable (0) or disable (1) LEDs
-    #             {NAME: "ac_socket_switch", MASK: 0x08},  # Disable (0) or enable (1) AC socket
-    #             {NAME: "temp_unit_fahrenheit", MASK: 0x01},  # Toggle °C(0) or F(1) unit, this does not change temperature value itself
-    #         ],
-    #     }
-    # },
+    "ac": {NAME: "ac_output_power", FACTOR: 0.1},
     "b0": {NAME: "battery_soc"},
+    "b1": {NAME: "pv_yield", FACTOR: 0.0001},
+    "b2": {NAME: "charged_energy", FACTOR: 0.00001},
+    "b3": {NAME: "output_energy", FACTOR: 0.0001},
+    "b4": {NAME: "discharged_energy", FACTOR: 0.00001},
     "b6": {NAME: "temperature", SIGNED: True},
     "b7": {NAME: "usage_mode?"},
     "b8": {NAME: "home_load_preset"},
-    "bb": {NAME: "ac_input_power?"},
+    "bb": {NAME: "consumed_energy", FACTOR: 0.0001},
+    "bc": {NAME: "bat_discharge_power", FACTOR: 0.01},
     "c0": {NAME: "discharge_power?"},
-    "c1": {NAME: "ac_output_power?", FACTOR: 0.1},
     "c3": {NAME: "grid_import_energy", FACTOR: 0.0001},
     "c4": {NAME: "grid_export_energy", FACTOR: 0.0001},
     "c8": {NAME: "home_demand", FACTOR: 0.1},
@@ -1903,23 +1878,12 @@ _A17C1_0408 = {
     "cf": {NAME: "pv_2_power"},
     "d0": {NAME: "pv_3_power"},
     "d1": {NAME: "pv_4_power"},
-    # "ab": {NAME: "photovoltaic_power"},
-    # "ac": {NAME: "pv_yield?"},
-    # "b1": {NAME: "unknown_power_2?"},
-    # "b2": {NAME: "home_consumption"},
-    # "b6": {NAME: "unknown_power_3?"},
-    # "b7": {NAME: "charged_energy?"},
-    # "b8": {NAME: "discharged_energy?"},
-    # "be": {NAME: "grid_import_energy"},
-    # "bf": {NAME: "unknown_energy_5?"},
-    # "d3": {NAME: "unknown_power_6?"},
-    # "d6": {NAME: "timestamp_1?"},
-    # "dc": {NAME: "max_load"},
-    # "e0": {NAME: "min_soc?"},
-    # "e1": {NAME: "max_soc?"},
-    # "e2": {NAME: "pv_power_3rd_party?"},
-    # "e6": {NAME: "pv_limit"},
-    # "e7": {NAME: "ac_input_limit"},
+    "e8": {NAME: "max_soc"},
+    "fb": {
+        BYTES: {
+            "00": [{NAME: "grid_export_disabled", MASK: 0x01}],
+        }
+    },
 }
 
 _A17C1_040a = {
