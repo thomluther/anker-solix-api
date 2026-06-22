@@ -1443,7 +1443,7 @@ async def set_sb2_home_load(  # noqa: C901
     self: AnkerSolixApi,
     siteId: str,
     deviceSn: str,
-    preset: int | None = None,
+    preset: float | None = None,
     charging_type: int | None = None,
     usage_mode: int | None = None,
     plan_name: str | None = None,
@@ -1733,7 +1733,7 @@ async def set_sb2_home_load(  # noqa: C901
                 insert: dict = {}
                 # Workaround to avoid None data for new field
                 if slot.get("charging_type", "") is None:
-                    slot["charging_type"] = 0
+                    slot["charging_type"] = SolixDefaults.PRESET_TYPE
 
                 # Check if parameter update required for current time but it falls into gap of no defined slot.
                 # Create insert slot for the gap and add before or after current slot at the end of the current slot checks/modifications (required for allday usage)
@@ -1782,7 +1782,12 @@ async def set_sb2_home_load(  # noqa: C901
                         insert.update(
                             {
                                 "charging_type": int(
-                                    charging_type or insert.get("charging_type") or 0
+                                    charging_type
+                                    if charging_type is not None
+                                    else (
+                                        insert.get("charging_type")
+                                        or SolixDefaults.PRESET_TYPE
+                                    )
                                 )
                             }
                         )
@@ -1842,7 +1847,7 @@ async def set_sb2_home_load(  # noqa: C901
                         overwrite and "charging_type" in insert
                     ):
                         insert.update(
-                            {"charging_type": int(insert_slot.charging_type or 0)}
+                            {"charging_type": int(insert_slot.charging_type or SolixDefaults.PRESET_TYPE)}
                         )
 
                     # insert slot before current slot if not last
@@ -1998,7 +2003,7 @@ async def set_sb2_home_load(  # noqa: C901
             "power": SolixDefaults.PRESET_DEF
             if set_slot.appliance_load is None
             else set_slot.appliance_load,
-            "charging_type": int(set_slot.charging_type or 0),
+            "charging_type": int(set_slot.charging_type or SolixDefaults.PRESET_TYPE),
         }
         new_ranges.append(slot)
 

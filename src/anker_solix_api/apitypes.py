@@ -1252,7 +1252,9 @@ class SolixSiteType:
     t_15 = (
         SolixDeviceType.HOME_BACKUP.value
     )  # Main E10 A17E1 & A17X7US Smart Meter for US market
-    # t_16 = ???  # Main A1903 Charging base & 4 each A110A, A110B, A110G, A1341
+    t_16 = (
+        SolixDeviceType.POWERBANK.value
+    )  # Main A1903 Charging base for power banks & 4 each A110A, A110B, A110G, A1341
     t_17 = (
         SolixDeviceType.HOME_BACKUP.value
     )  # Only AX170: Power Dock US market to connect multiple E10
@@ -1506,7 +1508,7 @@ class SolixDefaults:
     PRESET_MAX: int = 800
     PRESET_DEF: int = 100
     PRESET_NOSCHEDULE: int = 200
-    PRESET_MAX_MULTISYSTEM: int = 3600
+    PRESET_MAX_MULTISYSTEM: int = 4800
     PRESET_TYPE: int = SolarbankSchedulePresetType.supply.value
     # Export Switch preset for Solarbank schedule timeslot settings
     ALLOW_EXPORT: bool = True
@@ -1523,7 +1525,7 @@ class SolixDefaults:
     # AC tariff settings for Use Time plan
     TARIFF_DEF: int = SolixTariffTypes.OFF_PEAK.value
     TARIFF_PRICE_DEF: str = "0.00"
-    TARIFF_SELL_PRICE_DEF: str = "" # default to nothing in case not supported
+    TARIFF_SELL_PRICE_DEF: str = ""  # default to nothing in case not supported
     TARIFF_WE_SAME: bool = True
     CURRENCY_DEF: str = "€"
     # Seconds delay for subsequent Api requests in methods to update the Api cache dictionaries
@@ -1973,10 +1975,8 @@ class Solarbank2Timeslot:
 
     start_time: datetime | None
     end_time: datetime | None
-    appliance_load: int | None = None  # mapped to appliance_load setting
-    charging_type: int | None = (
-        None  # mapped to charging_type setting, was introduced April 2026
-    )
+    appliance_load: int | None = None  # mapped to timeslot preset value
+    charging_type: int | None = None  # mapped to value type, introduced April 2026
     weekdays: set[int | str] | None = (
         None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
     )
