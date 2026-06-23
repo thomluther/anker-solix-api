@@ -5802,7 +5802,15 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_DEFAULT: 2,
             },
         },
-        "0067": CMD_SB_MIN_SOC,  # select SOC reserve, cloud driven
+        "0067": {
+            # Old and new SOC limits
+            COMMAND_LIST: [
+                SolixMqttCommands.sb_power_cutoff_select,  # field a2, a3, a4
+                SolixMqttCommands.sb_soc_limits,  # field a2, a5, a6, a7
+            ],
+            SolixMqttCommands.sb_power_cutoff_select: CMD_SB_POWER_CUTOFF,  # Old: SOC reserve selection, cloud driven
+            SolixMqttCommands.sb_soc_limits: CMD_SB_SOC_LIMITS,  # New: min, max and backup soc + switch
+        },
         "0080": CMD_SB_DISABLE_GRID_EXPORT_SWITCH,  # Grid export (0), Disable grid export (1)
         "0084": CMD_SB_EV_CHARGER_SWITCH,  # EV charger support switch, cloud driven
         "0085": CMD_SB_3RD_PARTY_PV_SWITCH,  # 3rd Party support switch, cloud driven
@@ -5815,6 +5823,29 @@ SOLIXMQTTMAP: Final[dict] = {
         "0420": _DOCK_0420,
         # Interval: ~300 seconds
         "0421": _DOCK_0421,
+        # Interval: varies, e.g. upon soc changes
+        "0422": {
+            "a3": {
+                BYTES: {
+                    "04": {
+                        NAME: "max_soc",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    "05": {
+                        NAME: "power_cutoff",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    "06": {
+                        NAME: "backup_soc",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    "07": {
+                        NAME: "backup_soc_switch",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                },
+            },
+        },
         # Interval: ~300 seconds
         "0428": _DOCK_0428,
         # Interval: ~300 seconds

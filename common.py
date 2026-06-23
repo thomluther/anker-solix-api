@@ -10,8 +10,13 @@ from pathlib import Path
 import select
 import sys
 
-from anker_solix_api.apitypes import Color, SolarbankRatePlan, SolarbankUsageMode
-from anker_solix_api.helpers import round_by_factor
+from anker_solix_api.apitypes import (
+    Color,
+    SolarbankRatePlan,
+    SolarbankSchedulePresetType,
+    SolarbankUsageMode,
+)
+from anker_solix_api.helpers import get_enum_name, round_by_factor
 from anker_solix_api.mqtt_device import SolixMqttDevice
 from anker_solix_api.mqttcmdmap import (
     LENGTH,
@@ -145,7 +150,8 @@ def print_schedule(schedule: dict) -> None:
     if usage_mode := plan.get("mode_type") or 0:
         # SB2 schedule
         CONSOLE.info(
-            f"{'Usage Mode':<{t2}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize() + ' (' + str(usage_mode) + ')':<{t5 + t5 + t6}} {'Def. Preset':<{t5}}: {plan.get('default_home_load', '----'):>4} W   (Range: {plan.get('min_load', '?')} - {plan.get('max_load', '???')} W)"
+            f"{'Usage Mode':<{t2}}: {str(SolarbankUsageMode(usage_mode).name if usage_mode in iter(SolarbankUsageMode) else 'Unknown').capitalize() + ' (' + str(usage_mode) + ')':<{t5 + t5 + t6}} "
+            f"{'Def. Preset':<{t5}}: {plan.get('default_home_load', '----'):>4} W   (Range: {plan.get('min_load', '?')} - {plan.get('max_load', '???')} W)"
         )
         week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         for rate_plan_name in [SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs]:
@@ -154,11 +160,14 @@ def print_schedule(schedule: dict) -> None:
                 weekdays = [week[day] for day in idx.get("week") or []]
                 if ranges := idx.get("ranges") or []:
                     CONSOLE.info(
-                        f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}} {'Output':<{t6}} {'Weekdays':<{t6}}                          <== {rate_plan_name}{' (Smart plugs)' if rate_plan_name == SolarbankRatePlan.smartplugs else ''}"
+                        f"{'ID':<{t2}} {'Start':<{t5}} {'End':<{t5}}  {'Load':<{t6}}  {'Type':<{t9}}  {'Weekdays':<{t6}}             "
+                        f"<== {rate_plan_name}{' (Smart plugs)' if rate_plan_name == SolarbankRatePlan.smartplugs else ''}"
                     )
                 for slot in ranges:
                     CONSOLE.info(
-                        f"{index!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t5}} {str(slot.get('power', '')) + ' W':>{t6}} {','.join(weekdays):<{t6}}"
+                        f"{index!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t5}}  {str(slot.get('power', '')) + ' W':>{t6}}  "
+                        f"{str(get_enum_name(SolarbankSchedulePresetType,slot.get('charging_type', 0),f"({slot.get('charging_type')})")).replace('_',' ').title():<{t9}}  "
+                        f"{','.join(weekdays):<{t6}}"
                     )
         # AC specific plans
         if (rate_plan := plan.get(SolarbankRatePlan.backup) or {}) and (
@@ -169,7 +178,8 @@ def print_schedule(schedule: dict) -> None:
             )
             for slot in ranges:
                 CONSOLE.info(
-                    f"{datetime.datetime.fromtimestamp(slot.get('start_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}} {datetime.datetime.fromtimestamp(slot.get('end_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}}"
+                    f"{datetime.datetime.fromtimestamp(slot.get('start_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}} "
+                    f"{datetime.datetime.fromtimestamp(slot.get('end_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}}"
                 )
         if rate_plan := plan.get(SolarbankRatePlan.use_time) or []:
             tariffs = ["High", "Medium", "Low", "Valley"]

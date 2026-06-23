@@ -611,7 +611,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # set default presets for no active schedule slot
                         if device.get("type") == SolixDeviceType.COMBINER_BOX.value:
                             # assume generation and ac type for tracking schedule data in combiner box
-                            generation = 2
+                            generation = 3
                             ac_type = True
                         else:
                             generation = int(device.get("generation", 0))
@@ -620,7 +620,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         cnt = device.get("solarbank_count", 0)
                         mysite = self.sites.get(device.get("site_id") or "") or {}
                         if generation >= 2:
-                            # Solarbank 2 schedule
+                            # Solarbank 2+ schedule
                             mode_type = (
                                 value.get("mode_type") or SolixDefaults.USAGE_MODE
                             )
@@ -638,6 +638,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     else None,
                                 }
                             )
+                            if generation >= 3:
+                                # SB3+ unique settings
+                                device["preset_load_type"] = SolixDefaults.PRESET_TYPE
                             if ac_type:
                                 # update default with site currency if found
                                 if not (
@@ -690,7 +693,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
                             now_time = datetime.strptime("00:00", "%H:%M").time()
                         if generation >= 2:
-                            # Solarbank 2 schedule, weekday starts with 0=Sunday)
+                            # Solarbank 2+ schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
                             weekday = int(now.strftime("%w"))
                             month = now.month
@@ -731,11 +734,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         ).time()
                                     if start_time <= now_time < end_time:
                                         sys_power = slot.get("power")
-                                        device.update(
-                                            {
-                                                "preset_system_output_power": sys_power,
-                                            }
-                                        )
+                                        device["preset_system_output_power"] = sys_power
+                                        if generation >= 3:
+                                            # SB3+ unique settings
+                                            device["preset_load_type"] = (
+                                                slot.get("charging_type")
+                                                or SolixDefaults.PRESET_TYPE
+                                            )
                                         break
                             if ac_type and (
                                 backup := value.get(SolarbankRatePlan.backup) or {}
@@ -1489,6 +1494,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         setId: int = 1,
         socMin: float | None = None,
         socMax: float | None = None,
+        cmdType: int = 1,
         toFile: bool = False,
     ) -> bool | dict:
         """Set power cut off settings.
@@ -1503,12 +1509,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             "device_sn": deviceSn,
             "cutoff_data_id": setId,  # required parameter, default to id 1 with 10 %
         }
+        if not isinstance(cmdType, int):
+            cmdType = 1
         if isinstance(socMin, float | int):
             data["discharge_lower_limit"] = round(min(20, max(5, socMin)))
-            data["cmd_type"] = 1
+            data["cmd_type"] = cmdType
         if isinstance(socMax, float | int):
             data["charge_upper_limit"] = round(min(100, max(80, socMax)))
-            data["cmd_type"] = 1
+            data["cmd_type"] = cmdType
         if toFile:
             # For file data, verify first if there is a modified file to be used for testing
             if not (
@@ -1525,10 +1533,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # update active setting in filedata
             for setting in filedata.get("power_cutoff_data") or []:
                 setting["is_selected"] = 1 if setting.get("id") == setId else 0
-            if (val := data.get("discharge_lower_limit")) is not None:
-                filedata["discharge_lower_limit"] = val
-            if (val := data.get("charge_upper_limit")) is not None:
-                filedata["charge_upper_limit"] = val
+            for key in [
+                "discharge_lower_limit",
+                "charge_upper_limit",
+                "cmd_type",
+            ]:
+                if (val := data.get(key)) is not None:
+                    filedata[key] = val
             # Write data file for testing purposes
             if filedata and not await self.apisession.saveToFile(
                 Path(self.testDir())
@@ -1604,6 +1615,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             and "feed-in_power_limit" in station_settings
         ):
             data["feed-in_power_limit"] = round(gridExportLimit)
+        # Old SOC reserve setting
         if isinstance(socReserve, float | int):
             # lookup id of specified soc
             socid = next(
@@ -1619,66 +1631,74 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if socid is None:
                 return False
             data["id"] = socid
-        socMin = (
-            round(min(20, max(1, socMin))) if isinstance(socMin, float | int) else 0
-        )
-        socMax = (
-            round(min(100, max(80, socMax))) if isinstance(socMax, float | int) else 0
-        )
-        # existing 0 backup soc may indicate backup not supported
-        backup_supported = station_settings.get("backup_reserve")
-        socBackup = (
-            round(min(100, max(0, socBackup)))
-            if isinstance(socBackup, float | int) and backup_supported
-            else 0
-        )
-        socSwitch = (
-            socSwitch if isinstance(socSwitch, bool) and backup_supported else None
-        )
-        if socMin and "discharge_lower_limit" in station_settings:
-            data["discharge_lower_limit"] = socMin
-        if socMax > socMin and "charge_upper_limit" in station_settings:
-            data["charge_upper_limit"] = socMax
-        if isinstance(socSwitch, bool) and "backup_reserve_switch" in station_settings:
-            data["backup_reserve_switch"] = int(socSwitch)
-        # check and adjust new or existing backup value
-        backup = round(
-            min(
-                float(
-                    data.get("charge_upper_limit")
-                    or station_settings.get("charge_upper_limit")
-                    or 0
-                )
-                - 1,
-                max(
-                    float(
-                        data.get("discharge_lower_limit")
-                        or station_settings.get("discharge_lower_limit")
-                        or 0
-                    )
-                    + 1,
-                    socBackup or station_settings.get("backup_reserve") or 0,
-                ),
+        elif any(x is not None for x in [socMin, socMax, socBackup, socSwitch]):
+            socMin = (
+                round(min(20, max(1, socMin)))
+                if isinstance(socMin, float | int)
+                else (station_settings.get("discharge_lower_limit") or 10)
             )
-        )
-        if data.get("backup_reserve_switch") != 0 and (
-            station_settings.get("backup_reserve_switch")
-            or (socBackup and "backup_reserve" in station_settings)
-        ):
-            # backup soc is or should be enabled
-            data["backup_reserve"] = backup or 50
-            data["backup_reserve_switch"] = 1
-        elif station_settings.get("backup_reserve"):
-            # backup soc is disabled, reset to 50 if it has a value
-            data["backup_reserve"] = 50
+            socMax = (
+                round(min(100, max(80, socMax)))
+                if isinstance(socMax, float | int)
+                else (station_settings.get("charge_upper_limit") or 100)
+            )
+            if "discharge_lower_limit" in station_settings:
+                data["discharge_lower_limit"] = socMin
+                data["cmd_type"] = 1
+            if "charge_upper_limit" in station_settings:
+                data["charge_upper_limit"] = socMax if socMax > socMin else 100
+                data["cmd_type"] = 1
+
+            # existing 0 backup soc may indicate backup not supported
+            backup_supported = bool(station_settings.get("backup_reserve"))
+            socBackup = (
+                round(min(100, max(0, socBackup)))
+                if isinstance(socBackup, float | int) and backup_supported
+                else None
+            )
+            socSwitch = (
+                socSwitch if isinstance(socSwitch, bool) and backup_supported else None
+            )
+            if "backup_reserve_switch" in station_settings:
+                data["backup_reserve_switch"] = int(
+                    socSwitch
+                    if isinstance(socSwitch, bool)
+                    else bool(station_settings.get("backup_reserve_switch"))
+                )
+                data["cmd_type"] = 1
+            # check and adjust new or existing backup value
+            backup = round(
+                min(
+                    float(
+                        data.get("charge_upper_limit")
+                        or 1
+                    )
+                    - 1,
+                    max(
+                        float(
+                            data.get("discharge_lower_limit")
+                            or -1
+                        )
+                        + 1,
+                        socBackup or station_settings.get("backup_reserve") or 0,
+                    ),
+                )
+            )
+            if "backup_reserve" in station_settings:
+                if socSwitch is not False and (
+                    station_settings.get("backup_reserve_switch")
+                    or socBackup
+                ):
+                    # backup soc is or should be enabled
+                    data["backup_reserve"] = backup or 50
+                    data["backup_reserve_switch"] = 1
+                else:
+                    # backup soc is or was disabled, reset to 50 if it has a value
+                    data["backup_reserve"] = 50 if station_settings.get("backup_reserve") else 0
+                data["cmd_type"] = 1
 
         if not (data or station_settings):
             return False
-        # Remove fields not required for station setting changes
-        data.pop("enable_0w", None)  # 0/1 toggles enable_0w_change to False/True
-        data.pop(
-            "enable_0w_change", None
-        )  # Allow change per device, False for stations
         # Make the Api call and return result
         return await self.set_device_parm(
             siteId=siteId,
