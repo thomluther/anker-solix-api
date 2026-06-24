@@ -1608,7 +1608,7 @@ def convert_timestamp(
         if ms or len(value) > 4:
             msec = "".join(
                 c for c in value.decode(errors="ignore").strip() if c.isprintable()
-            )
+            ).rstrip("?")
             if msec.replace(".", "", 1).isdigit():
                 return float(msec) / 1000
         else:

@@ -3497,6 +3497,7 @@ _AS200_0421 = {
     "a4": {
         BYTES: {
             "00": {NAME: "device_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "01": {NAME: "reverse_charge_switch", TYPE: DeviceHexDataTypes.ui.value},
             "02": {
                 NAME: "car_battery_type",  # 0=LiFePO4, 1=Lead Acid
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -6132,9 +6133,24 @@ SOLIXMQTTMAP: Final[dict] = {
     # Alternator charger
     "AS200": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        "0100": CMD_STATUS_REQUEST
+        | {  # Device status request (one time status messages 0900)
+            "a2": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                BYTES: {
+                    "00": {
+                        NAME: "push_status_request",  # Push (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 1,
+                    },
+                },
+            }
+        },
         "0103": {
             # command group
             COMMAND_LIST: [
+                SolixMqttCommands.reverse_charge_switch,  # field a2
                 SolixMqttCommands.car_battery_type,  # field a3, aa
                 SolixMqttCommands.battery_charge_limits,  # field a5, b4
                 SolixMqttCommands.device_switch,  # field ac
@@ -6142,6 +6158,16 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.temp_unit_switch,  # field b2
                 SolixMqttCommands.device_power_mode,  # field b8
             ],
+            SolixMqttCommands.reverse_charge_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_reverse_charge_switch",  # Off (0), On (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "reverse_charge_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                    VALUE_STATE: "reverse_charge_switch",
+                },
+            },
             SolixMqttCommands.car_battery_type: CMD_COMMON_V2
             | {
                 "a3": {

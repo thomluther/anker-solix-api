@@ -59,6 +59,7 @@ FEATURES = {
     SolixMqttCommands.swipe_down_mode_select: MODELS,
     SolixMqttCommands.modbus_switch: MODELS,
     SolixMqttCommands.modbus_switch: MODELS,
+    SolixMqttCommands.reverse_charge_switch: MODELS,
     SolixMqttCommands.car_battery_type: MODELS,
     SolixMqttCommands.battery_charge_limits: MODELS,
     SolixMqttCommands.device_switch: MODELS,

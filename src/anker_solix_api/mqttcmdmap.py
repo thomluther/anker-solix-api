@@ -149,6 +149,7 @@ class SolixMqttCommands:
     )
     ev_solar_charging: str = "ev_solar_charging"  # complex command with switches
     ac_dc_mode_select: str = "ac_dc_mode_select"
+    reverse_charge_switch: str = "reverse_charge_switch"
     car_battery_type: str = "car_battery_type"
     battery_charge_limits: str = "battery_charge_limits"
 
