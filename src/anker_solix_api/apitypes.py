@@ -1926,6 +1926,14 @@ class SolixScheduleWeekendMode(StrEnum):
     unknown = "unknown"
 
 
+class SolixChargerMode(StrEnum):
+    """Str Enumeration for charger mode types."""
+
+    normal = "0"
+    reverse = "1"
+    unknown = "unknown"
+
+
 class SolixBatteryType(StrEnum):
     """Str Enumeration for Battery types."""
 

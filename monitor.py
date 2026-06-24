@@ -30,6 +30,7 @@ from anker_solix_api.apitypes import (
     SolixBatteryStatus,
     SolixBatteryType,
     SolixBatteryVoltageType,
+    SolixChargerMode,
     SolixChargerPortStatus,
     SolixConnectionStatus,
     SolixCpSignalStatus,
@@ -2220,19 +2221,27 @@ class AnkerSolixApiMonitor:
                         f"{'AC 1 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{(m3 or '-.---') + ' A (' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 10}}{co} "
                         f"{'AC 2 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
                     )
-                m1 = cm and str(mqtt.get("temperature", ""))
-                m3 = cm and mqtt.get("device_switch", "")
+                m1 = cm and mqtt.get("device_switch", "")
+                m3 = cm and str(mqtt.get("temperature", ""))
+                m2 = cm and str(mqtt.get("charger_mode", ""))
+                if (m3 and devtype == SolixDeviceType.CHARGER.value) or str(m1) or m2:
+                    if m3 and mqtt.get("temp_unit_fahrenheit"):
+                        m3 = f"{float(m3) * 9 / 5 + 32:>4} °F"
+                    else:
+                        m3 = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
+                    CONSOLE.info(
+                        f"{'Device / Temp':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper() + ' / ' + m3:<{col2}}{co} "
+                        f"{'Charger Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixChargerMode, m2, "Unknown ("+str(m2)+")").capitalize()}{co}"
+                    )
+                m1 = cm and mqtt.get("output_power", "")
                 m2 = cm and mqtt.get("output_power_limit_min", "")
                 m4 = cm and mqtt.get("output_power_limit_max", "")
-                if (m1 and devtype == SolixDeviceType.CHARGER.value) or str(m3) or m2:
-                    if m1 and mqtt.get("temp_unit_fahrenheit"):
-                        m1 = f"{float(m1) * 9 / 5 + 32:>4} °F"
-                    else:
-                        m1 = f"{m1 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
+                if m1 or m2 or m4:
                     CONSOLE.info(
-                        f"{'Temp / Device':<{col1}}: {str(m1) and (c or cm)}{m1 + ' / ' + get_enum_name(SolixSwitchMode, m3, str(m3) or '--').upper():<{col2}}{co} "
+                        f"{'Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2-5}}{co} "
                         f"{'Output Ctrl':<{col3}}: {m2 and (c or cm)}{m2 or '????'} - {m4 or '????'} {unit}{co}"
                     )
+
                 m1 = cm and str(mqtt.get("car_battery_type", ""))
                 m2 = cm and str(mqtt.get("car_battery_voltage_type", ""))
                 if m1 or m2:

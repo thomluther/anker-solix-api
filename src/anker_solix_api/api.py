@@ -1499,8 +1499,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     ) -> bool | dict:
         """Set power cut off settings.
 
+        Note: This query may only update the cloud for App display. For supported SB1 parameters, the cloud will drive the MQTT command.
+        For SB2 parameter updates, the client must drive the MQTT command to the device, otherwise it is only an App display change.
         Example input for query:
-        {'device_sn': '9JVB42LJK8J0P5RY', 'cutoff_data_id': 1, 'discharge_lower_limit': 10, 'charge_upper_limit': 90, 'cmd_type': 1}
+        {'device_sn': '9JVB42LJK8J0P5RY', 'cutoff_data_id': 1}
+        {'device_sn': '9JVB42LJK8J0P5RY', 'discharge_lower_limit': 15, 'charge_upper_limit': 90, 'cmd_type': 1}
         The id must be one of the ids listed with the get_power_cutoff endpoint.
         SOC min and max require appropriate firmware level of device. SB2 does not support backup_reserve settings
         NOTE: SB2 models must use this query since site_device_parm query with station parameter does not work for them yet
@@ -1517,6 +1520,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         if isinstance(socMax, float | int):
             data["charge_upper_limit"] = round(min(100, max(80, socMax)))
             data["cmd_type"] = cmdType
+        if "cmd_Type" in data:
+            # Add new soc setting parameters for SB2 not supporting backup soc
+            data["backup_reserve"] = 0
+            data["backup_reserve_switch"] = 0
+
         if toFile:
             # For file data, verify first if there is a modified file to be used for testing
             if not (
@@ -1536,6 +1544,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             for key in [
                 "discharge_lower_limit",
                 "charge_upper_limit",
+                "backup_reserve",
+                "backup_reserve_switch",
                 "cmd_type",
             ]:
                 if (val := data.get(key)) is not None:

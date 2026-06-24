@@ -3489,7 +3489,7 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             # "08": {
-            #     NAME: "output_power",  # reverse charging power?
+            #     NAME: "output_power",  # power to PPS, also reverse charging power?
             #     TYPE: DeviceHexDataTypes.sile.value,
             # },
         }
@@ -3497,7 +3497,10 @@ _AS200_0421 = {
     "a4": {
         BYTES: {
             "00": {NAME: "device_switch", TYPE: DeviceHexDataTypes.ui.value},
-            "01": {NAME: "reverse_charge_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "01": {
+                NAME: "charger_mode",  # 0=Normal, 1=Reverse
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "02": {
                 NAME: "car_battery_type",  # 0=LiFePO4, 1=Lead Acid
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -6150,7 +6153,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0103": {
             # command group
             COMMAND_LIST: [
-                SolixMqttCommands.reverse_charge_switch,  # field a2
+                SolixMqttCommands.charger_mode_select,  # field a2
                 SolixMqttCommands.car_battery_type,  # field a3, aa
                 SolixMqttCommands.battery_charge_limits,  # field a5, b4
                 SolixMqttCommands.device_switch,  # field ac
@@ -6158,14 +6161,14 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.temp_unit_switch,  # field b2
                 SolixMqttCommands.device_power_mode,  # field b8
             ],
-            SolixMqttCommands.reverse_charge_switch: CMD_COMMON_V2
+            SolixMqttCommands.charger_mode_select: CMD_COMMON_V2
             | {
                 "a2": {
-                    NAME: "set_reverse_charge_switch",  # Off (0), On (1)
+                    NAME: "set_charger_mode",  # Normal charge (0), Reverse Charge (1)
                     TYPE: DeviceHexDataTypes.ui.value,
-                    STATE_NAME: "reverse_charge_switch",
-                    VALUE_OPTIONS: {"off": 0, "on": 1},
-                    VALUE_STATE: "reverse_charge_switch",
+                    STATE_NAME: "charger_mode",
+                    VALUE_OPTIONS: {"normal": 0, "reverse": 1},
+                    VALUE_STATE: "charger_mode",
                 },
             },
             SolixMqttCommands.car_battery_type: CMD_COMMON_V2
