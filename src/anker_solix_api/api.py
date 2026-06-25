@@ -254,6 +254,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             ):
                                 # mark power limit option as Auto if empty like in app
                                 device[key] = value or ["Auto"]
+                        elif key == "feature_switch":
+                            # keep existing features, just update with new features provided
+                            device[key] = (device.get(key) or {}) | (value or {})
                         else:
                             device[key] = value
                     elif (
@@ -301,9 +304,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "time_zone",
                             "grid_export_limit",
                             "owner_user_id",
-                            "charge_upper_limit",
-                            "discharge_lower_limit",
-                            "backup_reserve",
                         ]
                         and value
                     ):
@@ -367,14 +367,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "micro_inverter_low_power_limit",
                             "grid_to_battery_power",
                             "pei_heating_power",
-                            "charge_upper_limit",
-                            "discharge_lower_limit",
-                            "backup_reserve",
                         ]
-                        and value
                     ):
-                        if key in getattr(
-                            SolarbankDeviceMetrics, device.get("device_pn") or "", {}
+                        if (
+                            value != ""
+                            and value is not None
+                            and key
+                            in getattr(
+                                SolarbankDeviceMetrics,
+                                device.get("device_pn") or "",
+                                {},
+                            )
                         ):
                             device[key] = str(value)
                     elif (
@@ -385,21 +388,38 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "pv_power_limit",
                             "ac_input_limit",
                         ]
-                        and str(value).isdigit()
                     ):
-                        if key in getattr(
+                        if str(value).isdigit() and key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
                         ):
                             device[key] = int(value)
                     elif (
-                        # Add solarbank int metrics depending on device type or generation
-                        key == "backup_reserve_switch"
-                        and key
-                        in getattr(
-                            SolarbankDeviceMetrics, device.get("device_pn") or "", {}
-                        )
+                        # Add solarbank int metrics depending on device type or generation and features
+                        key
+                        in [
+                            "charge_upper_limit",
+                            "discharge_lower_limit",
+                            "backup_reserve",
+                            "backup_reserve_switch",
+                        ]
                     ):
-                        device[key] = bool(value)
+                        if (
+                            value is not None
+                            and key
+                            in getattr(
+                                SolarbankDeviceMetrics,
+                                device.get("device_pn") or "",
+                                {},
+                            )
+                            and (
+                                (device.get("feature_switch") or {})
+                                | (devData.get("feature_switch") or {})
+                            ).get("soc_enable")
+                        ):
+                            if key == "backup_reserve_switch":
+                                device[key] = bool(value)
+                            else:
+                                device[key] = str(value)
                     elif key == "sub_package_num" and str(value).isdigit():
                         if key in getattr(
                             SolarbankDeviceMetrics, device.get("device_pn") or "", {}
@@ -1679,32 +1699,25 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # check and adjust new or existing backup value
             backup = round(
                 min(
-                    float(
-                        data.get("charge_upper_limit")
-                        or 1
-                    )
-                    - 1,
+                    float(data.get("charge_upper_limit") or 1) - 1,
                     max(
-                        float(
-                            data.get("discharge_lower_limit")
-                            or -1
-                        )
-                        + 1,
+                        float(data.get("discharge_lower_limit") or -1) + 1,
                         socBackup or station_settings.get("backup_reserve") or 0,
                     ),
                 )
             )
             if "backup_reserve" in station_settings:
                 if socSwitch is not False and (
-                    station_settings.get("backup_reserve_switch")
-                    or socBackup
+                    station_settings.get("backup_reserve_switch") or socBackup
                 ):
                     # backup soc is or should be enabled
                     data["backup_reserve"] = backup or 50
                     data["backup_reserve_switch"] = 1
                 else:
                     # backup soc is or was disabled, reset to 50 if it has a value
-                    data["backup_reserve"] = 50 if station_settings.get("backup_reserve") else 0
+                    data["backup_reserve"] = (
+                        50 if station_settings.get("backup_reserve") else 0
+                    )
                 data["cmd_type"] = 1
 
         if not (data or station_settings):
@@ -1942,17 +1955,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 station["grid_export_limit"] = str(
                     station_param.get("feed-in_power_limit", "")
                 )
-                station["charge_upper_limit"] = str(
-                    station_param.get("charge_upper_limit", "")
-                )
-                station["discharge_lower_limit"] = str(
-                    station_param.get("discharge_lower_limit", "")
-                )
-                station["backup_reserve"] = str(station_param.get("backup_reserve", ""))
-                station["backup_reserve_switch"] = bool(
-                    station_param.get("backup_reserve_switch")
-                )
-                # add station_sn to site as reference
+                # add physical station_sn to site as reference
                 self._update_site(siteId, {"station_sn": station_sn})
             # drop same name device limits as those field may be used to control individual device settings
             self._update_dev(

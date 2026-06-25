@@ -4370,7 +4370,7 @@ _PP_JSON = {
             NAME: "device_{x}_data"
         },  # list with PPS data dict, eg {"sn": <pps_sn>,"soc":61,"power":-1148,"error":0}
         "cp": {
-            NAME: "backup_reserve"
+            NAME: "backup_soc"
         },  # % SOC reserved for outage (verified: follows App setting changes)
         "pu": {NAME: "power_usage_mode?"},
         "inmt": {

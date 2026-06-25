@@ -1419,6 +1419,8 @@ class SolarbankDeviceMetrics:
         "pei_heating_power",
         "power_limit",
         "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
     }
     # SOLIX Solarbank 2 E1600 AC, witho 2 MPPT channel and AC socket
     A17C2: ClassVar[set[str]] = {
@@ -1435,6 +1437,8 @@ class SolarbankDeviceMetrics:
         "other_input_power",  # This is AC input for charging typically
         "power_limit",
         "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
     }
     # SOLIX Solarbank 2 E1600 Plus, with 2 MPPT
     A17C3: ClassVar[set[str]] = {
@@ -1445,6 +1449,8 @@ class SolarbankDeviceMetrics:
         "pei_heating_power",
         "power_limit",
         "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
     }
     # SOLIX Solarbank 3 E2700, with 4 MPPT channel and AC socket
     A17C5: ClassVar[set[str]] = {

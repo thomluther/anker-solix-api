@@ -843,13 +843,13 @@ class AnkerSolixApiMonitor:
                     or dev.get("power_cutoff", "")
                     or dev.get("output_cutoff_data", "")
                 )
-                if m3 := ((c or cm) and str(mqtt.get("backup_soc", ""))) or dev.get(
-                    "backup_reserve", ""
+                if m3 := ((c or cm) and str(mqtt.get("max_soc", ""))) or dev.get(
+                    "charge_upper_limit", ""
                 ):
                     m3 = int(m3)
                 if m1 or str(m3) or feat1:
                     CONSOLE.info(
-                        f"{'Min / Max SoC':<{col1}}: {m1 and (c or cm)}{(m1 or '--')!s:>4}{co} % / "
+                        f"{'Min / Max SoC':<{col1}}: {m1 and (c or cm)}{(m1 or '--')!s:>4} %{co} / "
                         f"{m3 and (c or cm)}{(str(m3) or '--')!s:>3} {'%':<{col2 - 13}}{co} "
                         f"{'Grid export':<{col3}}: {'ON' if feat1 else '---' if feat1 is None else 'OFF':>4} (Limit {feat2} W)"
                     )

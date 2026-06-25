@@ -734,8 +734,9 @@ async def poll_sites(  # noqa: C901
                     # make sure to write back any changes to the solarbank info in sites dict
                     new_sites[myid] = mysite
 
+                site_details = mysite.get("site_details") or {}
                 if not (cb_info := mysite.get("combiner_box_info") or {}) and (
-                    station_sn := mysite.get("station_sn")
+                    station_sn := site_details.get("station_sn")
                 ):
                     # handle updates for old scene info without combiner box info
                     cb_info = {"combiner_box_list": [{"device_sn": station_sn}]}
@@ -756,12 +757,23 @@ async def poll_sites(  # noqa: C901
                                 "retain_load": total_preset,  # only a flag to indicate the actual schedule preset updates don't need to update site appliance load
                             }
                         )
+                    # add required FW features to station since not listed per combiner box
+                    cb["feature_switch"] = (cb.get("feature_switch") or {}) | {
+                        k: v
+                        for k, v in (mysite.get("feature_switch") or {}).items()
+                        if k in ["soc_enable", "backup_reserve_enable"]
+                    }
                     if sn := api._update_dev(
                         cb,
                         siteId=myid,
                         isAdmin=admin,
                     ):
                         api._site_devices.add(sn)
+                    # add physical station_sn to site details as reference
+                    if not site_details.get("station_sn"):
+                        site_details["station_sn"] = sn
+                        mysite["site_details"] = site_details
+
                 if cp_info := mysite.get("charging_pile_info") or {}:
                     for cp in cp_info.get("charging_pile_list") or []:
                         # modify only a copy of the device dict to prevent changing the scene info dict

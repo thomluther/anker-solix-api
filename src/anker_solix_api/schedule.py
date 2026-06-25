@@ -354,7 +354,6 @@ async def get_device_parm(
             if station_sn in self.devices:
                 station = {"device_sn": station_sn}
                 station["power_cutoff_data"] = paramData.get("soc_list") or []
-                station["schedule"] = schedule
                 # extract active setting for station
                 for setting in station["power_cutoff_data"]:
                     if (
@@ -362,12 +361,6 @@ async def get_device_parm(
                         and int(setting.get("soc", 0)) > 0
                     ):
                         station["power_cutoff"] = int(setting.get("soc"))
-                station["allow_grid_export"] = not bool(
-                    paramData.get("switch_0w", None)
-                )
-                station["grid_export_limit"] = str(
-                    paramData.get("feed-in_power_limit", "")
-                )
                 station["charge_upper_limit"] = str(
                     paramData.get("charge_upper_limit", "")
                 )
@@ -377,6 +370,13 @@ async def get_device_parm(
                 station["backup_reserve"] = str(paramData.get("backup_reserve", ""))
                 station["backup_reserve_switch"] = bool(
                     paramData.get("backup_reserve_switch", "")
+                )
+                station["schedule"] = schedule
+                station["allow_grid_export"] = not bool(
+                    paramData.get("switch_0w", None)
+                )
+                station["grid_export_limit"] = str(
+                    paramData.get("feed-in_power_limit", "")
                 )
                 self._update_dev(station)
     return data
@@ -1847,7 +1847,12 @@ async def set_sb2_home_load(  # noqa: C901
                         overwrite and "charging_type" in insert
                     ):
                         insert.update(
-                            {"charging_type": int(insert_slot.charging_type or SolixDefaults.PRESET_TYPE)}
+                            {
+                                "charging_type": int(
+                                    insert_slot.charging_type
+                                    or SolixDefaults.PRESET_TYPE
+                                )
+                            }
                         )
 
                     # insert slot before current slot if not last
