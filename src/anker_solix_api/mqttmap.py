@@ -4557,7 +4557,10 @@ SOLIXMQTTMAP: Final[dict] = {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        "0401": _A1728_0401,  # Interval: Irregular, triggered on app/device actions, no fixed interval
+        "0401": _A1728_0401 # Interval: Irregular, triggered on app/device actions, no fixed interval
+        | {
+            "a2": {NAME: "dc_output_power_switch"},  # DC output switch: Disabled (0) or Enabled (1)
+        },
         "0404": _A1728_0404,  # Interval: Irregular, triggered on app action, no fixed interval
         "0405": _A1728_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
         "0830": _PPS_VERSIONS_0830,  # Interval: Irregular, triggered on app actions, no fixed interval
