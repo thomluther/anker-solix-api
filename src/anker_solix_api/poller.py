@@ -139,9 +139,7 @@ async def poll_sites(  # noqa: C901
                     )
                 else:
                     # Used defined codes for required device feature identification
-                    api._update_account(
-                        {"products": PRODUCT_CODES}
-                    )
+                    api._update_account({"products": PRODUCT_CODES})
             # Add any missing site device to cache
             for dev in [
                 d

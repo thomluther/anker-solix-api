@@ -1742,18 +1742,25 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             }
         if toFile:
             # change only relevant parts of existing status
-            filedata = self.sites.get(siteId, {}).get("site_details", {}).get("device_disaster") or {}
+            filedata = (
+                self.sites.get(siteId, {})
+                .get("site_details", {})
+                .get("device_disaster")
+                or {}
+            )
             filedata["manual_disaster_switch"] = bool(enable)
             if details := data.get("manual_disaster_detail"):
-                if (filedetails := filedata.get("disaster_details")) and isinstance(filedetails,list):
+                if (filedetails := filedata.get("disaster_details")) and isinstance(
+                    filedetails, list
+                ):
                     filedetails[0].update(details)
                 else:
                     # Mock the details if it just got enabled without previous information
-                    filedetails = {
-                        "uuid": "00000000-0000-0000-0000-000000000001"
-                    } | details | {
-                        "charging_time": 36,"event_key": ""
-                    }
+                    filedetails = (
+                        {"uuid": "00000000-0000-0000-0000-000000000001"}
+                        | details
+                        | {"charging_time": 36, "event_key": ""}
+                    )
                 filedata["disaster_details"] = [filedetails]
             else:
                 filedata["disaster_details"] = []
@@ -1815,7 +1822,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             resp = await self.apisession.request(
                 "post", API_CHARGING_ENDPOINTS["get_utility_rate_plan"], json=data
             )
-        if (result:= resp.get("data") or {}):
+        if result := resp.get("data") or {}:
             # add to device cache
             self._update_dev({"device_sn": deviceSn, "utility_rate_plan": result})
         return result
@@ -1866,7 +1873,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         # update device cache with details
         for device in result.get("device_infos") or []:
             devdata = device.copy()
-            devdata["device_sn"] = devdata.pop("sn","")
+            devdata["device_sn"] = devdata.pop("sn", "")
             self._update_dev(devdata)
         return result
 
