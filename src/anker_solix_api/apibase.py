@@ -611,7 +611,7 @@ class AnkerSolixBaseApi:
                             device_mqtt.update({key: str(value)})
                             value_updated = bool(
                                 key != "wifi_name"
-                                and not key.endswith(("_sn", "_pn", "_type"))
+                                and not key.endswith(("_sn", "_pn", "_type", "?"))
                             )
                         elif (
                             key
@@ -677,6 +677,7 @@ class AnkerSolixBaseApi:
                                 key.startswith(
                                     (
                                         "charge_power",
+                                        "reverse_power",
                                         "grid_power",
                                         "ac_input_power",
                                         "ac_output_power",
@@ -686,7 +687,7 @@ class AnkerSolixBaseApi:
                                         "home_demand",
                                     )
                                 )
-                                and not key.endswith(("_switch", "_mode"))
+                                and not key.endswith(("_switch", "_mode", "?"))
                             )
                         ) and str(value).replace("-", "", 1).replace(
                             ".", "", 1

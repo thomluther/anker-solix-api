@@ -13,6 +13,7 @@ from .mqttcmdmap import (
     CMD_AC_OUTPUT_TIMEOUT_SEC,
     CMD_AC_PORT_SWITCH,
     CMD_BATTERY_CHARGE_LIMITS,
+    CMD_CAR_BATTERY_TYPE,
     CMD_COMMON_V2,
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
@@ -44,6 +45,7 @@ from .mqttcmdmap import (
     CMD_PLUG_SCHEDULE,
     CMD_PORT_MEMORY_SWITCH,
     CMD_REALTIME_TRIGGER,
+    CMD_REVERSE_CHARGE_LIMITS,
     CMD_SB_3RD_PARTY_PV_SWITCH,
     CMD_SB_AC_INPUT_LIMIT,
     CMD_SB_AC_SOCKET_SWITCH,
@@ -3485,13 +3487,9 @@ _AS200_0421 = {
     "a3": {
         BYTES: {
             "04": {
-                NAME: "bat_charge_power",  # car battery charging power
+                NAME: "bat_charge_power",  # battery charging and reverse charging power
                 TYPE: DeviceHexDataTypes.sile.value,
             },
-            # "08": {
-            #     NAME: "output_power",  # power to PPS, also reverse charging power?
-            #     TYPE: DeviceHexDataTypes.sile.value,
-            # },
         }
     },
     "a4": {
@@ -3519,7 +3517,7 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "09": {
-                NAME: "output_power_limit",
+                NAME: "reverse_power_limit",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "11": {
@@ -3556,11 +3554,11 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "10": {
-                NAME: "output_power_limit_min",
+                NAME: "reverse_power_limit_min",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "12": {
-                NAME: "output_power_limit_max",
+                NAME: "reverse_power_limit_max",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "14": {
@@ -6156,6 +6154,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.charger_mode_select,  # field a2
                 SolixMqttCommands.car_battery_type,  # field a3, aa
                 SolixMqttCommands.battery_charge_limits,  # field a5, b4
+                SolixMqttCommands.reverse_charge_limits,  # field a6, b4
                 SolixMqttCommands.device_switch,  # field ac
                 SolixMqttCommands.device_timeout_minutes,  # field ae, bb, bc
                 SolixMqttCommands.temp_unit_switch,  # field b2
@@ -6171,24 +6170,9 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_STATE: "charger_mode",
                 },
             },
-            SolixMqttCommands.car_battery_type: CMD_COMMON_V2
-            | {
-                "a3": {
-                    NAME: "set_car_battery_type",  # LiFePO4 (0), Lead Acid (1)
-                    TYPE: DeviceHexDataTypes.ui.value,
-                    STATE_NAME: "car_battery_type",
-                    VALUE_OPTIONS: {"li_fe_po": 0, "lead_acid": 1},
-                    VALUE_STATE: "car_battery_type",
-                },
-                "aa": {
-                    NAME: "set_car_battery_voltage_type",  # 12V (0), 24V (1)
-                    TYPE: DeviceHexDataTypes.ui.value,
-                    STATE_NAME: "car_battery_voltage_type",
-                    VALUE_OPTIONS: {"12_v": 0, "24_v": 1},
-                    VALUE_STATE: "car_battery_voltage_type",
-                },
-            },
+            SolixMqttCommands.car_battery_type: CMD_CAR_BATTERY_TYPE,
             SolixMqttCommands.battery_charge_limits: CMD_BATTERY_CHARGE_LIMITS,
+            SolixMqttCommands.reverse_charge_limits: CMD_REVERSE_CHARGE_LIMITS,
             SolixMqttCommands.device_switch: CMD_DEVICE_SWITCH,  # Off (0), On (1)
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
             | {

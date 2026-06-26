@@ -62,6 +62,7 @@ FEATURES = {
     SolixMqttCommands.charger_mode_select: MODELS,
     SolixMqttCommands.car_battery_type: MODELS,
     SolixMqttCommands.battery_charge_limits: MODELS,
+    SolixMqttCommands.reverse_charge_limits: MODELS,
     SolixMqttCommands.device_switch: MODELS,
     SolixMqttCommands.device_timeout_minutes: MODELS,
     SolixMqttCommands.temp_unit_switch: MODELS,

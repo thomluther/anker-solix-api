@@ -2061,9 +2061,7 @@ class AnkerSolixApiMonitor:
                         f"{'DC Out Timeout':<{col3}}: {m2 and (c or cm)}{m2 or '--:--'}{co}"
                     )
                 m1 = cm and mqtt.get("ac_input_power", "")
-                m2 = cm and (
-                    mqtt.get("ac_input_limit", "") or mqtt.get("charge_power_limit", "")
-                )
+                m2 = cm and (mqtt.get("ac_input_limit", ""))
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'AC Input Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
@@ -2233,15 +2231,21 @@ class AnkerSolixApiMonitor:
                         f"{'Device / Temp':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper() + ' / ' + m3:<{col2}}{co} "
                         f"{'Charger Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixChargerMode, m2, "Unknown ("+str(m2)+")").capitalize()}{co}"
                     )
-                m1 = cm and mqtt.get("output_power", "")
-                m2 = cm and mqtt.get("output_power_limit_min", "")
-                m4 = cm and mqtt.get("output_power_limit_max", "")
+                m1 = cm and mqtt.get("bat_charge_power", "")
+                m2 = cm and mqtt.get("charge_power_limit", "")
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'Charge Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
+                    )
+                m1 = cm and mqtt.get("reverse_power_limit", "")
+                m2 = cm and mqtt.get("reverse_power_limit_min", "")
+                m4 = cm and mqtt.get("reverse_power_limit_max", "")
                 if m1 or m2 or m4:
                     CONSOLE.info(
-                        f"{'Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2-5}}{co} "
-                        f"{'Output Ctrl':<{col3}}: {m2 and (c or cm)}{m2 or '????'} - {m4 or '????'} {unit}{co}"
+                        f"{'Reverse Limit':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2-5}}{co} "
+                        f"{'Reverse Ctrl':<{col3}}: {m2 and (c or cm)}{m2 or '????'} - {m4 or '????'} {unit}{co}"
                     )
-
                 m1 = cm and str(mqtt.get("car_battery_type", ""))
                 m2 = cm and str(mqtt.get("car_battery_voltage_type", ""))
                 if m1 or m2:

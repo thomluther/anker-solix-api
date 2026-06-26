@@ -152,6 +152,7 @@ class SolixMqttCommands:
     charger_mode_select: str = "charger_mode_select"
     car_battery_type: str = "car_battery_type"
     battery_charge_limits: str = "battery_charge_limits"
+    reverse_charge_limits: str = "reverse_charge_limits"
 
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
@@ -672,7 +673,10 @@ CMD_SB_SOC_LIMITS = CMD_COMMON | {
             # ensure backup is min < backup < max if not specified
             else min(
                 int(cache.get("set_max_soc", cache.get("max_soc") or 1)) - 1,
-                max(int(cache.get("set_min_soc", cache.get("power_cutoff") or -1)) + 1, int(cache.get("backup_soc"))),
+                max(
+                    int(cache.get("set_min_soc", cache.get("power_cutoff") or -1)) + 1,
+                    int(cache.get("backup_soc")),
+                ),
             )
             if cache.get("backup_soc") and state is None
             else 0
@@ -1502,3 +1506,53 @@ CMD_BATTERY_CHARGE_LIMITS = (
         },
     }
 )
+
+CMD_REVERSE_CHARGE_LIMITS = (
+    CMD_COMMON_V2
+    | {
+        # Command: Alternator charger reverse charging limits
+        COMMAND_NAME: SolixMqttCommands.reverse_charge_limits,
+        "a6": {
+            NAME: "set_reverse_power_limit",  # 100-800 W, step 100 W
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "reverse_power_limit",
+            VALUE_MIN: 500,
+            VALUE_MIN_STATE: "reverse_power_limit_min",
+            VALUE_MAX: 800,
+            VALUE_MAX_STATE: "reverse_power_limit_max",
+            VALUE_STEP: 100,
+            VALUE_STATE: "reverse_power_limit",
+        },
+        "b4": {
+            NAME: "set_charge_voltage_limit",  # 12.0V to 13.8V in 0.1V step, depends on set type?
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "charge_voltage_limit",
+            VALUE_MIN: 12.0,
+            VALUE_MIN_STATE: "charge_voltage_limit_min",
+            VALUE_MAX: 13.8,
+            VALUE_MAX_STATE: "charge_voltage_limit_max",
+            VALUE_STEP: 0.1,
+            VALUE_DIVIDER: 0.1,
+            VALUE_STATE: "charge_voltage_limit",
+        },
+    }
+)
+
+CMD_CAR_BATTERY_TYPE = CMD_COMMON_V2 | {
+    # Command: Alternator charger battery type
+    COMMAND_NAME: SolixMqttCommands.car_battery_type,
+    "a3": {
+        NAME: "set_car_battery_type",  # LiFePO4 (0), Lead Acid (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "car_battery_type",
+        VALUE_OPTIONS: {"li_fe_po": 0, "lead_acid": 1},
+        VALUE_STATE: "car_battery_type",
+    },
+    "aa": {
+        NAME: "set_car_battery_voltage_type",  # 12V (0), 24V (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "car_battery_voltage_type",
+        VALUE_OPTIONS: {"12_v": 0, "24_v": 1},
+        VALUE_STATE: "car_battery_voltage_type",
+    },
+}
