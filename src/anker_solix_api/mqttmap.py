@@ -229,7 +229,7 @@ _A1725_0405 = {
 _A1728_0401 = {
     # C300(X) DC param info
     TOPIC: "param_info",
-    "a2": {NAME: "dc_12v_1_status"},  # DC 12V status: Inactive (0), Discharging (1)
+    "a2": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
     "a3": {
         NAME: "light_mode"
     },  # LED light mode: Off (0), Low (1), Medium (2), High (3)
@@ -4508,6 +4508,9 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_MAX: 86100,
             },
         },
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004f": CMD_LIGHT_MODE  # LED mode: Off (0), Low (1), Medium (2), High (3)
         | {
@@ -4544,6 +4547,9 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_MAX: 86100,
             },
         },
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004f": CMD_LIGHT_MODE  # LED mode: Off (0), Low (1), Medium (2), High (3)
         | {
