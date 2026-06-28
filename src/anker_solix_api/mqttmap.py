@@ -279,7 +279,7 @@ _A1728_0405 = {
     "be": {NAME: "usba_2_status"},  # USB-A right status: Inactive (0), Discharging (1)
     "bf": {
         NAME: "dc_12v_1_status"
-    },  # DC 12V status: Inactive (0), Discharging (1), Charging (2)
+    },  # DC 12V status: Inactive (0), Discharging (1)
     "c1": {
         NAME: "overload_event"
     },  # Overload event for port: None (0), USB-C1 (8), USB-C2 (9), USB-C3 (10), ...?
@@ -649,11 +649,27 @@ _A1783_0421 = {
     "a3": {
         BYTES: {
             "00": {
-                NAME: "charging_status_a3_0?",  # (0-3): Inactive (0), Solar (1), AC Input (2), Both (3)?
+                NAME: "charging_status",  # (0-3): Inactive (0), DC Input (1), AC Input (2), Both (3)?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
                 NAME: "ac_input_limit_max",  # Max supported charge limit, seems fix
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "06": {
+                NAME: "unknown_a3_06",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "07": {
+                NAME: "unknown_a3_07",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "unknown_a3_08",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "10": {
+                NAME: "unknown_a3_10",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -724,7 +740,7 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "charging_status_a5_1?",  # (0-3): Inactive (0), Solar (1), AC Input (2), Both (3)
+                NAME: "charging_status_a5_1?",  # (0-3): Inactive (0), DC Input (1), AC Input (2), Both (3)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
@@ -862,6 +878,26 @@ _A1783_0421 = {
             },
         ]
     },
+    "ce": {
+        BYTES: {
+            "00": {
+                NAME: "charger_device_pn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "18": {
+                NAME: "charger_device_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "40": {
+                NAME: "charger_mode?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "41": {
+                NAME: "charger_power?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
     "d9": {
         BYTES: {
             "03": {
@@ -872,10 +908,26 @@ _A1783_0421 = {
                 NAME: "min_soc",  # min_soc: 1, 5, 10, 15, 20 %
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "05": {
+                NAME: "unknown_d9_05?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "07": {
+                NAME: "unknown_d9_07?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "11": {
+                NAME: "unknown_d9_11?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
         }
     },
     "da": {
         BYTES: {
+            "19": {
+                NAME: "charger_status_da_10?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "12": {
                 NAME: "unknown_da_12?",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3487,7 +3539,20 @@ _AS200_0421 = {
     "a3": {
         BYTES: {
             "04": {
-                NAME: "bat_charge_power",  # battery charging and reverse charging power
+                NAME: "output_power",  # DC output power for each direction, allways positive
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "06": {
+                NAME: "output_voltage?",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.001,
+            },
+            "07": {
+                NAME: "unknown_a3_07?",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "unknown_a3_08?",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -3581,7 +3646,11 @@ _AS200_0421 = {
     "a7": {
         BYTES: {
             "11": {
-                NAME: "pps_sn?",
+                NAME: "pps_sn",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "29": {
+                NAME: "pps_pn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
         }

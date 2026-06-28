@@ -412,14 +412,14 @@ class AnkerSolixBaseApi:
                     #
                     if key == "device_sw_version" and value:
                         # Example for key name conversion when value is given
-                        device.update({"sw_version": str(value)})
+                        device["sw_version"] = str(value).lstrip("v")
                     elif key in [
                         # Examples for boolean key values
                         "wifi_online",
                         "auto_upgrade",
                         "is_ota_update",
                     ]:
-                        device.update({key: bool(value)})
+                        device[key] = bool(value)
                     elif key in [
                         # Example for key with string values
                         "wireless_type",
@@ -428,10 +428,10 @@ class AnkerSolixBaseApi:
                         # Example for key with string values that should only be updated if value returned
                         key == "wifi_name" and value
                     ):
-                        device.update({key: str(value)})
+                        device[key] = str(value)
                     else:
                         # Example for all other keys not filtered or converted
-                        device.update({key: value})
+                        device[key] = value
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
@@ -602,7 +602,9 @@ class AnkerSolixBaseApi:
                                     "load_balance_setting_d6",  # Unknown control parameter state value
                                 ]
                                 or (
-                                    key.startswith(("device_", "exp_", "pps_"))
+                                    key.startswith(
+                                        ("device_", "exp_", "pps_", "charger_")
+                                    )
                                     and (key.endswith(("_sn", "_pn", "_type")))
                                 )
                             )
@@ -687,7 +689,7 @@ class AnkerSolixBaseApi:
                                         "home_demand",
                                     )
                                 )
-                                and not key.endswith(("_switch", "_mode", "?"))
+                                and not key.endswith(("_switch", "_mode"))
                             )
                         ) and str(value).replace("-", "", 1).replace(
                             ".", "", 1
@@ -696,8 +698,13 @@ class AnkerSolixBaseApi:
                             # trigger device capacity calculation with SOC updates
                             if key in ["battery_soc", "main_battery_soc"]:
                                 calc_capacity = True
+                            # For alternator charger, invert output power depending on mode
+                            elif key == "output_power" and check_values.get(
+                                "charger_mode"
+                            ):
+                                device_mqtt[key] = f"{float(-1 * value):.0f}"
                             # calculate device PV total if not included in MQTT data
-                            if any(
+                            elif any(
                                 key == f"device_{x}_pv_1_power"
                                 and f"device_{x}_pv_power" not in check_values
                                 for x in range(1, 7)
@@ -804,11 +811,14 @@ class AnkerSolixBaseApi:
                                         "_hours",
                                         "_timestamp",
                                         "_packs",
+                                        # "?", # Add for decoder testing
                                     )
                                 )
                             )
                             or (
-                                str(key).startswith(("pair_id_circuit_", "id_circuit_"))
+                                str(key).startswith(
+                                    ("pair_id_circuit_", "id_circuit_")
+                                )  # , "unknown_" # Add for decoder testing
                             )
                         ) and value is not None:
                             device_mqtt[key] = value

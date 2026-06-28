@@ -866,6 +866,7 @@ class AnkerSolixMqttSession:
                             folderdict["duration"] = duration
                             folderdict["timestamps"] = len(timestamps)
                             folderdict["ts_index"] = 0
+                            folderdict["timestamp"] = timestamps[0] if timestamps else 0
                 if timestamps:
                     cycle_now = (
                         speedstart
@@ -886,6 +887,7 @@ class AnkerSolixMqttSession:
                                 2,
                             )
                         folderdict["ts_index"] = time_idx
+                        folderdict["timestamp"] = timestamps[time_idx]
                         # simulate mqtt messages for timestamp
                         for message in active_msgs.get(timestamps[time_idx]) or []:
                             self._logger.debug(

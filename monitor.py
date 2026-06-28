@@ -475,12 +475,16 @@ class AnkerSolixApiMonitor:
                     topics = value
                 if len(fields) >= 2:
                     # print row
+                    c1 = Color.RED if ((fields[0][0]).endswith("?") or (fields[0][0]).startswith(("unknown_","tbd_"))) else ""
+                    c2 = Color.RED if ((fields[1][0]).endswith("?") or (fields[0][0]).startswith(("unknown_","tbd_"))) else ""
                     CONSOLE.info(
-                        f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}} {fields[1][0]:<{col3}}: {fields[1][1]!s}"
+                        f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}}{Color.OFF} "
+                        f"{c2}{fields[1][0]:<{col3}}: {fields[1][1]!s}{Color.OFF}"
                     )
                     fields.clear()
             if fields:
-                CONSOLE.info(f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}")
+                c1 = Color.RED if ((fields[0][0]).endswith("?") or (fields[0][0]).startswith(("unknown_","tbd_"))) else ""
+                CONSOLE.info(f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}{Color.OFF}")
             if topics:
                 CONSOLE.info(f"{'Received Topics':<{col1}}: {topics!s}")
         CONSOLE.info(f"{'-' * 120}")
@@ -490,12 +494,14 @@ class AnkerSolixApiMonitor:
                 CONSOLE.info(
                     f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{Color.OFF}, Message cycle duration: {Color.CYAN}"
                     f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}, "
-                    f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
+                    f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}, "
+                    f"Timestamp: {Color.CYAN}{datetime.fromtimestamp(self.folderdict.get('timestamp', 0)).strftime('%Y-%m-%d %H:%M:%S')}{Color.OFF}"
                 )
             else:
                 CONSOLE.info(
                     f"MQTT step mode: {Color.YELLOW}{self.folderdict.get('progress', 0):6.2f} %{Color.OFF}, "
-                    f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
+                    f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}, "
+                    f"Timestamp: {Color.YELLOW}{datetime.fromtimestamp(self.folderdict.get('timestamp', 0)).strftime('%Y-%m-%d %H:%M:%S')}{Color.OFF}"
                 )
         else:
             trigger_sec = (
@@ -1869,10 +1875,12 @@ class AnkerSolixApiMonitor:
                         f"{(timedelta(hours=m2) if str(m2) else '--:--')!s}{co}"
                     )
                 m1 = cm and mqtt.get("light_switch", "")
+                m3 = cm and str(mqtt.get("light_timeout_minutes", ""))
                 m2 = cm and str(mqtt.get("light_mode", ""))
                 if str(m1) or m2:
                     CONSOLE.info(
-                        f"{'Light Switch':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2 - 3}}{co} "
+                        f"{'Light Sw./Tout':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{co} / "
+                        f"{m3 and (c or cm)}{(m3 or '---') + ' Min.':<{col2 - 6}}{co} "
                         f"{'Light Mode':<{col1}}: {m2 and (c or cm)}"
                         f"{get_enum_name(SolixPpsDisplayMode, m2, 'unknown' if m2 else '----').capitalize() + ' (' + (m2 or '-') + ')':<{col2 - 6}}{co} "
                     )
@@ -1995,7 +2003,7 @@ class AnkerSolixApiMonitor:
                     or dev.get("output_power", "")
                     or dev.get("to_home_load", "")
                 )
-                if m1 or m2:
+                if m1 or (m2 and devtype != SolixDeviceType.CHARGER.value):
                     m3 = cm and mqtt.get("pv_yield", "")
                     m4 = cm and mqtt.get("output_energy", "")
                     CONSOLE.info(
@@ -2231,11 +2239,11 @@ class AnkerSolixApiMonitor:
                         f"{'Device / Temp':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper() + ' / ' + m3:<{col2}}{co} "
                         f"{'Charger Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixChargerMode, m2, "Unknown ("+str(m2)+")").capitalize()}{co}"
                     )
-                m1 = cm and mqtt.get("bat_charge_power", "")
+                m1 = cm and mqtt.get("output_power", "")
                 m2 = cm and mqtt.get("charge_power_limit", "")
-                if m1 or m2:
+                if (m1 and devtype == SolixDeviceType.CHARGER.value) or m2:
                     CONSOLE.info(
-                        f"{'Charge Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("reverse_power_limit", "")
@@ -2820,12 +2828,14 @@ class AnkerSolixApiMonitor:
                     CONSOLE.info(
                         f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{co}, Message cycle duration: {Color.CYAN}"
                         f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}, "
-                        f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
+                        f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}, "
+                        f"Timestamp: {Color.CYAN}{datetime.fromtimestamp(self.folderdict.get('timestamp', 0)).strftime('%Y-%m-%d %H:%M:%S')}{Color.OFF}"
                     )
                 else:
                     CONSOLE.info(
                         f"MQTT step mode: {Color.YELLOW}{self.folderdict.get('progress', 0):6.2f} %{Color.OFF}, "
-                        f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}"
+                        f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}, "
+                        f"Timestamp: {Color.YELLOW}{datetime.fromtimestamp(self.folderdict.get('timestamp', 0)).strftime('%Y-%m-%d %H:%M:%S')}{Color.OFF}"
                     )
             else:
                 trigger_sec = (

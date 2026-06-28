@@ -222,7 +222,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 or str(value)
                             )
                     elif key == "device_sw_version" and value:
-                        device["sw_version"] = str(value)
+                        device["sw_version"] = str(value).lstrip("v")
                     elif key == "preset_inverter_limit" and str(value):
                         device.update(
                             {
