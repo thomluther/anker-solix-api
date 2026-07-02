@@ -759,7 +759,13 @@ async def poll_sites(  # noqa: C901
                     cb["feature_switch"] = (cb.get("feature_switch") or {}) | {
                         k: v
                         for k, v in (mysite.get("feature_switch") or {}).items()
-                        if k in ["soc_enable", "backup_reserve_enable"]
+                        if k
+                        in [
+                            "soc_enable",
+                            "custom_rate_charge_enable",
+                            "backup_reserve_enable",
+                            "backup_reserve_effective",
+                        ]
                     }
                     if sn := api._update_dev(
                         cb,

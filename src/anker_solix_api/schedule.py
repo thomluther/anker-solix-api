@@ -18,6 +18,7 @@ from .apitypes import (
     SolarbankDeviceMetrics,
     SolarbankPowerMode,
     SolarbankRatePlan,
+    SolarbankSchedulePresetType,
     SolarbankTimeslot,
     SolarbankUsageMode,
     SolixDayTypes,
@@ -28,7 +29,7 @@ from .apitypes import (
     SolixPriceTypes,
     SolixTariffTypes,
 )
-from .helpers import get_enum_name
+from .helpers import get_enum_name, get_enum_value
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -1444,7 +1445,7 @@ async def set_sb2_home_load(  # noqa: C901
     siteId: str,
     deviceSn: str,
     preset: float | None = None,
-    charging_type: int | None = None,
+    charging_type: int | str | None = None,  # Any SolixPresetType
     usage_mode: int | None = None,
     plan_name: str | None = None,
     set_slot: Solarbank2Timeslot | None = None,
@@ -1492,7 +1493,7 @@ async def set_sb2_home_load(  # noqa: C901
     charging_type = (
         int(charging_type)
         if str(charging_type).isdigit() or isinstance(charging_type, int | float)
-        else None
+        else get_enum_value(SolarbankSchedulePresetType, charging_type)
     )
     # Validate if selected mode is possible
     usage_mode_options = self.solarbank_usage_mode_options(deviceSn=deviceSn)

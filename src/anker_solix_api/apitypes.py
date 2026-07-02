@@ -47,7 +47,6 @@ API_COUNTRIES: Final[dict] = {
         "TW",
         "US",
         "CA",
-        "RO",
     ],
     "eu": [
         "DE",
@@ -95,6 +94,7 @@ API_COUNTRIES: Final[dict] = {
         "BY",
         "AZ",
         "IL",
+        "RO",
     ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
@@ -1990,10 +1990,32 @@ class Solarbank2Timeslot:
     start_time: datetime | None
     end_time: datetime | None
     appliance_load: int | None = None  # mapped to timeslot preset value
-    charging_type: int | None = None  # mapped to value type, introduced April 2026
+    charging_type: int | str | None = (
+        None  # mapped to value type, introduced April 2026
+    )
     weekdays: set[int | str] | None = (
         None  # set of weekday numbers or abbreviations where this slot applies, defaulting to all if None. sun = 0, sat = 6
     )
+
+    def __post_init__(self) -> None:
+        """Init the dataclass with proper type of parameters."""
+        if not isinstance(self.appliance_load, int | None):
+            self.appliance_load = (
+                int(self.appliance_load)
+                if str(self.appliance_load).replace(".", "", 1).lstrip("-").isdigit()
+                else None
+            )
+        if not isinstance(self.charging_type, int | None):
+            member: Enum | None = getattr(
+                SolarbankSchedulePresetType, str(self.charging_type), None
+            )
+            self.charging_type = (
+                member.value
+                if member
+                else int(self.charging_type)
+                if str(self.charging_type).replace(".", "", 1).isdigit()
+                else None
+            )
 
 
 @dataclass(order=True, kw_only=True)

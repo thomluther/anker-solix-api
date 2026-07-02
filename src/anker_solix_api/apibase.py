@@ -829,7 +829,7 @@ class AnkerSolixBaseApi:
                                     + int(check_values.get("voltage_l2", 0) > 0)
                                     + int(check_values.get("voltage_l3", 0) > 0)
                                 )
-                            if key.startswith("id_circuit_"):
+                            elif key.startswith("id_circuit_"):
                                 # assign physical ids to logical ids
                                 circuits[value] = [*circuits.get(value, []), key[-2:]]
                             value_updated = bool(

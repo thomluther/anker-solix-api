@@ -636,6 +636,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         else:
                             generation = int(device.get("generation", 0))
                             ac_type = bool(device.get("grid_to_battery_power") or False)
+                        # flag if rate plan charge type supported
+                        charge_enabled = bool(
+                            (device.get("feature_switch") or {}).get(
+                                "custom_rate_charge_enable"
+                            )
+                        )
                         # Count solarbanks for device output presets (only used for SB1)
                         cnt = device.get("solarbank_count", 0)
                         mysite = self.sites.get(device.get("site_id") or "") or {}
@@ -658,7 +664,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     else None,
                                 }
                             )
-                            if generation >= 3:
+                            if charge_enabled:
                                 # SB3+ unique settings
                                 device["preset_load_type"] = SolixDefaults.PRESET_TYPE
                             if ac_type:
@@ -755,7 +761,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     if start_time <= now_time < end_time:
                                         sys_power = slot.get("power")
                                         device["preset_system_output_power"] = sys_power
-                                        if generation >= 3:
+                                        if charge_enabled:
                                             # SB3+ unique settings
                                             device["preset_load_type"] = (
                                                 slot.get("charging_type")

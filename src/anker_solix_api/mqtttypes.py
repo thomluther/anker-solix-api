@@ -54,7 +54,7 @@ class DeviceHexDataHeader:
     cmd_msg: InitVar[bytearray | bytes | str | None] = None
 
     def __post_init__(self, hexbytes, cmd_msg) -> None:
-        """Init the dataclass from optional hexbytes or for new cmf_msg."""
+        """Init the dataclass from optional hexbytes or for new cmd_msg."""
         self.msglength = 0
         if isinstance(hexbytes, str):
             hexbytes = bytearray(bytes.fromhex(hexbytes))

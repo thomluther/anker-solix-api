@@ -277,9 +277,7 @@ _A1728_0405 = {
     "bc": {NAME: "usbc_4_status"},  # USB-C top status: Inactive (0), Discharging (1)
     "bd": {NAME: "usba_1_status"},  # USB-A left status: Inactive (0), Discharging (1)
     "be": {NAME: "usba_2_status"},  # USB-A right status: Inactive (0), Discharging (1)
-    "bf": {
-        NAME: "dc_12v_1_status"
-    },  # DC 12V status: Inactive (0), Discharging (1)
+    "bf": {NAME: "dc_12v_1_status"},  # DC 12V status: Inactive (0), Discharging (1)
     "c1": {
         NAME: "overload_event"
     },  # Overload event for port: None (0), USB-C1 (8), USB-C2 (9), USB-C3 (10), ...?
@@ -744,7 +742,7 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
-                NAME: "battery_soc",
+                NAME: "battery_soc",  # Total SOC of main + Exp batteries?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }
@@ -764,11 +762,13 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "06": {
-                NAME: "unknown_a6_06?",  # tbd
+                NAME: "remaining_time_hours",  # hours with factor 0.1
                 TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+                SIGNED: False,
             },
             "08": {
-                NAME: "unknown_a6_08?",  # tbd
+                NAME: "main_battery_soc?",  # SOC of main battery only?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         },
@@ -881,19 +881,19 @@ _A1783_0421 = {
     "ce": {
         BYTES: {
             "00": {
-                NAME: "charger_device_pn",
+                NAME: "device_1_pn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "18": {
-                NAME: "charger_device_sn",
+                NAME: "device_1_sn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "40": {
-                NAME: "charger_mode?",
+                NAME: "device_1_status?",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "41": {
-                NAME: "charger_power?",
+                NAME: "device_1_output_power?",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -3645,13 +3645,58 @@ _AS200_0421 = {
     },
     "a7": {
         BYTES: {
+            "00": {
+                NAME: "unknown_pps_a7_00",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "unknown_pps_a7_01",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "device_1_temperature",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+            },
+            "03": {
+                NAME: "unknown_pps_a7_03",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "unknown_pps_a7_04",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "05": {
+                NAME: "unknown_pps_a7_05",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "06": {
+                NAME: "unknown_pps_a7_06",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "08": {
+                NAME: "device_1_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "11": {
-                NAME: "pps_sn",
+                NAME: "device_1_sn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "29": {
-                NAME: "pps_pn",
+                NAME: "device_1_pn",
                 TYPE: DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "f9": {
+        BYTES: {
+            "24": {
+                NAME: "unknown_pps_f9_24",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "25": {
+                NAME: "unknown_pps_f9_25",
+                TYPE: DeviceHexDataTypes.sile.value,
             },
         }
     },
@@ -3992,7 +4037,7 @@ _DOCK_0421 = {
         NAME: "max_load_limit_total"
     },  # system defined limit based on given installation
     "a7": {NAME: "battery_soc_total"},  # Average SOC of all solarbank devices in system
-    "ac": {NAME: "max_soc?"},
+    "ac": {NAME: "unknown_ac?"},
     "ae": {NAME: "usage_mode"},  # SB usage modes
     "fc": {NAME: "device_sn"},
     "fd": {NAME: "local_timestamp"},
@@ -5914,10 +5959,6 @@ SOLIXMQTTMAP: Final[dict] = {
                     },
                     "06": {
                         NAME: "backup_soc",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                    "07": {
-                        NAME: "backup_soc_switch",
                         TYPE: DeviceHexDataTypes.ui.value,
                     },
                 },

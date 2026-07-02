@@ -47,7 +47,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.6.3.0"
+VERSION: str = "3.7.0.0"
 
 
 class AnkerSolixApiExport:
@@ -1807,7 +1807,7 @@ class AnkerSolixApiExport:
                             string.ascii_uppercase + string.digits, k=len(val)
                         )
                     )
-            elif "bt_ble_" in key or "_mac" in key:
+            elif ("bt_ble_" in key and key != "bt_ble_id") or "_mac" in key:
                 # Handle values with and without ':'
                 temp = val.replace(":", "")
                 randomstr = self._randomdata.get(
@@ -1825,6 +1825,7 @@ class AnkerSolixApiExport:
                         for a, b in zip(randomstr[::2], randomstr[1::2], strict=False)
                     )
             elif any(x in key for x in ["_id", "_password", "stationId"]):
+                # Handle values with and without '-'
                 for part in val.split("-"):
                     if randomstr:
                         randomstr = "-".join(
