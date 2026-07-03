@@ -488,6 +488,20 @@ _A1763_0421 = {
                 NAME: "ac_input_power",  # Input power total charge
                 TYPE: DeviceHexDataTypes.sile.value,
             },
+            "04": {
+                NAME: "dc_input_power_total",  # # DC input power (solar + car charging)
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "06": {
+                NAME: "remaining_time_hours",  # hours with factor 0.1
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+                SIGNED: False,
+            },
+            "08": {
+                NAME: "main_battery_soc?",  # SOC of main battery only?
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
         },
     },
     "a7": {

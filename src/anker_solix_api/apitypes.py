@@ -1807,6 +1807,7 @@ class SolixPpsPortStatus(StrEnum):
     inactive = "0"
     discharging = "1"
     charging = "2"
+    standby = "3"
     unknown = "unknown"
 
 
@@ -1861,16 +1862,6 @@ class SolixChargerConnectionStatus(StrEnum):
     connected = "0"
     disconnected = "1"
     connecting = "2"
-    unknown = "unknown"
-
-
-class SolixChargerStatus(StrEnum):
-    """Str Enumeration for Charger status."""
-
-    off = "0"
-    discharging = "1"
-    charging = "2"
-    standby = "3"
     unknown = "unknown"
 
 

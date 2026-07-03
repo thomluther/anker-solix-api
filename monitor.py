@@ -33,7 +33,6 @@ from anker_solix_api.apitypes import (
     SolixChargerConnectionStatus,
     SolixChargerMode,
     SolixChargerPortStatus,
-    SolixChargerStatus,
     SolixConnectionStatus,
     SolixCpSignalStatus,
     SolixDeviceType,
@@ -2328,7 +2327,7 @@ class AnkerSolixApiMonitor:
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Dev 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
-                        f"{'Dev 1 Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixChargerStatus, m2, m2 or '----').capitalize()}{co}"
+                        f"{'Dev 1 Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixPpsPortStatus, m2, m2 or '----').capitalize()}{co}"
                     )
                 if (m1 := mqtt.get("device_1_sn")) is not None:
                     m2 = cm and mqtt.get("device_1_soc", "")
