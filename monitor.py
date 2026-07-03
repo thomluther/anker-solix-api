@@ -30,8 +30,10 @@ from anker_solix_api.apitypes import (
     SolixBatteryStatus,
     SolixBatteryType,
     SolixBatteryVoltageType,
+    SolixChargerConnectionStatus,
     SolixChargerMode,
     SolixChargerPortStatus,
+    SolixChargerStatus,
     SolixConnectionStatus,
     SolixCpSignalStatus,
     SolixDeviceType,
@@ -475,16 +477,39 @@ class AnkerSolixApiMonitor:
                     topics = value
                 if len(fields) >= 2:
                     # print row
-                    c1 = Color.RED if ((fields[0][0]).endswith("?") or (fields[0][0]).startswith(("unknown_","tbd_"))) else ""
-                    c2 = Color.RED if ((fields[1][0]).endswith("?") or (fields[0][0]).startswith(("unknown_","tbd_"))) else ""
+                    c1 = (
+                        Color.RED
+                        if (
+                            (fields[0][0]).endswith("?")
+                            or (fields[0][0]).startswith(("unknown_", "tbd_"))
+                        )
+                        else ""
+                    )
+                    c2 = (
+                        Color.RED
+                        if (
+                            (fields[1][0]).endswith("?")
+                            or (fields[1][0]).startswith(("unknown_", "tbd_"))
+                        )
+                        else ""
+                    )
                     CONSOLE.info(
                         f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}}{Color.OFF} "
                         f"{c2}{fields[1][0]:<{col3}}: {fields[1][1]!s}{Color.OFF}"
                     )
                     fields.clear()
             if fields:
-                c1 = Color.RED if ((fields[0][0]).endswith("?") or (fields[0][0]).startswith(("unknown_","tbd_"))) else ""
-                CONSOLE.info(f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}{Color.OFF}")
+                c1 = (
+                    Color.RED
+                    if (
+                        (fields[0][0]).endswith("?")
+                        or (fields[0][0]).startswith(("unknown_", "tbd_"))
+                    )
+                    else ""
+                )
+                CONSOLE.info(
+                    f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}{Color.OFF}"
+                )
             if topics:
                 CONSOLE.info(f"{'Received Topics':<{col1}}: {topics!s}")
         CONSOLE.info(f"{'-' * 120}")
@@ -786,14 +811,14 @@ class AnkerSolixApiMonitor:
                 ota = dev.get("is_ota_update")
                 m1 = c and mqtt.get("sw_version", "")
                 CONSOLE.info(
-                    f"{'SW Version':<{col1}}: {m1 and c}{(m1 or (dev.get('sw_version', 'Unknown')) + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')'):<{col2}}{co} "
+                    f"{'SW Version':<{col1}}: {m1 and c}{(m1 or (dev.get('sw_version', 'Unknown')) + ' (' + ('Unknown' if ota is None else 'Updt' if ota else 'Ok') + ')'):<{col2}}{co} "
                     f"{'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'} (OTA {dev.get('ota_version') or 'Unknown'})"
                 )
                 for item in dev.get("ota_children") or []:
                     ota = item.get("need_update")
                     forced = item.get("force_upgrade")
                     CONSOLE.info(
-                        f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Update' if ota else 'Latest') + ')':<{col2}} "
+                        f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Updt' if ota else 'Ok') + ')':<{col2}} "
                         f"{' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
                     )
                 if mdev:
@@ -1857,15 +1882,16 @@ class AnkerSolixApiMonitor:
                 SolixDeviceType.SOLARBANK_PPS.value,
                 SolixDeviceType.CHARGER.value,
             ]:
-                CONSOLE.info(
-                    f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} "
-                    f"{'Status Code':<{col3}}: {dev.get('status', '-')!s}"
-                )
-                m2 = str(c and mqtt.get("charging_status", ""))
-                CONSOLE.info(
-                    f"{'Charge Status':<{col1}}: {m2 and c}{get_enum_name(SolixPpsChargingStatus, m2 or dev.get('charging_status'), '-------').capitalize():<{col2}}{co} "
-                    f"{'Status Code':<{col3}}: {m2 and c}{m2 or dev.get('charging_status', '-')!s}{co}"
-                )
+                if m2 := str(dev.get("status", "")):
+                    CONSOLE.info(
+                        f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} "
+                        f"{'Status Code':<{col3}}: {m2!s}"
+                    )
+                if m2 := str(c and mqtt.get("charging_status", "")):
+                    CONSOLE.info(
+                        f"{'Charge Status':<{col1}}: {m2 and c}{get_enum_name(SolixPpsChargingStatus, m2 or dev.get('charging_status'), '-------').capitalize():<{col2}}{co} "
+                        f"{'Status Code':<{col3}}: {m2 and c}{m2 or dev.get('charging_status', '-')!s}{co}"
+                    )
                 m1 = cm and str(mqtt.get("last_update", ""))
                 m2 = cm and mqtt.get("remaining_time_hours", "")
                 if m1 or str(m2):
@@ -2237,7 +2263,7 @@ class AnkerSolixApiMonitor:
                         m3 = f"{m3 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                     CONSOLE.info(
                         f"{'Device / Temp':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper() + ' / ' + m3:<{col2}}{co} "
-                        f"{'Charger Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixChargerMode, m2, "Unknown ("+str(m2)+")").capitalize()}{co}"
+                        f"{'Charger Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixChargerMode, m2, 'Unknown (' + str(m2) + ')').capitalize()}{co}"
                     )
                 m1 = cm and mqtt.get("output_power", "")
                 m2 = cm and mqtt.get("charge_power_limit", "")
@@ -2251,7 +2277,7 @@ class AnkerSolixApiMonitor:
                 m4 = cm and mqtt.get("reverse_power_limit_max", "")
                 if m1 or m2 or m4:
                     CONSOLE.info(
-                        f"{'Reverse Limit':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2-5}}{co} "
+                        f"{'Reverse Limit':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'Reverse Ctrl':<{col3}}: {m2 and (c or cm)}{m2 or '????'} - {m4 or '????'} {unit}{co}"
                     )
                 m1 = cm and str(mqtt.get("car_battery_type", ""))
@@ -2289,6 +2315,34 @@ class AnkerSolixApiMonitor:
                         f"{'Device Timeout':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {' Min.':<{col2 - 5}}{co} "
                         f"{'Timeout Ctrl':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} Min. {'(Awake ' + get_enum_name(SolixSwitchMode, m4, str(m4) or '--').upper() + ')'}{co}"
                     )
+                # attached device info
+                m1 = cm and str(mqtt.get("device_1_status", ""))
+                m2 = cm and str(mqtt.get("cable_unplugged", ""))
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'Dev 1 Status':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixChargerConnectionStatus, m1, m1 or '---').capitalize():<{col2}}{co} "
+                        f"{'XT60 Cable':<{col3}}: {m2 and (c or cm)}{'Plugged' if m2 == '0' else 'Unplugged' if m2 == '1' else (m2 or '--'):>2}{co}"
+                    )
+                m1 = cm and mqtt.get("device_1_output_power", "")
+                m2 = cm and str(mqtt.get("device_1_mode", ""))
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'Dev 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Dev 1 Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixChargerStatus, m2, m2 or '----').capitalize()}{co}"
+                    )
+                if (m1 := mqtt.get("device_1_sn")) is not None:
+                    m2 = cm and mqtt.get("device_1_soc", "")
+                    soc = f"{m2 or '---':>4} %"
+                    m3 = cm and mqtt.get("device_1_pn", "")
+                    m4 = cm and mqtt.get("device_1_temperature", "")
+                    if m4 and mqtt.get("temp_unit_fahrenheit"):
+                        m4 = f"{float(m4) * 9 / 5 + 32:>4} °F"
+                    else:
+                        m4 = f"{m4 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
+                    CONSOLE.info(
+                        f"{('Dev 1   [' + (c or cm) + (m3 or '-----') + co + ']'):<{col1}}: {(c or cm)}{(m1 or '-' * 17):<{col2}}{co} "
+                        f"{'Dev 1 SoC / Tmp':<{col3}}: {(c or cm)}{soc} / {m4}{co}"
+                    )
 
             else:
                 if "battery_capacity" in dev:
@@ -2296,7 +2350,6 @@ class AnkerSolixApiMonitor:
                         f"{'Capacity':<{col1}}: {cc}{customized.get('battery_capacity') or dev.get('battery_capacity', '----')!s:>4} {'Wh':<{col2 - 5}}{co} "
                         f"{'Battery Count':<{col3}}: {dev.get('batCount') or 'Unknown'}"
                     )
-
                 CONSOLE.warning(
                     f"Further details for device type {str(devtype).capitalize()} are not supported"
                 )

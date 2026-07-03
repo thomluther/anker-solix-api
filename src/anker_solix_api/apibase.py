@@ -673,7 +673,16 @@ class AnkerSolixBaseApi:
                             ]
                             or (
                                 key.startswith(("device_", "pv_"))
-                                and (key.endswith(("_power", "_power_signed", "_soc")))
+                                and (
+                                    key.endswith(
+                                        (
+                                            "_power",
+                                            "_power_signed",
+                                            "_soc",
+                                            "_temperature",
+                                        )
+                                    )
+                                )
                             )
                             or (
                                 key.startswith(
@@ -799,6 +808,8 @@ class AnkerSolixBaseApi:
                                 "generator_plug_status",
                                 "car_battery_type",
                                 "car_battery_voltage_type",
+                                "cable_unplugged",
+                                "device_1_disconnected",
                             ]
                             or (
                                 str(key).endswith(
@@ -817,8 +828,12 @@ class AnkerSolixBaseApi:
                             )
                             or (
                                 str(key).startswith(
-                                    ("pair_id_circuit_", "id_circuit_")
-                                )  # , "unknown_" # Add for decoder testing
+                                    (
+                                        "pair_id_circuit_",
+                                        "id_circuit_",
+                                        "unknown_",  # Add for decoder testing
+                                    )
+                                )
                             )
                         ) and value is not None:
                             device_mqtt[key] = value
@@ -1476,7 +1491,9 @@ class AnkerSolixBaseApi:
                                 "device_type": child.get("device_type"),
                                 "need_update": bool(child.get("needUpdate")),
                                 "force_upgrade": bool(child.get("force_upgrade")),
-                                "rom_version_name": child.get("rom_version_name"),
+                                "rom_version_name": str(
+                                    child.get("rom_version_name", "")
+                                ).lstrip("v"),
                             }
                         )
                     self._update_dev(
@@ -1484,9 +1501,11 @@ class AnkerSolixBaseApi:
                             "device_sn": deviceSn,
                             "is_ota_update": need_update,
                             "ota_forced": need_update,
-                            "ota_version": (dev.get("lastPackage") or {}).get("version")
-                            or dev.get("current_version")
-                            or "",
+                            "ota_version": str(
+                                (dev.get("lastPackage") or {}).get("version", "")
+                                or dev.get("current_version", "")
+                                or ""
+                            ).lstrip("v"),
                             "ota_children": children,
                         }
                     )

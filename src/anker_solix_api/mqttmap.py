@@ -889,11 +889,11 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "40": {
-                NAME: "device_1_status?",
+                NAME: "device_1_mode",  # reverse charge (1), charge (2), standby (3)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "41": {
-                NAME: "device_1_output_power?",
+                NAME: "device_1_output_power",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -2168,7 +2168,7 @@ _A17C5_0405 = {
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
     "a3": {NAME: "main_battery_soc"},
-    "a4": {NAME: "battery_status"},  # 0: Standby; ?: Charging; 2: Charging; ?: Sleep
+    "a4": {NAME: "battery_status"},  # 0: Standby; ?: Discharging; 2: Charging; ?: Sleep
     "a5": {NAME: "temperature", SIGNED: True},
     "a6": {NAME: "battery_soc"},
     "a7": {NAME: "sw_version", "values": 4},
@@ -3610,6 +3610,10 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
                 SIGNED: True,
             },
+            "04": {
+                NAME: "cable_unplugged",  # XT60i cable disconnected (1), connected (0)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "06": {
                 NAME: "charge_power_limit_min",
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3641,6 +3645,18 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
                 FACTOR: 0.1,
             },
+            "24": {
+                NAME: "unknown_device_1_a6_24",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "25": {
+                NAME: "device_1_output_power",  # power from connected PPS
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "27": {
+                NAME: "device_1_status",  # PPS connected (0), disconnected (1), connecting (2) / via XT60i or Expansion cable
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
         }
     },
     "a7": {
@@ -3664,11 +3680,7 @@ _AS200_0421 = {
             },
             "04": {
                 NAME: "unknown_pps_a7_04",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            "05": {
-                NAME: "unknown_pps_a7_05",
-                TYPE: DeviceHexDataTypes.ui.value,
+                TYPE: DeviceHexDataTypes.sile.value,
             },
             "06": {
                 NAME: "unknown_pps_a7_06",
@@ -3697,6 +3709,10 @@ _AS200_0421 = {
             "25": {
                 NAME: "unknown_pps_f9_25",
                 TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "26": {
+                NAME: "unknown_pps_f9_26",
+                TYPE: DeviceHexDataTypes.ui.value,
             },
         }
     },

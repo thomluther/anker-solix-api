@@ -1855,6 +1855,25 @@ class SolixConnectionStatus(StrEnum):
     unknown = "unknown"
 
 
+class SolixChargerConnectionStatus(StrEnum):
+    """Str Enumeration for charger connection status."""
+
+    connected = "0"
+    disconnected = "1"
+    connecting = "2"
+    unknown = "unknown"
+
+
+class SolixChargerStatus(StrEnum):
+    """Str Enumeration for Charger status."""
+
+    off = "0"
+    discharging = "1"
+    charging = "2"
+    standby = "3"
+    unknown = "unknown"
+
+
 class SolixCpSignalStatus(StrEnum):
     """Str Enumeration for CP Signal status."""
 
