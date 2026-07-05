@@ -3625,7 +3625,7 @@ _AS200_0421 = {
                 SIGNED: True,
             },
             "04": {
-                NAME: "cable_unplugged",  # XT60i cable disconnected (1), connected (0)
+                NAME: "device_1_status",  # PPS connection via XT60i or Expansion cable: connected (1), disconnected (0), connecting (2)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "06": {
@@ -3668,7 +3668,7 @@ _AS200_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "27": {
-                NAME: "device_1_status",  # PPS connected (0), disconnected (1), connecting (2) / via XT60i or Expansion cable
+                NAME: "cable_unplugged",  # XT60i cable disconnected (0), connected (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }

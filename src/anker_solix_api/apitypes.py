@@ -1853,6 +1853,7 @@ class SolixConnectionStatus(StrEnum):
 
     disconnected = "0"
     connected = "1"
+    connecting = "2"
     unknown = "unknown"
 
 
