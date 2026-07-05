@@ -2320,7 +2320,7 @@ class AnkerSolixApiMonitor:
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Dev 1 Status':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixChargerConnectionStatus, m1, m1 or '---').capitalize():<{col2}}{co} "
-                        f"{'XT60 Cable':<{col3}}: {m2 and (c or cm)}{'Plugged' if m2 == '0' else 'Unplugged' if m2 == '1' else (m2 or '--'):>2}{co}"
+                        f"{'XT60i Cable':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixChargerConnectionStatus, m2, m2 or '---').capitalize()}{co}"
                     )
                 m1 = cm and mqtt.get("device_1_output_power", "")
                 m2 = cm and str(mqtt.get("device_1_mode", ""))
