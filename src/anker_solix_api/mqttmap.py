@@ -277,7 +277,8 @@ _A1728_0405 = {
     "bc": {NAME: "usbc_4_status"},  # USB-C top status: Inactive (0), Discharging (1)
     "bd": {NAME: "usba_1_status"},  # USB-A left status: Inactive (0), Discharging (1)
     "be": {NAME: "usba_2_status"},  # USB-A right status: Inactive (0), Discharging (1)
-    "bf": {NAME: "dc_12v_1_status"},  # DC 12V status: Inactive (0), Discharging (1)
+    #"bf": {NAME: "dc_12v_1_status"},  # DC 12V status: Inactive (0), Discharging (1)
+    "bf": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
     "c1": {
         NAME: "overload_event"
     },  # Overload event for port: None (0), USB-C1 (8), USB-C2 (9), USB-C3 (10), ...?
