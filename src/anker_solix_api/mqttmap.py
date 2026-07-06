@@ -222,7 +222,7 @@ _A1725_0405 = {
         NAME: "temp_unit_fahrenheit"
     },  # Temperature unit: Celsius (0), Fahrenheit (1)
     "ca": {NAME: "display_switch"},  # Off (0) or On (1)
-    "cd": {NAME: "charging_status"},  # Inactive (0), Solar (1)
+    "cd": {NAME: "pv_1_status"},  # Inactive (0), Solar (1)
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
 }
 
@@ -298,7 +298,7 @@ _A1728_0405 = {
     "cb": {
         NAME: "light_timeout_minutes"
     },  # Light timeout: never, 30, 60, 120, 240, 360, 720, 1440 minutes
-    "cd": {NAME: "charging_status"},  # Inactive (0), Solar (1)
+    "cd": {NAME: "pv_1_status"},  # Inactive (0), Solar (1)
     "f7": {
         NAME: "dc_12v_auto_on"
     },  # Off (0), Last state (1) - as soon as the battery is charged to 10% again
@@ -311,14 +311,6 @@ _A1728_0405 = {
         }
     },
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
-}
-
-_A1729_0405 = _A1725_0405 | {
-    # C200X DC param info (A1729)
-    # A1729 matches the C200 DC telemetry layout, but cd is only the solar input
-    # status. Keep b6 as the overall charging_status because C3 charging reports
-    # b6=2 while cd remains 0.
-    "cd": {NAME: "solar_input_status"},  # Inactive (0), Solar (1)
 }
 
 _A1761_0405 = {
@@ -4720,7 +4712,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0401": _A1725_0401,  # Interval: Irregular, triggered on app/device actions
-        "0405": _A1729_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": _A1725_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
         "0830": _PPS_VERSIONS_0830,  # Interval: Irregular, triggered on app actions, no fixed interval
     },
     # PPS C1000(X) + B1000 Extension

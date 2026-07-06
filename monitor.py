@@ -2031,8 +2031,10 @@ class AnkerSolixApiMonitor:
                 if m1 or (m2 and devtype != SolixDeviceType.CHARGER.value):
                     m3 = cm and mqtt.get("pv_yield", "")
                     m4 = cm and mqtt.get("output_energy", "")
+                    m5 = get_enum_name(SolixPpsDcChargingStatus, cm and str(mqtt.get("pv_1_status", "")), "")
                     CONSOLE.info(
-                        f"{'Solar Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3 and (c or cm)}{((' (' + m3 + ' kWh)') if m3 else ''):<{col2 - 6}}{co} "
+                        f"{'Solar Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3 and (c or cm)}"
+                        f"{((' (' + m3 + ' kWh)') if m3 else (' (' + m5 + ')') if m5 else ''):<{col2 - 6}}{co} "
                         f"{'Output Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{m4 and (c or cm)}{((' (' + m4 + ' kWh)') if m4 else '')}{co}"
                     )
                 # show each MPPT if available
