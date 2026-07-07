@@ -2318,7 +2318,7 @@ class AnkerSolixApiMonitor:
                     )
                 # attached device info
                 m1 = cm and str(mqtt.get("device_1_status", ""))
-                m2 = cm and str(mqtt.get("cable_unplugged", ""))
+                m2 = cm and str(mqtt.get("xt60i_cable", ""))
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Dev 1 Status':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixConnectionStatus, m1, m1 or '---').capitalize():<{col2}}{co} "

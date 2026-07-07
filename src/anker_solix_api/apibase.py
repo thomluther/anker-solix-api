@@ -805,11 +805,9 @@ class AnkerSolixBaseApi:
                                 "tcp_port",
                                 "ip_address",
                                 "mode",  # HA missing, HES meaning not clear
-                                "generator_plug_status",
                                 "car_battery_type",
                                 "car_battery_voltage_type",
-                                "cable_unplugged",
-                                "device_1_disconnected",
+                                "xt60i_cable",
                             ]
                             or (
                                 str(key).endswith(
@@ -822,7 +820,7 @@ class AnkerSolixBaseApi:
                                         "_hours",
                                         "_timestamp",
                                         "_packs",
-                                        # "?", # Add for decoder testing
+                                        # "?", # Add for decoder testing in monitor
                                     )
                                 )
                             )
@@ -831,7 +829,7 @@ class AnkerSolixBaseApi:
                                     (
                                         "pair_id_circuit_",
                                         "id_circuit_",
-                                        "unknown_",  # Add for decoder testing
+                                        # "unknown_",  # Add for decoder testing monitor
                                     )
                                 )
                             )
@@ -847,6 +845,10 @@ class AnkerSolixBaseApi:
                             elif key.startswith("id_circuit_"):
                                 # assign physical ids to logical ids
                                 circuits[value] = [*circuits.get(value, []), key[-2:]]
+                            elif key == "reverse_remaining_time_hours" and check_values.get("charger_mode"):
+                                # consolidate values depending on active charger mode
+                                device_mqtt["remaining_time_hours"] = value
+                                check_values["remaining_time_hours"] = value
                             value_updated = bool(
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
