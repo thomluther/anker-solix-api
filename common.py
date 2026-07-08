@@ -166,7 +166,7 @@ def print_schedule(schedule: dict) -> None:
                 for slot in ranges:
                     CONSOLE.info(
                         f"{index!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t5}}  {str(slot.get('power', '')) + ' W':>{t6}}  "
-                        f"{str(get_enum_name(SolarbankSchedulePresetType,slot.get('charging_type', 0),f"({slot.get('charging_type')})")).replace('_',' ').title():<{t9}}  "
+                        f"{str(get_enum_name(SolarbankSchedulePresetType,slot.get('charging_type', 0),f"({slot.get('charging_type','----')})")).replace('_',' ').title():<{t9}}  "
                         f"{','.join(weekdays):<{t6}}"
                     )
         # AC specific plans
@@ -292,7 +292,10 @@ def print_schedule(schedule: dict) -> None:
             sb1 = str(solarbanks[0].get("power") if len(solarbanks) > 0 else "---")
             sb2 = str(solarbanks[1].get("power") if len(solarbanks) > 1 else "---")
             CONSOLE.info(
-                f"{slot.get('id', '')!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t5}} {('---' if enabled is None else 'YES' if enabled else 'NO'):^{t6}} {str(load.get('power', '')) + ' W':>{t6}} {str(slot.get('charge_priority', '')) + ' %':>{t10}} {('---' if discharge is None else 'YES' if discharge else 'NO'):>{t9}} {sb1 + ' W':>{t6}} {sb2 + ' W':>{t6}} {slot.get('power_setting_mode', '-')!s:^{t5}} {load.get('name', '')!s}"
+                f"{slot.get('id', '')!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t5}} "
+                f"{('---' if enabled is None else 'YES' if enabled else 'NO'):^{t6}} {str(load.get('power', '')) + ' W':>{t6}} "
+                f"{str(slot.get('charge_priority', '')) + ' %':>{t10}} {('---' if discharge is None else 'YES' if discharge else 'NO'):>{t9}} "
+                f"{sb1 + ' W':>{t6}} {sb2 + ' W':>{t6}} {slot.get('power_setting_mode', '-')!s:^{t5}} {load.get('name', '')!s}"
             )
 
 
