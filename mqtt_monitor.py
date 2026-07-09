@@ -201,13 +201,20 @@ class AnkerSolixMqttMonitor:
                                 f"({Color.YELLOW}{idx}{Color.OFF}) {devicename}"
                             )
                         selection = await self.async_inupt(
-                            f"Enter device number ({Color.YELLOW}{'1-' if len(device_names) > 1 else ''}{len(device_names)}{Color.OFF}) or {Color.CYAN}nothing{Color.OFF} to quit: "
+                            f"Enter device number ({Color.YELLOW}{'1-' if len(device_names) > 1 else ''}{len(device_names)}{Color.OFF}) or "
+                            f"{Color.YELLOW}0{Color.OFF} for {Color.YELLOW}all device commands{Color.OFF} or {Color.CYAN}nothing{Color.OFF} to quit: "
                         )
                         if not selection:
                             return False
-                        if selection.isdigit() and 1 <= int(selection) <= len(
+                        if selection.isdigit() and 0 <= int(selection) <= len(
                             device_names
                         ):
+                            if int(selection) == 0:
+                                CONSOLE.info(
+                                    f"Monitoring all devices ({Color.YELLOW}1-{len(device_names)}{Color.OFF}) for {Color.YELLOW}commands only{Color.OFF}..."
+                                )
+                                self.device_selected = {}
+                                break
                             self.device_selected = devices[int(selection) - 1]
                 else:
                     CONSOLE.info("No owned Anker Solix devices found for your account.")
@@ -225,7 +232,7 @@ class AnkerSolixMqttMonitor:
                     model = (
                         self.device_selected.get("device_pn")
                         or self.device_selected.get("product_code")
-                        or ""
+                        or "CMD"
                     )
                     prefix = f"{model}_mqtt_dump"
                     if not (self.fileprefix or self.device_sn):
@@ -271,12 +278,20 @@ class AnkerSolixMqttMonitor:
                         f"\nMQTT message dumping to file: {Color.CYAN}{Path.resolve(Path(dumpfolder / filename))}{Color.OFF}"
                     )
 
-                # Start the MQTT session for the selected device
-                device_sn = self.device_selected.get("device_sn")
+                # Start the MQTT session for the selected devices
+                device_sn = (
+                    self.device_selected.get("device_sn")
+                    if self.device_selected
+                    else "ALL"
+                )
                 device_pn = (
-                    self.device_selected.get("device_pn")
-                    or self.device_selected.get("product_code")
-                    or ""
+                    (
+                        self.device_selected.get("device_pn")
+                        or self.device_selected.get("product_code")
+                        or ""
+                    )
+                    if self.device_selected
+                    else "ALL"
                 )
                 CONSOLE.info(
                     f"\nStarting MQTT server connection for device {device_sn} (model {device_pn})..."
@@ -297,17 +312,30 @@ class AnkerSolixMqttMonitor:
                     listener.start()
                 # subscribe root Topic of selected device
                 topics = set()
-                if prefix := mqtt_session.get_topic_prefix(
-                    deviceDict=self.device_selected
-                ):
-                    topics.add(f"{prefix}#")
-                # Command messages (app to device)
-                if cmd_prefix := mqtt_session.get_topic_prefix(
-                    deviceDict=self.device_selected, publish=True
-                ):
-                    topics.add(f"{cmd_prefix}#")
-                # Create MQTT device instance and save default Api MQTT callback
-                mdev = SolixMqttDeviceFactory(self.api, device_sn).create_device()
+                if self.device_selected:
+                    if prefix := mqtt_session.get_topic_prefix(
+                        deviceDict=self.device_selected
+                    ):
+                        topics.add(f"{prefix}#")
+                    # Command messages (app or cloud to device)
+                    if cmd_prefix := mqtt_session.get_topic_prefix(
+                        deviceDict=self.device_selected, publish=True
+                    ):
+                        topics.add(f"{cmd_prefix}#")
+                    # Create MQTT device instance
+                    mdev = SolixMqttDeviceFactory(self.api, device_sn).create_device()
+                else:
+                    # Add only command topics for all devices
+                    for dev in self.api.devices.values():
+                        if cmd_prefix := mqtt_session.get_topic_prefix(
+                            deviceDict=dev, publish=True
+                        ):
+                            topics.add(f"{cmd_prefix}#")
+                        # Create MQTT device instance
+                    cmd_prefix = None
+                    prefix = None
+                    mdev = None
+                # save default Api MQTT callback
                 self.mqtt_callback = mqtt_session.message_callback()
                 progress_task = None
                 poller_task = None
@@ -402,8 +430,20 @@ class AnkerSolixMqttMonitor:
                                     )
                                     topics.clear()
                                     activetopic = None
-                                    topics.add(f"{prefix}#")
-                                    topics.add(f"{cmd_prefix}#")
+                                    if self.device_selected:
+                                        topics.add(f"{prefix}#")
+                                        topics.add(f"{cmd_prefix}#")
+                                    else:
+                                        # Add only command topics for all devices
+                                        for dev in self.api.devices.values():
+                                            if (
+                                                cmd_prefix
+                                                := mqtt_session.get_topic_prefix(
+                                                    deviceDict=dev, publish=True
+                                                )
+                                            ):
+                                                topics.add(f"{cmd_prefix}#")
+                                        cmd_prefix = None
                                 elif k == "t":
                                     if tl := list(self.found_topics):
                                         index = (
@@ -424,90 +464,113 @@ class AnkerSolixMqttMonitor:
                                             f"{Color.RED}\nNo topics received yet for toggling!{Color.OFF}"
                                         )
                                 elif k == "r":
-                                    if realtime:
-                                        CONSOLE.info(
-                                            f"{Color.RED}\nDisabling real time data trigger, messages will reduce after max. 60 seconds...{Color.OFF}"
-                                        )
-                                        realtime = False
-                                        rt_devices.discard(device_sn)
+                                    if self.device_selected:
+                                        if realtime:
+                                            CONSOLE.info(
+                                                f"{Color.RED}\nDisabling real time data trigger, messages will reduce after max. 60 seconds...{Color.OFF}"
+                                            )
+                                            realtime = False
+                                            rt_devices.discard(device_sn)
+                                        else:
+                                            CONSOLE.info(
+                                                f"{Color.GREEN}\nEnabling real time data trigger, message frequency should increase shortly...{Color.OFF}"
+                                            )
+                                            realtime = True
+                                            rt_devices.add(device_sn)
                                     else:
                                         CONSOLE.info(
-                                            f"{Color.GREEN}\nEnabling real time data trigger, message frequency should increase shortly...{Color.OFF}"
+                                            f"{Color.RED}\nOption not available in command mode for all devices!{Color.OFF}"
                                         )
-                                        realtime = True
-                                        rt_devices.add(device_sn)
                                 elif k == "o":
-                                    # individual real time trigger request
-                                    if mqtt_session.realtime_trigger(
-                                        deviceDict=self.device_selected,
-                                        timeout=60,
-                                        wait_for_publish=2,
-                                    ).is_published():
+                                    if self.device_selected:
+                                        # individual real time trigger request
+                                        if mqtt_session.realtime_trigger(
+                                            deviceDict=self.device_selected,
+                                            timeout=60,
+                                            wait_for_publish=2,
+                                        ).is_published():
+                                            CONSOLE.info(
+                                                f"{Color.CYAN}\nPublished one time real time trigger request, message frequency should appear shortly...{Color.OFF}"
+                                            )
+                                    else:
                                         CONSOLE.info(
-                                            f"{Color.CYAN}\nPublished one time real time trigger request, message frequency should appear shortly...{Color.OFF}"
+                                            f"{Color.RED}\nOption not available in command mode for all devices!{Color.OFF}"
                                         )
                                 elif k == "i":
-                                    # individual status request
-                                    if mqtt_session.status_request(
-                                        deviceDict=self.device_selected,
-                                        wait_for_publish=2,
-                                    ).is_published():
-                                        CONSOLE.info(
-                                            f"{Color.CYAN}\nPublished status request, status message(s) should appear shortly...{Color.OFF}"
-                                        )
-                                elif k == "c":
-                                    # control an MQTT device
-                                    # save active message callback for later restore
-                                    cb = mqtt_session.message_callback()
-                                    # Buffer messages to prevent scrolling during display
-                                    mqtt_session.message_callback(self.buffer_message)
-                                    self.pause_output = True
-                                    CONSOLE.info(
-                                        f"\n{Color.YELLOW}Controlling MQTT device...{Color.OFF}"
-                                    )
-                                    if mdev:
-                                        control = None
-                                        self.input_task = True
-                                        control = await loop.run_in_executor(
-                                            None, common.query_mqtt_command, mdev
-                                        )
-                                        self.input_task = False
-                                        if control:
+                                    if self.device_selected:
+                                        # individual status request
+                                        if mqtt_session.status_request(
+                                            deviceDict=self.device_selected,
+                                            wait_for_publish=2,
+                                        ).is_published():
                                             CONSOLE.info(
-                                                f"Running command '{Color.CYAN}{control[0]}{Color.OFF}' with provided parameters:\n{json.dumps(control[1], indent=2)}"
-                                            )
-                                            if isinstance(
-                                                response := await mdev.run_command(
-                                                    cmd=control[0], parm_map=control[1]
-                                                ),
-                                                dict,
-                                            ):
-                                                CONSOLE.info(
-                                                    f"{Color.GREEN}Command published.{Color.OFF}"
-                                                )
-                                                if response:
-                                                    CONSOLE.info(
-                                                        f"Mocked states:\n{json.dumps(response, indent=2)}"
-                                                    )
-                                            else:
-                                                CONSOLE.error(
-                                                    f"{Color.RED}Command failed.{Color.OFF}"
-                                                )
-                                        else:
-                                            CONSOLE.warning(
-                                                f"{Color.YELLOW}MQTT device control aborted{Color.OFF}"
+                                                f"{Color.CYAN}\nPublished status request, status message(s) should appear shortly...{Color.OFF}"
                                             )
                                     else:
-                                        CONSOLE.error(
-                                            f"{Color.RED}MQTT device could not be created{Color.OFF}"
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nOption not available in command mode for all devices!{Color.OFF}"
                                         )
-                                    await self.async_inupt(
-                                        f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
-                                    )
-                                    self.pause_output = False
-                                    # print buffered messages and restore previous callback
-                                    await self.print_buffer(cb)
-                                    mqtt_session.message_callback(cb)
+                                elif k == "c":
+                                    if self.device_selected:
+                                        # control an MQTT device
+                                        # save active message callback for later restore
+                                        cb = mqtt_session.message_callback()
+                                        # Buffer messages to prevent scrolling during display
+                                        mqtt_session.message_callback(
+                                            self.buffer_message
+                                        )
+                                        self.pause_output = True
+                                        CONSOLE.info(
+                                            f"\n{Color.YELLOW}Controlling MQTT device...{Color.OFF}"
+                                        )
+                                        if mdev:
+                                            control = None
+                                            self.input_task = True
+                                            control = await loop.run_in_executor(
+                                                None, common.query_mqtt_command, mdev
+                                            )
+                                            self.input_task = False
+                                            if control:
+                                                CONSOLE.info(
+                                                    f"Running command '{Color.CYAN}{control[0]}{Color.OFF}' with provided parameters:\n{json.dumps(control[1], indent=2)}"
+                                                )
+                                                if isinstance(
+                                                    response := await mdev.run_command(
+                                                        cmd=control[0],
+                                                        parm_map=control[1],
+                                                    ),
+                                                    dict,
+                                                ):
+                                                    CONSOLE.info(
+                                                        f"{Color.GREEN}Command published.{Color.OFF}"
+                                                    )
+                                                    if response:
+                                                        CONSOLE.info(
+                                                            f"Mocked states:\n{json.dumps(response, indent=2)}"
+                                                        )
+                                                else:
+                                                    CONSOLE.error(
+                                                        f"{Color.RED}Command failed.{Color.OFF}"
+                                                    )
+                                            else:
+                                                CONSOLE.warning(
+                                                    f"{Color.YELLOW}MQTT device control aborted{Color.OFF}"
+                                                )
+                                        else:
+                                            CONSOLE.error(
+                                                f"{Color.RED}MQTT device could not be created{Color.OFF}"
+                                            )
+                                        await self.async_inupt(
+                                            f"Hit [{Color.GREEN}Enter{Color.OFF}] to continue...\n"
+                                        )
+                                        self.pause_output = False
+                                        # print buffered messages and restore previous callback
+                                        await self.print_buffer(cb)
+                                        mqtt_session.message_callback(cb)
+                                    else:
+                                        CONSOLE.info(
+                                            f"{Color.RED}\nOption not available in command mode for all devices!{Color.OFF}"
+                                        )
                                 elif k == "d":
                                     # save active message callback for later restore
                                     cb = mqtt_session.message_callback()
@@ -685,8 +748,8 @@ class AnkerSolixMqttMonitor:
         session: AnkerSolixMqttSession,
         topic: str,
         message: Any,
-        data: bytes | dict,
-        model: str,
+        data: bytes | dict | None,
+        model: str | None,
         *args,
         **kwargs,
     ) -> None:
@@ -724,12 +787,9 @@ class AnkerSolixMqttMonitor:
         col1 = 25
         col2 = 25
         col3 = 25
-        device_pn = (
-            self.device_selected.get("device_pn")
-            or self.device_selected.get("product_code")
-            or ""
-        )
         for sn, device in self.api.mqttsession.mqtt_data.items():
+            dev = self.api.devices.get(sn, {})
+            device_pn = dev.get("device_pn") or dev.get("product_code") or ""
             CONSOLE.info(f"{' ' + sn + ' (' + device_pn + ') ':-^100}")
             fields = []
             for key, value in device.items():
@@ -757,8 +817,8 @@ class AnkerSolixMqttMonitor:
         session: AnkerSolixMqttSession,
         topic: str,
         message: Any,
-        data: bytes | dict,
-        model: str,
+        data: bytes | dict | None,
+        model: str | None,
         *args,
         **kwargs,
     ) -> None:
@@ -808,8 +868,8 @@ class AnkerSolixMqttMonitor:
         session: AnkerSolixMqttSession,
         topic: str,
         message: Any,
-        data: bytes | dict,
-        model: str,
+        data: bytes | dict | None,
+        model: str | None,
         *args,
         **kwargs,
     ) -> None:
