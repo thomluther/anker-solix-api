@@ -30,7 +30,6 @@ from anker_solix_api.apitypes import (
     SolixBatteryStatus,
     SolixBatteryType,
     SolixBatteryVoltageType,
-    SolixChargerConnectionStatus,
     SolixChargerMode,
     SolixChargerPortStatus,
     SolixConnectionStatus,
