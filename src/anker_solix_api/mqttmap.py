@@ -3570,13 +3570,14 @@ _A2345_0a00 = {
             },
         },
     },
+    "b0": {
+        NAME: "display_timeout_mode",  # 0 (Never), 1 (30 sec), 2 (1 min), 3 (5 min), 4 (30 min)
+    },
     "b1": {
         NAME: "usage_mode",  # 1 (AI Power), 2 (Connection Prio), 3 (Dual Laptop), 4 (Low power)
-        TYPE: DeviceHexDataTypes.ui.value,
     },
     "b3": {
         NAME: "display_brightness",  # Brightness in %, 20-100 % step 5 %
-        TYPE: DeviceHexDataTypes.ui.value,
     },
     "fe": {NAME: "msg_timestamp"},
 }
