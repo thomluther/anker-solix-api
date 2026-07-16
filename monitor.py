@@ -32,12 +32,16 @@ from anker_solix_api.apitypes import (
     SolixBatteryVoltageType,
     SolixChargerMode,
     SolixChargerPortStatus,
+    SolixChargerUsageMode,
+    SolixClockMode,
     SolixConnectionStatus,
     SolixCpSignalStatus,
     SolixDeviceType,
+    SolixDisplayTimeoutMode,
     SolixEvChargerSolarMode,
     SolixEvChargerStatus,
     SolixEvChargerWipeMode,
+    SolixKnobMode,
     SolixMode,
     SolixOcppConnectionStatus,
     SolixPhaseMode,
@@ -755,8 +759,9 @@ class AnkerSolixApiMonitor:
                 f"{'Device [' + dev.get('device_pn', '') + ']':<{col1}}: {c or Color.MAG}{(dev.get('name', 'NoName').strip()):<{col2}}{co} "
                 f"{'Alias':<{col3}}: {c or Color.MAG}{dev.get('alias', 'Unknown')}{co}"
             )
+            m1 = cm and mqtt.get("country_code", "")
             CONSOLE.info(
-                f"{'Serial [' + (get_solix_product_code(sn) or '----') + ']':<{col1}}: {sn:<{col2}} "
+                f"{'Serial [' + (get_solix_product_code(sn) or '----') + ']':<{col1}}: {sn:<{col2}} {m1 and cm}{('(' + m1 + ')') if m1 else ''}"
                 f"{'Admin':<{col3}}: {'YES' if admin else 'NO'}"
             )
             if m1 := cm and mqtt.get("local_timestamp", 0):
@@ -1921,6 +1926,62 @@ class AnkerSolixApiMonitor:
                         f"{m3 and (c or cm)}{get_enum_name(SolixPpsDisplayMode, m3, 'unknown' if m3 else '----').capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
                         f"{'Display Timeout':<{col3}}: {m2 and (c or cm)}{(m2 or '----'):>4} Sec.{co}"
                     )
+                m1 = cm and mqtt.get("display_brightness", "")
+                m2 = cm and str(mqtt.get("display_timeout_mode", ""))
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'Display Bright.':<{col1}}: {m1 and (c or cm)}{m1 or '---':>3} {'%':<{col2 - 4}}{co} "
+                        f"{'Display Timeout':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixDisplayTimeoutMode, m2, '----').replace('_', ''):>4} Sec.  (Mode: {m2 or '-'}){co}"
+                    )
+                m1 = (
+                    cm and str(mqtt.get("usage_mode", ""))
+                    if devtype == SolixDeviceType.CHARGER.value
+                    else ""
+                )
+                m2 = cm and str(mqtt.get("knob_mode", ""))
+                if m1 or m2:
+                    CONSOLE.info(
+                        f"{'Usage Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixChargerUsageMode, m1, '----').replace('_', ' ').replace('_', ' ').title() + ' (' + (m1 or '-') + ')':<{col2}}{co} "
+                        f"{'Knob Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixKnobMode, m2, '----').title()} ({m2 or '-'}){co}"
+                    )
+                m1 = cm and mqtt.get("clock_switch", "")
+                m3 = cm and str(mqtt.get("clock_mode", ""))
+                m2 = cm and mqtt.get("holiday_switch", "")
+                if str(m1) or str(m2) or m3:
+                    CONSOLE.info(
+                        f"{'Clock Control':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{co} / "
+                        f"{m3 and (c or cm)}{'Mode: ' + get_enum_name(SolixClockMode, m3, '---').strip('_') + ' (' + (m3 or '-') + ')':<{col2 - 6}}{co} "
+                        f"{'Holiday Switch':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
+                    )
+                m1 = cm and str(mqtt.get("theme_id", ""))
+                m2 = (
+                    ""  # TODO: Use method to extract ID from Api cache once implemented
+                )
+                if m1:
+                    CONSOLE.info(
+                        f"{'Clock Theme ID':<{col1}}: {m1 and (c or cm)}{m1 or '----------':<{col2}}{co} "
+                        f"{'Theme Name':<{col3}}: {m2 and c}{m2 or '----------'}{co}"
+                    )
+                m1 = cm and str(mqtt.get("clock_display_start_hour", ""))
+                m3 = cm and str(mqtt.get("clock_display_end_hour", ""))
+                m2 = cm and str(mqtt.get("clock_display_weekdays", "")).replace(
+                    "'", ""
+                ).replace(" ", "")
+                if m1 or m2 or m3:
+                    m1 = (
+                        f"{int(m1):02d}:{mqtt.get('clock_display_start_minute') or 0:02d}"
+                        if m1
+                        else m1
+                    )
+                    m3 = (
+                        f"{int(m3):02d}:{mqtt.get('clock_display_end_minute') or 0:02d}"
+                        if m3
+                        else m3
+                    )
+                    CONSOLE.info(
+                        f"{'Clock schedule':<{col1}}: {m1 and (c or cm)}{m1 or '--:--'}{co} - {m3 and (c or cm)}{m3 or '--:--':<{col2 - 8}}{co} "
+                        f"{'Weekdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
+                    )
                 m1 = cm and mqtt.get("ac_output_power_switch", "")
                 m2 = cm and mqtt.get("dc_output_power_switch", "")
                 m3 = cm and str(mqtt.get("ac_output_mode", ""))
@@ -2098,8 +2159,10 @@ class AnkerSolixApiMonitor:
                 if m2 := cm and str(mqtt.get("dc_output_timeout_seconds", "")):
                     m2 = str(timedelta(seconds=int(m2)))
                 if m1 or m2:
+                    if "." in str(m1):
+                        m1 = f"{float(m1):.2f}"
                     CONSOLE.info(
-                        f"{'DC Out Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'DC Out Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit:<{col2 - 6}}{co} "
                         f"{'DC Out Timeout':<{col3}}: {m2 and (c or cm)}{m2 or '--:--'}{co}"
                     )
                 m1 = cm and mqtt.get("ac_input_power", "")
@@ -2136,116 +2199,206 @@ class AnkerSolixApiMonitor:
                         f"{'Prot. Threshold':<{col1}}: Chg({m1 or '---':>3}) / Dischg({m3 or '---':>3}{')':<{col2 - 21}}{co} "
                         f"{'Protect Status':<{col3}}: {m2 or '-'}{co}"
                     )
-                if m1 := cm and mqtt.get("usbc_1_power", ""):
-                    if "." in m1:
+                for idx in [
+                    "usbc_1",
+                    "usbc_2",
+                    "usbc_3",
+                    "usbc_4",
+                    "usba_1",
+                    "usba_2",
+                    "dc_12v_1",
+                    "dc_12v_2",
+                ]:
+                    if m1 := cm and str(mqtt.get(f"{idx}_power", "")):
                         m1 = f"{float(m1):>5.2f}"
-                    if (m2 := cm and mqtt.get("usbc_2_power", "")) and "." in m2:
-                        m2 = f"{float(m2):>5.2f}"
-                    if m3 := cm and str(mqtt.get("usbc_1_status", "")):
-                        m3 = f" ({get_enum_name(SolixChargerPortStatus, m3, m3) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
-                    if m4 := cm and str(mqtt.get("usbc_2_status", "")):
-                        m4 = f" ({get_enum_name(SolixChargerPortStatus, m4, m4) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
-                    CONSOLE.info(
-                        f"{'USB-C 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
-                        f"{'USB-C 2 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>5} {unit}{m4}{co}"
-                    )
-                if (m1 := cm and mqtt.get("usbc_1_voltage", "")) and "." in m1:
-                    m1 = f"{float(m1):>5.2f}"
-                if (m3 := cm and mqtt.get("usbc_1_current", "")) and "." in m3:
-                    m3 = f"{float(m3):>5.3f}"
-                m5 = cm and mqtt.get("usbc_1_switch", "")
-                m6 = cm and mqtt.get("usbc_2_switch", "")
-                if m1 or m3 or str(m5):
-                    if (m2 := cm and mqtt.get("usbc_2_voltage", "")) and "." in m2:
-                        m2 = f"{float(m2):>5.2f}"
-                    if (m4 := cm and mqtt.get("usbc_2_current", "")) and "." in m4:
-                        m4 = f"{float(m4):>5.3f}"
-                    CONSOLE.info(
-                        f"{'USB-C 1 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{(m3 or '-.---') + ' A (' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 10}}{co} "
-                        f"{'USB-C 2 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
-                    )
-                if m1 := cm and mqtt.get("usbc_3_power", ""):
-                    if "." in m1:
-                        m1 = f"{float(m1):>5.2f}"
-                    if (m2 := cm and mqtt.get("usbc_4_power", "")) and "." in m2:
-                        m2 = f"{float(m2):>5.2f}"
-                    if m3 := cm and str(mqtt.get("usbc_3_status", "")):
-                        m3 = f" ({get_enum_name(SolixChargerPortStatus, m3, m3) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
-                    if m4 := cm and str(mqtt.get("usbc_4_status", "")):
-                        m4 = f" ({get_enum_name(SolixChargerPortStatus, m4, m4) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
-                    CONSOLE.info(
-                        f"{'USB-C 3 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
-                        f"{'USB-C 4 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>5} {unit}{m4}{co}"
-                    )
-                if (m1 := cm and mqtt.get("usbc_3_voltage", "")) and "." in m1:
-                    m1 = f"{float(m1):>5.2f}"
-                if (m3 := cm and mqtt.get("usbc_3_current", "")) and "." in m3:
-                    m3 = f"{float(m3):>5.3f}"
-                m5 = cm and mqtt.get("usbc_3_switch", "")
-                m6 = cm and mqtt.get("usbc_4_switch", "")
-                if m1 or m3 or str(m5):
-                    if (m2 := cm and mqtt.get("usbc_4_voltage", "")) and "." in m2:
-                        m2 = f"{float(m2):>5.2f}"
-                    if (m4 := cm and mqtt.get("usbc_4_current", "")) and "." in m4:
-                        m4 = f"{float(m4):>5.3f}"
-                    CONSOLE.info(
-                        f"{'USB-C 3 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{(m3 or '-.---') + ' A (' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 10}}{co} "
-                        f"{'USB-C 4 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
-                    )
-                if m1 := cm and mqtt.get("usba_1_power", ""):
-                    if "." in m1:
-                        m1 = f"{float(m1):>5.2f}"
-                    if (m2 := cm and mqtt.get("usba_2_power", "")) and "." in m2:
-                        m2 = f"{float(m2):>5.2f}"
-                    if m3 := cm and str(mqtt.get("usba_1_status", "")):
-                        m3 = f" ({get_enum_name(SolixChargerPortStatus, m3, m3) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
-                    if m4 := cm and str(mqtt.get("usba_2_status", "")):
-                        m4 = f" ({get_enum_name(SolixChargerPortStatus, m4, m4) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
-                    CONSOLE.info(
-                        f"{'USB-A 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
-                        f"{'USB-A 2 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>5} {unit}{m4}{co}"
-                    )
-                if (m1 := cm and mqtt.get("usba_1_voltage", "")) and "." in m1:
-                    m1 = f"{float(m1):>5.2f}"
-                if (m3 := cm and mqtt.get("usba_1_current", "")) and "." in m3:
-                    m3 = f"{float(m3):>5.3f}"
-                m5 = cm and mqtt.get("usba_switch", "")
-                m6 = cm and mqtt.get("usba_switch", "")
-                if m1 or m3 or str(m5):
-                    if (m2 := cm and mqtt.get("usba_2_voltage", "")) and "." in m2:
-                        m2 = f"{float(m2):>5.2f}"
-                    if (m4 := cm and mqtt.get("usba_2_current", "")) and "." in m4:
-                        m4 = f"{float(m4):>5.3f}"
-                    CONSOLE.info(
-                        f"{'USB-A 1 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{(m3 or '-.---') + ' A (' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 10}}{co} "
-                        f"{'USB-A 2 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
-                    )
-                if m1 := cm and mqtt.get("dc_12v_1_power", ""):
-                    if "." in m1:
-                        m1 = f"{float(m1):>5.2f}"
-                    if (m2 := cm and mqtt.get("dc_12v_2_power", "")) and "." in m2:
-                        m2 = f"{float(m2):>5.2f}"
-                    if m3 := cm and str(mqtt.get("dc_12v_1_status", "")):
-                        m3 = f" ({get_enum_name(SolixChargerPortStatus, m3, m3) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
-                    if m4 := cm and str(mqtt.get("dc_12v_2_status", "")):
-                        m4 = f" ({get_enum_name(SolixChargerPortStatus, m4, m4) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
-                    CONSOLE.info(
-                        f"{'DC 12V 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
-                        f"{'DC 12V 2 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>5} {unit}{m4}{co}"
-                    )
-                if (m1 := cm and mqtt.get("dc_12v_1_voltage", "")) and "." in m1:
-                    m1 = f"{float(m1):>5.2f}"
-                if (m3 := cm and mqtt.get("dc_12v_1_current", "")) and "." in m3:
-                    m3 = f"{float(m3):>5.3f}"
-                if m1 or m3:
-                    if (m2 := cm and mqtt.get("dc_12v_2_voltage", "")) and "." in m2:
-                        m2 = f"{float(m2):>5.2f}"
-                    if (m4 := cm and mqtt.get("dc_12v_2_current", "")) and "." in m4:
-                        m4 = f"{float(m4):>5.3f}"
-                    CONSOLE.info(
-                        f"{'DC 12V 1 V / A':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{m3 or '-.---':>5} {'A':<{col2 - 16}}{co} "
-                        f"{'DC 12V 2 V / A':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A{co}"
-                    )
+                        if m3 := cm and str(mqtt.get(f"{idx}_status", "")):
+                            m3 = f" ({get_enum_name(SolixChargerPortStatus, m3, m3) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
+                        if m2 := cm and str(mqtt.get(f"{idx}_voltage", "")):
+                            m2 = f"{float(m2):>5.2f}"
+                        if m4 := cm and str(mqtt.get(f"{idx}_current", "")):
+                            m4 = f"{float(m4):>5.3f}"
+                        if (
+                            m5 := cm and mqtt.get(f"{idx}_switch", "")
+                        ) == "" and idx.startswith("usba"):
+                            # Alternatively check shared switch for USB A
+                            m5 = cm and mqtt.get("usba_switch", "")
+                        idxstr = idx.replace("usb", "usb-").replace("_", " ").upper()
+                        CONSOLE.info(
+                            f"{idxstr + ' Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
+                            f"{idxstr + ' V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m5, str(m5) or '---').upper()}){co}"
+                        )
+                # if m1 := cm and mqtt.get("usbc_1_power", ""):
+                #     if "." in m1:
+                #         m1 = f"{float(m1):>5.2f}"
+                #     if (m2 := cm and mqtt.get("usbc_2_power", "")) and "." in m2:
+                #         m2 = f"{float(m2):>5.2f}"
+                #     if m3 := cm and str(mqtt.get("usbc_1_status", "")):
+                #         m3 = f" ({get_enum_name(SolixChargerPortStatus, m3, m3) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
+                #     if m4 := cm and str(mqtt.get("usbc_2_status", "")):
+                #         m4 = f" ({get_enum_name(SolixChargerPortStatus, m4, m4) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
+                #     CONSOLE.info(
+                #         f"{'USB-C 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
+                #         f"{'USB-C 2 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>5} {unit}{m4}{co}"
+                #     )
+                # if (m1 := cm and mqtt.get("usbc_1_voltage", "")) and "." in m1:
+                #     m1 = f"{float(m1):>5.2f}"
+                # if (m3 := cm and mqtt.get("usbc_1_current", "")) and "." in m3:
+                #     m3 = f"{float(m3):>5.3f}"
+                # m5 = cm and mqtt.get("usbc_1_switch", "")
+                # m6 = cm and mqtt.get("usbc_2_switch", "")
+                # if m1 or m3 or str(m5):
+                #     if (m2 := cm and mqtt.get("usbc_2_voltage", "")) and "." in m2:
+                #         m2 = f"{float(m2):>5.2f}"
+                #     if (m4 := cm and mqtt.get("usbc_2_current", "")) and "." in m4:
+                #         m4 = f"{float(m4):>5.3f}"
+                #     CONSOLE.info(
+                #         f"{'USB-C 1 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{(m3 or '-.---') + ' A (' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 10}}{co} "
+                #         f"{'USB-C 2 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
+                #     )
+                # if m1 := cm and mqtt.get("usbc_3_power", ""):
+                #     if "." in m1:
+                #         m1 = f"{float(m1):>5.2f}"
+                #     if (m2 := cm and mqtt.get("usbc_4_power", "")) and "." in m2:
+                #         m2 = f"{float(m2):>5.2f}"
+                #     if m3 := cm and str(mqtt.get("usbc_3_status", "")):
+                #         m3 = f" ({get_enum_name(SolixChargerPortStatus, m3, m3) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
+                #     if m4 := cm and str(mqtt.get("usbc_4_status", "")):
+                #         m4 = f" ({get_enum_name(SolixChargerPortStatus, m4, m4) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
+                #     CONSOLE.info(
+                #         f"{'USB-C 3 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
+                #         f"{'USB-C 4 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>5} {unit}{m4}{co}"
+                #     )
+                # if (m1 := cm and mqtt.get("usbc_3_voltage", "")) and "." in m1:
+                #     m1 = f"{float(m1):>5.2f}"
+                # if (m3 := cm and mqtt.get("usbc_3_current", "")) and "." in m3:
+                #     m3 = f"{float(m3):>5.3f}"
+                # m5 = cm and mqtt.get("usbc_3_switch", "")
+                # m6 = cm and mqtt.get("usbc_4_switch", "")
+                # if m1 or m3 or str(m5):
+                #     if (m2 := cm and mqtt.get("usbc_4_voltage", "")) and "." in m2:
+                #         m2 = f"{float(m2):>5.2f}"
+                #     if (m4 := cm and mqtt.get("usbc_4_current", "")) and "." in m4:
+                #         m4 = f"{float(m4):>5.3f}"
+                #     CONSOLE.info(
+                #         f"{'USB-C 3 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{(m3 or '-.---') + ' A (' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 10}}{co} "
+                #         f"{'USB-C 4 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
+                #     )
+                # if m1 := cm and mqtt.get("usba_1_power", ""):
+                #     if "." in m1:
+                #         m1 = f"{float(m1):>5.2f}"
+                #     if (m2 := cm and mqtt.get("usba_2_power", "")) and "." in m2:
+                #         m2 = f"{float(m2):>5.2f}"
+                #     if m3 := cm and str(mqtt.get("usba_1_status", "")):
+                #         m3 = f" ({get_enum_name(SolixChargerPortStatus, m3, m3) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
+                #     if m4 := cm and str(mqtt.get("usba_2_status", "")):
+                #         m4 = f" ({get_enum_name(SolixChargerPortStatus, m4, m4) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
+                #     CONSOLE.info(
+                #         f"{'USB-A 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
+                #         f"{'USB-A 2 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>5} {unit}{m4}{co}"
+                #     )
+                # if (m1 := cm and mqtt.get("usba_1_voltage", "")) and "." in m1:
+                #     m1 = f"{float(m1):>5.2f}"
+                # if (m3 := cm and mqtt.get("usba_1_current", "")) and "." in m3:
+                #     m3 = f"{float(m3):>5.3f}"
+                # m5 = cm and mqtt.get("usba_switch", "")
+                # m6 = cm and mqtt.get("usba_switch", "")
+                # if m1 or m3 or str(m5):
+                #     if (m2 := cm and mqtt.get("usba_2_voltage", "")) and "." in m2:
+                #         m2 = f"{float(m2):>5.2f}"
+                #     if (m4 := cm and mqtt.get("usba_2_current", "")) and "." in m4:
+                #         m4 = f"{float(m4):>5.3f}"
+                #     CONSOLE.info(
+                #         f"{'USB-A 1 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{(m3 or '-.---') + ' A (' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 10}}{co} "
+                #         f"{'USB-A 2 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
+                #     )
+                # if m1 := cm and mqtt.get("dc_12v_1_power", ""):
+                #     if "." in m1:
+                #         m1 = f"{float(m1):>5.2f}"
+                #     if (m2 := cm and mqtt.get("dc_12v_2_power", "")) and "." in m2:
+                #         m2 = f"{float(m2):>5.2f}"
+                #     if m3 := cm and str(mqtt.get("dc_12v_1_status", "")):
+                #         m3 = f" ({get_enum_name(SolixChargerPortStatus, m3, m3) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m3, m3)!s})"
+                #     if m4 := cm and str(mqtt.get("dc_12v_2_status", "")):
+                #         m4 = f" ({get_enum_name(SolixChargerPortStatus, m4, m4) if devtype == SolixDeviceType.CHARGER.value else get_enum_name(SolixPpsPortStatus, m4, m4)!s})"
+                #     CONSOLE.info(
+                #         f"{'DC 12V 1 Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
+                #         f"{'DC 12V 2 Power':<{col3}}: {m2 and (c or cm)}{m2 or '----':>5} {unit}{m4}{co}"
+                #     )
+                # if (m1 := cm and mqtt.get("dc_12v_1_voltage", "")) and "." in m1:
+                #     m1 = f"{float(m1):>5.2f}"
+                # if (m3 := cm and mqtt.get("dc_12v_1_current", "")) and "." in m3:
+                #     m3 = f"{float(m3):>5.3f}"
+                # if m1 or m3:
+                #     if (m2 := cm and mqtt.get("dc_12v_2_voltage", "")) and "." in m2:
+                #         m2 = f"{float(m2):>5.2f}"
+                #     if (m4 := cm and mqtt.get("dc_12v_2_current", "")) and "." in m4:
+                #         m4 = f"{float(m4):>5.3f}"
+                #     CONSOLE.info(
+                #         f"{'DC 12V 1 V / A':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{m3 or '-.---':>5} {'A':<{col2 - 16}}{co} "
+                #         f"{'DC 12V 2 V / A':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A{co}"
+                #     )
+                for idx in ["usbc_1", "usbc_2", "usbc_3", "usbc_4", "usba"]:
+                    m1 = cm and mqtt.get(f"{idx}_timer_seconds", "")
+                    m3 = cm and mqtt.get(f"{idx}_timer_switch", "")
+                    m6 = cm and mqtt.get(f"{idx}_priority", "")
+                    if str(m1) or str(m3) or str(m6):
+                        m2 = cm and mqtt.get(f"{idx}_timer_remaining_seconds", "")
+                        m4 = cm and mqtt.get(f"{idx}_timer_remaining_timestamp", "")
+                        if str(m1).isdigit():
+                            m1 = timedelta(seconds=m1)
+                        if str(m2).isdigit():
+                            m2 = (
+                                timedelta(seconds=sec)
+                                if (
+                                    sec := max(
+                                        0,
+                                        int(
+                                            m2
+                                            - (
+                                                int(datetime.now().timestamp()) - m4
+                                                if (m4)
+                                                else 0
+                                            )
+                                        ),
+                                    )
+                                )
+                                else ""
+                            )
+                        idxstr = idx.replace("usb", "usb-").replace("_", " ").upper()
+                        CONSOLE.info(
+                            f"{idxstr + ' Timer':<{col1}}: {m1 and (c or cm)}{str(m1) or '--:--:--':>8} {str(m3) and (c or cm)}({get_enum_name(SolixSwitchMode, m3, str(m3) or '--').upper() + ')':<{col2 - 10}}{co} "
+                            f"{idxstr + ' Remain':<{col3}}: {m2 and (c or cm)}{str(m2) or '--:--:--':>8}{co}  {str(m6) and (c or cm)}(Prio {str(m6) or '-'}){co}"
+                        )
+                    m1 = cm and str(mqtt.get(f"{idx}_start_hour", ""))
+                    m3 = cm and mqtt.get(f"{idx}_start_switch", "")
+                    m2 = cm and str(mqtt.get(f"{idx}_start_weekdays", "")).replace(
+                        "'", ""
+                    ).replace(" ", "")
+                    if m1 or m2 or str(m3):
+                        m1 = (
+                            f"{int(m1):02d}:{mqtt.get(f'{idx}_start_minute') or 0:02d}"
+                            if m1
+                            else m1
+                        )
+                        CONSOLE.info(
+                            f"{idxstr + ' Start':<{col1}}: {m1 and (c or cm)}{m1 or '--:--':>5}{co} {str(m3) and (c or cm)}({get_enum_name(SolixSwitchMode, m3, str(m3) or '--').upper() + ')':<{col2 - 7}}{co} "
+                            f"{idxstr + ' Wkdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
+                        )
+                    m1 = cm and str(mqtt.get(f"{idx}_end_hour", ""))
+                    m3 = cm and mqtt.get(f"{idx}_end_switch", "")
+                    m2 = cm and str(mqtt.get(f"{idx}_end_weekdays", "")).replace(
+                        "'", ""
+                    ).replace(" ", "")
+                    if m1 or m2 or str(m3):
+                        m1 = (
+                            f"{int(m1):02d}:{mqtt.get(f'{idx}_end_minute') or 0:02d}"
+                            if m1
+                            else m1
+                        )
+                        CONSOLE.info(
+                            f"{idxstr + ' End':<{col1}}: {m1 and (c or cm)}{m1 or '--:--':>5}{co} {str(m3) and (c or cm)}({get_enum_name(SolixSwitchMode, m3, str(m3) or '--').upper() + ')':<{col2 - 7}}{co} "
+                            f"{idxstr + ' Wkdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
+                        )
                 if (m1 := cm and mqtt.get("ac_1_voltage", "")) and "." in m1:
                     m1 = f"{float(m1):>5.2f}"
                 if (m3 := cm and mqtt.get("ac_1_current", "")) and "." in m3:

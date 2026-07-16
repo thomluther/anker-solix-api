@@ -14,7 +14,13 @@ from .mqttcmdmap import (
     CMD_AC_PORT_SWITCH,
     CMD_BATTERY_CHARGE_LIMITS,
     CMD_CAR_BATTERY_TYPE,
+    CMD_CHARGER_CLOCK_DISPLAY,
+    CMD_CHARGER_CLOCK_HOLIDAY,
+    CMD_CHARGER_CLOCK_MODE,
+    CMD_CHARGER_KNOB_MODE,
+    CMD_CHARGER_THEME,
     CMD_CHARGER_USAGE_MODE,
+    CMD_COMMON,
     CMD_COMMON_V2,
     CMD_DC_12V_OUTPUT_MODE,
     CMD_DC_OUTPUT_SWITCH,
@@ -26,6 +32,7 @@ from .mqttcmdmap import (
     CMD_DISPLAY_BRIGHTNESS,
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
+    CMD_DISPLAY_TIMEOUT_MODE,
     CMD_DISPLAY_TIMEOUT_SEC,
     CMD_ENERGY_SAVING_SWITCH,
     CMD_EV_AUTO_CHARGE_RESTART_SWITCH,
@@ -45,8 +52,11 @@ from .mqttcmdmap import (
     CMD_PLUG_DELAYED_TOGGLE,
     CMD_PLUG_LOCK_SWITCH,
     CMD_PLUG_SCHEDULE,
+    CMD_PORT_END,
     CMD_PORT_MEMORY_SWITCH,
     CMD_PORT_PRIORITY,
+    CMD_PORT_START,
+    CMD_PORT_TIMER,
     CMD_REALTIME_TRIGGER,
     CMD_REVERSE_CHARGE_LIMITS,
     CMD_SB_3RD_PARTY_PV_SWITCH,
@@ -70,6 +80,7 @@ from .mqttcmdmap import (
     CMD_STATUS_REQUEST,
     CMD_SWIPE_DOWN_MODE,
     CMD_SWIPE_UP_MODE,
+    CMD_TBD_SWITCH,
     CMD_TEMP_UNIT,
     CMD_TEMP_UNIT_V2,
     CMD_TIMER_REQUEST,
@@ -2494,6 +2505,9 @@ _AX170_0405 = {
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
     "a6": {NAME: "battery_soc_total"},  # Average SOC of all devices in system
+    "a7": {NAME: "sw_version", "values": 4},
+    "a8": {NAME: "sw_controller", "values": 4},
+    "a9": {NAME: "hw_version?", "values": 4},
     "ab": {
         NAME: "pv_power_total"
     },  # Total PV power from all devices in system? Only verified with 1 E10 Module
@@ -2539,6 +2553,10 @@ _AX170_0405 = {
     # for e3 decoding see https://github.com/thomluther/anker-solix-api/issues/312#issuecomment-4691257976
     "e3": {
         BYTES: {
+            "00": {
+                NAME: "low_backup_soc",  # SOC when low prio circuits stop during backup discharge
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "01": {
                 NAME: "pair_id_circuit_01",
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -2927,6 +2945,9 @@ _AX170_0405 = {
             },
         }
     },
+    "fd": {
+        NAME: "high_backup_soc"
+    },  # SOC when low prio circuits start during backup discharge
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -3348,6 +3369,7 @@ _A2345_0303 = {
         }
     },
     "a8": {
+        # same as 0a00 bd
         BYTES: {
             "00": {
                 NAME: "unknown_a8_00_01",
@@ -3367,6 +3389,7 @@ _A2345_0303 = {
             },
         }
     },
+    # "a9" same as 0a00 be
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -3516,6 +3539,47 @@ _A2345_0a00 = {
                 NAME: "usbc_1_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "01": {
+                NAME: "usbc_1_start_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "usbc_1_start_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                NAME: "usbc_1_start_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "usbc_1_start_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "05": {
+                NAME: "usbc_1_end_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "06": {
+                NAME: "usbc_1_end_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "07": {
+                NAME: "usbc_1_end_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "usbc_1_end_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "09": {NAME: "usbc_1_timer_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "10": {
+                NAME: "usbc_1_timer_seconds",
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "14": {
+                NAME: "usbc_1_timer_remaining_seconds",  # remaining seconds
+                TYPE: DeviceHexDataTypes.var.value,
+            },
             "18": {
                 NAME: "usbc_1_priority",  # 1 normal, 2 prioritized
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -3527,6 +3591,47 @@ _A2345_0a00 = {
             "00": {
                 NAME: "usbc_2_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usbc_2_start_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "usbc_2_start_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                NAME: "usbc_2_start_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "usbc_2_start_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "05": {
+                NAME: "usbc_2_end_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "06": {
+                NAME: "usbc_2_end_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "07": {
+                NAME: "usbc_2_end_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "usbc_2_end_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "09": {NAME: "usbc_2_timer_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "10": {
+                NAME: "usbc_2_timer_seconds",
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "14": {
+                NAME: "usbc_2_timer_remaining_seconds",  # remaining seconds
+                TYPE: DeviceHexDataTypes.var.value,
             },
             "18": {
                 NAME: "usbc_2_priority",  # 1 normal, 2 prioritized
@@ -3540,6 +3645,47 @@ _A2345_0a00 = {
                 NAME: "usbc_3_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "01": {
+                NAME: "usbc_3_start_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "usbc_3_start_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                NAME: "usbc_3_start_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "usbc_3_start_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "05": {
+                NAME: "usbc_3_end_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "06": {
+                NAME: "usbc_3_end_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "07": {
+                NAME: "usbc_3_end_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "usbc_3_end_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "09": {NAME: "usbc_3_timer_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "10": {
+                NAME: "usbc_3_timer_seconds",
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "14": {
+                NAME: "usbc_3_timer_remaining_seconds",  # remaining seconds
+                TYPE: DeviceHexDataTypes.var.value,
+            },
             "18": {
                 NAME: "usbc_3_priority",  # 1 normal, 2 prioritized
                 TYPE: DeviceHexDataTypes.ui.value,
@@ -3551,6 +3697,47 @@ _A2345_0a00 = {
             "00": {
                 NAME: "usbc_4_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usbc_4_start_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "usbc_4_start_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                NAME: "usbc_4_start_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "usbc_4_start_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "05": {
+                NAME: "usbc_4_end_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "06": {
+                NAME: "usbc_4_end_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "07": {
+                NAME: "usbc_4_end_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "usbc_4_end_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "09": {NAME: "usbc_4_timer_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "10": {
+                NAME: "usbc_4_timer_seconds",
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "14": {
+                NAME: "usbc_4_timer_remaining_seconds",  # remaining seconds
+                TYPE: DeviceHexDataTypes.var.value,
             },
             "18": {
                 NAME: "usbc_4_priority",  # 1 normal, 2 prioritized
@@ -3564,9 +3751,63 @@ _A2345_0a00 = {
                 NAME: "usba_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "01": {
+                NAME: "usba_start_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "usba_start_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                NAME: "usba_start_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "usba_start_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "05": {
+                NAME: "usba_end_switch",  # 0 (off), 1 (on)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "06": {
+                NAME: "usba_end_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "07": {
+                NAME: "usba_end_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "08": {
+                NAME: "usba_end_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "09": {NAME: "usba_timer_switch", TYPE: DeviceHexDataTypes.ui.value},
+            "10": {
+                NAME: "usba_timer_seconds",
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            "14": {
+                NAME: "usba_timer_remaining_seconds",  # remaining seconds
+                TYPE: DeviceHexDataTypes.var.value,
+            },
             "18": {
                 NAME: "usba_priority",  # 0 no priority
                 TYPE: DeviceHexDataTypes.ui.value,
+            },
+        },
+    },
+    "af": {
+        BYTES: {
+            "00": [
+                {NAME: "clock_switch", MASK: 0x80},
+                {NAME: "holiday_switch", MASK: 0x40},
+            ],
+            "01": {
+                NAME: "theme_id",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
             },
         },
     },
@@ -3579,6 +3820,41 @@ _A2345_0a00 = {
     "b3": {
         NAME: "display_brightness",  # Brightness in %, 20-100 % step 5 %
     },
+    "b4": {
+        NAME: "knob_mode",  # 0: forward, 1 backward
+    },
+    "b5": {
+        NAME: "clock_mode",  # 0 (12h), 1 (24h)
+    },
+    "b6": {
+        NAME: "unknown_b6",
+    },
+    "b9": {
+        BYTES: {
+            "00": {
+                NAME: "clock_display_start_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "clock_display_start_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "clock_display_end_hour",  # hour as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                NAME: "clock_display_end_minute",  # minute as byte
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "clock_display_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        },
+    },
+    # "bd" same as 0303 a8
+    # "be" same as 0303 a9
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -6059,7 +6335,32 @@ SOLIXMQTTMAP: Final[dict] = {
     # Prime Charger 250W
     "A2345": {
         "0200": CMD_STATUS_REQUEST,  # Device status request for message 0a00
+        "0202": CMD_COMMON | {COMMAND_NAME: SolixMqttCommands.theme_request},
+        "0203": CMD_DISPLAY_TIMEOUT_MODE,  # 0 (Never), 1 (30 sec), 2 (60 sec), 3 (5 min), 4 (30 min)
         "0204": CMD_DISPLAY_BRIGHTNESS,  # Display brightness 20-100 %, step 5 %
+        "0205": {  # Set Theme and clock display
+            COMMAND_LIST: [
+                SolixMqttCommands.charger_theme,  # fields a2-a6
+                SolixMqttCommands.charger_theme_custom,  # fields a2-a5, a7 with custom url
+            ],
+            SolixMqttCommands.charger_theme: CMD_CHARGER_THEME,
+            SolixMqttCommands.charger_theme_custom: {
+                k: v for k, v in CMD_CHARGER_THEME.items() if k != "a6"
+            }
+            | {
+                "a7": {
+                    TYPE: DeviceHexDataTypes.bin.value,
+                    BYTES: {
+                        "00": {
+                            NAME: "set_theme_url",
+                            TYPE: DeviceHexDataTypes.str.value,
+                            STATE_NAME: "theme_url",
+                            VALUE_STATE: "theme_url",
+                        }
+                    },
+                }
+            },
+        },
         "0206": CMD_CHARGER_USAGE_MODE,  # mode: 1 (AI Power mode), 2 (Connection Prio), 3 (Dual Laptop mode), 4 (Low power mode)
         "0207": {
             # USB port switch command. Same command, but selected port is a parameter
@@ -6070,67 +6371,69 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.usbc_4_port_switch,
                 SolixMqttCommands.usba_port_switch,
             ],
-            SolixMqttCommands.usbc_1_port_switch: CMD_USB_PORT_SWITCH
-            | {
-                "a2": {
-                    **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 0,  # same pattern but different default option for port
-                },
-                "a3": {
-                    **CMD_USB_PORT_SWITCH["a3"],
-                    STATE_NAME: "usbc_1_switch",
-                },
-            },
-            SolixMqttCommands.usbc_2_port_switch: CMD_USB_PORT_SWITCH
-            | {
-                "a2": {
-                    **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 1,  # same pattern but different default option for port
-                },
-                "a3": {
-                    **CMD_USB_PORT_SWITCH["a3"],
-                    STATE_NAME: "usbc_2_switch",
-                },
-            },
-            SolixMqttCommands.usbc_3_port_switch: CMD_USB_PORT_SWITCH
-            | {
-                "a2": {
-                    **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 2,  # same pattern but different default option for port
-                },
-                "a3": {
-                    **CMD_USB_PORT_SWITCH["a3"],
-                    STATE_NAME: "usbc_3_switch",
-                },
-            },
-            SolixMqttCommands.usbc_4_port_switch: CMD_USB_PORT_SWITCH
-            | {
-                "a2": {
-                    **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 3,  # same pattern but different default option for port
-                },
-                "a3": {
-                    **CMD_USB_PORT_SWITCH["a3"],
-                    STATE_NAME: "usbc_4_switch",
-                },
-            },
-            SolixMqttCommands.usba_port_switch: CMD_USB_PORT_SWITCH
-            | {
-                "a2": {
-                    **CMD_USB_PORT_SWITCH["a2"],
-                    VALUE_DEFAULT: 4,  # same pattern but different default option for port
-                },
-                "a3": {
-                    **CMD_USB_PORT_SWITCH["a3"],
-                    STATE_NAME: "usba_switch",
-                },
-            },
+            SolixMqttCommands.usbc_1_port_switch: CMD_USB_PORT_SWITCH.get("usbc_1"),
+            SolixMqttCommands.usbc_2_port_switch: CMD_USB_PORT_SWITCH.get("usbc_2"),
+            SolixMqttCommands.usbc_3_port_switch: CMD_USB_PORT_SWITCH.get("usbc_3"),
+            SolixMqttCommands.usbc_4_port_switch: CMD_USB_PORT_SWITCH.get("usbc_4"),
+            SolixMqttCommands.usba_port_switch: CMD_USB_PORT_SWITCH.get("usba"),
         },
+        "0208": {
+            # USB port schedule command. Same command, but selected port and time type is a parameter
+            COMMAND_LIST: [
+                SolixMqttCommands.usbc_1_start_time,
+                SolixMqttCommands.usbc_2_start_time,
+                SolixMqttCommands.usbc_3_start_time,
+                SolixMqttCommands.usbc_4_start_time,
+                SolixMqttCommands.usba_start_time,
+                SolixMqttCommands.usbc_1_end_time,
+                SolixMqttCommands.usbc_2_end_time,
+                SolixMqttCommands.usbc_3_end_time,
+                SolixMqttCommands.usbc_4_end_time,
+                SolixMqttCommands.usba_end_time,
+            ],
+            SolixMqttCommands.usbc_1_start_time: CMD_PORT_START.get("usbc_1"),
+            SolixMqttCommands.usbc_2_start_time: CMD_PORT_START.get("usbc_2"),
+            SolixMqttCommands.usbc_3_start_time: CMD_PORT_START.get("usbc_3"),
+            SolixMqttCommands.usbc_4_start_time: CMD_PORT_START.get("usbc_4"),
+            SolixMqttCommands.usba_start_time: CMD_PORT_START.get("usba"),
+            SolixMqttCommands.usbc_1_end_time: CMD_PORT_END.get("usbc_1"),
+            SolixMqttCommands.usbc_2_end_time: CMD_PORT_END.get("usbc_2"),
+            SolixMqttCommands.usbc_3_end_time: CMD_PORT_END.get("usbc_3"),
+            SolixMqttCommands.usbc_4_end_time: CMD_PORT_END.get("usbc_4"),
+            SolixMqttCommands.usba_end_time: CMD_PORT_END.get("usba"),
+        },
+        "0209": {
+            # USB port timer command. Same command, but selected port is a parameter
+            COMMAND_LIST: [
+                SolixMqttCommands.usbc_1_port_timer,
+                SolixMqttCommands.usbc_2_port_timer,
+                SolixMqttCommands.usbc_3_port_timer,
+                SolixMqttCommands.usbc_4_port_timer,
+                SolixMqttCommands.usba_port_timer,
+            ],
+            SolixMqttCommands.usbc_1_port_timer: CMD_PORT_TIMER.get("usbc_1"),
+            SolixMqttCommands.usbc_2_port_timer: CMD_PORT_TIMER.get("usbc_2"),
+            SolixMqttCommands.usbc_3_port_timer: CMD_PORT_TIMER.get("usbc_3"),
+            SolixMqttCommands.usbc_4_port_timer: CMD_PORT_TIMER.get("usbc_4"),
+            SolixMqttCommands.usba_port_timer: CMD_PORT_TIMER.get("usba"),
+        },
+        # "020a" # unknown client command, fields a2 (country_id), a3 (account_id)
         # Special realtime trigger for this device, with 10 seconds timeout fix, sending a 0303 message per second
         "020b": {
             k: v for k, v in CMD_REALTIME_TRIGGER.items() if k not in ["a2", "a3"]
         },
         "020c": CMD_PORT_PRIORITY,  # Set the port priorities for given port bitmask
+        "020e": CMD_CHARGER_KNOB_MODE,  # Set charger knob mode: 0 forward, 1 backward
+        "020f": CMD_CHARGER_CLOCK_HOLIDAY,  # Set weekend mode for clock display
+        "0210": CMD_CHARGER_CLOCK_MODE,  # Set charger clock mode: 0: 12h, 1: 24h
+        # "0212" # unknown cloud command, fields a2-a8
+        "0213": CMD_CHARGER_CLOCK_DISPLAY,  # Set charger clock display schedule
+        # "0214": CMD_TBD_SWITCH,  # unknown client command, fields a2
+        # "0223": CMD_TBD_SWITCH,  # unknown client command, fields a2
+        "0300": {
+            "a4": {NAME: "usage_mode"},
+            "fe": {NAME: "msg_timestamp"},
+        },
         # Interval: Upon change of the referred port toggle, usable by data extractor to adjust correct port state
         "0302": {
             "a2": {NAME: "set_port_switch_select"},
@@ -6139,13 +6442,57 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~1 second, but only with realtime trigger. Consumption data, all data fields are also in 0a00 message
         "0303": _A2345_0303,
-        # Interval: Upon change of the priority
+        # Interval: Upon change of the port timer
+        "0307": {
+            "a2": {NAME: "set_port_timer_select"},
+            "a3": {
+                BYTES: {
+                    "00": {
+                        NAME: "set_port_timer_switch",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },  # "off": 0, "on": 1
+                    "01": {
+                        NAME: "port_timer_seconds",  # Timer seconds, custom range: 0-86100, step 300
+                        TYPE: DeviceHexDataTypes.var.value,
+                    },
+                    "05": {
+                        NAME: "port_timer_remaining_seconds",  # remaining seconds
+                        TYPE: DeviceHexDataTypes.var.value,
+                    },
+                },
+            },
+        },
         "030f": {
-            "a3": {NAME: "port_priority"},
+            "a3": {NAME: "set_port_priority"},
+            "fe": {NAME: "msg_timestamp"},
+        },
+        "0312": {
+            "a2": {NAME: "country_code", TYPE: DeviceHexDataTypes.str.value},  # "DE"
             "fe": {NAME: "msg_timestamp"},
         },
         # Interval: only with status request command. Contains all settings and consumption data
         "0a00": _A2345_0a00,
+        "0a02": {
+            "a2": {
+                BYTES: {
+                    "00": [
+                        {NAME: "clock_switch", MASK: 0x80},
+                        {NAME: "holiday_switch", MASK: 0x40},
+                    ],
+                },
+            },
+            "a3": {
+                NAME: "theme_id",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+            },
+            "a4": {
+                NAME: "theme_url",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "a6": {NAME: "unknown_0a02_a6"},
+            "fe": {NAME: "msg_timestamp"},
+        },
     },
     # Prime Charging Station 240W 8-in-1
     "A91B2": {
@@ -6184,7 +6531,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "020b": {
             k: v for k, v in CMD_REALTIME_TRIGGER.items() if k not in ["a2", "a3"]
         },
-        # Port switch state notification (broadcast by device after 0207 command)
+        # Port switch state notification (eventual broadcast by device after 0207 command)
         "0302": {
             "a2": {NAME: "set_port_switch_select"},
             "a3": {NAME: "set_port_switch"},

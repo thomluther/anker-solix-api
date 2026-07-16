@@ -692,6 +692,12 @@ class AnkerSolixMqttMonitor:
                     listener.stop()
                     # remove queue file handler again before zipping folder
                     CONSOLE.removeHandler(qh)
+                    CONSOLE.info(
+                        "\nMQTT dump file completed: %s%s%s",
+                        Color.CYAN,
+                        Path.resolve(Path(dumpfolder / filename)),
+                        Color.OFF,
+                    )
 
     async def print_menu(self) -> None:
         """Print the key menu."""

@@ -198,7 +198,11 @@ API_ENDPOINTS: Final[dict] = {
     "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list",  # {"device_sn": deviceSn}
     "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data",  # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"}
     "charger_get_device_setting": "mini_power/v1/app/setting/get_device_setting",  # {"device_sn": deviceSn}
-    "charger_get_screensavers": "mini_power/v1/app/style/get_clock_screensavers",  # works for {"device_sn": deviceSn, "product_code": "A2345"} => Prime charger
+    "charger_get_screensavers": "mini_power/v1/app/style/get_clock_screensavers",  # works for {"product_code": "A2345"} => Prime charger
+    "charger_get_manual_screensavers": "mini_power/v1/app/style/get_manual_clock_screensavers",  # {"sn": deviceSn} # empty if no manual screensavers defined for device
+    "charger_get_port_remarks": "mini_power/v1/app/setting/get_port_remarks",  # list applied port labels {"device_sn": deviceSn}
+    "charger_set_port_remark": "mini_power/v1/app/setting/set_port_remark",  # label a port {"device_sn": deviceSn, "port_name": "C3", "remark": "test"}
+    "charger_get_protocol_status": "mini_power/v1/app/setting/get_protocol_status",  # get protocol details per mode {"device_sn": deviceSn})
 }
 
 """Following are the Anker Power/Solix Cloud API charging_energy_service endpoints known so far. They are used for Power Panels."""
@@ -492,28 +496,24 @@ related to what, seem to work with Power Panel sites: 3 + 4 used => 7 total
     'charging_disaster_prepared/quit_disaster_prepare',
     'charging_disaster_prepared/disaster_detail', # 404 page not found (verified on A17B1)
 
-related to Prime charger models: 22 + 9 used => 31 total
+related to Prime charger models: 18 + 13 used => 31 total
     'mini_power/v1/app/charging/update_charging_mode',
     'mini_power/v1/app/charging/add_charging_mode',
     'mini_power/v1/app/charging/delete_charging_mode',
     'mini_power/v1/app/setting/set_charging_mode_status',
-    'mini_power/v1/app/setting/get_port_remark',
-    'mini_power/v1/app/setting/set_port_remark',
     'mini_power/v1/app/setting/get_charging_device_identity_new_status',
     'mini_power/v1/app/setting/set_charging_device_identity_new_status',
     'mini_power/v1/app/setting/set_charging_device_identity_status',
     'mini_power/v1/app/setting/get_charging_device_identity_status_default_true',
     'mini_power/v1/app/setting/set_charging_device_identity_status_default_true',
-    'mini_power/v1/app/setting/get_power_range_support_protocols',
-    'mini_power/v1/app/setting/get_protocol_status',
+    'mini_power/v1/app/setting/get_power_range_support_protocols',  # {"device_model": "A2345"} list empty
     'mini_power/v1/app/setting/set_protocol_status',
     'mini_power/v1/app/setting/get_port_protocol_status',
     'mini_power/v1/app/setting/set_port_protocol_status',
     'mini_power/v1/app/setting/set_mode_sub_status',
+    'mini_power/v1/app/setting/set_compatibility_status',
     'mini_power/v1/app/egg/add_easter_egg_trigger_record',
     'mini_power/v1/app/egg/report_easter_egg_trigger_status', # {"device_sn": deviceSn, "report_time": 1734969388, "egg_type": 1}
-    'mini_power/v1/app/setting/set_compatibility_status',
-    'mini_power/v1/app/style/get_manual_clock_screensavers',
     'mini_power/v1/app/style/add_manual_clock_screensavers',
     'mini_power/v1/app/style/delete_manual_clock_screensavers',
     'mini_power/v1/app/style/get_url',
@@ -619,6 +619,9 @@ API_FILEPREFIXES: Final[dict] = {
     "charger_get_statistics": "charger_statistics",
     "charger_get_device_setting": "charger_device_setting",
     "charger_get_screensavers": "charger_screensavers",
+    "charger_get_manual_screensavers": "charger_manual_screensavers",
+    "charger_get_port_remarks": "charger_port_remarks",
+    "charger_get_protocol_status": "charger_protocol_status",
     # charging_energy_service endpoint file prefixes
     "charging_get_error_info": "charging_error_info",
     "charging_get_system_running_info": "charging_system_running_info",
@@ -1743,6 +1746,43 @@ class SolixMode(StrEnum):
     unknown = "unknown"
 
 
+class SolixChargerUsageMode(StrEnum):
+    """Str Enumeration for Anker Solix charger usage mode."""
+
+    ai_power = "1"
+    connection_priority = "2"
+    dual_laptop = "3"
+    low_power ="4"
+    unknown = "unknown"
+
+
+class SolixKnobMode(StrEnum):
+    """Str Enumeration for Anker Solix Knob mode."""
+
+    forward = "0"
+    backward = "1"
+    unknown = "unknown"
+
+
+class SolixClockMode(StrEnum):
+    """Str Enumeration for Anker Solix Clock mode."""
+
+    _12h = "0"
+    _24h = "1"
+    unknown = "unknown"
+
+
+class SolixDisplayTimeoutMode(StrEnum):
+    """Str Enumeration for Anker Solix display timeout mode."""
+
+    _0 = "0"
+    _30 = "1"
+    _60 = "2"
+    _300 = "3"
+    _1800 = "4"
+    unknown = "unknown"
+
+
 class SolixSwitchMode(IntEnum):
     """Int Enumeration for generic Anker Solix switch modes."""
 
@@ -1974,6 +2014,17 @@ class SolixPlugTimerMode(StrEnum):
     start = "1"
     paused = "2"
     running = "3"
+    unknown = "unknown"
+
+
+class SolixPortId(StrEnum):
+    """Str Enumeration for Solix Port Identifiers."""
+
+    usbc_1 = "0"
+    usbc_2 = "1"
+    usbc_3 = "2"
+    usbc_4 = "3"
+    usba = "4"
     unknown = "unknown"
 
 

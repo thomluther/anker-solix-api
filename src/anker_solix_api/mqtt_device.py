@@ -128,127 +128,139 @@ class SolixMqttDevice:
                             elif isinstance(items, dict):
                                 # extract all bytefield descriptions as parameter which have defined value keys
                                 subfields = items.get(BYTES, {})
-                                for item in (
+                                for itm in (
                                     subfields
                                     if isinstance(subfields, list)
                                     else list(subfields.values())
                                     if subfields
                                     else [items]
                                 ):
-                                    descriptors = {
-                                        k: v
-                                        for k, v in item.items()
-                                        if k
-                                        in [
-                                            VALUE_MIN,
-                                            VALUE_MAX,
-                                            VALUE_MIN_STATE,
-                                            VALUE_MAX_STATE,
-                                            VALUE_STEP,
-                                            VALUE_STATE,
-                                            VALUE_OPTIONS,
-                                            VALUE_OPTIONS_STATE,
-                                            VALUE_DEFAULT,
-                                            STATE_CONVERTER,
-                                            STATE_NAME,
-                                            VALUE_FOLLOWS,
-                                            LENGTH,
-                                        ]
-                                    }
-                                    # check if valid parameter for command
-                                    if (name := item.get(NAME)) and descriptors:
-                                        # check if validator can be initialized, will throw ValueError or TypeError
-                                        if (
-                                            VALUE_STATE not in descriptors
-                                            and VALUE_DEFAULT not in descriptors
-                                            and VALUE_FOLLOWS not in descriptors
-                                        ):
-                                            # This is a required parameter, preliminary descriptor check
-                                            opt = descriptors.get(VALUE_OPTIONS)
-                                            MqttCmdValidator(
-                                                min=descriptors.get(VALUE_MIN),
-                                                max=descriptors.get(VALUE_MAX),
-                                                step=descriptors.get(VALUE_STEP),
-                                                options=opt,
+                                    # handle nested bitmask fields as well
+                                    for item in itm if isinstance(itm, list) else [itm]:
+                                        descriptors = {
+                                            k: v
+                                            for k, v in item.items()
+                                            if k
+                                            in [
+                                                VALUE_MIN,
+                                                VALUE_MAX,
+                                                VALUE_MIN_STATE,
+                                                VALUE_MAX_STATE,
+                                                VALUE_STEP,
+                                                VALUE_STATE,
+                                                VALUE_OPTIONS,
+                                                VALUE_OPTIONS_STATE,
+                                                VALUE_DEFAULT,
+                                                STATE_CONVERTER,
+                                                STATE_NAME,
+                                                VALUE_FOLLOWS,
+                                                LENGTH,
+                                            ]
+                                        }
+                                        # check if valid parameter for command
+                                        if (name := item.get(NAME)) and descriptors:
+                                            # check if validator can be initialized, will throw ValueError or TypeError
+                                            if (
+                                                VALUE_STATE not in descriptors
+                                                and VALUE_DEFAULT not in descriptors
+                                                and VALUE_FOLLOWS not in descriptors
+                                            ):
+                                                # This is a required parameter, preliminary descriptor check
+                                                opt = descriptors.get(VALUE_OPTIONS)
+                                                MqttCmdValidator(
+                                                    min=descriptors.get(VALUE_MIN),
+                                                    max=descriptors.get(VALUE_MAX),
+                                                    step=descriptors.get(VALUE_STEP),
+                                                    options=opt,
+                                                )
+                                                required_options.append(opt)
+                                                if required_number is None:
+                                                    required_number = descriptors.get(
+                                                        VALUE_MIN, 0
+                                                    ) < descriptors.get(VALUE_MAX, 0)
+                                                else:
+                                                    required_number = False
+                                            # flag whether parameter is switch
+                                            descriptors["is_switch"] = bool(
+                                                isinstance(
+                                                    opt := descriptors.get(
+                                                        VALUE_OPTIONS
+                                                    ),
+                                                    dict,
+                                                )
+                                                and len(opt) == 2
+                                                and "on" in opt
+                                                and "off" in opt
                                             )
-                                            required_options.append(opt)
-                                            if required_number is None:
-                                                required_number = descriptors.get(
-                                                    VALUE_MIN, 0
-                                                ) < descriptors.get(VALUE_MAX, 0)
-                                            else:
-                                                required_number = False
-                                        # flag whether parameter is switch
-                                        descriptors["is_switch"] = bool(
-                                            isinstance(
-                                                opt := descriptors.get(VALUE_OPTIONS),
-                                                dict,
+                                            # flag whether parameter is number
+                                            descriptors["is_number"] = bool(
+                                                descriptors.get(VALUE_MIN, 0)
+                                                < descriptors.get(VALUE_MAX, 0)
                                             )
-                                            and len(opt) == 2
-                                            and "on" in opt
-                                            and "off" in opt
-                                        )
-                                        # flag whether parameter is number
-                                        descriptors["is_number"] = bool(
-                                            descriptors.get(VALUE_MIN, 0)
-                                            < descriptors.get(VALUE_MAX, 0)
-                                        )
-                                        # flag whether parameter is text
-                                        descriptors["is_text"] = bool(
-                                            isinstance(
-                                                opt := descriptors.get(VALUE_OPTIONS),
-                                                dict | list,
+                                            # flag whether parameter is text
+                                            descriptors["is_text"] = bool(
+                                                isinstance(
+                                                    opt := descriptors.get(
+                                                        VALUE_OPTIONS
+                                                    ),
+                                                    dict | list,
+                                                )
+                                                and len(opt) == 0
                                             )
-                                            and len(opt) == 0
-                                        )
-                                        # add descriptors
-                                        parameters[name] = descriptors
-                                        # save reference to descriptor for dynamic updates if state was found
-                                        if (
-                                            state_name := descriptors.get(
-                                                VALUE_MIN_STATE
-                                            )
-                                        ) is not None:
-                                            desc = self.dynamic_descriptions.get(
-                                                state_name, {}
-                                            )
-                                            self.dynamic_descriptions[state_name] = {
-                                                "key": VALUE_MIN,
-                                                "desc": [
-                                                    *desc.get("desc", []),
-                                                    descriptors,
-                                                ],
-                                            }
-                                        if (
-                                            state_name := descriptors.get(
-                                                VALUE_MAX_STATE
-                                            )
-                                        ) is not None:
-                                            desc = self.dynamic_descriptions.get(
-                                                state_name, {}
-                                            )
-                                            self.dynamic_descriptions[state_name] = {
-                                                "key": VALUE_MAX,
-                                                "desc": [
-                                                    *desc.get("desc", []),
-                                                    descriptors,
-                                                ],
-                                            }
-                                        if (
-                                            state_name := descriptors.get(
-                                                VALUE_OPTIONS_STATE
-                                            )
-                                        ) is not None:
-                                            desc = self.dynamic_descriptions.get(
-                                                state_name, {}
-                                            )
-                                            self.dynamic_descriptions[state_name] = {
-                                                "key": VALUE_OPTIONS,
-                                                "desc": [
-                                                    *desc.get("desc", []),
-                                                    descriptors,
-                                                ],
-                                            }
+                                            # add descriptors
+                                            parameters[name] = descriptors
+                                            # save reference to descriptor for dynamic updates if state was found
+                                            if (
+                                                state_name := descriptors.get(
+                                                    VALUE_MIN_STATE
+                                                )
+                                            ) is not None:
+                                                desc = self.dynamic_descriptions.get(
+                                                    state_name, {}
+                                                )
+                                                self.dynamic_descriptions[
+                                                    state_name
+                                                ] = {
+                                                    "key": VALUE_MIN,
+                                                    "desc": [
+                                                        *desc.get("desc", []),
+                                                        descriptors,
+                                                    ],
+                                                }
+                                            if (
+                                                state_name := descriptors.get(
+                                                    VALUE_MAX_STATE
+                                                )
+                                            ) is not None:
+                                                desc = self.dynamic_descriptions.get(
+                                                    state_name, {}
+                                                )
+                                                self.dynamic_descriptions[
+                                                    state_name
+                                                ] = {
+                                                    "key": VALUE_MAX,
+                                                    "desc": [
+                                                        *desc.get("desc", []),
+                                                        descriptors,
+                                                    ],
+                                                }
+                                            if (
+                                                state_name := descriptors.get(
+                                                    VALUE_OPTIONS_STATE
+                                                )
+                                            ) is not None:
+                                                desc = self.dynamic_descriptions.get(
+                                                    state_name, {}
+                                                )
+                                                self.dynamic_descriptions[
+                                                    state_name
+                                                ] = {
+                                                    "key": VALUE_OPTIONS,
+                                                    "desc": [
+                                                        *desc.get("desc", []),
+                                                        descriptors,
+                                                    ],
+                                                }
                         control["parameters"] = parameters
                         # check if control is a switch with only "on" and "off" in single required option
                         control["is_switch"] = bool(

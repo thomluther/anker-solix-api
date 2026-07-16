@@ -390,6 +390,24 @@ class DeviceHexDataField:
         values = values or {}
         if not hexdata:
             return values
+        # allow direct type overwrites, recursive calls with modified type won't modify type again
+        if (
+            fieldtype != DeviceHexDataTypes.strb.value
+            and isinstance(fieldmap, dict)
+            and (typ := fieldmap.get(TYPE))
+        ):
+            fieldtype = (
+                typ
+                if typ
+                in [
+                    DeviceHexDataTypes.str.value,
+                    DeviceHexDataTypes.ui.value,
+                    DeviceHexDataTypes.sile.value,
+                    DeviceHexDataTypes.var.value,
+                    DeviceHexDataTypes.bin.value,
+                ]
+                else fieldtype
+            )
         match fieldtype:
             case DeviceHexDataTypes.str.value:
                 # various number of bytes, string (Base type), use only printable part
@@ -405,17 +423,30 @@ class DeviceHexDataField:
                             if c.isprintable()
                         )
             case DeviceHexDataTypes.ui.value:
-                # 1 byte fix, unsigned int (Base type)
-                if name := fieldmap.get(NAME):
-                    factor = fieldmap.get(FACTOR, 1)
-                    values[name] = round_by_factor(
-                        int.from_bytes(
-                            hexdata,
-                            signed=fieldmap.get(SIGNED) is True,
+                if fieldmap.get(BYTES, {}):
+                    # extract found bytes description like DeviceHexDataTypes.bin
+                    values.update(
+                        self.extract_value(
+                            hexdata=hexdata,
+                            fieldtype=DeviceHexDataTypes.bin.value,
+                            fieldmap=fieldmap,
                         )
-                        * factor,
-                        factor,
                     )
+                elif name := fieldmap.get(NAME):
+                    # 1 byte fix, unsigned int (Base type)
+                    if name.endswith("_weekdays"):
+                        # special case for weekday bitmask
+                        values[name] = convert_weekdays(hexdata)
+                    else:
+                        factor = fieldmap.get(FACTOR, 1)
+                        values[name] = round_by_factor(
+                            int.from_bytes(
+                                hexdata,
+                                signed=fieldmap.get(SIGNED) is True,
+                            )
+                            * factor,
+                            factor,
+                        )
             case DeviceHexDataTypes.sile.value:
                 # sile can also be a 2 byte str for some fields (weird), this should then be described like a binary field
                 if fieldmap.get(BYTES, {}):
@@ -721,9 +752,12 @@ class DeviceHexDataField:
             desc = {}
         # Ignore options for fields following, since their value was already updated during validation
         options = None if desc.get(VALUE_FOLLOWS) else desc.get(VALUE_OPTIONS)
-        if (desc.get(NAME, "") or desc.get(STATE_NAME, "")).endswith("_time"):
+        if (name := desc.get(NAME, "") or desc.get(STATE_NAME, "")).endswith("_time"):
             # special case for time strings HH:MM[:SS], convert to bytes already
             fieldvalue = convert_time(str(value)) or bytes.fromhex("000000")
+        elif name.endswith("_weekdays"):
+            # special case for weekday list converting to bitmask
+            fieldvalue = convert_weekdays(value) or bytes.fromhex("00")
         elif isinstance(value, str | int | float):
             # for provided default, state or follow values without value validation descriptions, use value as is
             if not (options or VALUE_MIN in desc or VALUE_MAX in desc):
@@ -1651,4 +1685,45 @@ def convert_time(value: bytes | bytearray | str) -> bytes | str | None:
                 ([int(parts[2])] if len(parts) > 2 else [])
                 + [int(parts[1]), int(parts[0])]
             )
+    return None
+
+
+def convert_weekdays(
+    value: bytes | bytearray | list | set, lsb_day: str = "mon"
+) -> bytes | list | None:
+    """Convert list of weekdays between byte bitmask used in MQTT messages and list formats.
+
+    Automatically detects input value type and converts accordingly. The typical Byte Bitmask is:
+    0:sun:sat:fri:thu:wed:tue:mon
+    with mon as lsb_day
+
+    Args:
+        value: Weekday data in a byte bitmask (1 byte, 0-0x7f)
+              or list|set format (["tue", "sat"]).
+        lsb_day: least significant day of week = bit 0
+
+    Returns:
+        List with weekdays if input is bytes/bytearray.
+        1 Byte with the bitmask (0-0x7f) if input is list.
+        None if input is invalid or unsupported type.
+
+    """
+    weekdays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    if isinstance(lsb_day, str) and lsb_day.lower() in weekdays:
+        idx = weekdays.index(lsb_day.lower())
+        weekdays = weekdays[idx:] + weekdays[:idx]
+    if isinstance(value, bytes | bytearray) and len(value) == 1:
+        # Convert bitmask to list
+        return [
+            name
+            for idx, name in enumerate(weekdays)
+            if int.from_bytes(value) & (1 << idx)
+        ]
+    if isinstance(value, list | set) and (0 <= len(set(value)) <= 6):
+        # Convert list into bitmask byte
+        return sum(
+            1 << weekdays.index(day.lower())
+            for day in set(value)
+            if isinstance(day, str) and day.lower() in weekdays
+        ).to_bytes()
     return None
