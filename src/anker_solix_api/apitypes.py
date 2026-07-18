@@ -747,6 +747,7 @@ AE100  SOLIX Power Dock                         Plug-in Home Battery
 AE1R0  Anker SOLIX P1 Meter                     Accessory
 AE1X0  Smart Meter Gen 2                        Accessory
 AS100  C1000 Gen 2 LE                           Portable Power Station
+AS220  SOLIX S2000                              Portable Power Station
 AS200  Alternator Charger                       Charger
 AX1S0  Power Dock Pro                           Residential Storage System
 AX170  Power Dock                               Home Backup System
@@ -1018,10 +1019,15 @@ class SolixParmType(Enum):
     SOLARBANK_TARIFF_SCHEDULE = "12"
     SOLARBANK_AUTHORIZATIONS = "13"
     SOLARBANK_POWERDOCK = "16"  # get power dock SN
-    SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock
+    SOLARBANK_STATION = "18"  # station settings for site, like SOC reserve and grid export switch, works for systems that support power dock, Not used with Gen 4
     SOLARBANK_POWER_LIMIT = "19"  # cannot be queried, but only set. get_power_limit query will show active data
     # SOLARBANK_EV_CHARGER = "23" # EV Charger switch?
     SOLARBANK_3RD_PARTY_PV = "26"  # third party PV settings for site
+    SOLARBANK_SOC = "27"  # Gen 4 SOC settings (no longer in 18)
+    SOLARBANK_GRID_EXPORT = "28"  # Gen 4 grid export settings (no longer in 18)
+    SOLARBANK_PEAK_SHAVING = (
+        "30"  # Gen 4 peak_shaving_soc, peak_shaving_switch\, peak_shaving_upper_limit
+    )
     # SOLARBANK_BACKUP = "33" # backup install and ats setting
 
 
@@ -1208,6 +1214,7 @@ class SolixDeviceCapacity:
     A1763: int = 1024  # SOLIX C1000 Gen 2 Portable Power Station
     A1765: int = 1024  # SOLIX C1000X Gen 2 Portable Power Station
     AS100: int = 1024  # SOLIX C1000 Gen 2 LE Portable Power Station
+    AS220: int = 2010  # SOLIX S2000 Portable Power Station
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
@@ -1311,56 +1318,43 @@ class SolixDeviceCategory:
     A17X8: str = SolixDeviceType.SMARTPLUG.value  # SOLIX Smart Plug Gen 1/2
     SHPPS: str = SolixDeviceType.SMARTPLUG.value  # Shelly Smart Plug
     # Portable Power Stations (PPS)
-    A1720: str = (
-        SolixDeviceType.PPS.value
-    )  # Anker PowerHouse 521 Portable Power Station
-    A1722: str = SolixDeviceType.PPS.value  # SOLIX C300 Portable Power Station
-    A1723: str = SolixDeviceType.PPS.value  # SOLIX C300X Portable Power Station
-    A1725: str = SolixDeviceType.PPS.value  # SOLIX C200(X) Portable Power Station
-    A1726: str = SolixDeviceType.PPS.value  # SOLIX C300 DC Portable Power Station
-    A1727: str = SolixDeviceType.PPS.value  # SOLIX C200 DC Portable Power Station
-    A1728: str = SolixDeviceType.PPS.value  # SOLIX C300X DC Portable Power Station
-    A1729: str = SolixDeviceType.PPS.value  # SOLIX C200X DC Portable Power Station
-    A1751: str = (
-        SolixDeviceType.PPS.value
-    )  # Anker PowerHouse 535 Portable Power Station
-    A1753: str = SolixDeviceType.PPS.value  # SOLIX C800 Portable Power Station
-    A1754: str = SolixDeviceType.PPS.value  # SOLIX C800 Plus Portable Power Station
-    A1755: str = SolixDeviceType.PPS.value  # SOLIX C800X Portable Power Station
-    A1760: str = (
-        SolixDeviceType.PPS.value
-    )  # Anker PowerHouse 555 Portable Power Station
-    A1761: str = SolixDeviceType.PPS.value  # SOLIX C1000(X) Portable Power Station
-    A1762: str = SolixDeviceType.PPS.value  # SOLIX Portable Power Station 1000
-    A1763: str = SolixDeviceType.PPS.value  # SOLIX C1000 Gen 2 Portable Power Station
-    A1765: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 Portable Power Station
-    AS100: str = (
-        SolixDeviceType.PPS.value
-    )  # SOLIX C1000X Gen 2 LE Portable Power Station
-    A1770: str = (
-        SolixDeviceType.PPS.value
-    )  # Anker PowerHouse 757 Portable Power Station
-    A1771: str = SolixDeviceType.PPS.value  # SOLIX F1200 Portable Power Station
-    A1772: str = SolixDeviceType.PPS.value  # SOLIX F1500 Portable Power Station
-    A1780: str = (
-        SolixDeviceType.PPS.value
-    )  # SOLIX F2000 Portable Power Station (PowerHouse 767) with Wifi
-    A1780P: str = (
-        SolixDeviceType.PPS.value
-    )  # SOLIX F2000 Plus Portable Power Station (PowerHouse 767)
-    A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 Portable Power Station
+    A1720: str = SolixDeviceType.PPS.value  # Anker PowerHouse 521 PPS
+    A1722: str = SolixDeviceType.PPS.value  # SOLIX C300 PPS
+    A1723: str = SolixDeviceType.PPS.value  # SOLIX C300X PPS
+    A1725: str = SolixDeviceType.PPS.value  # SOLIX C200(X) PPS
+    A1726: str = SolixDeviceType.PPS.value  # SOLIX C300 DC PPS
+    A1727: str = SolixDeviceType.PPS.value  # SOLIX C200 DC PPS
+    A1728: str = SolixDeviceType.PPS.value  # SOLIX C300X DC PPS
+    A1729: str = SolixDeviceType.PPS.value  # SOLIX C200X DC PPS
+    A1751: str = SolixDeviceType.PPS.value  # Anker PowerHouse 535 PPS
+    A1753: str = SolixDeviceType.PPS.value  # SOLIX C800 PPS
+    A1754: str = SolixDeviceType.PPS.value  # SOLIX C800 Plus PPS
+    A1755: str = SolixDeviceType.PPS.value  # SOLIX C800X PPS
+    A1760: str = SolixDeviceType.PPS.value  # Anker PowerHouse 555 PPS
+    A1761: str = SolixDeviceType.PPS.value  # SOLIX C1000(X) PPS
+    A1762: str = SolixDeviceType.PPS.value  # SOLIX PPS 1000
+    A1763: str = SolixDeviceType.PPS.value  # SOLIX C1000 Gen 2 PPS
+    A1765: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 PPS
+    AS100: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 LE PPS
+    AS220: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 LE PPS
+    A1770: str = SolixDeviceType.PPS.value  # Anker PowerHouse 757 PPS
+    A1771: str = SolixDeviceType.PPS.value  # SOLIX F1200 PPS
+    A1772: str = SolixDeviceType.PPS.value  # SOLIX F1500 PPS
+    A1780: str = SolixDeviceType.PPS.value  # SOLIX F2000 PPS (PowerHouse 767) with Wifi
+    A1780P: str = SolixDeviceType.PPS.value  # SOLIX F2000 Plus PPS (PowerHouse 767)
+    A1781: str = SolixDeviceType.PPS.value  # SOLIX F2600 PPS
     A1783: str = (
         SolixDeviceType.PPS.value
-    )  # SOLIX C2000 Gen 2 Portable Power Station with Smart Meter support
+    )  # SOLIX C2000 Gen 2 PPS with Smart Meter support
     A1785: str = (
         SolixDeviceType.PPS.value
-    )  # SOLIX C2000X Gen 2 Portable Power Station with Smart Meter support
-    A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 Portable Power Station
-    A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus Portable Power Station
+    )  # SOLIX C2000X Gen 2 PPS with Smart Meter support
+    A1790: str = SolixDeviceType.PPS.value  # SOLIX F3800 PPS
+    A1790P: str = SolixDeviceType.PPS.value  # SOLIX F3800 Plus PPS
     # Solarbank PPS devices
     A1782: str = (
         SolixDeviceType.SOLARBANK_PPS.value
-    )  # SOLIX F3000 Portable Power Station with SM support (US Market)
+    )  # SOLIX F3000 PPS with SM support (US Market)
     # Power Panels (Home_backup)
     A17B1: str = (
         SolixDeviceType.POWERPANEL.value
@@ -1462,6 +1456,44 @@ class SolarbankDeviceMetrics:
         "solar_power_2",
         "solar_power_3",
         "solar_power_4",
+        "ac_power",
+        "to_home_load",
+        "pei_heating_power",
+        "grid_to_battery_power",
+        "other_input_power",  # This is AC input for charging typically
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
+        "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
+        "backup_reserve",
+        "backup_reserve_switch",
+    }
+    # SOLIX Solarbank 4 E5000, with 4 MPPT channel and AC socket
+    AE103: ClassVar[set[str]] = {
+        "sub_package_num",
+        "solar_power_1",
+        "solar_power_2",
+        "solar_power_3",
+        "solar_power_4",
+        "ac_power",
+        "to_home_load",
+        "pei_heating_power",
+        "grid_to_battery_power",
+        "other_input_power",  # This is AC input for charging typically
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
+        "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
+        "backup_reserve",
+        "backup_reserve_switch",
+    }
+    # SOLIX Solarbank Max AC
+    A17E2: ClassVar[set[str]] = {
+        "sub_package_num",
         "ac_power",
         "to_home_load",
         "pei_heating_power",
@@ -1752,7 +1784,7 @@ class SolixChargerUsageMode(StrEnum):
     ai_power = "1"
     connection_priority = "2"
     dual_laptop = "3"
-    low_power ="4"
+    low_power = "4"
     unknown = "unknown"
 
 
@@ -2025,6 +2057,23 @@ class SolixPortId(StrEnum):
     usbc_3 = "2"
     usbc_4 = "3"
     usba = "4"
+    unknown = "unknown"
+
+
+class SolixPortPriority(StrEnum):
+    """Str Enumeration for Solix Port Priorities."""
+
+    off = "0"
+    c1 = "1"
+    c2 = "2"
+    c1_c2 = "3"
+    c3 = "4"
+    c1_c3 = "5"
+    c2_c3 = "6"
+    c4 = "8"
+    c1_c4 = "9"
+    c2_c4 = "10"
+    c3_c4 = "12"
     unknown = "unknown"
 
 

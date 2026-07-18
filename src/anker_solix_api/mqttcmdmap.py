@@ -29,6 +29,12 @@ LENGTH: Final[str] = (
 MASK: Final[str] = (
     "mask"  # Define a bit mask value to be used for decoding the data value. Required if a single byte may reflect multiple data fields/settings
 )
+MASK_STATE: Final[str] = (
+    "mask_state"  # Define a state name to obtain initial bitmask field value
+)
+MASK_VALUE: Final[str] = (
+    "mask_value"  # Field to save the last state found as defined with mask_state value
+)
 OFFSET: Final[str] = (
     "offset"  # Key word to indicate byte offset to use from beginning of field
 )
@@ -1633,56 +1639,59 @@ CMD_CHARGER_CLOCK_MODE = CMD_COMMON | {
     },
 }
 
-CMD_CHARGER_CLOCK_DISPLAY = CMD_COMMON | {
-    # Command: Charger clock display schedule
-    COMMAND_NAME: SolixMqttCommands.clock_display_schedule,
-    "a2": {
-        TYPE: DeviceHexDataTypes.bin.value,
-        LENGTH: 5,
-        BYTES: {
-            "00": {
-                NAME: "set_clock_display_start_hour",  # hour
-                TYPE: DeviceHexDataTypes.ui.value,
-                VALUE_MIN: 0,
-                VALUE_MAX: 23,
-                STATE_NAME: "clock_display_start_hour",
-                VALUE_STATE: "clock_display_start_hour",
-            },
-            "01": {
-                NAME: "set_clock_display_start_minute",  # min
-                TYPE: DeviceHexDataTypes.ui.value,
-                VALUE_MIN: 0,
-                VALUE_MAX: 59,
-                STATE_NAME: "clock_display_start_minute",
-                VALUE_STATE: "clock_display_start_minute",
-            },
-            "02": {
-                NAME: "set_clock_display_end_hour",  # hour
-                TYPE: DeviceHexDataTypes.ui.value,
-                VALUE_MIN: 0,
-                VALUE_MAX: 23,
-                STATE_NAME: "clock_display_end_hour",
-                VALUE_STATE: "clock_display_end_hour",
-            },
-            "03": {
-                NAME: "set_clock_display_end_minute",  # min
-                TYPE: DeviceHexDataTypes.ui.value,
-                VALUE_MIN: 0,
-                VALUE_MAX: 59,
-                STATE_NAME: "clock_display_end_minute",
-                VALUE_STATE: "clock_display_end_minute",
-            },
-            "04": {
-                NAME: "set_clock_display_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
-                TYPE: DeviceHexDataTypes.ui.value,
-                VALUE_MIN: 0,
-                VALUE_MAX: 127,
-                STATE_NAME: "clock_display_weekdays",
-                VALUE_STATE: "clock_display_weekdays",
+CMD_CHARGER_CLOCK_DISPLAY = (
+    CMD_COMMON
+    | {
+        # Command: Charger clock display schedule
+        COMMAND_NAME: SolixMqttCommands.clock_display_schedule,
+        "a2": {
+            TYPE: DeviceHexDataTypes.bin.value,
+            LENGTH: 5,
+            BYTES: {
+                "00": {
+                    NAME: "set_clock_display_start_hour",  # hour
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 23,
+                    STATE_NAME: "clock_display_start_hour",
+                    VALUE_STATE: "clock_display_start_hour",
+                },
+                "01": {
+                    NAME: "set_clock_display_start_minute",  # min
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 59,
+                    STATE_NAME: "clock_display_start_minute",
+                    VALUE_STATE: "clock_display_start_minute",
+                },
+                "02": {
+                    NAME: "set_clock_display_end_hour",  # hour
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 23,
+                    STATE_NAME: "clock_display_end_hour",
+                    VALUE_STATE: "clock_display_end_hour",
+                },
+                "03": {
+                    NAME: "set_clock_display_end_minute",  # min
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 59,
+                    STATE_NAME: "clock_display_end_minute",
+                    VALUE_STATE: "clock_display_end_minute",
+                },
+                "04": {
+                    NAME: "set_clock_display_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 127,
+                    STATE_NAME: "clock_display_weekdays",
+                    VALUE_STATE: "clock_display_weekdays",
+                },
             },
         },
-    },
-}
+    }
+)
 
 CMD_CHARGER_THEME = CMD_COMMON | {
     # Command: Set charger theme and display options
@@ -1691,11 +1700,20 @@ CMD_CHARGER_THEME = CMD_COMMON | {
         BYTES: {
             "00": [
                 {
-                    NAME: "set_clock_display_switch",
+                    NAME: "set_clock_switch",
                     VALUE_OPTIONS: {"off": 0, "on": 1},
                     MASK: 0x80,
-                    STATE_NAME: "clock_display_switch",
-                    VALUE_STATE: "clock_display_switch",
+                    MASK_STATE: "clock_settings",
+                    STATE_NAME: "clock_switch",
+                    VALUE_STATE: "clock_switch",
+                },
+                {
+                    NAME: "set_holiday_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                    MASK: 0x40,
+                    MASK_STATE: "clock_settings",
+                    STATE_NAME: "holiday_switch",
+                    VALUE_STATE: "holiday_switch",
                 },
             ]
         },
@@ -1707,7 +1725,7 @@ CMD_CHARGER_THEME = CMD_COMMON | {
         STATE_NAME: "theme_id",
         VALUE_STATE: "theme_id",
         VALUE_MIN: 0,
-        VALUE_MAX: 4294967295,
+        VALUE_MAX: 0xFFFFFFFF,
     },
     "a4": {
         NAME: "set_theme_hash",
@@ -1716,15 +1734,15 @@ CMD_CHARGER_THEME = CMD_COMMON | {
         STATE_NAME: "theme_hash",
         VALUE_STATE: "theme_hash",
         VALUE_MIN: 0,
-        VALUE_MAX: 4294967295,
+        VALUE_MAX: 0xFFFFFFFF,
     },
     "a5": {
         NAME: "set_unknown_a5",  # only FFFFFFFF seen
         TYPE: DeviceHexDataTypes.var.value,
         SIGNED: False,
         VALUE_MIN: 0,
-        VALUE_MAX: 4294967295,
-        VALUE_DEFAULT: 4294967295,
+        VALUE_MAX: 0xFFFFFFFF,
+        VALUE_DEFAULT: 0xFFFFFFFF,
     },
     "a6": {
         TYPE: DeviceHexDataTypes.bin.value,
@@ -1974,14 +1992,14 @@ CMD_PORT_PRIORITY = CMD_COMMON | {
             "off": 0,
             "c1": 1,
             "c2": 2,
-            "c1c2": 3,
+            "c1_c2": 3,
             "c3": 4,
-            "c1c3": 5,
-            "c2c3": 6,
+            "c1_c3": 5,
+            "c2_c3": 6,
             "c4": 8,
-            "c1c4": 9,
-            "c2c4": 10,
-            "c3c4": 12,
+            "c1_c4": 9,
+            "c2_c4": 10,
+            "c3_c4": 12,
         },
     },
 }

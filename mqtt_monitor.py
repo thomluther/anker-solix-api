@@ -802,16 +802,52 @@ class AnkerSolixMqttMonitor:
                 # convert timestamps to readable data and time for printout
                 if "timestamp" in key and isinstance(value, int):
                     value = datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
+                elif key.endswith("_settings"):
+                    # print integer as bitmask
+                    value = f"{value!s} ({value:08b})"
                 if key != "topics":
                     fields.append((key, value))
                 if len(fields) >= 2:
                     # print row
+                    c1 = (
+                        Color.RED
+                        if (
+                            (fields[0][0]).endswith("?")
+                            or (fields[0][0]).startswith(("unknown_", "tbd_"))
+                        )
+                        else Color.CYAN
+                        if (fields[0][0]).endswith("_settings")
+                        else ""
+                    )
+                    c2 = (
+                        Color.RED
+                        if (
+                            (fields[1][0]).endswith("?")
+                            or (fields[1][0]).startswith(("unknown_", "tbd_"))
+                        )
+                        else Color.CYAN
+                        if (fields[1][0]).endswith("_settings")
+                        else ""
+                    )
                     CONSOLE.info(
-                        f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}} {fields[1][0]:<{col3}}: {fields[1][1]!s}"
+                        f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}}{Color.OFF} "
+                        f"{c2}{fields[1][0]:<{col3}}: {fields[1][1]!s}{Color.OFF}"
                     )
                     fields.clear()
             if fields:
-                CONSOLE.info(f"{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}")
+                c1 = (
+                    Color.RED
+                    if (
+                        (fields[0][0]).endswith("?")
+                        or (fields[0][0]).startswith(("unknown_", "tbd_"))
+                    )
+                    else Color.CYAN
+                    if (fields[0][0]).endswith("_settings")
+                    else ""
+                )
+                CONSOLE.info(
+                    f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}{Color.OFF}"
+                )
         CONSOLE.info(f"{100 * '-'}\nReceived Topics:")
         for t in self.found_topics:
             CONSOLE.info(f"{t}")

@@ -15,6 +15,7 @@ from .mqttcmdmap import (
     EMBEDDED,
     FACTOR,
     LENGTH,
+    MASK,
     NAME,
     OFFSET,
     SIGNED,
@@ -704,16 +705,27 @@ class DeviceHexDataField:
             raise TypeError(
                 "Error updating DeviceHexDataField: Missing field identifier"
             )
+        if not isinstance(desc, dict):
+            desc = {}
+        # check if field is a bitmask
+        mask = desc.get(MASK)
         try:
             if offset is None:
-                self.f_value = self.encode_value(
-                    value=value, fieldtype=fieldtype, desc=desc
-                )
+                val = self.encode_value(value=value, fieldtype=fieldtype, desc=desc)
+                # merge bitmask with existing field value if required
+                if mask and val and len(val) == 1:
+                    self.f_value = bytearray(
+                        (
+                            (val[0] & mask) | ((self.f_value[:1] or [0])[0] & ~mask)
+                        ).to_bytes()
+                    )
+                else:
+                    self.f_value = val
             # update only subfield value for requested byte offset and subfield type
             elif val := self.encode_value(
                 value=value, fieldtype=desc.get(TYPE), desc=desc
             ):
-                # Extend with zeros if needed
+                # Extend with zeros if needed to fill gap
                 if len(self.f_value) < offset:
                     self.f_value.extend(b"\x00" * (offset - len(self.f_value)))
                 # avoid str field exceeds overall field length
@@ -726,6 +738,14 @@ class DeviceHexDataField:
                     # check if field has length byte and adjust it
                     if desc.get(LENGTH, 1) <= 0:
                         val[0] = len(val) - 1
+                # merge bitmask with existing field value if required
+                if mask and val and len(val) == 1:
+                    val = bytearray(
+                        (
+                            (val[0] & mask)
+                            | ((self.f_value[offset : offset + 1] or [0])[0] & ~mask)
+                        ).to_bytes()
+                    )
                 self.f_value[offset : offset + len(val)] = val
             # Update data length
             self.f_length = len(self.f_type) + len(self.f_value)
@@ -739,24 +759,27 @@ class DeviceHexDataField:
         else:
             return self
 
-    def encode_value(
+    def encode_value(  # noqa: C901
         self,
         value: float | str | dict,
         fieldtype: bytearray | bytes | None = None,
         desc: dict | None = None,
     ) -> bytearray | None:
         """Return the encoded hex value according to existing or provided base type and field description."""
-        if not isinstance(fieldtype, bytearray | bytes):
-            fieldtype = self.f_type
         if not isinstance(desc, dict):
             desc = {}
+        # check if field is a bitmask
+        mask = desc.get(MASK)
+        if not isinstance(fieldtype, bytearray | bytes):
+            # default to single byte ui value if bitmask
+            fieldtype = DeviceHexDataTypes.ui.value if mask else self.f_type
         # Ignore options for fields following, since their value was already updated during validation
         options = None if desc.get(VALUE_FOLLOWS) else desc.get(VALUE_OPTIONS)
         if (name := desc.get(NAME, "") or desc.get(STATE_NAME, "")).endswith("_time"):
             # special case for time strings HH:MM[:SS], convert to bytes already
             fieldvalue = convert_time(str(value)) or bytes.fromhex("000000")
         elif name.endswith("_weekdays"):
-            # special case for weekday list converting to bitmask
+            # special case for weekday list converting to integer bitmask for range validation
             fieldvalue = convert_weekdays(value) or bytes.fromhex("00")
         elif isinstance(value, str | int | float):
             # for provided default, state or follow values without value validation descriptions, use value as is
@@ -813,6 +836,18 @@ class DeviceHexDataField:
                             signed=desc.get(SIGNED) is True,
                         )
                     )
+                # special case for provided binary fieldvalues
+                elif isinstance(fieldvalue, bytes | bytearray):
+                    # ensure 1 byte length if requirded
+                    hexvalue = bytearray(fieldvalue[:1])
+                # shift value if bitmask
+                if mask and hexvalue:
+                    value = hexvalue[0]
+                    # shift mask and value until LSB of mask is one, then value reflects correct byte value
+                    while (mask & 1) == 0:
+                        mask >>= 1
+                        value <<= 1
+                    hexvalue[0] = value & 0xFF  # limit to 1 byte
             case DeviceHexDataTypes.sile.value:
                 # 2 bytes fix, signed int LE (Base type)
                 if isinstance(fieldvalue, int | float):
@@ -853,7 +888,7 @@ class DeviceHexDataField:
                 raise TypeError(
                     f"Field type not supported for encoding, got {fieldtype!s}"
                 )
-        if not hexvalue:
+        if hexvalue is None:
             raise TypeError(
                 f"Value not supported for encoding to fieldtype {fieldtype!s}, parameter '{desc.get(NAME, '')}' was {type(value)}: {value!s}, with value options: {options!s}"
             )
@@ -1719,7 +1754,7 @@ def convert_weekdays(
             for idx, name in enumerate(weekdays)
             if int.from_bytes(value) & (1 << idx)
         ]
-    if isinstance(value, list | set) and (0 <= len(set(value)) <= 6):
+    if isinstance(value, list | set) and (0 <= len(set(value)) <= 7):
         # Convert list into bitmask byte
         return sum(
             1 << weekdays.index(day.lower())

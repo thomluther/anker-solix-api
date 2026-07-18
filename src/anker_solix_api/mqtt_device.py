@@ -10,7 +10,7 @@ from __future__ import annotations  # noqa: TID251
 import contextlib
 from typing import TYPE_CHECKING, Any
 
-from .apitypes import SolixDefaults
+from .apitypes import DeviceHexDataTypes, SolixDefaults
 from .helpers import round_by_factor
 from .mqtt import generate_mqtt_command
 from .mqttcmdmap import (
@@ -19,9 +19,13 @@ from .mqttcmdmap import (
     COMMAND_LIST,
     COMMAND_NAME,
     LENGTH,
+    MASK,
+    MASK_STATE,
+    MASK_VALUE,
     NAME,
     STATE_CONVERTER,
     STATE_NAME,
+    TYPE,
     VALUE_DEFAULT,
     VALUE_FOLLOWS,
     VALUE_MAX,
@@ -35,7 +39,12 @@ from .mqttcmdmap import (
     SolixMqttCommands,
 )
 from .mqttmap import SOLIXMQTTMAP
-from .mqtttypes import MqttCmdValidator, convert_time
+from .mqtttypes import (
+    DeviceHexDataField,
+    MqttCmdValidator,
+    convert_time,
+    convert_weekdays,
+)
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -146,6 +155,9 @@ class SolixMqttDevice:
                                                 VALUE_MAX,
                                                 VALUE_MIN_STATE,
                                                 VALUE_MAX_STATE,
+                                                MASK,
+                                                MASK_STATE,
+                                                MASK_VALUE,
                                                 VALUE_STEP,
                                                 VALUE_STATE,
                                                 VALUE_OPTIONS,
@@ -198,14 +210,10 @@ class SolixMqttDevice:
                                                 < descriptors.get(VALUE_MAX, 0)
                                             )
                                             # flag whether parameter is text
-                                            descriptors["is_text"] = bool(
-                                                isinstance(
-                                                    opt := descriptors.get(
-                                                        VALUE_OPTIONS
-                                                    ),
-                                                    dict | list,
-                                                )
-                                                and len(opt) == 0
+                                            descriptors["is_text"] = (
+                                                item.get(TYPE)
+                                                == DeviceHexDataTypes.str.value
+                                                and not descriptors.get(VALUE_OPTIONS)
                                             )
                                             # add descriptors
                                             parameters[name] = descriptors
@@ -261,6 +269,23 @@ class SolixMqttDevice:
                                                         descriptors,
                                                     ],
                                                 }
+                                            if (
+                                                state_name := descriptors.get(
+                                                    MASK_STATE
+                                                )
+                                            ) is not None:
+                                                desc = self.dynamic_descriptions.get(
+                                                    state_name, {}
+                                                )
+                                                self.dynamic_descriptions[
+                                                    state_name
+                                                ] = {
+                                                    "key": MASK_VALUE,
+                                                    "desc": [
+                                                        *desc.get("desc", []),
+                                                        descriptors,
+                                                    ],
+                                                }
                         control["parameters"] = parameters
                         # check if control is a switch with only "on" and "off" in single required option
                         control["is_switch"] = bool(
@@ -309,13 +334,15 @@ class SolixMqttDevice:
                         (state := merged.get(state_name)) is not None
                         and str(state) != str(dd.get("last_value"))
                         and (key := dd.get("key"))
-                        in [VALUE_MIN, VALUE_MAX, VALUE_STEP, VALUE_OPTIONS]
+                        in [VALUE_MIN, VALUE_MAX, VALUE_STEP, VALUE_OPTIONS, MASK_VALUE]
                     ):
                         # update all dependent parameter descriptors
                         for desc in dd.get("desc", []):
                             if key == VALUE_OPTIONS:
                                 if isinstance(state, dict | list):
                                     desc[key] = state
+                            elif key == MASK_VALUE:
+                                desc[key] = state
                             elif (
                                 str(state)
                                 .replace("-", "", 1)
@@ -493,7 +520,7 @@ class SolixMqttDevice:
 
     def validate_cmd_value(
         self, cmd: str, value: Any, parm: str | None = None
-    ) -> int | float | str | bool | None:
+    ) -> int | float | str | bool | list | None:
         """Get validated command value for device control or None if anything invalid.
 
         parm is required if the command may have more than one parameter without default value.
@@ -545,15 +572,18 @@ class SolixMqttDevice:
         # use default if value not provided
         value = desc.get(VALUE_DEFAULT) if value is None else value
         # if value is string make further conversions to get the actual value
-        if desc.get(STATE_NAME, "").endswith("_time"):
+        if (name := desc.get(STATE_NAME, "")).endswith("_time"):
             # special case for fields indicating (seconds), minutes, hours per byte
             value = (
                 convert_time(hextime)
                 if isinstance(hextime := convert_time(value), bytes)
                 else None
             )
-        # limit text value if length specified
+        elif name.endswith("_weekdays"):
+            # special case for fields indicating weekday list to be validated
+            value = convert_weekdays(convert_weekdays(value))
         elif desc.get("is_text"):
+            # limit text value if length specified
             value = (
                 value[: abs(int(desc.get(LENGTH) or len(value)))]
                 if isinstance(value, str)
@@ -591,7 +621,8 @@ class SolixMqttDevice:
                     options=desc.get(VALUE_OPTIONS),
                 ).check(value)
                 if value != desc.get(VALUE_DEFAULT)
-                and not desc.get(STATE_NAME, "").endswith("_time")
+                and not desc.get(STATE_NAME, "").endswith(("_time", "_weekdays"))
+                and not desc.get("is_text")
                 else value
             )
         except (ValueError, TypeError) as err:
@@ -604,6 +635,29 @@ class SolixMqttDevice:
                 err,
             )
             return None
+
+    def _mock_mask_state(
+        self,
+        value: int,
+        mask_value: int,
+        description: dict,
+    ) -> int | None:
+        """Update the mask state for testing."""
+
+        if (
+            isinstance(description, dict)
+            and isinstance(value, int)
+            and isinstance(mask_value, int)
+        ):
+            if (mask := description.get(MASK)) is not None and (
+                val := DeviceHexDataField().encode_value(
+                    value=value,
+                    fieldtype=description.get(TYPE, DeviceHexDataTypes.ui.value),
+                    desc=description,
+                )
+            ):
+                return (val[0] & mask) | (mask_value & ~mask)
+        return None
 
     async def _send_mqtt_command(
         self,
@@ -692,7 +746,12 @@ class SolixMqttDevice:
                     err,
                 )
                 return None
-        self._logger.info("MQTT device %s (%s) %s", self.sn, self.pn, description)
+        if toFile:
+            self._logger.info(
+                "TESTMODE: MQTT device %s (%s) %s", self.sn, self.pn, description
+            )
+        else:
+            self._logger.debug("MQTT device %s (%s) %s", self.sn, self.pn, description)
         return hexdata.hex()
 
     async def run_command(  # noqa: C901
@@ -720,6 +779,7 @@ class SolixMqttDevice:
 
         """
         resp = None
+        dynamic_descriptions = False
         if not isinstance(parm_map, dict):
             parm_map = {}
         # Validate command values
@@ -779,6 +839,23 @@ class SolixMqttDevice:
                             state_fields[state_name] = state_value[:length]
                         else:
                             state_fields[state_name] = state_value
+                        # keep mocking of mask_value fields while bits are changed
+                        if (mask_value := desc.get(MASK_VALUE, "")) and (
+                            mask_state := desc.get(MASK_STATE, "")
+                        ):
+                            # actual mocked mask_value is tracked in state_fields
+                            val = self._mock_mask_state(
+                                value=state_value,
+                                mask_value=int(
+                                    str(state_fields.get(mask_state, ""))
+                                    or str(mask_value)
+                                    or 0
+                                ),
+                                description=desc,
+                            )
+                            if val is not None:
+                                state_fields[mask_state] = val
+                                dynamic_descriptions = True
                     # generate generic user description and provided string value or field value
                     user_parms[par] = val if isinstance(val, str) else fieldvalue
                     # mark required parameter as defined
@@ -811,7 +888,7 @@ class SolixMqttDevice:
                     # Mock state
                     if state_name := desc.get(STATE_NAME):
                         converter = desc.get(STATE_CONVERTER)
-                        state_fields[state_name] = (
+                        state_value = (
                             converter(
                                 parameters[par],
                                 None,
@@ -820,6 +897,24 @@ class SolixMqttDevice:
                             if callable(converter)
                             else parameters[par]
                         )
+                        state_fields[state_name] = state_value
+                        # keep mocking of mask_value fields while bits are changed
+                        if (mask_value := desc.get(MASK_VALUE, "")) and (
+                            mask_state := desc.get(MASK_STATE, "")
+                        ):
+                            # actual mocked mask_value is tracked in state_fields
+                            val = self._mock_mask_state(
+                                value=state_value,
+                                mask_value=int(
+                                    str(state_fields.get(mask_state, ""))
+                                    or str(mask_value)
+                                    or 0
+                                ),
+                                description=desc,
+                            )
+                            if val is not None:
+                                state_fields[mask_state] = val
+                                dynamic_descriptions = True
                     # mark required parameter as defined
                     req_parms.discard(par)
             # finally add command parameters that follow another parameter and convert their state
@@ -855,6 +950,23 @@ class SolixMqttDevice:
                     # Mock state
                     if state_name := desc.get(STATE_NAME):
                         state_fields[state_name] = parameters[par]
+                        # keep mocking of mask_value fields while bits are changed
+                        if (mask_value := desc.get(MASK_VALUE, "")) and (
+                            mask_state := desc.get(MASK_STATE, "")
+                        ):
+                            # actual mocked mask_value is tracked in state_fields
+                            val = self._mock_mask_state(
+                                value=parameters[par],
+                                mask_value=int(
+                                    str(state_fields.get(mask_state, ""))
+                                    or str(mask_value)
+                                    or 0
+                                ),
+                                description=desc,
+                            )
+                            if val is not None:
+                                state_fields[mask_state] = val
+                                dynamic_descriptions = True
             # check if all required parameters are specified
             if req_parms:
                 self._logger.error(
@@ -878,6 +990,9 @@ class SolixMqttDevice:
                 # add mock states for fields with depending values
                 if toFile:
                     self._filedata.update(resp)
+                    # Trigger mocked bitmask state value updates in parameter descriptions
+                    if dynamic_descriptions:
+                        self.update_device(self.device, resp)
         return resp
 
     async def realtime_trigger(

@@ -972,7 +972,7 @@ async def poll_site_details(
                         "current_site_device_models"
                     )
                     or []
-                    if m == "A17C5"
+                    if m in ["A17C5", "AE103", "A17E2"]
                 }:
                     # fetch provider list for supported models only once per day
                     if (datetime.now().strftime("%Y-%m-%d")) != (

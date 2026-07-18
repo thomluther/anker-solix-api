@@ -4,6 +4,7 @@
 import contextlib
 import datetime
 import getpass
+import json
 import logging
 import os
 from pathlib import Path
@@ -30,6 +31,7 @@ from anker_solix_api.mqttcmdmap import (
     VALUE_STATE,
     VALUE_STEP,
 )
+from anker_solix_api.mqtttypes import convert_weekdays
 
 # platform dependent imports for key press handling
 if sys.platform.startswith("win"):
@@ -445,6 +447,9 @@ def query_mqtt_command(  # noqa: C901
             elif str(desc.get(STATE_NAME)).endswith("_time"):
                 # special case for fields indicating (seconds), minutes, hours per byte
                 value_info = f"{Color.YELLOW}({'00:00-23:59' if 0 <= desc.get(VALUE_MAX, 0) <= 5947 else '00:00:00-23:59:59'})"
+            elif str(desc.get(STATE_NAME)).endswith("_weekdays"):
+                # special case for fields indicating bitmask for weekdays
+                value_info = f"{Color.YELLOW}({convert_weekdays(b"\x7f")})".replace(", ","|")
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
                 if (v := desc.get(VALUE_STEP)) is not None:
@@ -478,6 +483,8 @@ def query_mqtt_command(  # noqa: C901
                     # convert string to number
                     if sel.replace("-", "", 1).replace(".", "", 1).isdigit():
                         sel = round_by_factor(float(sel), step)
+                    elif sel.startswith(("[", "{")):
+                        sel = json.loads(sel)
                     else:
                         sel = sel.strip("'\"")
                     if (
@@ -499,6 +506,9 @@ def query_mqtt_command(  # noqa: C901
             elif str(desc.get(STATE_NAME)).endswith("_time"):
                 # special case for fields indicating (seconds), minutes, hours per byte
                 value_info = f"{Color.YELLOW}({'00:00-23:59' if 0 <= desc.get(VALUE_MAX, 0) <= 5947 else '00:00:00-23:59:59'})"
+            elif str(desc.get(STATE_NAME)).endswith("_weekdays"):
+                # special case for fields indicating bitmask for weekdays
+                value_info = f"{Color.YELLOW}({convert_weekdays(b"\x7f")})".replace(", ","|")
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
                 if (v := desc.get(VALUE_STEP)) is not None:
@@ -536,6 +546,8 @@ def query_mqtt_command(  # noqa: C901
                     # convert string to number
                     if sel.replace("-", "", 1).replace(".", "", 1).isdigit():
                         sel = round_by_factor(float(sel), step)
+                    elif sel.startswith(("[", "{")):
+                        sel = json.loads(sel)
                     else:
                         sel = sel.strip("'\"")
                     if (

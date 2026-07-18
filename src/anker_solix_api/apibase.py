@@ -860,6 +860,8 @@ class AnkerSolixBaseApi:
                                         "_timestamp",
                                         "_packs",
                                         "_priority",
+                                        "_tariff",
+                                        "_settings",
                                         # "?", # Add for decoder testing in monitor
                                     )
                                 )

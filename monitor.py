@@ -474,6 +474,9 @@ class AnkerSolixApiMonitor:
                 if key != "topics":
                     if "timestamp" in key:
                         value = f"{value!s} ({datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')})"
+                    elif key.endswith("_settings"):
+                        # print integer as bitmask
+                        value = f"{value!s} ({value:08b})"
                     fields.append((key, value))
                 else:
                     topics = value
@@ -485,6 +488,7 @@ class AnkerSolixApiMonitor:
                             (fields[0][0]).endswith("?")
                             or (fields[0][0]).startswith(("unknown_", "tbd_"))
                         )
+                        else Color.CYAN if (fields[0][0]).endswith("_settings")
                         else ""
                     )
                     c2 = (
@@ -493,6 +497,7 @@ class AnkerSolixApiMonitor:
                             (fields[1][0]).endswith("?")
                             or (fields[1][0]).startswith(("unknown_", "tbd_"))
                         )
+                        else Color.CYAN if (fields[1][0]).endswith("_settings")
                         else ""
                     )
                     CONSOLE.info(
@@ -507,6 +512,7 @@ class AnkerSolixApiMonitor:
                         (fields[0][0]).endswith("?")
                         or (fields[0][0]).startswith(("unknown_", "tbd_"))
                     )
+                    else Color.CYAN if (fields[0][0]).endswith("_settings")
                     else ""
                 )
                 CONSOLE.info(

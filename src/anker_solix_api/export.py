@@ -494,7 +494,7 @@ class AnkerSolixApiExport:
             for model in {
                 dev.get("device_pn")
                 for dev in self.api_power.devices.values()
-                if dev.get("device_pn") in ["A17C5", "A5101", "A5102", "A5103"]
+                if dev.get("device_pn") in ["A17C5", "A5101", "A5102", "A5103", "AE103", "A17E2"]
             }:
                 self._logger.info(
                     "Exporting dynamic price providers for model '%s'...", model
