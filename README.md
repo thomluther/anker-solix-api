@@ -364,6 +364,46 @@ Optionally the AnkerSolixApi class can use the json files for debugging and test
 > [!NOTE]
 > You should preferably run the `export_system.py` with the owner account of the power system. Otherwise only limited information can be exported by shared accounts due to access permissions.
 
+### Command line options for export system tool
+
+Command line arguments allow making the tool more suitable for automation and non-interactive usage.
+You can run with no arguments and being prompted for options, or supplying an option parameter to skip its prompt.
+--non-interactive will avoid any prompts and use defaults for options not specified.
+Keep in mind that credential prompts are only avoided if they are defined as environment variables:
+  - ANKERUSER=<username>
+  - ANKERPASSWORD=<password>
+  - ANKERCOUNTRY=<country_id>
+
+Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
+
+#### Main usage options
+- `--services {all,power,charging,hes,mqtt,discover}` / `-s`: Which services to use for export
+- `--endpoint-limit N` / `-l`: Api endpoint request limit
+- `--randomize` / `--no-randomize`: Randomize IDs/SNs
+- `--mqtt-data` / `--no-mqtt-data`: Export also MQTT device messages
+- `--folder FOLDER` / `-f`: Export subfolder
+- `--zip` / `--no-zip`: Zip the output folder
+- `--non-interactive` / `-n`: Avoid prompts and use defaults for missing options
+
+
+#### Command line argument usage examples
+
+```bash
+# Quick monitoring with MQTT and real-time data
+python monitor.py -live -mqtt -rt
+
+# Energy monitoring with custom interval
+python monitor.py -live --energy-stats --interval 60
+
+# Monitor specific site with pure MQTT display
+python monitor.py -live -mqtt --mqtt-display --site-id ABC123
+
+# Debug mode with HTTP logging
+python monitor.py -live -mqtt --debug-http
+```
+</details>
+
+
 ## monitor.py
 
 ```shell
