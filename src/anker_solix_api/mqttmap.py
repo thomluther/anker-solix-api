@@ -967,6 +967,146 @@ _A1783_0421 = {
     "fe": {NAME: "msg_timestamp"},
 }
 
+# c490 device-summary "a2" protobuf field map: walker .path -> field description.
+# a2 is a LEB128 protobuf(-like) rollup the A1783 (C1000/C2000 G2) posts on its own every
+# ~9 min over BLE; the ".23" sub-message is the live telemetry, the ".14"/".19" blocks are
+# cumulative lifetime energy ledgers split by direction AND source (a category 0421 lacks).
+# Paths + names confirmed live on a C2000 G2, cross-validated against VM per-port metrics
+# and the app's own field vocabulary (SOC/output/input/remaining_time/flow match 0421).
+# All a2 leaf fields (walker .path -> field). Confirmed names are unsuffixed; "?" marks
+# single-regime candidates and unknown/unmapped fields -- kept even when they read zero on a
+# base unit, since (like exp_1_*) they are conditional and light up under the right regime.
+# ".23" is the live rollup; ".14"/".19" are cumulative lifetime energy ledgers (by direction
+# + source); ".15" holds pack voltage/capacity/cycles; ".1"/".14.1" are string/bytes leaves.
+_A1783_0490_a2 = {
+    ".1": {NAME: "device_family_model"},  # C1000 G2 family model string
+    ".2": {NAME: "unknown_2?"},  # tbd
+    ".6.7": {NAME: "unknown_6_7?"},  # tbd
+    ".6.8": {NAME: "unknown_6_8?"},  # tbd
+    ".14.1": {NAME: "pack_bms_struct?"},  # main-pack BMS struct (bytes)
+    ".14.2": {NAME: "unknown_14_2?"},  # tbd
+    ".14.3": {NAME: "cumulative_charge_14_3"},  # charge-driven counter; coarse
+    ".14.4": {NAME: "cumulative_discharge_14_4"},  # discharge-driven counter; coarse
+    ".14.5": {NAME: "unknown_14_5?"},  # tbd
+    ".14.6": {NAME: "unknown_14_6?"},  # tbd
+    ".14#1.1": {NAME: "exp_1_bms_struct?"},  # expansion slot
+    ".14#1.2": {NAME: "exp_1_unknown_14_2?"},  # expansion slot
+    ".14#1.3": {NAME: "exp_1_cumulative_charge_14_3?"},  # expansion slot
+    ".14#1.4": {NAME: "exp_1_cumulative_discharge_14_4?"},  # expansion slot
+    ".14#1.5": {NAME: "exp_1_unknown_14_5?"},  # expansion slot
+    ".14#1.6": {NAME: "exp_1_unknown_14_6?"},  # expansion slot
+    ".15.1": {NAME: "battery_capacity_wh?"},  # usable capacity? (nominal 2048 Wh)
+    ".15.2": {NAME: "unknown_15_2?"},  # tbd
+    ".15.3": {NAME: "battery_voltage", FACTOR: 0.1},  # decivolts; not in 0421
+    ".15.4": {NAME: "battery_voltage_15_4?", FACTOR: 0.1},  # mirrors .15.3 pack voltage
+    ".15.5": {NAME: "unknown_15_5?"},  # state latch?
+    ".15.6": {NAME: "battery_cycles?"},  # cycle count?
+    ".15.7": {NAME: "unknown_15_7?"},  # tbd
+    ".15.8": {NAME: "unknown_15_8?"},  # tbd
+    ".15.9": {NAME: "unknown_15_9?"},  # tbd
+    ".15.10": {NAME: "unknown_15_10?"},  # tbd
+    ".15.11": {NAME: "unknown_15_11?"},  # tbd
+    ".15.12": {NAME: "unknown_15_12?"},  # tbd
+    ".15#1.1": {NAME: "exp_1_battery_capacity_wh?"},  # expansion slot
+    ".15#1.2": {NAME: "exp_1_unknown_15_2?"},  # expansion slot
+    ".15#1.3": {NAME: "exp_1_battery_voltage?", FACTOR: 0.1},  # expansion slot
+    ".15#1.4": {NAME: "exp_1_unknown_15_4?"},  # expansion slot
+    ".15#1.5": {NAME: "exp_1_unknown_15_5?"},  # expansion slot
+    ".15#1.6": {NAME: "exp_1_battery_cycles?"},  # expansion slot
+    ".15#1.7": {NAME: "exp_1_unknown_15_7?"},  # expansion slot
+    ".15#1.8": {NAME: "exp_1_unknown_15_8?"},  # expansion slot
+    ".15#1.9": {NAME: "exp_1_unknown_15_9?"},  # expansion slot
+    ".15#1.10": {NAME: "exp_1_unknown_15_10?"},  # expansion slot
+    ".15#1.11": {NAME: "exp_1_unknown_15_11?"},  # expansion slot
+    ".15#1.12": {NAME: "exp_1_unknown_15_12?"},  # expansion slot
+    ".18.1": {NAME: "unknown_18_1?"},  # tbd
+    ".18.2": {NAME: "unknown_18_2?"},  # tbd
+    ".18.3": {NAME: "unknown_18_3?"},  # tbd
+    ".18.4": {NAME: "unknown_18_4?"},  # tbd
+    ".18.5": {NAME: "unknown_18_5?"},  # tbd
+    ".18.6": {NAME: "unknown_18_6?"},  # tbd
+    ".18.7": {NAME: "unknown_18_7?"},  # tbd
+    ".18.8": {NAME: "unknown_18_8?"},  # tbd
+    ".19.1": {NAME: "cumulative_discharge_19_1"},  # discharge-driven
+    ".19.2": {NAME: "cumulative_ac_charge_19_2"},  # AC-charge-driven; coarse
+    ".19.3": {NAME: "cumulative_ac_charge_energy_wh"},  # AC-charge energy (Wh)
+    ".19.4": {NAME: "cumulative_ac_discharge_energy"},  # AC-output discharge; unit tbd
+    ".19.5": {NAME: "post_counter_19_5?"},  # post counter, paired with .22
+    ".19.6": {NAME: "cumulative_dc_charge_19_6"},  # DC/solar-charge-driven
+    ".19.7": {NAME: "cumulative_dc_charge_energy"},  # DC/solar charge; unit tbd
+    ".19.8": {NAME: "cumulative_discharge_energy_wh"},  # discharge energy (Wh)
+    ".20.1": {NAME: "unknown_20_1?"},  # tbd
+    ".20.2": {NAME: "unknown_20_2?"},  # tbd
+    ".20.3": {NAME: "unknown_20_3?"},  # tbd
+    ".20.4": {NAME: "unknown_20_4?"},  # tbd
+    ".20.5": {NAME: "unknown_20_5?"},  # tbd
+    ".20.6": {NAME: "unknown_20_6?"},  # tbd
+    ".20.7": {NAME: "unknown_20_7?"},  # tbd
+    ".20.8": {NAME: "unknown_20_8?"},  # tbd
+    ".20.9": {NAME: "unknown_20_9?"},  # tbd
+    ".21.1": {NAME: "unknown_21_1?"},  # tbd
+    ".21.2": {NAME: "unknown_21_2?"},  # tbd
+    ".21.3": {NAME: "unknown_21_3?"},  # tbd
+    ".21.4": {NAME: "unknown_21_4?"},  # tbd
+    ".21.5": {NAME: "unknown_21_5?"},  # tbd
+    ".21.6": {NAME: "unknown_21_6?"},  # tbd
+    ".21.7": {NAME: "unknown_21_7?"},  # tbd
+    ".21.8": {NAME: "unknown_21_8?"},  # tbd
+    ".21.9": {NAME: "unknown_21_9?"},  # tbd
+    ".22": {NAME: "post_counter?"},  # +1 per device post
+    ".23.1": {NAME: "battery_soc"},
+    ".23.1#1": {NAME: "exp_1_soc"},  # expansion battery SoC (slot 1)
+    ".23.2": {NAME: "output_power_total"},  # total output; DC/USB out = .23.2 - .23.3
+    ".23.3": {NAME: "ac_output_power"},  # AC output
+    ".23.4": {NAME: "input_power_total"},  # total input; AC in = .23.4 - .23.5
+    ".23.5": {NAME: "dc_input_power_total"},  # DC/solar input
+    ".23.6": {NAME: "charge_presence"},  # responds to DC input; unit tbd
+    ".23.7": {NAME: "work_status"},  # app: workStatus -- 0 idle / 1 discharge / 2 charge
+    ".23.8": {NAME: "remaining_time_hours", FACTOR: 0.1},  # deci-hours, bidirectional
+    ".23.9": {NAME: "unknown_23_9?"},  # tbd
+    ".23.10": {NAME: "unknown_23_10?"},  # tbd
+    ".24.1": {NAME: "unknown_24_1?"},  # config/mode flag?
+    ".24.2": {NAME: "unknown_24_2?"},  # tbd
+    ".24.3": {NAME: "unknown_24_3?"},  # tbd
+    ".24.4": {NAME: "unknown_24_4?"},  # tbd
+    ".24.5": {NAME: "unknown_24_5?"},  # tbd
+    ".24.6": {NAME: "unknown_24_6?"},  # tbd
+    ".24.7": {NAME: "unknown_24_7?"},  # tbd
+    ".24.8": {NAME: "unknown_24_8?"},  # tbd
+    ".24.9": {NAME: "unknown_24_9?"},  # tbd
+    ".24.10": {NAME: "unknown_24_10?"},  # tbd
+    ".24.11": {NAME: "unknown_24_11?"},  # tbd
+    ".24.12": {NAME: "unknown_24_12?"},  # tbd
+    ".24.13": {NAME: "unknown_24_13?"},  # tbd
+    ".24.14": {NAME: "unknown_24_14?"},  # tbd
+    ".24.15": {NAME: "unknown_24_15?"},  # tbd
+    ".24.16": {NAME: "unknown_24_16?"},  # tbd
+    ".24.17": {NAME: "unknown_24_17?"},  # tbd
+    ".24.18": {NAME: "unknown_24_18?"},  # tbd
+}
+
+_A1783_0490 = {
+    # C1000/C2000 G2 (A1783) periodic device-summary posted over BLE. Absent over MQTT.
+    "a1": {NAME: "summary_generation?"},  # 1 byte, const 0x31 -- family generation marker
+    "a2": {
+        # LEB128 protobuf rollup; walked and mapped via _A1783_0490_a2 (keys are walker paths)
+        TYPE: DeviceHexDataTypes.varint.value,
+        BYTES: _A1783_0490_a2,
+    },
+    "a3": {NAME: "charging_series_id", TYPE: DeviceHexDataTypes.str.value},
+}
+
+# C1000 G2 (A1763): same c490 frame, but the C1000 G2 has no BP2000 expansion option, so the
+# repeated per-pack fields (the "#" occurrence -- slot 1) never appear. Reuse the A1783 map
+# dropping every "#" path. Unverified on A1763 hardware; the payload embeds the A1763 model.
+_A1763_0490_a2 = {
+    path: desc for path, desc in _A1783_0490_a2.items() if "#" not in path
+}
+_A1763_0490 = {
+    **_A1783_0490,
+    "a2": {**_A1783_0490["a2"], BYTES: _A1763_0490_a2},
+}
+
 _A1780_0405 = {
     # F2000(P) param info
     TOPIC: "param_info",
@@ -5640,6 +5780,10 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: Irregular, maybe on changes or as response to App status request? Same content as 0421
         "0900": _A1763_0421,
+        # Interval: ~9 min, device-posted device summary over BLE only. Same frame format as
+        # the C2000 G2 (A1783), minus the exp_1_* fields (the C1000 G2 has no BP2000 option).
+        # Unverified on A1763 hardware; the c490 payload embeds the A1763 family model.
+        "0490": _A1763_0490,
     },
     # PPS C2000 Gen 2
     "A1783": {
@@ -5785,6 +5929,9 @@ SOLIXMQTTMAP: Final[dict] = {
         "0830": _PPS_VERSIONS_0830,
         # Interval: Irregular, maybe on changes or as response to App status request? Same content as 0421
         "0900": _A1783_0421,
+        # Interval: ~9 min, device-posted device summary over BLE only (absent over MQTT).
+        # a2 is a LEB128 protobuf rollup with cumulative energy ledgers 0421 does not carry.
+        "0490": _A1783_0490,
     },
     # PPS S2000 - matches A1783 (C2000 Gen 2); 0101-0103 controls inherited, not yet validated
     "AS220": {
