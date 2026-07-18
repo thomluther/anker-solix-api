@@ -20,8 +20,13 @@ The API class can use the json files for debugging and testing on
 various system outputs. MQTT classes also use the exported MQTT messages for debugging and
 proper decoding of the messages can be validated as well once decoding has been described.
 
+All prompts can be pre-answered via command line arguments for unattended runs
+(e.g. cron, CI). Any option not supplied on the command line is still prompted
+interactively, unless --non-interactive is set, in which case the default is used.
+
 """
 
+import argparse
 import asyncio
 from dataclasses import asdict
 import json
@@ -61,7 +66,63 @@ ch.setFormatter(
 SESSION.addHandler(ch)
 
 
-async def main() -> bool:
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments.
+
+    Every interactive prompt has a matching option. Supplying it skips that
+    prompt; omitting it still prompts, unless --non-interactive uses the default.
+    """
+    parser = argparse.ArgumentParser(
+        description="Anker Solix System Export - Export Api responses and optional MQTT device data for an account"
+    )
+    parser.add_argument(
+        "--services",
+        "-s",
+        type=str,
+        choices=["all", "power", "charging", "hes", "mqtt", "discover"],
+        help="Api endpoint services to export (default: discover)",
+    )
+    parser.add_argument(
+        "--endpoint-limit",
+        "-l",
+        type=int,
+        metavar="N",
+        help="Api endpoint request limit for throttling, 0 = disabled (default: keep api default)",
+    )
+    parser.add_argument(
+        "--randomize",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Randomize unique IDs and SNs in exported files (default: yes)",
+    )
+    parser.add_argument(
+        "--mqtt-data",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Export optional MQTT device data, adds > 5 minutes (default: yes)",
+    )
+    parser.add_argument(
+        "--folder",
+        "-f",
+        type=str,
+        help="Subfolder for the export (default: account nickname)",
+    )
+    parser.add_argument(
+        "--zip",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Zip the output folder (default: yes)",
+    )
+    parser.add_argument(
+        "--non-interactive",
+        "-n",
+        action="store_true",
+        help="Never prompt; use defaults for any option not supplied via arguments",
+    )
+    return parser.parse_args()
+
+
+async def main(args: argparse.Namespace) -> bool:
     """Run main function to export config after querying some options from user."""
 
     CONSOLE.info("Exporting found Anker Solix system data for all assigned sites.")
@@ -83,56 +144,80 @@ async def main() -> bool:
                 CONSOLE.info(
                     "Authentication: CACHED"
                 )  # Login validation will be done during first API call
-            resp = await loop.run_in_executor(
-                None,
-                input,
-                f"INPUT: Which Api endpoint services do you want to export? [{Color.CYAN}A{Color.OFF}]ll / "
-                f"[{Color.CYAN}P{Color.OFF}]ower / [{Color.CYAN}C{Color.OFF}]harging / [{Color.CYAN}H{Color.OFF}]es / "
-                f"[{Color.CYAN}M{Color.OFF}]qtt only / [{Color.YELLOW}D{Color.OFF}]iscover (default): ",
-            )
-            if resp != "" or not isinstance(services, set):
-                if resp.upper() in ["A", "LL"]:
-                    services = set(asdict(ApiEndpointServices()).values())
-                elif resp.upper() in ["P", "POWER"]:
-                    services = {ApiEndpointServices.power}
-                elif resp.upper() in ["C", "CHARGING"]:
-                    services = {ApiEndpointServices.charging}
-                elif resp.upper() in ["H", "HES"]:
-                    services = {ApiEndpointServices.hes_svc}
-                elif resp.upper() in ["M", "MQTT"]:
-                    services = {"mqtt_only"}
-                else:
-                    # default to discover required services
-                    services = set()
+            # Which Api endpoint services to export
+            services_map = {
+                "all": set(asdict(ApiEndpointServices()).values()),
+                "power": {ApiEndpointServices.power},
+                "charging": {ApiEndpointServices.charging},
+                "hes": {ApiEndpointServices.hes_svc},
+                "mqtt": {"mqtt_only"},
+                "discover": set(),
+            }
+            if args.services is not None:
+                services = services_map[args.services]
+            elif not args.non_interactive:
+                resp = await loop.run_in_executor(
+                    None,
+                    input,
+                    f"INPUT: Which Api endpoint services do you want to export? [{Color.CYAN}A{Color.OFF}]ll / "
+                    f"[{Color.CYAN}P{Color.OFF}]ower / [{Color.CYAN}C{Color.OFF}]harging / [{Color.CYAN}H{Color.OFF}]es / "
+                    f"[{Color.CYAN}M{Color.OFF}]qtt only / [{Color.YELLOW}D{Color.OFF}]iscover (default): ",
+                )
+                if resp != "" or not isinstance(services, set):
+                    if resp.upper() in ["A", "LL"]:
+                        services = services_map["all"]
+                    elif resp.upper() in ["P", "POWER"]:
+                        services = services_map["power"]
+                    elif resp.upper() in ["C", "CHARGING"]:
+                        services = services_map["charging"]
+                    elif resp.upper() in ["H", "HES"]:
+                        services = services_map["hes"]
+                    elif resp.upper() in ["M", "MQTT"]:
+                        services = services_map["mqtt"]
+                    else:
+                        # default to discover required services
+                        services = set()
             CONSOLE.info(
                 f"Exporting following services: {Color.YELLOW}{services or 'Discover automatically'}{Color.OFF}"
             )
-            resp = await loop.run_in_executor(
-                None,
-                input,
-                f"INPUT: Do you want to change Api endpoint request limit for proper throttling of same endpoint requests? "
-                f"[{Color.CYAN}0{Color.OFF}] = disabled / [{Color.YELLOW}{myapi.endpointLimit()!s}{Color.OFF}] = default: ",
-            )
-            if resp.isdigit() and int(resp) >= 0:
-                myapi.endpointLimit(limit=int(resp))
+            # Api endpoint request limit
+            if args.endpoint_limit is not None:
+                if args.endpoint_limit >= 0:
+                    myapi.endpointLimit(limit=args.endpoint_limit)
+            elif not args.non_interactive:
+                resp = await loop.run_in_executor(
+                    None,
+                    input,
+                    f"INPUT: Do you want to change Api endpoint request limit for proper throttling of same endpoint requests? "
+                    f"[{Color.CYAN}0{Color.OFF}] = disabled / [{Color.YELLOW}{myapi.endpointLimit()!s}{Color.OFF}] = default: ",
+                )
+                if resp.isdigit() and int(resp) >= 0:
+                    myapi.endpointLimit(limit=int(resp))
             CONSOLE.info(
                 f"Api endpoint limit: {Color.YELLOW}{myapi.endpointLimit()!s}{Color.OFF}"
             )
-            resp = await loop.run_in_executor(
-                None,
-                input,
-                f"INPUT: Do you want to randomize unique IDs and SNs in exported files? "
-                f"[{Color.YELLOW if randomize else Color.CYAN}Y{Color.OFF}]es{' (default)' if randomize else ''} / "
-                f"[{Color.YELLOW if not randomize else Color.CYAN}N{Color.OFF}]o{' (default)' if not randomize else ''}: ",
-            )
-            if resp != "" or not isinstance(randomize, bool):
-                randomize = resp.upper() in ["Y", "YES", "TRUE", 1]
+            # Randomize unique IDs and SNs
+            if args.randomize is not None:
+                randomize = args.randomize
+            elif not args.non_interactive:
+                resp = await loop.run_in_executor(
+                    None,
+                    input,
+                    f"INPUT: Do you want to randomize unique IDs and SNs in exported files? "
+                    f"[{Color.YELLOW if randomize else Color.CYAN}Y{Color.OFF}]es{' (default)' if randomize else ''} / "
+                    f"[{Color.YELLOW if not randomize else Color.CYAN}N{Color.OFF}]o{' (default)' if not randomize else ''}: ",
+                )
+                if resp != "" or not isinstance(randomize, bool):
+                    randomize = resp.upper() in ["Y", "YES", "TRUE", 1]
             CONSOLE.info(
                 f"Randomization of data: {Color.YELLOW}{randomize!s}{Color.OFF}",
             )
+            # Optional MQTT device data export
             if "mqtt_only" in services:
                 mqttdata = True
-            else:
+            elif args.mqtt_data is not None:
+                mqttdata = args.mqtt_data
+            elif not args.non_interactive:
                 resp = await loop.run_in_executor(
                     None,
                     input,
@@ -148,26 +233,36 @@ async def main() -> bool:
             nickname = myapi.apisession.nickname.replace(
                 "*", "x"
             )  # avoid filesystem problems with * in user nicknames
-            folder = await loop.run_in_executor(
-                None,
-                input,
-                f"INPUT: Subfolder for export (default: {Color.YELLOW}{nickname}{Color.OFF}): ",
-            )
+            # Subfolder for export
+            if args.folder is not None:
+                folder = args.folder
+            elif args.non_interactive:
+                folder = nickname
+            else:
+                folder = await loop.run_in_executor(
+                    None,
+                    input,
+                    f"INPUT: Subfolder for export (default: {Color.YELLOW}{nickname}{Color.OFF}): ",
+                )
             if folder == "":
                 if nickname == "":
                     return False
                 folder = nickname
             CONSOLE.info(f"Subfolder for export: {Color.YELLOW}{folder!s}{Color.OFF}")
 
+            # Zip the output folder
             zipped: bool = True
-            resp = await loop.run_in_executor(
-                None,
-                input,
-                f"INPUT: Do you want to zip the output folder? "
-                f"[{Color.YELLOW}Y{Color.OFF}]es (default) / [{Color.CYAN}N{Color.OFF}]o: ",
-            )
-            if resp != "":
-                zipped = resp.upper() not in ["N", "NO", "FALSE", 0]
+            if args.zip is not None:
+                zipped = args.zip
+            elif not args.non_interactive:
+                resp = await loop.run_in_executor(
+                    None,
+                    input,
+                    f"INPUT: Do you want to zip the output folder? "
+                    f"[{Color.YELLOW}Y{Color.OFF}]es (default) / [{Color.CYAN}N{Color.OFF}]o: ",
+                )
+                if resp != "":
+                    zipped = resp.upper() not in ["N", "NO", "FALSE", 0]
             CONSOLE.info(f"Zip output folder: {Color.YELLOW}{zipped!s}{Color.OFF}")
             input_task = False
             myexport = AnkerSolixApiExport(
@@ -207,7 +302,7 @@ async def main() -> bool:
 # run async main
 if __name__ == "__main__":
     try:
-        if not asyncio.run(main(), debug=False):
+        if not asyncio.run(main(parse_arguments()), debug=False):
             CONSOLE.warning("Aborted!")
     except KeyboardInterrupt:
         CONSOLE.warning("Aborted!")
