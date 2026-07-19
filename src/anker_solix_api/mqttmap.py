@@ -4342,50 +4342,51 @@ _AS220_0421 = {
     },
     "d9": {
         # AS220: AC-output mode selector + backup + Time-of-Use plan (layout differs from A1783).
-        BYTES: (
-            {
-                "00": {
-                    NAME: "usage_mode_raw",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "01": {
-                    NAME: "usage_mode",  # 0-based: 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "02": {
-                    NAME: "backup_soc",  # backup reserve % (discharge floor)
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "03": {
-                    NAME: "max_soc",  # max_soc %
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "04": {
-                    NAME: "min_soc",  # min_soc % - restored from A1783 template; feeds soc_min / power_cutoff
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "05": {
-                    NAME: "tou_slot_count",  # number of Time-of-Use periods following at byte 6+
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-            }
-            # Byte 6+ holds the TOU schedule: {tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr} x tou_slot_count
-            | {
-                f"{6 + (idx - 1) * 3:02d}": {
-                    NAME: f"tou_slot_{idx}_tariff",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                f"{7 + (idx - 1) * 3:02d}": {
-                    NAME: f"tou_slot_{idx}_start_hour",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                f"{8 + (idx - 1) * 3:02d}": {
-                    NAME: f"tou_slot_{idx}_end_hour",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-            }
-            for idx in range(1, 6)
-        )
+        BYTES: {
+            "00": {
+                NAME: "usage_mode_raw",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "usage_mode",  # 0-based: 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "backup_soc",  # backup reserve % (discharge floor)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "03": {
+                NAME: "max_soc",  # max_soc %
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "04": {
+                NAME: "min_soc",  # min_soc % - restored from A1783 template; feeds soc_min / power_cutoff
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "05": {
+                NAME: "tou_slot_count",  # number of Time-of-Use periods following at byte 6+
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            # Byte 6+ holds the TOU schedule: {tariff, start_hr, end_hr} x tou_slot_count
+            **{
+                key: value
+                for idx in range(1, 6)
+                for key, value in {
+                    f"{6 + (idx - 1) * 3:02d}": {
+                        NAME: f"tou_slot_{idx}_tariff",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{7 + (idx - 1) * 3:02d}": {
+                        NAME: f"tou_slot_{idx}_start_hour",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{8 + (idx - 1) * 3:02d}": {
+                        NAME: f"tou_slot_{idx}_end_hour",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                }.items()
+            },
+        }
     },
     "da": {
         BYTES: {
@@ -4405,40 +4406,41 @@ _AS220_0421 = {
     },
     "dd": {
         # Custom-mode charge/discharge schedule (live-confirmed vs app).
-        BYTES: (
-            {
-                "00": {
-                    NAME: "custom_mode_switch",  # 0/1
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "01": {
-                    NAME: "custom_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "02": {
-                    NAME: "custom_slot_count",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-            }
+        BYTES: {
+            "00": {
+                NAME: "custom_mode_switch",  # 0/1
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "custom_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "02": {
+                NAME: "custom_slot_count",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             # Byte 3+ holds slots: {mode(1=charge,2=discharge), start_min(u16 LE), end_min(u16 LE)} x custom_slot_count.
-            | {
-                f"{3 + (idx - 1) * 5:02d}": {
-                    NAME: f"custom_slot_{idx}_mode",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                f"{4 + (idx - 1) * 5:02d}": {
-                    NAME: f"custom_slot_{idx}_start_minutes",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                f"{6 + (idx - 1) * 5:02d}": {
-                    NAME: f"custom_slot_{idx}_end_minutes",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-            }
-            for idx in range(1, 6)
-        )
+            **{
+                key: value
+                for idx in range(1, 6)
+                for key, value in {
+                    f"{3 + (idx - 1) * 5:02d}": {
+                        NAME: f"custom_slot_{idx}_mode",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{4 + (idx - 1) * 5:02d}": {
+                        NAME: f"custom_slot_{idx}_start_minutes",
+                        TYPE: DeviceHexDataTypes.sile.value,
+                        SIGNED: False,
+                    },
+                    f"{6 + (idx - 1) * 5:02d}": {
+                        NAME: f"custom_slot_{idx}_end_minutes",
+                        TYPE: DeviceHexDataTypes.sile.value,
+                        SIGNED: False,
+                    },
+                }.items()
+            },
+        }
     },
     "df": {
         # Silent-mode schedule (live-confirmed vs app)
