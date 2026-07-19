@@ -80,7 +80,7 @@ from .mqttcmdmap import (
     CMD_STATUS_REQUEST,
     CMD_SWIPE_DOWN_MODE,
     CMD_SWIPE_UP_MODE,
-    CMD_TBD_SWITCH,
+    # CMD_TBD_SWITCH,
     CMD_TEMP_UNIT,
     CMD_TEMP_UNIT_V2,
     CMD_TIMER_REQUEST,
@@ -813,7 +813,7 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
-                NAME: "ac_input_power", # mirrors a6.02
+                NAME: "ac_input_power",  # mirrors a6.02
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -4167,7 +4167,7 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "28": {
-                NAME: "smart_ac_output_timeout",  # minutes; AS220 replaces ac_output_timeout_seconds (live: 240=4h, 720=12h)
+                NAME: "ac_output_timeout_minutes",  # minutes; AS220 replaces ac_output_timeout_seconds (live: 240=4h, 720=12h)
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -4210,7 +4210,7 @@ _AS220_0421 = {
                 SIGNED: False,
             },
             "08": {
-                NAME: "main_battery_soc?",  # SOC of main battery only?
+                NAME: "main_battery_soc",  # SOC of main battery only?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         },
@@ -4371,20 +4371,23 @@ _AS220_0421 = {
             }
             # Byte 6+ holds the TOU schedule: {tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr} x tou_slot_count
             | {
-                f"{6 + (idx - 1) * 3:02d}": {
-                    NAME: f"tou_slot_{idx}_tariff",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                f"{7 + (idx - 1) * 3:02d}": {
-                    NAME: f"tou_slot_{idx}_start_hour",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                f"{8 + (idx - 1) * 3:02d}": {
-                    NAME: f"tou_slot_{idx}_end_hour",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
+                k: v
+                for idx in range(1,8)
+                for k, v in {
+                    f"{6 + (idx - 1) * 3:02d}": {
+                        NAME: f"tou_slot_{idx}_tariff",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{7 + (idx - 1) * 3:02d}": {
+                        NAME: f"tou_slot_{idx}_start_hour",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{8 + (idx - 1) * 3:02d}": {
+                        NAME: f"tou_slot_{idx}_end_hour",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                }.items()
             }
-            for idx in range(1, 6)
         )
     },
     "da": {
@@ -4422,22 +4425,25 @@ _AS220_0421 = {
             }
             # Byte 3+ holds slots: {mode(1=charge,2=discharge), start_min(u16 LE), end_min(u16 LE)} x custom_slot_count.
             | {
-                f"{3 + (idx - 1) * 5:02d}": {
-                    NAME: f"custom_slot_{idx}_mode",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                f"{4 + (idx - 1) * 5:02d}": {
-                    NAME: f"custom_slot_{idx}_start_minutes",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                f"{6 + (idx - 1) * 5:02d}": {
-                    NAME: f"custom_slot_{idx}_end_minutes",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
+                k: v
+                for idx in range(1,6)
+                for k, v in {
+                    f"{3 + (idx - 1) * 5:02d}": {
+                        NAME: f"custom_slot_{idx}_mode",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{4 + (idx - 1) * 5:02d}": {
+                        NAME: f"custom_slot_{idx}_start_minutes",
+                        TYPE: DeviceHexDataTypes.sile.value,
+                        SIGNED: False,
+                    },
+                    f"{6 + (idx - 1) * 5:02d}": {
+                        NAME: f"custom_slot_{idx}_end_minutes",
+                        TYPE: DeviceHexDataTypes.sile.value,
+                        SIGNED: False,
+                    },
+                }.items()
             }
-            for idx in range(1, 6)
         )
     },
     "df": {
@@ -4466,7 +4472,7 @@ _AS220_0421 = {
     "f0": {
         BYTES: {
             "00": {
-                NAME: "ac_output_switch_f0",  # dup of ac_output_power_switch - live-confirmed via isolation test
+                NAME: "ac_output_power_switch_f0",  # dup of ac_output_power_switch - live-confirmed via isolation test
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }

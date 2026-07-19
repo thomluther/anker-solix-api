@@ -122,7 +122,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-async def main(args: argparse.Namespace) -> bool:
+async def main(args: argparse.Namespace) -> bool:  # noqa: C901
     """Run main function to export config after querying some options from user."""
 
     CONSOLE.info("Exporting found Anker Solix system data for all assigned sites.")
