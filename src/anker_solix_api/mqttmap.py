@@ -4429,7 +4429,7 @@ _AS220_0421 = {
                 for idx in range(1,6)
                 for k, v in {
                     f"{3 + (idx - 1) * 5:02d}": {
-                        NAME: f"custom_slot_{idx}_mode",
+                        NAME: f"custom_slot_{idx}_load_mode",
                         TYPE: DeviceHexDataTypes.ui.value,
                     },
                     f"{4 + (idx - 1) * 5:02d}": {

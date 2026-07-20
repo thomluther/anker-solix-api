@@ -80,6 +80,104 @@ class SolixMqttDevicePps(SolixMqttDevice):
         self.features = FEATURES
         super().__init__(api_instance=api_instance, device_sn=device_sn)
 
+    def update_device(
+        self, device: dict, dynamic_descriptions: dict | None = None
+    ) -> None:
+        """Define callback for Api device updates."""
+        super().update_device(device=device, dynamic_descriptions=dynamic_descriptions)
+        # update plans if available
+        self.get_custom_plan(fromFile=True)
+        self.get_tou_plan(fromFile=True)
+
+    def get_custom_plan(
+        self,
+        fromFile: bool = False,
+    ) -> dict | None:
+        """Get an actual custom plan from the PPS.
+
+        Args:
+            fromFile: If True, consider the mocked cache
+
+        Returns:
+            dict: Custom plan as updated in mqttdata["custom_plan"] and returned. None will be returned if not supported.
+
+        Example output:
+            {
+                "custom_mode_switch": 1,
+                "weekdays": ["tue","wed","thu","fri","sat"],
+                "ranges": [
+                    {"start_time": "00:00","end_time": "08:00","load_mode": 1},
+                    {"start_time": "10:00","end_time": "20:00","load_mode": 2},
+                    {"start_time": "22:00","end_time": "24:00","load_mode": 1}
+                ]
+            }
+
+        """
+
+        cache = self.get_status(fromFile=fromFile)
+        if (slots := cache.get("custom_slot_count")) is not None and slots > 0:
+            plan = {
+                "custom_mode_switch": cache.get("custom_mode_switch"),
+                "weekdays": cache.get("custom_mode_weekdays", []),
+            }
+            ranges = []
+            for idx in range(1, slots + 1):
+                start = cache.get(f"custom_slot_{idx}_start_minutes", 0)
+                end = cache.get(f"custom_slot_{idx}_end_minutes", 0)
+                ranges.append(
+                    {
+                        "start_time": f"{start // 60:02d}:{start % 60:02d}",
+                        "end_time": f"{end // 60:02d}:{end % 60:02d}",
+                        "load_mode": self.mqttdata.get(
+                            f"custom_slot_{idx}_load_mode", 0
+                        ),
+                    }
+                )
+            plan["ranges"] = ranges
+            self.mqttdata["custom_plan"] = plan
+        else:
+            self.mqttdata.pop("custom_plan", None)
+        return self.mqttdata.get("custom_plan")
+
+    def get_tou_plan(
+        self,
+        fromFile: bool = False,
+    ) -> dict | None:
+        """Get an actual time of use plan from the PPS.
+
+        Args:
+            fromFile: If True, consider the mocked cache
+
+        Returns:
+            dict: TOU plan as updated in mqttdata["tou_plan"] and returned. None will be returned if not supported.
+
+        Example output:
+            {
+                "ranges": [
+                    {"start_time": "00:00","end_time": "08:00","tariff": 1},
+                    {"start_time": "08:00","end_time": "20:00","tariff": 2},
+                    {"start_time": "20:00","end_time": "24:00","tariff": 3}
+                ]
+            }
+
+        """
+        cache = self.get_status(fromFile=fromFile)
+        if (slots := cache.get("tou_slot_count")) is not None and slots > 0:
+            plan = {}
+            ranges = [
+                {
+                    "start_time": f"{cache.get(f'tou_slot_{idx}_start_hour', 0):02d}:00",
+                    "end_time": f"{cache.get(f'tou_slot_{idx}_end_hour', 0):02d}:00",
+                    "tariff": cache.get(f"tou_slot_{idx}_tariff", 0),
+                }
+                for idx in range(1, slots + 1)
+            ]
+            plan["ranges"] = ranges
+            self.mqttdata["tou_plan"] = plan
+        else:
+            self.mqttdata.pop("tou_plan", None)
+        return self.mqttdata.get("tou_plan")
+
     async def set_ac_output(
         self,
         enabled: bool | None = None,

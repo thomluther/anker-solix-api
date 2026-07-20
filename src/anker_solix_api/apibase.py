@@ -861,6 +861,7 @@ class AnkerSolixBaseApi:
                                         "_packs",
                                         "_priority",
                                         "_tariff",
+                                        "_count",
                                         "_settings",
                                         # "?", # Add for decoder testing in monitor
                                     )
@@ -1155,7 +1156,14 @@ class AnkerSolixBaseApi:
                             # flag to trigger update if dynamic description value changed
                             dyn_desc = True
                             break
-                    if oldsize == 0 or dyn_desc:
+                    if (
+                        oldsize == 0
+                        or dyn_desc
+                        or any(
+                            key in check_values
+                            for key in ["tou_slot_count", "custom_slot_count"]
+                        )
+                    ):
                         self.notify_device(deviceSn=sn)
             # update MQTT statistic in account cache, convert datetime to json compatible format
             stats = self.mqttsession.mqtt_stats.asdict()
