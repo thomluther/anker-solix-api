@@ -1778,13 +1778,25 @@ class SolixMode(StrEnum):
     unknown = "unknown"
 
 
+class SolixPpsUsageMode(StrEnum):
+    """Str Enumeration for Anker Solix PPS usage mode."""
+
+    # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+    standard = "0" # UPS mode
+    time_of_use = "1"
+    self_consumption = "2"
+    custom = "3"
+    unknown = "unknown"
+
+
 class SolixChargerUsageMode(StrEnum):
     """Str Enumeration for Anker Solix charger usage mode."""
 
     ai_power = "1"
-    connection_priority = "2"
+    port_priority = "2"
     dual_laptop = "3"
     low_power = "4"
+    custom = "5" # Only available if charging_mode_status enabled in device settings of A2345
     unknown = "unknown"
 
 
@@ -1852,6 +1864,15 @@ class SolixPpsOutputModeV2(StrEnum):
 
     normal = "0"
     smart = "1"
+    unknown = "unknown"
+
+
+class SolixPpsLoadMode(StrEnum):
+    """Str Enumeration for Anker Solix PPS load mode."""
+
+    # 1: Charge; 2: Discharge
+    charge = "1"
+    discharge = "2"
     unknown = "unknown"
 
 

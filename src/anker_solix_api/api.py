@@ -56,6 +56,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     """Define the API class to handle API data for Anker balcony power sites and devices using power_service endpoints."""
 
     # import outsourced methods
+    from .charger import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+        get_charger_custom_mode_list,
+        get_charger_device_setting,
+        get_charger_manual_screensavers,
+        get_charger_port_remarks,
+        get_charger_protocol_status,
+        get_charger_screensavers,
+        set_charger_port_remark,
+    )
     from .energy import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
         device_pv_energy_daily,
         energy_analysis,
@@ -1114,6 +1123,16 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     ),
                                 }
                             )
+
+                    # Mini charger specific keys
+                    elif key in [
+                        "protocol_status",
+                        "port_remarks",
+                        "device_setting",
+                        "custom_modes",
+                        "modes",
+                    ]:
+                        device[key] = value
 
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(

@@ -1267,8 +1267,57 @@ async def poll_device_details(  # noqa: C901
 
         # Fetch device type specific details, if device type not excluded
         if dev_type in ({SolixDeviceType.EV_CHARGER.value} - exclude):
-            # Fetch charger total statistics
+            # Fetch EV charger total statistics
             await api.get_device_charge_order_stats(deviceSn=sn, fromFile=fromFile)
+
+        elif dev_type in ({SolixDeviceType.CHARGER.value} - exclude):
+            # Fetch mini charger datails for supported models
+            if (pn := device.get("device_pn")) == "A2345":
+                # Fetch screensavers
+                screensavers = api.account.get("screensavers") or {}
+                pn_themes = screensavers.get(pn, {})
+                # Fetch stock screensavers for model only once a day
+                if pn_themes.get("poll_time", "").split(" ")[
+                    0
+                ] != datetime.now().strftime("%Y-%m-%d"):
+                    ids = {}
+                    # Flatten the categories into a theme id dictionary per model for id lookups:
+                    # "948897111": {"category_name": "Futuristic", "title": "Celestial", "file_hash": "0x40914327",
+                    #     "image_url": "https://public-aiot-ore-qa.s3.dualstack.us-west-2.amazonaws.com/anker-power/public/banner/2025/03/26/iot-admin/T5IyObNNgxhUVPH8/%E6%B0%94%E6%B3%A1.jpg"},
+                    # "236632206": {"category_name": "Futuristic", "title": "Robotic", "file_hash": "0x756eab66",
+                    #     "image_url": "https://public-aiot-ore-qa.s3.dualstack.us-west-2.amazonaws.com/anker-power/public/banner/2025/03/26/iot-admin/ZOXFASuOK3154M0O/%E6%9C%BA%E7%94%B2.jpg"}}
+                    for cat in (
+                        await api.get_charger_screensavers(
+                            devicePn=pn, fromFile=fromFile
+                        )
+                    ).get("category") or []:
+                        if name := cat.get("category_name"):
+                            for theme in cat.get("list") or []:
+                                if theme_id := theme.get("id"):
+                                    ids[theme_id] = {
+                                        "category_name": name,
+                                        "title": theme.get("title"),
+                                        "file_hash": theme.get("file_crc32"),
+                                        "image_url": theme.get("image_url"),
+                                    }
+                    if ids:
+                        screensavers[pn] = {
+                            "poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "themes": ids,
+                        }
+                        api._update_account({"screensavers": screensavers})
+                # Fetch custom screensavers for device and flatten it for merge with stock screensavers
+                await api.get_charger_manual_screensavers(
+                    deviceSn=sn, fromFile=fromFile
+                )
+                # Fetch port remarks
+                await api.get_charger_port_remarks(deviceSn=sn, fromFile=fromFile)
+                # Get custom mode list
+                await api.get_charger_custom_mode_list(deviceSn=sn, fromFile=fromFile)
+                # Get device feature settings
+                await api.get_charger_device_setting(deviceSn=sn, fromFile=fromFile)
+                # Get protocol status
+                await api.get_charger_protocol_status(deviceSn=sn, fromFile=fromFile)
 
         # Merge additional powerpanel data
         if api.powerpanelApi:

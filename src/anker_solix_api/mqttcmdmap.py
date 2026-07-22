@@ -1618,9 +1618,10 @@ CMD_CHARGER_USAGE_MODE = CMD_COMMON | {
         STATE_NAME: "usage_mode",
         VALUE_OPTIONS: {
             "ai_power": 1,
-            "connection_priority": 2,
+            "port_priority": 2,
             "dual_laptop": 3,
             "low_power": 4,
+            "custom": 5,
         },
     },
 }
