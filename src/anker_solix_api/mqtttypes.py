@@ -33,6 +33,92 @@ from .mqttcmdmap import (
 from .mqttmap import SOLIXMQTTMAP
 
 
+def _read_varint(buf: bytes, pos: int) -> tuple[int, int]:
+    """Read one LEB128 varint from buf at pos; return (value, next_pos)."""
+    result = shift = 0
+    while True:
+        byte = buf[pos]
+        result |= (byte & 0x7F) << shift
+        pos += 1
+        if not byte & 0x80:
+            return result, pos
+        shift += 7
+
+
+def _is_protobuf_message(sub: bytes) -> bool:
+    """True if sub parses cleanly as a protobuf message (so it is recursed into)."""
+    pos = 0
+    try:
+        while pos < len(sub):
+            tag, pos = _read_varint(sub, pos)
+            wire = tag & 7
+            if wire == 0:
+                _, pos = _read_varint(sub, pos)
+            elif wire == 2:
+                length, pos = _read_varint(sub, pos)
+                pos += length
+            elif wire == 5:
+                pos += 4
+            elif wire == 1:
+                pos += 8
+            else:
+                return False
+        return pos == len(sub)
+    except (IndexError, ValueError):
+        return False
+
+
+def walk_protobuf(buf: bytes, prefix: str = "", out: dict | None = None) -> dict:
+    """Flatten a protobuf(-like) blob to a ``.field.subfield`` -> int map.
+
+    Keeps repeated tags in wire order (occurrence index appended as ``#n``) and addresses
+    every field by ``.path``, so byte offsets never matter -- a leaf value crossing 128
+    grows its varint in place without shifting anything. Used for the varint field type
+    (the A1783 c490 device-summary), which the fixed-offset TLV types cannot decode.
+
+    Every field is recorded: a length-delimited sub-message is stored as its byte length
+    *and* recursed into (so the container and its leaves both appear), and a wire-type 3/4
+    group marker is stored as ``None`` and stops the walk. Silently dropping containers
+    under-counts the message, which is a wrong decode.
+    """
+    if out is None:
+        out = {}
+    pos = 0
+    seen: dict[int, int] = {}
+    while pos < len(buf):
+        try:
+            tag, pos = _read_varint(buf, pos)
+        except IndexError:
+            break
+        fnum, wire = tag >> 3, tag & 7
+        occ = seen.get(fnum, 0)
+        seen[fnum] = occ + 1
+        path = f"{prefix}.{fnum}" + (f"#{occ}" if occ else "")
+        if wire == 0:
+            out[path], pos = _read_varint(buf, pos)
+        elif wire == 2:
+            length, pos = _read_varint(buf, pos)
+            sub = buf[pos : pos + length]
+            pos += length
+            if length and _is_protobuf_message(sub) and any(sub):
+                out[path] = length  # container: record its length, then its fields
+                walk_protobuf(sub, path, out)
+            elif sub and all(32 <= b < 127 for b in sub):
+                out[path] = sub.decode("ascii")  # printable string leaf
+            else:
+                out[path] = sub.hex()  # bytes leaf (kept as hex)
+        elif wire == 5:
+            out[path] = int.from_bytes(buf[pos : pos + 4], "little")
+            pos += 4
+        elif wire == 1:
+            out[path] = int.from_bytes(buf[pos : pos + 8], "little")
+            pos += 8
+        else:
+            out[path] = None  # group marker (wire type 3/4): record and stop
+            break
+    return out
+
+
 @dataclass(order=True, kw_only=True)
 class DeviceHexDataHeader:
     """Dataclass to structure Solix device hex data headers as received from MQTT transmissions.
@@ -406,6 +492,7 @@ class DeviceHexDataField:
                     DeviceHexDataTypes.sile.value,
                     DeviceHexDataTypes.var.value,
                     DeviceHexDataTypes.bin.value,
+                    DeviceHexDataTypes.varint.value,
                 ]
                 else fieldtype
             )
@@ -669,6 +756,21 @@ class DeviceHexDataField:
                         fieldmap=fieldmap.get(DeviceHexDataTypes.json.name, {}),
                     )
                 )
+            case DeviceHexDataTypes.varint.value:
+                # LEB128 protobuf(-like) blob (e.g. the A1783 c490 device-summary a2 field).
+                # Walk it to protobuf .path -> value; the BYTES submap keys are walker .paths,
+                # each an optional FACTOR/SIGNED like the base types. Self-delimiting varints
+                # make this width-drift proof (a value crossing 128 grows the field in place).
+                paths = walk_protobuf(hexdata)
+                for path, desc in (fieldmap.get(BYTES) or {}).items():
+                    if path in paths and (name := desc.get(NAME)):
+                        value = paths[path]
+                        if (
+                            isinstance(value, int)
+                            and (factor := desc.get(FACTOR, 1)) != 1
+                        ):
+                            value = round_by_factor(value * factor, factor)
+                        values[name] = value
             case _:
                 # check if type provided in mapping and convert value accordingly
                 if (
