@@ -1142,6 +1142,11 @@ class AnkerSolixBaseApi:
                             else:
                                 api = self
                             api._update_dev({"device_sn": sn, "battery_capacity": cap})
+                    # trigger device cache update for display theme
+                    elif "theme_id" in check_values:
+                        # update only if cached value different
+                        if str(check_values.get("theme_id")) != device.get("display_theme",{}).get("id"):
+                            self._update_dev({"device_sn": sn, "theme_id": check_values.get("theme_id")})
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated or dynamic description state changed
@@ -1156,6 +1161,7 @@ class AnkerSolixBaseApi:
                             # flag to trigger update if dynamic description value changed
                             dyn_desc = True
                             break
+                    # callback registered MQTT device if required
                     if (
                         oldsize == 0
                         or dyn_desc

@@ -157,8 +157,8 @@ async def set_charger_port_remark(
         )
         # update active setting in filedata
         remarks = []
-        for port in (filedata.get("port_remarks") or []):
-            if remark is not None and (name := port.get("port_name", "")) >= portName:
+        for port in filedata.get("port_remarks") or []:
+            if (name := port.get("port_name", "")) >= portName and remark is not None:
                 # insert/replace port in new list
                 remarks.append({"port_name": portName, "remark": remark})
                 remark = None
@@ -263,14 +263,51 @@ async def get_charger_manual_screensavers(
     for theme in data.get("list") or []:
         if (theme_id := theme.get("id")) is not None:
             ids[theme_id] = {
-                "category_name": "custom",
+                "category_name": "Custom",
                 "title": theme.get("name"),
                 "file_hash": theme.get("hash_code"),
                 "image_url": theme.get("img_url"),
+                "id": theme_id,
+                "theme_name": f"Custom:{theme.get('name')}",
             }
     if ids:
         self._update_dev({"device_sn": deviceSn, "screensaver": ids})
     return data
+
+
+def get_charger_themes(
+    self: AnkerSolixApi,
+    deviceSn: str,
+) -> dict:
+    """Get the mini charger merged themes with stock and custom screensavers."""
+
+    if isinstance(deviceSn, str):
+        dev = self.devices.get(deviceSn) or {}
+        return self.account.get("screensaver", {}).get(
+            dev.get("device_pn", ""), {}
+        ).get("themes", {}) | dev.get("screensaver", {})
+    return {}
+
+
+def get_charger_theme_options(
+    self: AnkerSolixApi, deviceSn: str, theme_id: str | int | None = None
+) -> list:
+    """Get the mini charger screensaver theme options with category name and theme title."""
+    if isinstance(deviceSn, str):
+        if not isinstance(theme_id, str | int):
+            theme_id = None
+        # prepare lookup mapping
+        if theme_id and (
+            (theme := self.devices.get(deviceSn, {}).get("display_theme", {})).get("id")
+            or None
+        ) == str(theme_id):
+            themes = {theme_id: theme}
+        else:
+            themes = self.get_charger_themes(deviceSn)
+            if theme_id:
+                themes = {theme_id: themes.get(theme_id)} if theme_id in themes else {}
+        return [theme.get("theme_name") for theme in themes.values()]
+    return []
 
 
 async def get_charger_protocol_status(

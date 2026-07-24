@@ -1274,7 +1274,7 @@ async def poll_device_details(  # noqa: C901
             # Fetch mini charger datails for supported models
             if (pn := device.get("device_pn")) == "A2345":
                 # Fetch screensavers
-                screensavers = api.account.get("screensavers") or {}
+                screensavers = api.account.get("screensaver") or {}
                 pn_themes = screensavers.get(pn, {})
                 # Fetch stock screensavers for model only once a day
                 if pn_themes.get("poll_time", "").split(" ")[
@@ -1299,13 +1299,15 @@ async def poll_device_details(  # noqa: C901
                                         "title": theme.get("title"),
                                         "file_hash": theme.get("file_crc32"),
                                         "image_url": theme.get("image_url"),
+                                        "id": theme_id,
+                                        "theme_name": f"{name}:{theme.get('title')}"
                                     }
                     if ids:
                         screensavers[pn] = {
                             "poll_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             "themes": ids,
                         }
-                        api._update_account({"screensavers": screensavers})
+                        api._update_account({"screensaver": screensavers})
                 # Fetch custom screensavers for device and flatten it for merge with stock screensavers
                 await api.get_charger_manual_screensavers(
                     deviceSn=sn, fromFile=fromFile

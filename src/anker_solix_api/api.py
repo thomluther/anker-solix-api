@@ -63,6 +63,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         get_charger_port_remarks,
         get_charger_protocol_status,
         get_charger_screensavers,
+        get_charger_theme_options,
+        get_charger_themes,
         set_charger_port_remark,
     )
     from .energy import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
@@ -1130,10 +1132,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "port_remarks",
                         "device_setting",
                         "custom_modes",
+                        "screensaver",
                         "modes",
                     ]:
                         device[key] = value
-
+                    elif key == "theme_id" and value is not None:
+                        # update only if cached value different
+                        if str(value) != device.get("display_theme",{}).get("id"):
+                            theme = self.get_charger_themes(deviceSn=sn).get(str(value),{})
+                            device["display_theme"] = theme
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
                         "Api %s error %s occurred when updating device details for key '%s' with value %s: %s",

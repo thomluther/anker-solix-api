@@ -983,7 +983,7 @@ class SolixMqttDevice:
             if await self._send_mqtt_command(
                 command=cmd,
                 parameters=parameters,
-                description=f"sent command '{cmd}'{': ' if user_parms else ''}{user_parms}",
+                description=f"sent command '{cmd}'{': ' + str(user_parms) if user_parms else ''}",
                 toFile=toFile,
             ):
                 resp = state_fields
