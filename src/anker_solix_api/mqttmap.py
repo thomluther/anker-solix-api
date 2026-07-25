@@ -3240,6 +3240,14 @@ _AS220_0421 = {
                 NAME: "port_memory_switch",  # Output Port Memory switch: Disabled (0) or Enabled (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "23": {
+                NAME: "max_soc",  # max_soc %
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "24": {
+                NAME: "min_soc",  # min_soc %
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
             "28": {
                 NAME: "ac_output_timeout_minutes",  # minutes; AS220 replaces ac_output_timeout_seconds (live: 240=4h, 720=12h)
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3274,7 +3282,7 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "02": {
-                NAME: "ac_input_power_total",  # Input power total charge
+                NAME: "ac_input_power",  # Input power total charge
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "04": {
@@ -3290,6 +3298,14 @@ _AS220_0421 = {
             "08": {
                 NAME: "main_battery_soc",  # SOC of main battery only?
                 TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "10": {
+                NAME: "ac_input_plug_status",  # 0: Disconnected, 1: connected
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "11": {
+                NAME: "input_power_total",  # AC and DC input power combined
+                TYPE: DeviceHexDataTypes.sile.value,
             },
         },
     },
@@ -3308,7 +3324,7 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
-                NAME: "ac_input_power",  # AC input power (dup of a6 ac_input_power) - live-confirmed = input W
+                NAME: "ac_input_power_dup?",  # AC input power (dup of a6 ac_input_power) - live-confirmed = input W
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -3316,11 +3332,11 @@ _AS220_0421 = {
     "aa": {
         BYTES: {
             "00": {
-                NAME: "usbc_1_status",  # USB-C 1 status: Inactive (0), Discharging (1), Charging (2)
+                NAME: "usb_status",  # USB total status: Inactive (0), Discharging (1), Charging (2)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "usbc_1_power",
+                NAME: "usb_power", # Total USB power
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -3334,7 +3350,7 @@ _AS220_0421 = {
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "01": {
-                    NAME: "usage_mode",  # 0-based: 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+                    NAME: "usage_mode",  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "02": {
@@ -3342,11 +3358,11 @@ _AS220_0421 = {
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "03": {
-                    NAME: "max_soc",  # max_soc %
+                    NAME: "max_soc_dup?",  # max_soc %
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "04": {
-                    NAME: "min_soc",  # min_soc % - restored from A1783 template; feeds soc_min / power_cutoff
+                    NAME: "min_soc_dup?",  # min_soc %
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "05": {
@@ -4637,7 +4653,7 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
         # Interval: Only as esponse to status request, same content as 0421
-        "0900": _AS220_0421,
+        #"0900": _AS220_0421, # 0900 Mapping still to be verified
     },
     # PPS F2000
     "A1780": {

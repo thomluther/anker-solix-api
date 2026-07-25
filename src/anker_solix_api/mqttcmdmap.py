@@ -1762,9 +1762,9 @@ CMD_CHARGER_CLOCK_HOLIDAY = CMD_COMMON | {
     # Command: Enable / disable clock holiday switch
     COMMAND_NAME: SolixMqttCommands.clock_holiday_switch,
     "a2": {
-        NAME: "set_clock_holiday_switch",  # Disable (0) | Enable (1)
+        NAME: "set_holiday_switch",  # Disable (0) | Enable (1)
         TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "clock_holiday_switch",
+        STATE_NAME: "holiday_switch",
         VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }

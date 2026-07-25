@@ -700,6 +700,7 @@ class AnkerSolixBaseApi:
                                         "ac_output_power",
                                         "dc_input_power",
                                         "dc_output_power",
+                                        "input_power",
                                         "output_power",
                                         "home_demand",
                                     )
@@ -1094,6 +1095,16 @@ class AnkerSolixBaseApi:
                                 device_mqtt[f"peers_circuit_{physicals[0]}"] = list(
                                     map(int, physicals[1:])
                                 )
+                    elif "usbc_1_priority" in check_values:
+                        # update bitmask field for actual priority setting
+                        bitmask = 0
+                        for bit, idx in enumerate(
+                            ["usbc_1", "usbc_2", "usbc_3", "usbc_4"]
+                        ):
+                            bitmask += (
+                                int(check_values.get(f"{idx}_priority", 0) > 1) >> bit
+                            )
+                        device_mqtt["port_priority"] = bitmask
                     device["mqtt_data"] = device_mqtt
                     # trigger device cache update for cap calculation with total or main device soc updates
                     if calc_capacity and (cap := device.get("battery_capacity")):
@@ -1145,8 +1156,15 @@ class AnkerSolixBaseApi:
                     # trigger device cache update for display theme
                     elif "theme_id" in check_values:
                         # update only if cached value different
-                        if str(check_values.get("theme_id")) != device.get("display_theme",{}).get("id"):
-                            self._update_dev({"device_sn": sn, "theme_id": check_values.get("theme_id")})
+                        if str(check_values.get("theme_id")) != device.get(
+                            "display_theme", {}
+                        ).get("id"):
+                            self._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "theme_id": check_values.get("theme_id"),
+                                }
+                            )
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated or dynamic description state changed

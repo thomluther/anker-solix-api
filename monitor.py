@@ -2182,14 +2182,23 @@ class AnkerSolixApiMonitor:
                     if "." in str(m1):
                         m1 = f"{float(m1):.2f}"
                     CONSOLE.info(
-                        f"{'DC Out Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit:<{col2 - 6}}{co} "
+                        f"{'DC Out Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'DC Out Timeout':<{col3}}: {m2 and (c or cm)}{m2 or '--:--'}{co}"
                     )
-                m1 = cm and mqtt.get("ac_input_power", "")
-                m2 = cm and (mqtt.get("ac_input_limit", ""))
+                m1 = cm and mqtt.get("input_power_total", "")
+                m2 = cm and str(mqtt.get("ac_input_plug_status", ""))
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'AC Input Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'Input Pwr Total':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'AC Input Plug':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixConnectionStatus, m2, 'unknown' if m2 else '----').title()} ({m2 or '-'}){co}"
+                    )
+                m1 = cm and mqtt.get("ac_input_power", "")
+                m3 = cm and mqtt.get("ac_input_power_switch", "")
+                m2 = cm and mqtt.get("ac_input_limit", "")
+                if m1 or m2 or str(m3):
+                    CONSOLE.info(
+                        f"{'AC Input Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{co} / "
+                        f"({str(m3) and (c or cm)}{get_enum_name(SolixSwitchMode, m3, str(m3) or '---').upper():>3}{co}{')':<{col2-12}}"
                         f"{'AC Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("ac_output_power", "")
@@ -2200,7 +2209,7 @@ class AnkerSolixApiMonitor:
                 if m1 or m2 or m3 or m4:
                     CONSOLE.info(
                         f"{'AC Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3 and (c or cm)}{' / ' + (m3 or '--') + ' Hz':<{col2 - 6}}{co} "
-                        f"{'Out Tot/AC Off':<{col3}}: {(m2 or m4) and (c or cm)}{m2 or '----':>4} {unit}{co} / {m4 and (c or cm)}{m4 or '-:--:--'}{co}"
+                        f"{'Out Tot/AC Off':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co} / {m4 and (c or cm)}{m4 or '-:--:--'}{co}"
                     )
                 m1 = str(dev.get("phase", ""))
                 m2 = str(dev.get("branch_ct_number", ""))
@@ -2220,6 +2229,7 @@ class AnkerSolixApiMonitor:
                         f"{'Protect Status':<{col3}}: {m2 or '-'}{co}"
                     )
                 for idx in [
+                    "usb",
                     "usbc_1",
                     "usbc_2",
                     "usbc_3",
@@ -2242,7 +2252,7 @@ class AnkerSolixApiMonitor:
                         ) == "" and idx.startswith("usba"):
                             # Alternatively check shared switch for USB A
                             m5 = cm and mqtt.get("usba_switch", "")
-                        idxstr = idx.replace("usb", "usb-").replace("_", " ").upper()
+                        idxstr = idx.replace("usb", "usb-" if idx != "usb" else idx).replace("_", " ").upper()
                         CONSOLE.info(
                             f"{idxstr + ' Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
                             f"{idxstr + ' V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m5, str(m5) or '---').upper()}){co}"
