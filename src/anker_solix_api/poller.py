@@ -1312,14 +1312,16 @@ async def poll_device_details(  # noqa: C901
                 await api.get_charger_manual_screensavers(
                     deviceSn=sn, fromFile=fromFile
                 )
-                # Fetch port remarks
-                await api.get_charger_port_remarks(deviceSn=sn, fromFile=fromFile)
-                # Get custom mode list
-                await api.get_charger_custom_mode_list(deviceSn=sn, fromFile=fromFile)
                 # Get device feature settings
                 await api.get_charger_device_setting(deviceSn=sn, fromFile=fromFile)
-                # Get protocol status
-                await api.get_charger_protocol_status(deviceSn=sn, fromFile=fromFile)
+                # Get custom mode list
+                await api.get_charger_custom_mode_list(deviceSn=sn, fromFile=fromFile)
+                # Fetch USB details if not excluded
+                if ({ApiCategories.charger_usb_settings} - exclude):
+                    # Fetch port remarks
+                    await api.get_charger_port_remarks(deviceSn=sn, fromFile=fromFile)
+                    # Get protocol status
+                    await api.get_charger_protocol_status(deviceSn=sn, fromFile=fromFile)
 
         # Merge additional powerpanel data
         if api.powerpanelApi:

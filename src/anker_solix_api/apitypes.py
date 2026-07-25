@@ -1165,6 +1165,7 @@ class ApiCategories:
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
     charger_energy: str = "charger_energy"
+    charger_usb_settings: str = "charger_usb_settings"
     powerpanel_energy: str = "powerpanel_energy"
     powerpanel_avg_power: str = "powerpanel_avg_power"
     hes_energy: str = "hes_energy"

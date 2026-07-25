@@ -3336,7 +3336,7 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "usb_power", # Total USB power
+                NAME: "usb_power",  # Total USB power
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -4507,13 +4507,144 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS S2000 - matches A1783 (C2000 Gen 2); 0101-0103 controls inherited, not yet validated
     "AS220": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0090": {
+            # TOU command group
+            COMMAND_LIST: [
+                SolixMqttCommands.pps_usage_mode,  # field a2
+                SolixMqttCommands.backup_soc,  # field a5
+            ],
+            SolixMqttCommands.pps_usage_mode: CMD_COMMON_V2
+            | {
+                "a2": {  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+                    NAME: "set_usage_mode",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "usage_mode",
+                    VALUE_OPTIONS: {
+                        "standard": 0,  # UPS mode
+                        "time_of_use": 1,
+                        "self_consumption": 2,
+                        "custom": 3,
+                    },
+                },
+            },
+            SolixMqttCommands.backup_soc: CMD_COMMON_V2
+            | {
+                "a5": {
+                    NAME: "set_backup_soc",  # range? step?
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "backup_soc",
+                    VALUE_MIN: 10,
+                    VALUE_MAX: 90,
+                    VALUE_STEP: 1,
+                },
+            },
+        },
+        "0093": {
+            COMMAND_LIST: [
+                SolixMqttCommands.pps_custom_schedule,  # field a2
+                SolixMqttCommands.silent_schedule,  # field a4
+            ],
+            SolixMqttCommands.pps_custom_schedule: CMD_COMMON_V2
+            | {
+                # command structure for custom mode binary a2 field not clear yet
+                # a2   0e 04    01: 1f: 02:01:00:00:68:01:02:68:01:d0:02
+                # └->  14 bin   b'\x01\x1f\x02\x01\x00\x00h\x01\x02h\x01\xd0\x02'
+                # a2   15 04    02: 1f: 02: 01 :00:00: 68:01: 02: 68:01 :d0:02  :60: 01: 02: 00:00: 3c:00
+                #               cnt wk  idx md  0      360    md  360    720     ??  ??  md  00     60
+                # └->  21 bin   b'\x02\x1f\x02\x01\x00\x00h\x01\x02h\x01\xd0\x02`\x01\x02\x00\x00<\x00'
+                # custom_mode_switch ?
+                # custom_mode_weekdays ?
+                # custom_slot_count ?
+                # custom_slot_x_load_mode ?
+                # custom_slot_x_start_minutes ?
+                # custom_slot_x_end_minutes ?
+                "a2": {
+                    TYPE: DeviceHexDataTypes.bin.value,
+                    # LENGTH: ??, varies, depends on slots
+                    BYTES: {
+                        "00": {
+                            NAME: "set_custom_mode_switch",  # Disable (0) | Enable (1)
+                            TYPE: DeviceHexDataTypes.ui.value,
+                            STATE_NAME: "custom_mode_switch",
+                            VALUE_STATE: "custom_mode_switch",
+                            VALUE_OPTIONS: {"off": 0, "on": 1},
+                        },
+                        "01": {
+                            NAME: "set_custom_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                            TYPE: DeviceHexDataTypes.ui.value,
+                            STATE_NAME: "custom_mode_weekdays",
+                            VALUE_STATE: "custom_mode_weekdays",
+                            VALUE_MIN: 0,
+                            VALUE_MAX: 127,
+                        },
+                    },
+                },
+            },
+            SolixMqttCommands.silent_schedule: CMD_COMMON_V2
+            | {
+                "a4": {
+                    TYPE: DeviceHexDataTypes.bin.value,
+                    LENGTH: 6,
+                    BYTES: {
+                        "00": {
+                            NAME: "set_silent_mode_switch",  # Disable (0) | Enable (1)
+                            TYPE: DeviceHexDataTypes.ui.value,
+                            STATE_NAME: "silent_mode_switch",
+                            VALUE_STATE: "silent_mode_switch",
+                            VALUE_OPTIONS: {"off": 0, "on": 1},
+                        },
+                        "01": {
+                            NAME: "set_silent_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
+                            TYPE: DeviceHexDataTypes.ui.value,
+                            STATE_NAME: "silent_mode_weekdays",
+                            VALUE_STATE: "silent_mode_weekdays",
+                            VALUE_MIN: 0,
+                            VALUE_MAX: 127,
+                        },
+                        "02": {
+                            NAME: "set_silent_mode_start_minutes",  # start, minutes of day
+                            TYPE: DeviceHexDataTypes.sile.value,
+                            SIGNED: False,
+                            STATE_NAME: "silent_mode_start_minutes",
+                            VALUE_STATE: "silent_mode_start_minutes",
+                            VALUE_MIN: 0,
+                            VALUE_MAX: 1339,
+                        },
+                        "04": {
+                            NAME: "set_silent_mode_end_minutes",  # end, minutes of day
+                            TYPE: DeviceHexDataTypes.ui.value,
+                            SIGNED: False,
+                            STATE_NAME: "silent_mode_end_minutes",
+                            VALUE_STATE: "silent_mode_end_minutes",
+                            VALUE_MIN: 1,
+                            VALUE_MAX: 1440,
+                        },
+                    },
+                },
+            },
+        },
+        "0100": CMD_STATUS_REQUEST
+        | {  # Device status request (one time status messages 0900)
+            "a2": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                BYTES: {
+                    "00": {
+                        NAME: "push_status_request",  # Push (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 1,
+                    },
+                },
+            }
+        },
         "0101": {
             # AC command group
             COMMAND_LIST: [
                 SolixMqttCommands.ac_output_switch,  # field a2
-                SolixMqttCommands.ac_output_timeout_seconds,  # field a3
                 SolixMqttCommands.ac_charge_limit,  # field a4
                 SolixMqttCommands.ac_output_mode_select,  # field a6
+                SolixMqttCommands.ac_fast_charge_switch,  # field a7
+                SolixMqttCommands.ac_output_timeout_minutes,  # field aa
             ],
             SolixMqttCommands.ac_output_switch: CMD_COMMON_V2
             | {
@@ -4536,17 +4667,6 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_STEP: 100,
                 },
             },
-            SolixMqttCommands.ac_output_timeout_seconds: CMD_COMMON_V2
-            | {
-                "a3": {
-                    NAME: "set_ac_output_timeout_seconds",  # Timeout seconds, custom range: 0-86400, step 300
-                    TYPE: DeviceHexDataTypes.var.value,
-                    STATE_NAME: "ac_output_timeout_seconds",
-                    VALUE_MIN: 0,
-                    VALUE_MAX: 86400,
-                    VALUE_STEP: 300,
-                },
-            },
             SolixMqttCommands.ac_output_mode_select: CMD_COMMON_V2
             | {
                 "a6": {
@@ -4554,6 +4674,26 @@ SOLIXMQTTMAP: Final[dict] = {
                     TYPE: DeviceHexDataTypes.ui.value,
                     STATE_NAME: "ac_output_mode",
                     VALUE_OPTIONS: {"normal": 0, "smart": 1},
+                },
+            },
+            SolixMqttCommands.ac_fast_charge_switch: CMD_COMMON_V2
+            | {
+                "a7": {
+                    NAME: "set_ac_fast_charge_switch",  # Disable (0) | Enable (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_fast_charge_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+            SolixMqttCommands.ac_output_timeout_minutes: CMD_COMMON_V2
+            | {
+                "aa": {
+                    NAME: "set_ac_output_timeout_minutes",  # Timeout seconds, custom range: 0-1440, step 5
+                    TYPE: DeviceHexDataTypes.var.value,
+                    STATE_NAME: "ac_output_timeout_minutes",
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 1440,
+                    VALUE_STEP: 5,
                 },
             },
         },
@@ -4652,8 +4792,8 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
-        # Interval: Only as esponse to status request, same content as 0421
-        #"0900": _AS220_0421, # 0900 Mapping still to be verified
+        # Interval: Only as response to status request, same content as 0421
+        "0900": _AS220_0421,
     },
     # PPS F2000
     "A1780": {

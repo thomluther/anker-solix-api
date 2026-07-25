@@ -95,6 +95,7 @@ class SolixMqttCommands:
     ac_output_switch: str = "ac_output_switch"
     ac_output_mode_select: str = "ac_output_mode_select"
     ac_output_timeout_seconds: str = "ac_output_timeout_seconds"
+    ac_output_timeout_minutes: str = "ac_output_timeout_minutes"
     dc_output_switch: str = "dc_output_switch"
     dc_12v_output_mode_select: str = "dc_12v_output_mode_select"
     dc_output_timeout_seconds: str = "dc_output_timeout_seconds"
@@ -130,6 +131,11 @@ class SolixMqttCommands:
     usbc_4_end_time: str = "usbc_4_end_time"
     usba_end_time: str = "usba_end_time"
     soc_limits: str = "soc_limits"
+    backup_soc: str = "backup_soc"
+    pps_usage_mode: str = "pps_usage_mode"
+    pps_tou_schedule: str = "tou_schedule"
+    pps_custom_schedule: str = "pps_custom_schedule"
+    silent_schedule: str = "silent_schedule"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
     sb_min_soc_select: str = "sb_min_soc_select"  # Old command: Does not change App station wide setting, needs Api request as well
@@ -366,7 +372,7 @@ CMD_AC_FAST_CHARGE_SWITCH = CMD_COMMON | {
     "a2": {
         NAME: "set_ac_fast_charge_switch",  # Disable (0) | Enable (1)
         TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "fast_charge_switch",
+        STATE_NAME: "ac_fast_charge_switch",
         VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }

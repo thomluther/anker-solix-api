@@ -1037,7 +1037,7 @@ class DeviceHexData:
                         and f.f_type
                         in [DeviceHexDataTypes.str.value, DeviceHexDataTypes.var.value]
                     ):
-                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value))).strftime('%Y-%m-%d %H:%M:%S')})"
+                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value)) or 0).strftime('%Y-%m-%d %H:%M:%S')})"
                     s += f"\n{f.decode().rstrip()}"
                     if name:
                         s += (
@@ -1676,8 +1676,10 @@ def convert_timestamp(
         # convert to float timestamp in seconds
         if ms or len(value) > 4:
             msec = "".join(
-                c for c in value.decode(errors="ignore").strip() if c.isprintable()
-            ).rstrip("?")
+                c
+                for c in value.decode(errors="ignore").strip()
+                if (c.isdigit() or c == ".")
+            )
             if msec.replace(".", "", 1).isdigit():
                 return float(msec) / 1000
         else:
