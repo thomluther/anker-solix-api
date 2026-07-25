@@ -1090,7 +1090,7 @@ _A1783_0490 = {
     "a1": {NAME: "summary_generation?"},  # 1 byte, const 0x31 -- family generation marker
     "a2": {
         # LEB128 protobuf rollup; walked and mapped via _A1783_0490_a2 (keys are walker paths)
-        TYPE: DeviceHexDataTypes.varint.value,
+        TYPE: DeviceHexDataTypes.prtb.value,
         BYTES: _A1783_0490_a2,
     },
     "a3": {NAME: "charging_series_id", TYPE: DeviceHexDataTypes.str.value},

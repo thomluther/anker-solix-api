@@ -492,7 +492,7 @@ class DeviceHexDataField:
                     DeviceHexDataTypes.sile.value,
                     DeviceHexDataTypes.var.value,
                     DeviceHexDataTypes.bin.value,
-                    DeviceHexDataTypes.varint.value,
+                    DeviceHexDataTypes.prtb.value,
                 ]
                 else fieldtype
             )
@@ -756,7 +756,7 @@ class DeviceHexDataField:
                         fieldmap=fieldmap.get(DeviceHexDataTypes.json.name, {}),
                     )
                 )
-            case DeviceHexDataTypes.varint.value:
+            case DeviceHexDataTypes.prtb.value:
                 # LEB128 protobuf(-like) blob (e.g. the A1783 c490 device-summary a2 field).
                 # Walk it to protobuf .path -> value; the BYTES submap keys are walker .paths,
                 # each an optional FACTOR/SIGNED like the base types. Self-delimiting varints
