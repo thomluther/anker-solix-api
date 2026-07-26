@@ -1756,14 +1756,15 @@ def convert_weekdays(
             for idx, name in enumerate(weekdays)
             if int.from_bytes(value) & (1 << idx)
         ]
-    if isinstance(value, list | set) and (0 <= len(set(value)) <= 7):
-        # convert "all" to weekdays
+    if isinstance(value, list | set) and (0 <= len(set(value)) <= 10):
+        # convert elements to lower case string and "all" to weekdays
+        value = set(map(str.lower, map(str, value)))
         if "all" in value:
-            value = (set(map(str.lower, value)) - {"all"}) | set(weekdays)
-        # Convert list into bitmask byte
+            value = (value - {"all"}) | set(weekdays)
+        # Convert valid weekdays into bitmask byte
         return sum(
             1 << weekdays.index(day.lower())
-            for day in set(value)
-            if isinstance(day, str) and day.lower() in weekdays
+            for day in value
+            if isinstance(day, str) and day in weekdays
         ).to_bytes()
     return None

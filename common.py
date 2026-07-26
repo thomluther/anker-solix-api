@@ -168,7 +168,7 @@ def print_schedule(schedule: dict) -> None:
                 for slot in ranges:
                     CONSOLE.info(
                         f"{index!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t5}}  {str(slot.get('power', '')) + ' W':>{t6}}  "
-                        f"{str(get_enum_name(SolarbankSchedulePresetType,slot.get('charging_type', 0),f"({slot.get('charging_type','----')})")).replace('_',' ').title():<{t9}}  "
+                        f"{str(get_enum_name(SolarbankSchedulePresetType, slot.get('charging_type', 0), f'({slot.get("charging_type", "----")})')).replace('_', ' ').title():<{t9}}  "
                         f"{','.join(weekdays):<{t6}}"
                     )
         # AC specific plans
@@ -449,7 +449,11 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}({'00:00-23:59' if 0 <= desc.get(VALUE_MAX, 0) <= 5947 else '00:00:00-23:59:59'})"
             elif str(desc.get(STATE_NAME)).endswith("_weekdays"):
                 # special case for fields indicating bitmask for weekdays
-                value_info = f"{Color.YELLOW}({["all", *convert_weekdays(b"\x7f")]})".replace(", ","|")
+                value_info = (
+                    f"{Color.YELLOW}({['all', *convert_weekdays(b'\x7f')]})".replace(
+                        ", ", "|"
+                    )
+                )
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
                 if (v := desc.get(VALUE_STEP)) is not None:
@@ -461,13 +465,7 @@ def query_mqtt_command(  # noqa: C901
             if value_info:
                 if (v := desc.get(VALUE_DEFAULT)) is not None or (
                     callable(v := desc.get(STATE_CONVERTER))
-                    and (
-                        v := v(
-                            None,
-                            None,
-                            mdev.get_status(fromFile=toFile)
-                        )
-                    )
+                    and (v := v(None, None, mdev.get_status(fromFile=toFile)))
                     is not None
                 ):
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
@@ -484,12 +482,14 @@ def query_mqtt_command(  # noqa: C901
                     if sel.replace("-", "", 1).replace(".", "", 1).isdigit():
                         sel = round_by_factor(float(sel), step)
                     elif sel.startswith(("[", "{")):
-                        sel = json.loads(sel)
+                        with contextlib.suppress(json.decoder.JSONDecodeError):
+                            sel = json.loads(sel)
                     else:
                         sel = sel.strip("'\"")
                     if (
-                        sel := mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm)
+                        val := mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm)
                     ) is not None:
+                        sel = val
                         break
                     # exit loop if input was cancelled
                     if not sel:
@@ -497,7 +497,9 @@ def query_mqtt_command(  # noqa: C901
                 if sel is not None:
                     parameters[parm] = sel
         # get optional states and follow parameters
-        for parm, desc in mdev.get_cmd_parms(cmd=cmd, state_parms=True, follow_parms=True).items():
+        for parm, desc in mdev.get_cmd_parms(
+            cmd=cmd, state_parms=True, follow_parms=True
+        ).items():
             value_info = ""
             step = 1
             state = None
@@ -508,7 +510,11 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}({'00:00-23:59' if 0 <= desc.get(VALUE_MAX, 0) <= 5947 else '00:00:00-23:59:59'})"
             elif str(desc.get(STATE_NAME)).endswith("_weekdays"):
                 # special case for fields indicating bitmask for weekdays
-                value_info = f"{Color.YELLOW}({["all", *convert_weekdays(b"\x7f")]})".replace(", ","|")
+                value_info = (
+                    f"{Color.YELLOW}({['all', *convert_weekdays(b'\x7f')]})".replace(
+                        ", ", "|"
+                    )
+                )
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
                 if (v := desc.get(VALUE_STEP)) is not None:
@@ -518,18 +524,18 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
             # query default parameters only if value has validation descriptors
             if value_info:
-                if ((v := desc.get(VALUE_STATE)) is not None and (
+                if (v := desc.get(VALUE_STATE)) is not None and (
                     state := mdev.get_status(fromFile=toFile).get(v)
-                ) is not None):
+                ) is not None:
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use last state ({Color.GREEN}{state}{Color.OFF})"
                 elif (v := desc.get(VALUE_FOLLOWS)) is not None:
-                    state = (mdev.get_status(fromFile=toFile)  | parameters).get(v)
+                    state = (mdev.get_status(fromFile=toFile) | parameters).get(v)
                     # convert state as required
                     if isinstance(options := desc.get(VALUE_OPTIONS), dict):
                         # get follow state from option map
                         state = options.get(state)
                     elif callable(converter := desc.get(STATE_CONVERTER)):
-                        state = converter(state,None,mdev.get_status(fromFile=toFile))
+                        state = converter(state, None, mdev.get_status(fromFile=toFile))
                     if state is not None:
                         value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use follow state ({Color.GREEN}{state}{Color.OFF})"
                 elif (v := desc.get(VALUE_DEFAULT)) is not None:
@@ -547,12 +553,14 @@ def query_mqtt_command(  # noqa: C901
                     if sel.replace("-", "", 1).replace(".", "", 1).isdigit():
                         sel = round_by_factor(float(sel), step)
                     elif sel.startswith(("[", "{")):
-                        sel = json.loads(sel)
+                        with contextlib.suppress(json.decoder.JSONDecodeError):
+                            sel = json.loads(sel)
                     else:
                         sel = sel.strip("'\"")
                     if (
-                        sel := mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm)
+                        val := mdev.validate_cmd_value(cmd=cmd, value=sel, parm=parm)
                     ) is not None:
+                        sel = val
                         break
                     # exit loop if input was cancelled
                     if not sel:

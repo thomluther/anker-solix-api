@@ -4616,7 +4616,7 @@ SOLIXMQTTMAP: Final[dict] = {
                             SIGNED: False,
                             STATE_NAME: "silent_mode_end_minutes",
                             VALUE_STATE: "silent_mode_end_minutes",
-                            VALUE_MIN: 1,
+                            VALUE_MIN: 0,
                             VALUE_MAX: 1440,
                         },
                     },
