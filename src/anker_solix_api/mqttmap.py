@@ -4612,7 +4612,7 @@ SOLIXMQTTMAP: Final[dict] = {
                         },
                         "04": {
                             NAME: "set_silent_mode_end_minutes",  # end, minutes of day
-                            TYPE: DeviceHexDataTypes.ui.value,
+                            TYPE: DeviceHexDataTypes.sile.value,
                             SIGNED: False,
                             STATE_NAME: "silent_mode_end_minutes",
                             VALUE_STATE: "silent_mode_end_minutes",
@@ -4689,7 +4689,7 @@ SOLIXMQTTMAP: Final[dict] = {
             | {
                 "aa": {
                     NAME: "set_ac_output_timeout_minutes",  # Timeout seconds, custom range: 0-1440, step 5
-                    TYPE: DeviceHexDataTypes.var.value,
+                    TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "ac_output_timeout_minutes",
                     VALUE_MIN: 0,
                     VALUE_MAX: 1440,

@@ -1728,15 +1728,15 @@ def convert_time(value: bytes | bytearray | str) -> bytes | str | None:
 def convert_weekdays(
     value: bytes | bytearray | list | set, lsb_day: str = "mon"
 ) -> bytes | list | None:
-    """Convert list of weekdays between byte bitmask used in MQTT messages and list formats.
+    """Convert list of weekdays between bitmask used in MQTT messages and list formats.
 
-    Automatically detects input value type and converts accordingly. The typical Byte Bitmask is:
+    Automatically detects input value type and converts accordingly. The typical Bitmask is:
     0:sun:sat:fri:thu:wed:tue:mon
     with mon as lsb_day
 
     Args:
         value: Weekday data in a byte bitmask (1 byte, 0-0x7f)
-              or list|set format (["tue", "sat"]).
+              or list|set with 3 char weekdays or "all", format ["tue", "sat"] or ["all"].
         lsb_day: least significant day of week = bit 0
 
     Returns:
@@ -1757,6 +1757,9 @@ def convert_weekdays(
             if int.from_bytes(value) & (1 << idx)
         ]
     if isinstance(value, list | set) and (0 <= len(set(value)) <= 7):
+        # convert "all" to weekdays
+        if "all" in value:
+            value = (set(map(str.lower, value)) - {"all"}) | set(weekdays)
         # Convert list into bitmask byte
         return sum(
             1 << weekdays.index(day.lower())

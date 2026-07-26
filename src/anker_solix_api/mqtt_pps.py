@@ -47,6 +47,7 @@ MODELS = {
 # Those commands are only supported once also described for a message type in the model mapping (except realtime trigger)
 # Models can be removed from a feature to block command usage even if message type is described in the mapping
 FEATURES = {
+    SolixMqttCommands.status_request: MODELS,
     SolixMqttCommands.realtime_trigger: MODELS,
     SolixMqttCommands.temp_unit_switch: MODELS,
     SolixMqttCommands.device_max_load: MODELS,
@@ -57,6 +58,7 @@ FEATURES = {
     SolixMqttCommands.ac_fast_charge_switch: MODELS,
     SolixMqttCommands.ac_output_mode_select: MODELS,
     SolixMqttCommands.ac_output_timeout_seconds: MODELS,
+    SolixMqttCommands.ac_output_timeout_minutes: MODELS,
     SolixMqttCommands.dc_output_switch: MODELS,
     SolixMqttCommands.dc_12v_output_mode_select: MODELS,
     SolixMqttCommands.dc_output_timeout_seconds: MODELS,
@@ -68,6 +70,11 @@ FEATURES = {
     SolixMqttCommands.light_mode_select: MODELS,
     SolixMqttCommands.port_memory_switch: MODELS,
     SolixMqttCommands.soc_limits: MODELS,
+    SolixMqttCommands.pps_usage_mode: MODELS,
+    SolixMqttCommands.silent_schedule: MODELS,
+    # SolixMqttCommands.pps_custom_schedule: MODELS,
+    # SolixMqttCommands.pps_tou_schedule: MODELS,
+    # SolixMqttCommands.backup_soc: MODELS,
 }
 
 
