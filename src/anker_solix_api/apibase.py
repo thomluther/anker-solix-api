@@ -1154,7 +1154,7 @@ class AnkerSolixBaseApi:
                                 api = self
                             api._update_dev({"device_sn": sn, "battery_capacity": cap})
                     # trigger device cache update for display theme
-                    elif "theme_id" in check_values:
+                    if "theme_id" in check_values:
                         # update only if cached value different
                         if str(check_values.get("theme_id")) != device.get(
                             "display_theme", {}

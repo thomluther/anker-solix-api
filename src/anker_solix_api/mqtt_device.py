@@ -200,7 +200,7 @@ class SolixMqttDevice:
                                                     ),
                                                     dict,
                                                 )
-                                                and len(opt) == 2
+                                                and 2 <= len(opt) <= 3 # tolerate a 3rd undefined option for a switch, which is not used
                                                 and "on" in opt
                                                 and "off" in opt
                                             )
@@ -291,7 +291,7 @@ class SolixMqttDevice:
                         control["is_switch"] = bool(
                             len(required_options) == 1
                             and isinstance(opt := required_options[0], dict)
-                            and len(opt) == 2
+                            and 2 <= len(opt) <= 3 # tolerate a 3rd undefined option for a switch, which is not used
                             and "on" in opt
                             and "off" in opt
                         )

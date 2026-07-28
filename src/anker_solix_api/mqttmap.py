@@ -997,11 +997,19 @@ _A1780_0405 = {
         NAME: "exp_1_temperature",
         SIGNED: True,
     },  # Expansion battery 1 temperature (°C)
+    "bf": {NAME: "battery_status"},  # 0=standby, 1=discharge, 2=Charge
     "c1": {NAME: "main_battery_soc"},  # Main battery state of charge (%)
     "c2": {NAME: "exp_1_soc"},  # Expansion battery 1 state of charge (%)
     "c3": {NAME: "battery_soh"},  # Main battery state of health (%)
     "c4": {NAME: "exp_1_soh"},  # Expansion battery 1 state of health (%)
     "c5": {NAME: "expansion_packs"},
+    "c6": {NAME: "usbc_1_status"},  # 0:0ff, 1:On
+    "c7": {NAME: "usbc_2_status"},  # 0:0ff, 1:On
+    "c8": {NAME: "usbc_3_status"},  # 0:0ff, 1:On
+    "c9": {NAME: "usba_1_status"},  # 0:0ff, 1:On
+    "ca": {NAME: "usba_2_status"},  # 0:0ff, 1:On
+    "cb": {NAME: "dc_12v_1_status"},  # 0:0ff, 1:On
+    "cc": {NAME: "dc_12v_2_status"},  # 0:0ff, 1:On
     "d0": {NAME: "device_sn"},
     "d1": {NAME: "ac_input_limit"},  # Maximum charge setting (W)
     "d2": {
@@ -1087,6 +1095,10 @@ _A1782_0421 = (
                     NAME: "ac_input_limit",  # AC charge limit: 200-1800 W, step: 100
                     TYPE: DeviceHexDataTypes.sile.value,
                 },
+                "06": {
+                    NAME: "ac_frequency",  # 60 / 50 Hz
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
                 "07": {
                     NAME: "ac_output_mode",  # Normal (0), Smart (1) - auto-off below 14W
                     TYPE: DeviceHexDataTypes.ui.value,
@@ -1170,11 +1182,23 @@ _A1782_0421 = (
         "a8": {
             BYTES: {
                 "00": {
-                    NAME: "dc_input_power_status?",  # ?  Seems to have a value of 1 when the next field has a non-zero value
+                    NAME: "pv_1_status",  # Low Voltage PV: Inactive (0), Active (1)
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "01": {
-                    NAME: "dc_input_power?",  # Don't know what this is; seems to be power-input-adjacent.
+                    NAME: "pv_1_power",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+            }
+        },
+        "a9": {
+            BYTES: {
+                "00": {
+                    NAME: "pv_2_status",  # High Voltage PV: Inactive (0), Active (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "01": {
+                    NAME: "pv_2_power",
                     TYPE: DeviceHexDataTypes.sile.value,
                 },
             }
@@ -1284,7 +1308,7 @@ _A1782_0421 = (
 )
 
 _A1782_0502 = {
-    # F3000 state info with aggregated energies
+    # F3000 state info with aggregated energies?
     TOPIC: "state_info",
     # "a2": {
     #     BYTES: {
@@ -1530,9 +1554,9 @@ _A1790_0405 = {
     "a7": {NAME: "usbc_1_power"},
     "a8": {NAME: "usbc_2_power"},
     "a9": {NAME: "usbc_3_power"},
-    "aa": {NAME: "usba_1_power?"},
-    "ab": {NAME: "usba_2_power?"},
-    "ac": {NAME: "dc_12v_output_power_switch?"},
+    "aa": {NAME: "usba_1_power"},
+    "ab": {NAME: "usba_2_power"},
+    "ac": {NAME: "dc_12v_1_power"},
     "ad": {NAME: "battery_soc"},  # Total SOC of main + Exp batteries?
     "ae": {NAME: "photovoltaic_power"},  # Total solar input
     "af": {NAME: "pv_1_power"},
@@ -1557,11 +1581,9 @@ _A1790_0405 = {
     "c2": {NAME: "usbc_1_status"},
     "c3": {NAME: "usbc_2_status"},
     "c4": {NAME: "usbc_3_status"},
-    "c5": {NAME: "usba_1_status?"},
-    "c6": {NAME: "usba_2_status?"},
-    "c7": {
-        NAME: "dc_output_power_switch"
-    },  # 12V DC output switch: Disabled (0) or Enabled (1)
+    "c5": {NAME: "usba_1_status"},
+    "c6": {NAME: "usba_2_status"},
+    "c7": {NAME: "dc_12v_1_status"},
     "cc": {NAME: "device_sn"},
     "cd": {NAME: "ac_input_limit"},  # AC charge limit: 200-1800 W, step: 100
     "ce": {
@@ -1569,7 +1591,7 @@ _A1790_0405 = {
     },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
     "cf": {NAME: "display_timeout_seconds"},  # User Setting (in seconds)
     "d3": {NAME: "ac_output_power_switch_dup?"},  # Duplicate of bc?
-    "d4": {NAME: "dc_output_power_switch_dup?"},  # Duplicate of c7?
+    "d4": {NAME: "dc_output_power_switch"},  # 12V DC output switch: Disabled (0) or Enabled (1)
     "d5": {
         NAME: "display_mode"
     },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
@@ -3194,11 +3216,6 @@ _AS220_0421 = {
     },
     "a4": {
         BYTES: {
-            "00": {
-                NAME: "ac_output_timeout_seconds",  # disable (0), min:0, max: 86400, step 300
-                TYPE: DeviceHexDataTypes.var.value,
-                LENGTH: 4,
-            },
             "04": {
                 NAME: "ac_input_limit",  # AC charge limit: 100-2400 W, step: 100
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3206,11 +3223,6 @@ _AS220_0421 = {
             "06": {
                 NAME: "ac_frequency",  # 60 / 50 Hz
                 TYPE: DeviceHexDataTypes.ui.value,
-            },
-            "08": {
-                NAME: "dc_output_timeout_seconds",  # disable (0), min:0, max: 86400, step 300
-                TYPE: DeviceHexDataTypes.var.value,
-                LENGTH: 4,
             },
             "13": {
                 NAME: "device_timeout_minutes",  # 0 (Never), 30, 60, 120, 240, 360, 720, 1440
@@ -3805,6 +3817,23 @@ _EV_CHARGER_0410 = {
     "bb": {NAME: "ev_charger_status"},
     # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
 }
+
+_A17A5_0405 = {
+    # SOLIX Everfrost 2 58L
+    TOPIC: "param_info",
+    "a2": {NAME: "device_sn"},
+    "a4": {NAME: "device_pn"},
+    "d0": {
+        BYTES: {
+            "01": {
+                NAME: "unknown_sn_d0",
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+        }
+    },
+    "fe": {NAME: "msg_timestamp"},
+}
+
 
 _X1_JSON = {
     "sn": {NAME: "device_sn"},
@@ -4642,7 +4671,6 @@ SOLIXMQTTMAP: Final[dict] = {
             COMMAND_LIST: [
                 SolixMqttCommands.ac_output_switch,  # field a2
                 SolixMqttCommands.ac_charge_limit,  # field a4
-                SolixMqttCommands.ac_output_mode_select,  # field a6
                 SolixMqttCommands.ac_fast_charge_switch,  # field a7
                 SolixMqttCommands.ac_output_timeout_minutes,  # field aa
             ],
@@ -4665,15 +4693,6 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_MAX: 1200,  # lowest limit
                     VALUE_MAX_STATE: "ac_input_limit_max",  # adopt limit based on device variant # TODO: is limit in data?
                     VALUE_STEP: 100,
-                },
-            },
-            SolixMqttCommands.ac_output_mode_select: CMD_COMMON_V2
-            | {
-                "a6": {
-                    NAME: "set_ac_output_mode",  # Normal (0), Smart (1)
-                    TYPE: DeviceHexDataTypes.ui.value,
-                    STATE_NAME: "ac_output_mode",
-                    VALUE_OPTIONS: {"normal": 0, "smart": 1},
                 },
             },
             SolixMqttCommands.ac_fast_charge_switch: CMD_COMMON_V2
@@ -5770,6 +5789,13 @@ SOLIXMQTTMAP: Final[dict] = {
             "a5": {NAME: "setting_0889_a5"},
             "a6": {NAME: "setting_0889_a6"},
         },
+    },
+    # Power Cooler Everfrost 2 58L
+    "A17A5": {
+        # Interval: Unknown
+        "0405": _A17A5_0405,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": _PPS_VERSIONS_0830,
     },
     # Prime Charger 250W
     "A2345": {

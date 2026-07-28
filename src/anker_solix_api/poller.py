@@ -1273,13 +1273,20 @@ async def poll_device_details(  # noqa: C901
         elif dev_type in ({SolixDeviceType.CHARGER.value} - exclude):
             # Fetch mini charger datails for supported models
             if (pn := device.get("device_pn")) == "A2345":
-                # Fetch screensavers
+                # Fetch custom screensavers for device and flatten it for merge with stock screensavers
+                await api.get_charger_manual_screensavers(
+                    deviceSn=sn, fromFile=fromFile
+                )
+                # Fetch stock screensavers
                 screensavers = api.account.get("screensaver") or {}
                 pn_themes = screensavers.get(pn, {})
-                # Fetch stock screensavers for model only once a day
+                active_id = device.get("mqtt_data", {}).get("theme_id")
+                # Fetch stock screensavers for model only once a day or theme_id not found previously
                 if pn_themes.get("poll_time", "").split(" ")[
                     0
-                ] != datetime.now().strftime("%Y-%m-%d"):
+                ] != datetime.now().strftime("%Y-%m-%d") or (
+                    active_id and active_id != device.get("display_theme", {}).get("id")
+                ):
                     ids = {}
                     # Flatten the categories into a theme id dictionary per model for id lookups:
                     # "948897111": {"category_name": "Futuristic", "title": "Celestial", "file_hash": "0x40914327",
@@ -1300,7 +1307,7 @@ async def poll_device_details(  # noqa: C901
                                         "file_hash": theme.get("file_crc32"),
                                         "image_url": theme.get("image_url"),
                                         "id": theme_id,
-                                        "theme_name": f"{name}:{theme.get('title')}"
+                                        "theme_name": f"{name}:{theme.get('title')}",
                                     }
                     if ids:
                         screensavers[pn] = {
@@ -1308,20 +1315,26 @@ async def poll_device_details(  # noqa: C901
                             "themes": ids,
                         }
                         api._update_account({"screensaver": screensavers})
-                # Fetch custom screensavers for device and flatten it for merge with stock screensavers
-                await api.get_charger_manual_screensavers(
-                    deviceSn=sn, fromFile=fromFile
-                )
+                        # trigger update for active theme if id known
+                        if active_id:
+                            api._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "theme_id": active_id,
+                                }
+                            )
                 # Get device feature settings
                 await api.get_charger_device_setting(deviceSn=sn, fromFile=fromFile)
                 # Get custom mode list
                 await api.get_charger_custom_mode_list(deviceSn=sn, fromFile=fromFile)
                 # Fetch USB details if not excluded
-                if ({ApiCategories.charger_usb_settings} - exclude):
+                if {ApiCategories.charger_usb_settings} - exclude:
                     # Fetch port remarks
                     await api.get_charger_port_remarks(deviceSn=sn, fromFile=fromFile)
                     # Get protocol status
-                    await api.get_charger_protocol_status(deviceSn=sn, fromFile=fromFile)
+                    await api.get_charger_protocol_status(
+                        deviceSn=sn, fromFile=fromFile
+                    )
 
         # Merge additional powerpanel data
         if api.powerpanelApi:

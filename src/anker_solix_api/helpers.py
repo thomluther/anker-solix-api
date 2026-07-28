@@ -1,6 +1,6 @@
 """Helper modules and classes for the Anker Power/Solix Cloud API."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from enum import Enum
 import hashlib
 from typing import Any
@@ -105,6 +105,43 @@ def convertToKwh(val: str | float, unit: str, decimals: int = 2) -> str | float 
         return f"{result:.{decimals}f}" if isinstance(val, str) else result
     except ValueError:
         return None
+
+
+def convert_time_seconds(val: str | float | time) -> int | time | None:
+    """Convert the given time or seconds value into the opposite. A string will be intepreted as time string."""
+    # first convert into any of the 2 expected formats
+    if isinstance(val, str):
+        try:
+            val = time.fromisoformat(val)
+        except ValueError:
+            val = None
+    elif isinstance(val, float | int):
+        val = int(val % (24 * 3600))  # Restricting to a 24-hour format
+    if isinstance(val, time):
+        return val.hour * 3600 + val.minute * 60 + val.second
+    if isinstance(val, int):
+        hours, remainder = divmod(val, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return time(hours, minutes, seconds)
+    return None
+
+
+def convert_time_minutes(val: str | float | time) -> int | time | None:
+    """Convert the given time or minutes value into the opposite. A string will be intepreted as time string."""
+    # first convert into any of the 2 expected formats
+    if isinstance(val, str):
+        try:
+            val = time.fromisoformat(val)
+        except ValueError:
+            val = None
+    elif isinstance(val, float | int):
+        val = int(val % (24 * 60))  # Restricting to a 24-hour format
+    if isinstance(val, time):
+        return val.hour * 60 + val.minute
+    if isinstance(val, int):
+        hours, minutes = divmod(val, 60)
+        return time(hours, minutes)
+    return None
 
 
 def get_enum_name(

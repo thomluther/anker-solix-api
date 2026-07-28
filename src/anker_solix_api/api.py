@@ -1136,11 +1136,21 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "modes",
                     ]:
                         device[key] = value
+                        # update selected theme if custom theme
+                        if (
+                            key == "screensaver"
+                            and (
+                                theme_id := device.get("mqtt_data", {}).get("theme_id")
+                            )
+                            and (theme := (value or {}).get(str(theme_id), {}))
+                        ):
+                            device["display_theme"] = theme
                     elif key == "theme_id" and value is not None:
                         # update only if cached value different
-                        if str(value) != device.get("display_theme",{}).get("id"):
-                            theme = self.get_charger_themes(deviceSn=sn).get(str(value),{})
-                            device["display_theme"] = theme
+                        if str(value) != device.get("display_theme", {}).get("id"):
+                            device["display_theme"] = self.get_charger_themes(
+                                deviceSn=sn
+                            ).get(str(value), {})
                 except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
                     self._logger.error(
                         "Api %s error %s occurred when updating device details for key '%s' with value %s: %s",
