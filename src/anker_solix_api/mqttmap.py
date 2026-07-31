@@ -4269,6 +4269,7 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS C800
     "A1753": {
+        "0040": CMD_STATUS_REQUEST,  # Device status request, to be verified (one time status messages 0405 etc)
         "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,  # field a2, range 0-86400, step 300, 0 = disabled.
         "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # field a2, range 0-86400, step 300, 0 = disabled.
         "0044": CMD_AC_CHARGE_LIMIT  # AC Recharge Limit options as offered by app slider
