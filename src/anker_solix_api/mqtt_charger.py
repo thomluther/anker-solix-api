@@ -85,6 +85,7 @@ FEATURES = {
     SolixMqttCommands.display_timeout_mode_select: MODELS,
     SolixMqttCommands.clock_mode_select: MODELS,
     SolixMqttCommands.clock_display_schedule: MODELS,
+    SolixMqttCommands.clock_holiday_switch: MODELS,
     SolixMqttCommands.knob_mode_select: MODELS,
     SolixMqttCommands.car_battery_type: MODELS,
     SolixMqttCommands.battery_charge_limits: MODELS,

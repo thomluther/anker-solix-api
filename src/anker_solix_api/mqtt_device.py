@@ -11,7 +11,7 @@ import contextlib
 from typing import TYPE_CHECKING, Any
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
-from .helpers import round_by_factor
+from .helpers import convert_time, convert_weekdays, round_by_factor
 from .mqtt import generate_mqtt_command
 from .mqttcmdmap import (
     BYTES,
@@ -39,12 +39,7 @@ from .mqttcmdmap import (
     SolixMqttCommands,
 )
 from .mqttmap import SOLIXMQTTMAP
-from .mqtttypes import (
-    DeviceHexDataField,
-    MqttCmdValidator,
-    convert_time,
-    convert_weekdays,
-)
+from .mqtttypes import DeviceHexDataField, MqttCmdValidator
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -200,7 +195,9 @@ class SolixMqttDevice:
                                                     ),
                                                     dict,
                                                 )
-                                                and 2 <= len(opt) <= 3 # tolerate a 3rd undefined option for a switch, which is not used
+                                                and 2
+                                                <= len(opt)
+                                                <= 3  # tolerate a 3rd undefined option for a switch, which is not used
                                                 and "on" in opt
                                                 and "off" in opt
                                             )
@@ -291,7 +288,9 @@ class SolixMqttDevice:
                         control["is_switch"] = bool(
                             len(required_options) == 1
                             and isinstance(opt := required_options[0], dict)
-                            and 2 <= len(opt) <= 3 # tolerate a 3rd undefined option for a switch, which is not used
+                            and 2
+                            <= len(opt)
+                            <= 3  # tolerate a 3rd undefined option for a switch, which is not used
                             and "on" in opt
                             and "off" in opt
                         )

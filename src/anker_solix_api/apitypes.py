@@ -196,7 +196,7 @@ API_ENDPOINTS: Final[dict] = {
     # Endpoints for standalone Anker power charger devices
     "charger_get_charging_modes": "mini_power/v1/app/charging/get_charging_mode_list",  # {"device_sn": deviceSn}
     "charger_get_triggers": "mini_power/v1/app/egg/get_easter_egg_trigger_list",  # {"device_sn": deviceSn}
-    "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data",  # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"}
+    "charger_get_statistics": "mini_power/v1/app/power/get_day_power_data",  # {"device_sn": deviceSn, "device_model": "A2345", "date": "2025-02-27"} # working day str format unknown
     "charger_get_device_setting": "mini_power/v1/app/setting/get_device_setting",  # {"device_sn": deviceSn}
     "charger_get_screensavers": "mini_power/v1/app/style/get_clock_screensavers",  # works for {"product_code": "A2345"} => Prime charger
     "charger_get_manual_screensavers": "mini_power/v1/app/style/get_manual_clock_screensavers",  # {"sn": deviceSn} # empty if no manual screensavers defined for device
@@ -516,9 +516,9 @@ related to Prime charger models: 18 + 13 used => 31 total
     'mini_power/v1/app/egg/report_easter_egg_trigger_status', # {"device_sn": deviceSn, "report_time": 1734969388, "egg_type": 1}
     'mini_power/v1/app/style/add_manual_clock_screensavers',
     'mini_power/v1/app/style/delete_manual_clock_screensavers',
-    'mini_power/v1/app/style/get_url',
-    'mini_power/v1/app/style/get_screensaver_img_url',
-    'mini_power/v1/app/style/set_manual_clock_screensaver_name',
+    'mini_power/v1/app/style/get_url', # get long from short url {"sn": deviceSn, "short_url": "/anker_power/edge/screen_saver/2026/07/27/4724xxxxxxxAsGf1ur.cropped_image.jpg"}
+    'mini_power/v1/app/style/get_screensaver_img_url', # get long url from id {"sn": deviceSn, "id": 41043, "type": "manual"}
+    'mini_power/v1/app/style/set_manual_clock_screensaver_name', # {"sn": deviceSn, "screensaver_id": 41043, "name": "Fireworks"}
 
 Structure of the JSON response for an API Login Request:
 An unexpired token_id must be used for API request, along with the gtoken which is an MD5 hash of the returned(encrypted) user_id.

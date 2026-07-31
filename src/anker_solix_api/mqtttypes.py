@@ -8,7 +8,7 @@ import struct
 from typing import Any, Self
 
 from .apitypes import Color, DeviceHexDataTypes, SolixDeviceCategory
-from .helpers import round_by_factor
+from .helpers import convert_time, convert_timestamp, convert_weekdays, round_by_factor
 from .mqttcmdmap import (
     BYTES,
     COMMAND_LIST,
@@ -19,6 +19,7 @@ from .mqttcmdmap import (
     NAME,
     OFFSET,
     SIGNED,
+    STATE_CONVERTER,
     STATE_NAME,
     TYPE,
     VALUE_DEFAULT,
@@ -430,7 +431,7 @@ class DeviceHexDataField:
                         self.extract_value(
                             hexdata=hexdata,
                             fieldtype=DeviceHexDataTypes.bin.value,
-                            fieldmap=fieldmap,
+                            fieldmap=fieldmap.get(BYTES, {}),
                         )
                     )
                 elif name := fieldmap.get(NAME):
@@ -561,7 +562,7 @@ class DeviceHexDataField:
                             fieldmap=flds,
                         )
                     )
-                else:
+                elif flds:
                     # fix bytemap position from mapping
                     for key, bytemap in flds.items():
                         pos = int(key)
@@ -589,6 +590,21 @@ class DeviceHexDataField:
                                     fieldmap={key: bytemap},
                                 )
                             )
+                elif name := fieldmap.get(NAME):
+                    # Extract binary field structure
+                    if (converter := fieldmap.get(STATE_CONVERTER)) and callable(
+                        converter
+                    ):
+                        values[name] = converter(hexdata, None, None)
+                        # add used extracted binary to provide valid hex field for extracted length
+                        if (
+                            fieldmap.get(LENGTH) is None
+                            and not 1 <= self.f_length - len(hexdata) <= 2
+                        ):
+                            values[f"{name}_hex"] = converter(None, values[name], None)
+                    else:
+                        values[name] = hexdata
+
             case DeviceHexDataTypes.sfle.value:
                 # 4 bytes, signed float LE (Base type)
                 if len(hexdata) == 4 and (name := fieldmap.get(NAME, "")):
@@ -638,18 +654,23 @@ class DeviceHexDataField:
                     else:
                         length = bytemap.get(LENGTH, 0)
                     if length == 0:
-                        # first byte is length of bytes following for field
-                        length = int.from_bytes(self.f_value[pos : pos + 1])
-                        pos += 1
-                        values.update(
-                            self.extract_value(
-                                hexdata=self.f_value[pos : pos + length],
-                                fieldtype=bytemap.get(
-                                    TYPE, DeviceHexDataTypes.unk.value
-                                ),
-                                fieldmap=bytemap,
-                            )
+                        # if type binary, length may vary and be unknown
+                        if ftype == DeviceHexDataTypes.bin.value:
+                            length = max(0, len(self.f_value) - pos)
+                        else:
+                            # first byte is length of bytes following for field
+                            length = int.from_bytes(self.f_value[pos : pos + 1])
+                            pos += 1
+                        extracted = self.extract_value(
+                            hexdata=self.f_value[pos : pos + length],
+                            fieldtype=bytemap.get(TYPE, DeviceHexDataTypes.unk.value),
+                            fieldmap=bytemap,
                         )
+                        if ftype == DeviceHexDataTypes.bin.value:
+                            length = len(
+                                extracted.pop(f"{bytemap.get(NAME, '')}_hex", {})
+                            )
+                        values.update(extracted)
                     else:
                         values.update(
                             self.extract_value(
@@ -761,7 +782,7 @@ class DeviceHexDataField:
 
     def encode_value(  # noqa: C901
         self,
-        value: float | str | dict,
+        value: Any,
         fieldtype: bytearray | bytes | None = None,
         desc: dict | None = None,
     ) -> bytearray | None:
@@ -802,9 +823,12 @@ class DeviceHexDataField:
                 if value != desc.get(VALUE_DEFAULT)
                 else value
             )
-        # use json as is
-        elif isinstance(value, dict):
-            fieldvalue = value
+        # use json and binary as is or convert as described
+        elif isinstance(value, dict | list | bytearray | bytes):
+            if (converter := desc.get(STATE_CONVERTER)) and callable(converter):
+                fieldvalue = converter(None, value, None)
+            else:
+                fieldvalue = value
         # use default value if defined in fieldmap
         elif (fieldvalue := desc.get(VALUE_DEFAULT)) is None:
             raise ValueError(
@@ -880,6 +904,9 @@ class DeviceHexDataField:
                 # '<f' little-endian 32-bit float (4 Bytes, single)
                 if isinstance(fieldvalue, int | float):
                     hexvalue = bytearray(struct.pack("<f", fieldvalue / divider))
+            case DeviceHexDataTypes.bin.value:
+                # Provided binary fieldvalues with any structure
+                hexvalue = None if fieldvalue is None else bytearray(fieldvalue)
             case DeviceHexDataTypes.json.value:
                 hexvalue = bytearray(
                     json.dumps(fieldvalue, separators=(",", ":")), "utf-8"
@@ -1657,114 +1684,3 @@ class MqttCmdValidator:
     def asdict(self) -> dict:
         """Return a dictionary representation of the class fields."""
         return asdict(self)
-
-
-def convert_timestamp(
-    value: float | bytes | bytearray, ms: bool = False
-) -> float | bytes | None:
-    """Convert the input value between bytes and float value according to the formats used in MQTT messages."""
-    # traditional timestamp format with field type var with 4 bytes little endian representing the timestamp in seconds
-    # new format is timestamp in milliseconds as string formatted field
-    if isinstance(value, float | int):
-        # convert to bytes
-        if ms:
-            # convert timestamp to ms and strin prior encoding
-            return str(int(value * 1000)).encode()
-        # encode timestamp as little endian integer
-        return int(value).to_bytes(4, byteorder="little")
-    if isinstance(value, bytes | bytearray):
-        # convert to float timestamp in seconds
-        if ms or len(value) > 4:
-            msec = "".join(
-                c
-                for c in value.decode(errors="ignore").strip()
-                if (c.isdigit() or c == ".")
-            )
-            if msec.replace(".", "", 1).isdigit():
-                return float(msec) / 1000
-        else:
-            return float(int.from_bytes(value, byteorder="little", signed=True))
-    return None
-
-
-def convert_time(value: bytes | bytearray | str) -> bytes | str | None:
-    """Convert time between bytes used in MQTT messages and string formats.
-
-    Automatically detects input value type and converts accordingly.
-
-    Args:
-        value: Time data in bytes format (2-3 bytes in little endian: ([seconds,] minutes, hours))
-              or string format (HH:MM or HH:MM:SS).
-
-    Returns:
-        String in HH:MM[:SS] format if input is bytes/bytearray.
-        2-3 Bytes ([seconds,] minutes, hours) if input is string.
-        None if input is invalid or unsupported type.
-
-    """
-    if isinstance(value, bytes | bytearray) and (2 <= len(value) <= 3):
-        # Convert bytes to string
-        parts = [f"{x:02d}" for x in value]
-        parts.reverse()  # reverse to little endian
-        return ":".join(parts)
-    if (
-        isinstance(value, str)
-        and (parts := value.split(":"))
-        and (2 <= len(parts) <= 3)
-    ):
-        # Convert string to bytes
-        if (
-            (parts[0].isdigit() and 0 <= int(parts[0]) <= 23)
-            and (parts[1].isdigit() and 0 <= int(parts[1]) <= 59)
-            and (len(parts) < 3 or (parts[2].isdigit() and 0 <= int(parts[2]) <= 59))
-        ):
-            return bytes(
-                ([int(parts[2])] if len(parts) > 2 else [])
-                + [int(parts[1]), int(parts[0])]
-            )
-    return None
-
-
-def convert_weekdays(
-    value: bytes | bytearray | list | set, lsb_day: str = "mon"
-) -> bytes | list | None:
-    """Convert list of weekdays between bitmask used in MQTT messages and list formats.
-
-    Automatically detects input value type and converts accordingly. The typical Bitmask is:
-    0:sun:sat:fri:thu:wed:tue:mon
-    with mon as lsb_day
-
-    Args:
-        value: Weekday data in a byte bitmask (1 byte, 0-0x7f)
-              or list|set with 3 char weekdays or "all", format ["tue", "sat"] or ["all"].
-        lsb_day: least significant day of week = bit 0
-
-    Returns:
-        List with weekdays if input is bytes/bytearray.
-        1 Byte with the bitmask (0-0x7f) if input is list.
-        None if input is invalid or unsupported type.
-
-    """
-    weekdays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    if isinstance(lsb_day, str) and lsb_day.lower() in weekdays:
-        idx = weekdays.index(lsb_day.lower())
-        weekdays = weekdays[idx:] + weekdays[:idx]
-    if isinstance(value, bytes | bytearray) and len(value) == 1:
-        # Convert bitmask to list
-        return [
-            name
-            for idx, name in enumerate(weekdays)
-            if int.from_bytes(value) & (1 << idx)
-        ]
-    if isinstance(value, list | set) and (0 <= len(set(value)) <= 10):
-        # convert elements to lower case string and "all" to weekdays
-        value = set(map(str.lower, map(str, value)))
-        if "all" in value:
-            value = (value - {"all"}) | set(weekdays)
-        # Convert valid weekdays into bitmask byte
-        return sum(
-            1 << weekdays.index(day.lower())
-            for day in value
-            if isinstance(day, str) and day in weekdays
-        ).to_bytes()
-    return None

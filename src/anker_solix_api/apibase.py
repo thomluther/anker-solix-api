@@ -863,6 +863,7 @@ class AnkerSolixBaseApi:
                                         "_priority",
                                         "_tariff",
                                         "_count",
+                                        "_schedule",
                                         "_settings",
                                         # "?", # Add for decoder testing in monitor
                                     )
@@ -1185,7 +1186,7 @@ class AnkerSolixBaseApi:
                         or dyn_desc
                         or any(
                             key in check_values
-                            for key in ["tou_slot_count", "custom_slot_count"]
+                            for key in ["tou_mode_schedule", "custom_mode_schedule"]
                         )
                     ):
                         self.notify_device(deviceSn=sn)

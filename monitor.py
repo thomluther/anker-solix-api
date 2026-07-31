@@ -491,7 +491,8 @@ class AnkerSolixApiMonitor:
                             (fields[0][0]).endswith("?")
                             or (fields[0][0]).startswith(("unknown_", "tbd_"))
                         )
-                        else Color.CYAN if (fields[0][0]).endswith("_settings")
+                        else Color.CYAN
+                        if (fields[0][0]).endswith("_settings")
                         else ""
                     )
                     c2 = (
@@ -500,7 +501,8 @@ class AnkerSolixApiMonitor:
                             (fields[1][0]).endswith("?")
                             or (fields[1][0]).startswith(("unknown_", "tbd_"))
                         )
-                        else Color.CYAN if (fields[1][0]).endswith("_settings")
+                        else Color.CYAN
+                        if (fields[1][0]).endswith("_settings")
                         else ""
                     )
                     CONSOLE.info(
@@ -515,7 +517,8 @@ class AnkerSolixApiMonitor:
                         (fields[0][0]).endswith("?")
                         or (fields[0][0]).startswith(("unknown_", "tbd_"))
                     )
-                    else Color.CYAN if (fields[0][0]).endswith("_settings")
+                    else Color.CYAN
+                    if (fields[0][0]).endswith("_settings")
                     else ""
                 )
                 CONSOLE.info(
@@ -1951,7 +1954,7 @@ class AnkerSolixApiMonitor:
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Usage Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPpsUsageMode, m1, '----').replace('_', ' ').replace('_', ' ').title() + ' (' + (m1 or '-') + ')':<{col2}}{co} "
-                        #f"{'Knob Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixKnobMode, m2, '----').title()} ({m2 or '-'}){co}"
+                        # f"{'Knob Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixKnobMode, m2, '----').title()} ({m2 or '-'}){co}"
                     )
                 m1 = (
                     cm and str(mqtt.get("usage_mode", ""))
@@ -1974,10 +1977,8 @@ class AnkerSolixApiMonitor:
                         f"{'Holiday Switch':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
                     )
                 m1 = cm and str(mqtt.get("theme_id", ""))
-                m2 = (
-                    ""  # TODO: Use method to extract ID from Api cache once implemented
-                )
-                if m1:
+                m2 = dev.get("display_theme", {}).get("theme_name", "")
+                if m1 or m2:
                     CONSOLE.info(
                         f"{'Clock Theme ID':<{col1}}: {m1 and (c or cm)}{m1 or '----------':<{col2}}{co} "
                         f"{'Theme Name':<{col3}}: {m2 and c}{m2 or '----------'}{co}"
@@ -2198,7 +2199,7 @@ class AnkerSolixApiMonitor:
                 if m1 or m2 or str(m3):
                     CONSOLE.info(
                         f"{'AC Input Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{co} / "
-                        f"({str(m3) and (c or cm)}{get_enum_name(SolixSwitchMode, m3, str(m3) or '---').upper():>3}{co}{')':<{col2-12}}"
+                        f"({str(m3) and (c or cm)}{get_enum_name(SolixSwitchMode, m3, str(m3) or '---').upper():>3}{co}{')':<{col2 - 12}}"
                         f"{'AC Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("ac_output_power", "")
@@ -2252,7 +2253,11 @@ class AnkerSolixApiMonitor:
                         ) == "" and idx.startswith("usba"):
                             # Alternatively check shared switch for USB A
                             m5 = cm and mqtt.get("usba_switch", "")
-                        idxstr = idx.replace("usb", "usb-" if idx != "usb" else idx).replace("_", " ").upper()
+                        idxstr = (
+                            idx.replace("usb", "usb-" if idx != "usb" else idx)
+                            .replace("_", " ")
+                            .upper()
+                        )
                         CONSOLE.info(
                             f"{idxstr + ' Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
                             f"{idxstr + ' V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m5, str(m5) or '---').upper()}){co}"
@@ -2424,34 +2429,6 @@ class AnkerSolixApiMonitor:
                         f"{('Dev 1   [' + (c or cm) + (m3 or '-----') + co + ']'):<{col1}}: {(c or cm)}{(m1 or '-' * 17):<{col2}}{co} "
                         f"{'Dev 1 SoC / Tmp':<{col3}}: {(c or cm)}{soc} / {m4}{co}"
                     )
-                if schedule := mqtt.get("custom_plan"):
-                    m1 = cm and schedule.get("custom_mode_switch", "")
-                    m2 = cm and str(schedule.get("weekdays", "")).replace(
-                        "'", ""
-                    ).replace(" ", "")
-                    CONSOLE.info(
-                        f"{'Cust. Mode Sw.':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{'':<{col2-3}}{co} "
-                        f"{'Weekdays':<{col3}}: {m2 and (c or cm)}{m2 or '---'}{co}"
-                    )
-                    for i, slot in enumerate(schedule.get("ranges",[]), start = 1):
-                        m1 = cm and str(slot.get("start_time", ""))
-                        m3 = cm and str(slot.get("end_time", ""))
-                        m2 = cm and str(slot.get("load_mode", ""))
-                        if m1 or m2:
-                            CONSOLE.info(
-                                f"{'Cust. Slot '+ str(i):<{col1}}: {m1 and (c or cm)}{m1 or '--:--'}{co} - {m3 and (c or cm)}{m3 or '--:--':<{col2 - 8}}{co} "
-                                f"{'Load mode '+ str(i):<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixPpsLoadMode, m2, m2 or '---').title()}{co}"
-                            )
-                if schedule := mqtt.get("tou_plan"):
-                    for i, slot in enumerate(schedule.get("ranges",[]), start = 1):
-                        m1 = cm and str(slot.get("start_time", ""))
-                        m3 = cm and str(slot.get("end_time", ""))
-                        m2 = cm and str(slot.get("tariff", ""))
-                        if m1 or m2:
-                            CONSOLE.info(
-                                f"{'TOU Slot '+ str(i):<{col1}}: {m1 and (c or cm)}{m1 or '--:--'}{co} - {m3 and (c or cm)}{m3 or '--:--':<{col2 - 8}}{co} "
-                                f"{'Tariff '+ str(i):<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixTariffTypes, int(m2) if m2.isdigit() else m2, m2 or '-').title().replace("_"," ")}{co}"
-                            )
                 m1 = cm and str(mqtt.get("silent_mode_start_minutes", ""))
                 m3 = cm and str(mqtt.get("silent_mode_end_minutes", ""))
                 if m1 or m3:
@@ -2465,9 +2442,15 @@ class AnkerSolixApiMonitor:
                     m5 = cm and mqtt.get("silent_mode_switch", "")
                     CONSOLE.info(
                         f"{'Silent Mode':<{col1}}: {m1 and (c or cm)}{m1 or '--:--'}{co} - {m3 and (c or cm)}{m3 or '--:--'}{co} "
-                        f"{str(m5) and (c or cm)}({get_enum_name(SolixSwitchMode, m5, str(m5) or '---').upper():>3}{')':<{col2-18}}{co} "
+                        f"{str(m5) and (c or cm)}({get_enum_name(SolixSwitchMode, m5, str(m5) or '---').upper():>3}{')':<{col2 - 18}}{co} "
                         f"{'Weekdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
                     )
+                if schedule := (c or cm) and mqtt.get("custom_mode_schedule"):
+                    CONSOLE.info(f"{'-' * 80}")
+                    common.print_pps_schedule({"custom_mode_schedule": schedule}, c or cm)
+                if schedule := (c or cm) and mqtt.get("tou_mode_schedule"):
+                    CONSOLE.info(f"{'-' * 80}")
+                    common.print_pps_schedule({"tou_mode_schedule": schedule}, c or cm)
 
             else:
                 if "battery_capacity" in dev:

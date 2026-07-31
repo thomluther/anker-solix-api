@@ -16,8 +16,10 @@ from anker_solix_api.apitypes import (
     SolarbankRatePlan,
     SolarbankSchedulePresetType,
     SolarbankUsageMode,
+    SolixPpsLoadMode,
+    SolixTariffTypes,
 )
-from anker_solix_api.helpers import get_enum_name, round_by_factor
+from anker_solix_api.helpers import convert_weekdays, get_enum_name, round_by_factor
 from anker_solix_api.mqtt_device import SolixMqttDevice
 from anker_solix_api.mqttcmdmap import (
     LENGTH,
@@ -31,7 +33,6 @@ from anker_solix_api.mqttcmdmap import (
     VALUE_STATE,
     VALUE_STEP,
 )
-from anker_solix_api.mqtttypes import convert_weekdays
 
 # platform dependent imports for key press handling
 if sys.platform.startswith("win"):
@@ -299,6 +300,57 @@ def print_schedule(schedule: dict) -> None:
                 f"{str(slot.get('charge_priority', '')) + ' %':>{t10}} {('---' if discharge is None else 'YES' if discharge else 'NO'):>{t9}} "
                 f"{sb1 + ' W':>{t6}} {sb2 + ' W':>{t6}} {slot.get('power_setting_mode', '-')!s:^{t5}} {load.get('name', '')!s}"
             )
+
+
+def print_pps_schedule(schedule: dict, color: str = "") -> None:
+    """Print the schedule ranges as table."""
+    t2 = 2
+    t5 = 5
+    t6 = 6
+    t9 = 9
+    t10 = 10
+    if not isinstance(schedule, dict):
+        schedule = {}
+    for name, plan in schedule.items():
+        if name == "custom_mode_schedule":
+            for group in plan.get("groups") or [{}]:
+                index = group.get("index", "--")
+                weekdays = list(map(str.title, group.get("weekdays", [])))
+                if ranges := group.get("ranges", []):
+                    CONSOLE.info(
+                        f"{'ID':>{t2}} {'Start':<{t5}} {'End':<{t6}} {'Type':<{t9 + t9}} {'Weekdays':<{t6}}             <== {name}"
+                    )
+                for slot in ranges:
+                    mode = str(slot.get("load_mode", ""))
+                    CONSOLE.info(
+                        f"{color}{index!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t6}} "
+                        f"{str(get_enum_name(SolixPpsLoadMode, mode, '')).replace('_', ' ').title() + ' (' + (mode or '-') + ')':<{t9 + t9}} "
+                        f"{','.join(weekdays):<{t6}}{Color.OFF}"
+                    )
+        if name == "tou_mode_schedule":
+            if ranges := plan.get("ranges") or []:
+                CONSOLE.info(
+                    f"{'Sl':<{t2}} {'Start':<{t5}} {'End':<{t6}} {'Tariff':<{t10 + t9}}{'Sl':<{t2}} {'Start':<{t5}} {'End':<{t6}} {'Tariff'}  <== {name}"
+                )
+            row = ""
+            for idx, slot in enumerate(ranges):
+                tariff = slot.get("tariff", 0)
+                start = slot.get("start_time", "")
+                end = slot.get("end_time", "")
+                if idx % 2:
+                    row += (
+                        f"{idx + 1:>{t2}} {start:<{t5}} {end:<{t6}} "
+                        f"{(str(get_enum_name(SolixTariffTypes, tariff, '')) + ' (' + str(tariff or '-') + ')').replace('_', ' ').title()}"
+                    )
+                    CONSOLE.info(f"{row}{Color.OFF}")
+                    row = ""
+                else:
+                    row = (
+                        f"{color}{idx + 1:>{t2}} {start:<{t5}} {end:<{t6}} "
+                        f"{(str(get_enum_name(SolixTariffTypes, tariff, '')) + ' (' + str(tariff or '-') + ')').replace('_', ' ').title():<{t10 + t9}}"
+                    )
+            if row:
+                CONSOLE.info(f"{row}{Color.OFF}")
 
 
 def print_products(products: dict) -> None:

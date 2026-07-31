@@ -3,6 +3,7 @@
 from typing import Final
 
 from .apitypes import DeviceHexDataTypes
+from .helpers import convert_pps_custom_schedule, convert_pps_tou_schedule
 from .mqttcmdmap import (
     BYTES,
     CMD_AC_CHARGE_LIMIT,
@@ -104,6 +105,7 @@ from .mqttcmdmap import (
     VALUE_MAX,
     VALUE_MAX_STATE,
     VALUE_MIN,
+    VALUE_MIN_STATE,
     VALUE_OPTIONS,
     VALUE_OPTIONS_STATE,
     VALUE_STATE,
@@ -1577,7 +1579,6 @@ _A1790_0405 = {
     "bf": {NAME: "display_status"},  # Asleep (0), Manual Off (1), On (2)
     "c0": {NAME: "main_battery_soc"},  # Main battery SOC?
     "c1": {NAME: "battery_soh"},
-    # TODO: What does USB status mean, is that a toggle setting? If port is used, this should be indicated by power as well
     "c2": {NAME: "usbc_1_status"},
     "c3": {NAME: "usbc_2_status"},
     "c4": {NAME: "usbc_3_status"},
@@ -1591,7 +1592,9 @@ _A1790_0405 = {
     },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
     "cf": {NAME: "display_timeout_seconds"},  # User Setting (in seconds)
     "d3": {NAME: "ac_output_power_switch_dup?"},  # Duplicate of bc?
-    "d4": {NAME: "dc_output_power_switch"},  # 12V DC output switch: Disabled (0) or Enabled (1)
+    "d4": {
+        NAME: "dc_output_power_switch"
+    },  # 12V DC output switch: Disabled (0) or Enabled (1)
     "d5": {
         NAME: "display_mode"
     },  # Display brightness: Off (0), Low (1), Medium (2), High (3)
@@ -3355,93 +3358,65 @@ _AS220_0421 = {
     },
     "d9": {
         # AS220: AC-output mode selector + backup + Time-of-Use plan (layout differs from A1783).
-        BYTES: (
+        BYTES: [
             {
-                "00": {
-                    NAME: "usage_mode_raw",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "01": {
-                    NAME: "usage_mode",  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "02": {
-                    NAME: "backup_soc",  # backup reserve % (discharge floor)
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "03": {
-                    NAME: "max_soc_dup?",  # max_soc %
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "04": {
-                    NAME: "min_soc_dup?",  # min_soc %
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "05": {
-                    NAME: "tou_slot_count",  # number of Time-of-Use periods following at byte 6+
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-            }
-            # Byte 6+ holds the TOU schedule: {tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr} x tou_slot_count
-            | {
-                k: v
-                for idx in range(1, 8)
-                for k, v in {
-                    f"{6 + (idx - 1) * 3:02d}": {
-                        NAME: f"tou_slot_{idx}_tariff",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                    f"{7 + (idx - 1) * 3:02d}": {
-                        NAME: f"tou_slot_{idx}_start_hour",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                    f"{8 + (idx - 1) * 3:02d}": {
-                        NAME: f"tou_slot_{idx}_end_hour",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                }.items()
-            }
-        )
+                NAME: "usage_mode_raw",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "usage_mode",  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "backup_soc",  # backup reserve % (discharge floor for tou)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "tou_max_soc?",  # max_soc % (for tou usage?)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "tou_min_soc?",  # min_soc % (for tou usage?)
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            # Byte 5 is the tou schedule slot count and 6+ holds the TOU schedule:
+            # (tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr) * tou_slot_count
+            # App allows max 6 slots, byte groups show max 7 groups with last group empty? Or different purpose for last group?
+            {
+                NAME: "tou_mode_schedule",
+                TYPE: DeviceHexDataTypes.bin.value,
+                # Define both conversions since length of schedule is flexible within binary
+                STATE_CONVERTER: lambda value, state, cache: (
+                    convert_pps_tou_schedule(value)
+                    if value is not None
+                    else convert_pps_tou_schedule(state)
+                ),
+            },
+            {
+                NAME: "unknown_d9_1_timestamp",  # Storm guard start?
+                TYPE: DeviceHexDataTypes.var.value,
+                OFFSET: 3,
+            },
+            {
+                NAME: "unknown_d9_2_timestamp",  # Storm guard end?
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+        ]
     },
     "dd": {
-        # Custom-mode charge/discharge schedule (live-confirmed vs app).
-        BYTES: (
-            {
-                "00": {
-                    NAME: "custom_mode_switch",  # 0/1
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "01": {
-                    NAME: "custom_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "02": {
-                    NAME: "custom_slot_count",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-            }
-            # Byte 3+ holds slots: {mode(1=charge,2=discharge), start_min(u16 LE), end_min(u16 LE)} x custom_slot_count.
-            | {
-                k: v
-                for idx in range(1, 6)
-                for k, v in {
-                    f"{3 + (idx - 1) * 5:02d}": {
-                        NAME: f"custom_slot_{idx}_load_mode",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                    f"{4 + (idx - 1) * 5:02d}": {
-                        NAME: f"custom_slot_{idx}_start_minutes",
-                        TYPE: DeviceHexDataTypes.sile.value,
-                        SIGNED: False,
-                    },
-                    f"{6 + (idx - 1) * 5:02d}": {
-                        NAME: f"custom_slot_{idx}_end_minutes",
-                        TYPE: DeviceHexDataTypes.sile.value,
-                        SIGNED: False,
-                    },
-                }.items()
-            }
-        )
+        # Custom-mode charge/discharge schedule (live-confirmed vs app). Flexible structure!!!
+        # groups:u8  1: weekend same, 2: weekday + weekend
+        # per group: weekdays:u8 (bit0=Mon..bit6=Sun), slots:u8 + 5 slots max
+        # per slot: load_mode:u8 (1=Charge, 2=Discharge), start_minutes:u16 LE, end_minutes:u16 LE
+        # a2  0e 04    01: 1f: 02: 01: 00:00:68:01: 02: 68:01:d0:02
+        # a2  15 04    02: 1f: 02: 01: 00:00:68:01: 02: 68:01:d0:02  :60: 01: 02: 00:00: 3c:00
+        #        bin   grp wk  slt dis    00   360  ch    360   720   wk  slt chg    00     60
+        NAME: "custom_mode_schedule",
+        STATE_CONVERTER: lambda value, state, cache: (
+            convert_pps_custom_schedule(value)
+            if value is not None
+            else convert_pps_custom_schedule(state)
+        ),
     },
     "df": {
         # Silent-mode schedule (live-confirmed vs app)
@@ -4559,12 +4534,14 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.backup_soc: CMD_COMMON_V2
             | {
                 "a5": {
-                    NAME: "set_backup_soc",  # range? step?
+                    NAME: "set_backup_soc",  # range as [min_soc + 6, max_soc], step 1%
                     TYPE: DeviceHexDataTypes.ui.value,
                     STATE_NAME: "backup_soc",
-                    VALUE_MIN: 10,
-                    VALUE_MAX: 90,
+                    VALUE_MIN: 1,
+                    VALUE_MAX: 100,
                     VALUE_STEP: 1,
+                    VALUE_MIN_STATE: "min_soc",
+                    VALUE_MAX_STATE: "max_soc",
                 },
             },
         },
@@ -4575,38 +4552,14 @@ SOLIXMQTTMAP: Final[dict] = {
             ],
             SolixMqttCommands.pps_custom_schedule: CMD_COMMON_V2
             | {
-                # command structure for custom mode binary a2 field not clear yet
-                # a2   0e 04    01: 1f: 02:01:00:00:68:01:02:68:01:d0:02
-                # └->  14 bin   b'\x01\x1f\x02\x01\x00\x00h\x01\x02h\x01\xd0\x02'
-                # a2   15 04    02: 1f: 02: 01 :00:00: 68:01: 02: 68:01 :d0:02  :60: 01: 02: 00:00: 3c:00
-                #               cnt wk  idx md  0      360    md  360    720     ??  ??  md  00     60
-                # └->  21 bin   b'\x02\x1f\x02\x01\x00\x00h\x01\x02h\x01\xd0\x02`\x01\x02\x00\x00<\x00'
-                # custom_mode_switch ?
-                # custom_mode_weekdays ?
-                # custom_slot_count ?
-                # custom_slot_x_load_mode ?
-                # custom_slot_x_start_minutes ?
-                # custom_slot_x_end_minutes ?
                 "a2": {
+                    NAME: "set_custom_mode_schedule",
                     TYPE: DeviceHexDataTypes.bin.value,
-                    # LENGTH: ??, varies, depends on slots
-                    BYTES: {
-                        "00": {
-                            NAME: "set_custom_mode_switch",  # Disable (0) | Enable (1)
-                            TYPE: DeviceHexDataTypes.ui.value,
-                            STATE_NAME: "custom_mode_switch",
-                            VALUE_STATE: "custom_mode_switch",
-                            VALUE_OPTIONS: {"off": 0, "on": 1},
-                        },
-                        "01": {
-                            NAME: "set_custom_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
-                            TYPE: DeviceHexDataTypes.ui.value,
-                            STATE_NAME: "custom_mode_weekdays",
-                            VALUE_STATE: "custom_mode_weekdays",
-                            VALUE_MIN: 0,
-                            VALUE_MAX: 127,
-                        },
-                    },
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        convert_pps_custom_schedule(state)
+                        if state is not None
+                        else value
+                    ),
                 },
             },
             SolixMqttCommands.silent_schedule: CMD_COMMON_V2
@@ -5175,7 +5128,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "ad": {NAME: "charging_status?"},
             # "ae": Binary structure for schedule slots, dynamic size depending on schedule
             # 2 bytes LE for start/end time in minutes, 1 byte priority limit, Export switch switch setting and discharge prio in bitmask
-            # Dynamic byte structures cannot be described, the schedule should be managed completely via Api
+            # The schedule should be managed completely via Api
             "b0": {NAME: "bat_charge_power"},
             "b1": {NAME: "pv_yield", FACTOR: 0.0001},
             "b2": {NAME: "charged_energy", FACTOR: 0.0001},
@@ -5889,7 +5842,7 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         "020c": CMD_PORT_PRIORITY,  # Set the port priorities for given port bitmask
         "020e": CMD_CHARGER_KNOB_MODE,  # Set charger knob mode: 0 forward, 1 backward
-        "020f": CMD_CHARGER_CLOCK_HOLIDAY,  # Set weekend mode for clock display???
+        "020f": CMD_CHARGER_CLOCK_HOLIDAY,  # Set weekend mode for clock display
         "0210": CMD_CHARGER_CLOCK_MODE,  # Set charger clock mode: 0: 12h, 1: 24h
         # "0212" # unknown cloud command, fields a2-a8
         "0213": CMD_CHARGER_CLOCK_DISPLAY,  # Set charger clock display schedule
