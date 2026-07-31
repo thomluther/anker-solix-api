@@ -391,6 +391,46 @@ _A1761_0405 = {
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
 }
 
+_A1753_0405 = {
+    # PPS C800 (A1753) param info
+    # Field layout partly matches the C1000 (_A1761_0405). Only fields verified
+    # against real C800 MQTT dumps are mapped below; remaining fields (SOH,
+    # output modes, timeout settings) still need verification before being added.
+    TOPIC: "param_info",
+    "a2": {
+        NAME: "ac_output_timeout_seconds"
+    },  # Active AC output auto-off countdown in seconds (0 = disabled); set via cmd 0042, range 0-86400, step 300
+    "a3": {
+        NAME: "dc_output_timeout_seconds"
+    },  # Active DC output auto-off countdown in seconds (0 = disabled); verified via app timer changes
+    "a4": {
+        NAME: "remaining_time_hours",
+        FACTOR: 0.1,
+        SIGNED: False,
+    },  # Remaining runtime in hours (value * factor)
+    "a5": {NAME: "ac_input_power"},  # AC charging power to battery (W)
+    "a6": {NAME: "ac_output_power"},  # AC outlet output power (W)
+    "a7": {NAME: "usbc_1_power"},  # USB-C port 1 output power (W)
+    "a8": {NAME: "usbc_2_power"},  # USB-C port 2 output power (W)
+    "a9": {NAME: "usba_1_power"},  # USB-A port 1 output power (W)
+    "aa": {NAME: "usba_2_power"},  # USB-A port 2 output power (W)
+    "ae": {NAME: "dc_input_power"},  # DC input power (solar/car charging) (W)
+    "af": {NAME: "photovoltaic_power"},  # Solar input power (W)
+    "b0": {NAME: "output_power_total"},  # Combined AC + DC output power (W), includes LED lamp (1-3 W)
+    "bb": {NAME: "ac_output_status"},  # AC inverter: Off (0), On (1); mirrors switch state d7
+    "bd": {NAME: "temperature", SIGNED: True},  # Main device temperature (°C)
+    "c1": {NAME: "main_battery_soc"},  # Main battery state of charge (%), verified on real device
+    "cc": {NAME: "dc_12v_status"},  # 12V car socket: Off (0), On (1); mirrors switch state d8
+    "d0": {NAME: "device_sn"},  # Device serial number
+    "d1": {NAME: "ac_input_limit"},  # Max AC charge setting (W), verified 750/600/300/200
+    "d7": {NAME: "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "d8": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "da": {NAME: "ac_frequency"},  # AC frequency (Hz): 50 / 60
+    "dc": {NAME: "light_mode"},  # LED bar: Off (0), Low (1), Medium (2), High (3)
+    "de": {NAME: "display_switch"},  # Off (0) or On (1)
+    "fe": {NAME: "msg_timestamp"},  # Message timestamp
+}
+
 _A1763_0421 = {
     "a2": {
         BYTES: {
@@ -4168,6 +4208,37 @@ SOLIXMQTTMAP: Final[dict] = {
         "0401": _A1725_0401,  # Interval: Irregular, triggered on app/device actions
         "0405": _A1725_0405,  # Interval: ~3-5 seconds, but only with realtime trigger
         "0830": _PPS_VERSIONS_0830,  # Interval: Irregular, triggered on app actions, no fixed interval
+    },
+    # PPS C800
+    "A1753": {
+        # Standby timer = AC output auto-off timeout. Command field a2 (var), seconds,
+        # range 0-86400, step 300, 0 = disabled. Verified against a real C800 MQTT dump.
+        "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,
+        # Following commands re-used from A1761; the corresponding status fields in
+        # 0405 were verified by toggling each control in the app on a real device.
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout; status field a3 verified
+        "0044": CMD_AC_CHARGE_LIMIT  # AC Recharge Limit options as offered by app slider
+        | {
+            "a2": {
+                **CMD_AC_CHARGE_LIMIT["a2"],
+                VALUE_OPTIONS: [200, 300, 400, 500, 600, 700, 750],
+            }
+        },  # status field d1 verified with app changes 750/600/300/200
+        "004a": CMD_AC_OUTPUT_SWITCH,  # status fields bb/d7 verified
+        "004b": CMD_DC_OUTPUT_SWITCH,  # status fields cc/d8 verified
+        "004f": CMD_LIGHT_MODE  # status field dc verified: Off (0) - High (3), no blinking mode
+        | {
+            "a2": {
+                **CMD_LIGHT_MODE["a2"],
+                VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
+            },
+        },
+        "0052": CMD_DISPLAY_SWITCH,  # status field de verified
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": _A1753_0405,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": _PPS_VERSIONS_0830,
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
