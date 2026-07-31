@@ -6,6 +6,7 @@ These methods provide comprehensive device control via MQTT commands.
 
 from __future__ import annotations  # noqa: TID251
 
+from itertools import pairwise
 from typing import TYPE_CHECKING
 
 from .mqtt_device import SolixMqttDevice
@@ -76,6 +77,360 @@ FEATURES = {
     # SolixMqttCommands.pps_tou_schedule: MODELS,
     # SolixMqttCommands.backup_soc: MODELS,
 }
+
+
+# ---------------------------------------------------------------------------
+# S2000 (AS220) schedule plan helpers
+#
+# Pure conversion and modification helpers for the two PPS schedule structures,
+# kept separate from the command dispatch so they can be reused by whichever
+# service shape the plan changes end up using.
+#
+# Both structures are a struct field (type byte 0x04) followed by a variable
+# number of slots, so neither can be described by a fixed byte map.
+#
+# TOU plan (message 0090, field a7):
+#     04 | tariff_1 | (start, end, tariff_of_next_slot) * | (start, end)
+#   Whole hours 0..24, one byte each. Each slot carries the FOLLOWING slot's
+#   tariff, and the final slot omits it.
+#
+# Custom plan (message 0093, field a2):
+#     04 | group_count | per group: weekday_mask, slot_count,
+#          slot_count * (load_mode, start_minutes u16 LE, end_minutes u16 LE)
+#   Minutes since midnight, so custom slots are not restricted to whole hours.
+# ---------------------------------------------------------------------------
+
+# Tariff codes shared by the TOU structure, consistent across captured plans.
+TOU_TARIFFS: dict[str, int] = {"peak": 1, "midpeak": 2, "offpeak": 3}
+# Load modes of the custom plan.
+CUSTOM_LOAD_MODES: dict[str, int] = {"charge": 1, "discharge": 2}
+
+# Device limits. Slot and group maxima are the largest values observed so far
+# and are applied as guard rails; the device may accept fewer.
+TOU_MAX_SLOTS: int = 24
+CUSTOM_MAX_GROUPS: int = 2
+CUSTOM_MAX_SLOTS: int = 5
+# The TOU plan must tile the whole day: every captured plan runs 00:00 to 24:00
+# with no gaps and no overlaps. The custom plan does allow gaps between slots.
+TOU_DAY_START: int = 0
+TOU_DAY_END: int = 24
+
+WEEKDAYS: tuple[str, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+
+def _split_time(value: str | int) -> tuple[int, int]:
+    """Return (hour, minute) for a "HH:MM" string or an hour integer."""
+    if isinstance(value, int):
+        return value, 0
+    parts = str(value).split(":")
+    try:
+        hour = int(parts[0])
+        minute = int(parts[1]) if len(parts) > 1 else 0
+    except ValueError as err:
+        raise ValueError(f"Invalid time value: {value!r}") from err
+    return hour, minute
+
+
+def _tou_hour(value: str | int, field: str) -> int:
+    """Validate and return a whole hour 0..24 for the TOU plan."""
+    hour, minute = _split_time(value)
+    if minute:
+        raise ValueError(
+            f"TOU plan {field} must be a whole hour, got {value!r} "
+            "(the device encodes TOU boundaries as single hour bytes)"
+        )
+    if not TOU_DAY_START <= hour <= TOU_DAY_END:
+        raise ValueError(
+            f"TOU plan {field} must be {TOU_DAY_START}-{TOU_DAY_END}, got {hour}"
+        )
+    return hour
+
+
+def _custom_minutes(value: str | int, field: str) -> int:
+    """Validate and return minutes since midnight for the custom plan."""
+    hour, minute = _split_time(value)
+    total = hour * 60 + minute
+    if not 0 <= total <= 1440:
+        raise ValueError(
+            f"Custom plan {field} must be within 00:00-24:00, got {value!r}"
+        )
+    return total
+
+
+def _as_code(value: str | int | None, options: dict[str, int], field: str) -> int:
+    """Return the numeric code for a name or an already numeric code."""
+    if isinstance(value, str) and not value.isdigit():
+        if (code := options.get(value.lower())) is None:
+            raise ValueError(
+                f"Unknown {field} {value!r}, expected one of {list(options)}"
+            )
+        return code
+    code = int(value)
+    if code not in options.values():
+        raise ValueError(
+            f"Invalid {field} code {code}, expected one of {sorted(options.values())}"
+        )
+    return code
+
+
+def _hhmm(minutes: int) -> str:
+    """Return minutes since midnight as "HH:MM"."""
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def encode_tou_plan(plan: dict) -> bytes:
+    """Encode a TOU plan dict into the a7 struct value of message 0090.
+
+    Args:
+        plan: Plan as returned by SolixMqttDevicePps.get_tou_plan(), i.e.
+            {"ranges": [{"start_time","end_time","tariff"}, ...]}
+
+    Returns:
+        bytes: the field value including the leading 0x04 struct type byte.
+
+    Raises:
+        ValueError: if the plan is empty, exceeds the slot limit, or does not
+            tile 00:00-24:00 without gaps or overlaps.
+
+    """
+    ranges = list(plan.get("ranges") or [])
+    if not ranges:
+        raise ValueError("TOU plan requires at least one slot")
+    if len(ranges) > TOU_MAX_SLOTS:
+        raise ValueError(
+            f"TOU plan supports at most {TOU_MAX_SLOTS} slots, got {len(ranges)}"
+        )
+
+    slots: list[tuple[int, int, int]] = []
+    for idx, item in enumerate(ranges, 1):
+        start = _tou_hour(item.get("start_time", 0), f"slot {idx} start_time")
+        end = _tou_hour(item.get("end_time", 0), f"slot {idx} end_time")
+        if end <= start:
+            raise ValueError(f"TOU plan slot {idx} end_time must be after start_time")
+        slots.append((start, end, _as_code(item.get("tariff"), TOU_TARIFFS, "tariff")))
+
+    slots.sort(key=lambda s: s[0])
+    if slots[0][0] != TOU_DAY_START or slots[-1][1] != TOU_DAY_END:
+        raise ValueError(
+            f"TOU plan must cover {TOU_DAY_START:02d}:00-{TOU_DAY_END:02d}:00, "
+            f"got {slots[0][0]:02d}:00-{slots[-1][1]:02d}:00"
+        )
+    for (_, prev_end, _), (start, _, _) in pairwise(slots):
+        if start != prev_end:
+            raise ValueError(
+                f"TOU plan slots must be contiguous, gap or overlap at {prev_end:02d}:00"
+            )
+
+    data = bytearray([0x04, slots[0][2]])
+    for idx, (start, end, _) in enumerate(slots):
+        data += bytes([start, end])
+        if idx + 1 < len(slots):
+            data.append(slots[idx + 1][2])
+    return bytes(data)
+
+
+def decode_tou_plan(data: bytes | bytearray | str) -> dict:
+    """Decode an a7 TOU struct value back into a plan dict.
+
+    Args:
+        data: field value with or without the leading 0x04 struct type byte,
+            as bytes or a hex string.
+
+    Returns:
+        dict: {"ranges": [{"start_time","end_time","tariff"}, ...]}
+
+    """
+    raw = (
+        bytes.fromhex(data.replace(":", "").replace(" ", ""))
+        if isinstance(data, str)
+        else bytes(data)
+    )
+    if raw and raw[0] == 0x04:
+        raw = raw[1:]
+    if len(raw) < 3:
+        raise ValueError("TOU struct too short to contain a slot")
+    tariff = raw[0]
+    ranges: list[dict] = []
+    pos = 1
+    while pos + 1 < len(raw):
+        start, end = raw[pos], raw[pos + 1]
+        pos += 2
+        if pos < len(raw):
+            next_tariff = raw[pos]
+            pos += 1
+        else:
+            next_tariff = None
+        ranges.append(
+            {
+                "start_time": f"{start:02d}:00",
+                "end_time": f"{end:02d}:00",
+                "tariff": tariff,
+            }
+        )
+        if next_tariff is not None:
+            tariff = next_tariff
+    return {"ranges": ranges}
+
+
+def encode_custom_plan(plan: dict) -> bytes:
+    """Encode a custom plan dict into the a2 struct value of message 0093.
+
+    Accepts either a single group, using the plan level "weekdays" key, or an
+    explicit "groups" list of {"weekdays": [...], "ranges": [...]} entries.
+
+    Args:
+        plan: {"weekdays": [...], "ranges": [{"start_time","end_time","load_mode"}]}
+            or {"groups": [{"weekdays": [...], "ranges": [...]}, ...]}
+
+    Returns:
+        bytes: the field value including the leading 0x04 struct type byte.
+
+    Raises:
+        ValueError: on group or slot limit violation, overlapping slots, or an
+            unknown weekday or load mode.
+
+    """
+    groups = plan.get("groups")
+    if not groups:
+        groups = [
+            {
+                "weekdays": plan.get("weekdays") or [],
+                "ranges": plan.get("ranges") or [],
+            }
+        ]
+    if len(groups) > CUSTOM_MAX_GROUPS:
+        raise ValueError(
+            f"Custom plan supports at most {CUSTOM_MAX_GROUPS} groups, "
+            f"got {len(groups)}"
+        )
+
+    data = bytearray([0x04, len(groups)])
+    for gidx, group in enumerate(groups, 1):
+        ranges = list(group.get("ranges") or [])
+        if not ranges:
+            raise ValueError(f"Custom plan group {gidx} requires at least one slot")
+        if len(ranges) > CUSTOM_MAX_SLOTS:
+            raise ValueError(
+                f"Custom plan group {gidx} supports at most {CUSTOM_MAX_SLOTS} slots, got {len(ranges)}"
+            )
+        mask = 0
+        for day in group.get("weekdays") or []:
+            name = str(day).lower()[:3]
+            if name not in WEEKDAYS:
+                raise ValueError(
+                    f"Unknown weekday {day!r}, expected one of {list(WEEKDAYS)}"
+                )
+            mask |= 1 << WEEKDAYS.index(name)
+
+        slots: list[tuple[int, int, int]] = []
+        for sidx, item in enumerate(ranges, 1):
+            start = _custom_minutes(
+                item.get("start_time", 0), f"group {gidx} slot {sidx} start_time"
+            )
+            end = _custom_minutes(
+                item.get("end_time", 0), f"group {gidx} slot {sidx} end_time"
+            )
+            if end <= start:
+                raise ValueError(
+                    f"Custom plan group {gidx} slot {sidx} end_time must be after start_time"
+                )
+            mode = _as_code(item.get("load_mode"), CUSTOM_LOAD_MODES, "load_mode")
+            slots.append((start, end, mode))
+        slots.sort(key=lambda s: s[0])
+        # Gaps between custom slots are allowed, overlaps are not.
+        for (_, prev_end, _), (start, _, _) in pairwise(slots):
+            if start < prev_end:
+                raise ValueError(
+                    f"Custom plan group {gidx} slots overlap at {_hhmm(start)}"
+                )
+
+        data += bytes([mask, len(slots)])
+        for start, end, mode in slots:
+            data += (
+                bytes([mode]) + start.to_bytes(2, "little") + end.to_bytes(2, "little")
+            )
+    return bytes(data)
+
+
+def decode_custom_plan(data: bytes | bytearray | str) -> dict:
+    """Decode an a2 custom struct value back into a plan dict.
+
+    Returns:
+        dict: {"groups": [{"weekdays": [...], "ranges": [...]}, ...]}
+
+    """
+    raw = (
+        bytes.fromhex(data.replace(":", "").replace(" ", ""))
+        if isinstance(data, str)
+        else bytes(data)
+    )
+    if raw and raw[0] == 0x04:
+        raw = raw[1:]
+    if not raw:
+        raise ValueError("Custom struct is empty")
+    groups: list[dict] = []
+    pos = 1
+    for _ in range(raw[0]):
+        if pos + 1 >= len(raw):
+            raise ValueError("Custom struct truncated in group header")
+        mask, count = raw[pos], raw[pos + 1]
+        pos += 2
+        ranges = []
+        for _ in range(count):
+            if pos + 4 >= len(raw):
+                raise ValueError("Custom struct truncated in slot")
+            mode = raw[pos]
+            start = int.from_bytes(raw[pos + 1 : pos + 3], "little")
+            end = int.from_bytes(raw[pos + 3 : pos + 5], "little")
+            pos += 5
+            ranges.append(
+                {"start_time": _hhmm(start), "end_time": _hhmm(end), "load_mode": mode}
+            )
+        groups.append(
+            {
+                "weekdays": [d for i, d in enumerate(WEEKDAYS) if mask & (1 << i)],
+                "ranges": ranges,
+            }
+        )
+    return {"groups": groups}
+
+
+def update_plan_slots(
+    ranges: list[dict] | None,
+    slot: dict | None = None,
+    index: int | None = None,
+    delete: bool = False,
+) -> list[dict]:
+    """Return a new slot list with one slot inserted, updated or removed.
+
+    Supports both whole slot objects and individual parameter updates: keys
+    absent from ``slot`` are kept from the existing slot at ``index``.
+
+    Args:
+        ranges: existing slot list, as held in a plan's "ranges".
+        slot: slot keys to apply. Omit to only delete.
+        index: 1-based slot position. None appends a new slot.
+        delete: remove the slot at ``index`` instead of updating it.
+
+    Returns:
+        list[dict]: a new list; the input is not modified.
+
+    """
+    items = [dict(item) for item in (ranges or [])]
+    if delete:
+        if index is None or not 1 <= index <= len(items):
+            raise ValueError(f"Cannot delete slot {index}, plan has {len(items)} slots")
+        items.pop(index - 1)
+        return items
+    if not slot:
+        raise ValueError("Provide slot values to update, or delete=True")
+    if index is None:
+        items.append(dict(slot))
+    elif 1 <= index <= len(items):
+        items[index - 1].update(slot)
+    else:
+        raise ValueError(f"Cannot update slot {index}, plan has {len(items)} slots")
+    return items
 
 
 class SolixMqttDevicePps(SolixMqttDevice):
