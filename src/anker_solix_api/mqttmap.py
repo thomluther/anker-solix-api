@@ -4242,18 +4242,22 @@ SOLIXMQTTMAP: Final[dict] = {
         # Following commands re-used from A1761; the corresponding status fields in
         # 0405 were verified by toggling each control in the app on a real device.
         "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout; status field a3 verified
-        "0044": CMD_AC_CHARGE_LIMIT
+        "0044": CMD_AC_CHARGE_LIMIT  # AC Recharge Limit options as offered by app slider
         | {
             "a2": {
                 **CMD_AC_CHARGE_LIMIT["a2"],
-                VALUE_MIN: 200,
-                VALUE_MAX: 750,
-                VALUE_STEP: 50,
+                VALUE_OPTIONS: [200, 300, 400, 500, 600, 700, 750],
             }
-        },  # observed on device: 200-750 W (status field d1); min/step TBC
+        },  # status field d1 verified with app changes 750/600/300/200
         "004a": CMD_AC_OUTPUT_SWITCH,  # status fields bb/d7 verified
         "004b": CMD_DC_OUTPUT_SWITCH,  # status fields cc/d8 verified
-        "004f": CMD_LIGHT_MODE,  # status field dc verified: Off (0) - High (3)
+        "004f": CMD_LIGHT_MODE  # status field dc verified: Off (0) - High (3), no blinking mode
+        | {
+            "a2": {
+                **CMD_LIGHT_MODE["a2"],
+                VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
+            },
+        },
         "0052": CMD_DISPLAY_SWITCH,  # status field de verified
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
