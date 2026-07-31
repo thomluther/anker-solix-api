@@ -136,6 +136,7 @@ class SolixMqttCommands:
     pps_tou_schedule: str = "tou_schedule"
     pps_custom_schedule: str = "pps_custom_schedule"
     silent_schedule: str = "silent_schedule"
+    storm_guard_switch: str = "storm_guard_switch"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
     sb_min_soc_select: str = "sb_min_soc_select"  # Old command: Does not change App station wide setting, needs Api request as well

@@ -1337,7 +1337,7 @@ class SolixDeviceCategory:
     A1763: str = SolixDeviceType.PPS.value  # SOLIX C1000 Gen 2 PPS
     A1765: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 PPS
     AS100: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 LE PPS
-    AS220: str = SolixDeviceType.PPS.value  # SOLIX C1000X Gen 2 LE PPS
+    AS220: str = SolixDeviceType.PPS.value  # SOLIX S2000 PPS
     A1770: str = SolixDeviceType.PPS.value  # Anker PowerHouse 757 PPS
     A1771: str = SolixDeviceType.PPS.value  # SOLIX F1200 PPS
     A1772: str = SolixDeviceType.PPS.value  # SOLIX F1500 PPS

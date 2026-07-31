@@ -1950,11 +1950,11 @@ class AnkerSolixApiMonitor:
                     if devtype == SolixDeviceType.PPS.value
                     else ""
                 )
-                m2 = cm and str(mqtt.get("", ""))
-                if m1 or m2:
+                m2 = cm and mqtt.get("storm_guard_switch", "")
+                if m1 or str(m2):
                     CONSOLE.info(
                         f"{'Usage Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPpsUsageMode, m1, '----').replace('_', ' ').replace('_', ' ').title() + ' (' + (m1 or '-') + ')':<{col2}}{co} "
-                        # f"{'Knob Mode':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixKnobMode, m2, '----').title()} ({m2 or '-'}){co}"
+                        f"{'Storm Guard':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, '---').upper()} ({str(m2) or '-'}){co}"
                     )
                 m1 = (
                     cm and str(mqtt.get("usage_mode", ""))
@@ -2445,9 +2445,22 @@ class AnkerSolixApiMonitor:
                         f"{str(m5) and (c or cm)}({get_enum_name(SolixSwitchMode, m5, str(m5) or '---').upper():>3}{')':<{col2 - 18}}{co} "
                         f"{'Weekdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
                     )
+                m1 = cm and mqtt.get("backup_start_timestamp", "")
+                m2 = cm and mqtt.get("backup_end_timestamp", "")
+                if str(m1) or str(m2):
+                    if str(m1):
+                        m1 = datetime.fromtimestamp(m1).strftime("%Y-%m-%d %H:%M:%S")
+                    if str(m2):
+                        m2 = datetime.fromtimestamp(m2).strftime("%Y-%m-%d %H:%M:%S")
+                    CONSOLE.info(
+                        f"{'Backup Start':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
+                        f"{'Backup End':<{col3}}: {m2 and (c or cm)}{m2}{co}"
+                    )
                 if schedule := (c or cm) and mqtt.get("custom_mode_schedule"):
                     CONSOLE.info(f"{'-' * 80}")
-                    common.print_pps_schedule({"custom_mode_schedule": schedule}, c or cm)
+                    common.print_pps_schedule(
+                        {"custom_mode_schedule": schedule}, c or cm
+                    )
                 if schedule := (c or cm) and mqtt.get("tou_mode_schedule"):
                     CONSOLE.info(f"{'-' * 80}")
                     common.print_pps_schedule({"tou_mode_schedule": schedule}, c or cm)

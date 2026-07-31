@@ -3277,10 +3277,10 @@ _AS220_0421 = {
     },
     "a3": {
         BYTES: {
-            "00": {
-                NAME: "charging_status",  # (0-3): Inactive (0), DC Input (1), AC Input (2), Both (3)
+            "00": {NAME: "battery_status",
+
                 TYPE: DeviceHexDataTypes.ui.value,
-            },
+                   },
             "04": {
                 NAME: "ac_input_limit_max",  # Max supported charge limit, seems fix
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3349,6 +3349,7 @@ _AS220_0421 = {
                 NAME: "min_soc",  # min_soc %
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "26": {NAME: "region", TYPE: DeviceHexDataTypes.str.value, LENGTH: 2},
             "28": {
                 NAME: "ac_output_timeout_minutes",  # minutes; AS220 replaces ac_output_timeout_seconds (live: 240=4h, 720=12h)
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3479,12 +3480,23 @@ _AS220_0421 = {
                 ),
             },
             {
-                NAME: "unknown_d9_1_timestamp",  # Storm guard start?
-                TYPE: DeviceHexDataTypes.var.value,
-                OFFSET: 3,
+                NAME: "unknown_backup_state_d9_1",
+                TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "unknown_d9_2_timestamp",  # Storm guard end?
+                NAME: "storm_guard_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "unknown_backup_state_d9_3",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "backup_start_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            {
+                NAME: "backup_end_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
             },
         ]
@@ -4631,6 +4643,70 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS S2000 - matches A1783 (C2000 Gen 2); 0101-0103 controls inherited, not yet validated
     "AS220": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": CMD_COMMON_V2  # Backup plan, includes storm guard
+        | {
+            "a3": {
+                NAME: "active_usage_mode_raw",  # is this the actual usage mode raw setting?
+                TYPE: DeviceHexDataTypes.ui.value,
+                STATE_NAME: "usage_mode_raw?",  # is this the actual usage mode raw setting?
+                VALUE_STATE: "usage_mode_raw?",
+                VALUE_OPTIONS: {  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
+                    "standard": 0,  # UPS mode
+                    "time_of_use": 3,
+                    "self_consumption": 4,
+                    "custom": 5,
+                },
+            },
+            "a4": {
+                NAME: "set_unknown_switch_005e_a4",
+                TYPE: DeviceHexDataTypes.ui.value,
+                STATE_NAME: "unknown_backup_switch_d9_1?",
+                VALUE_STATE: "unknown_backup_switch_d9_1?",
+                VALUE_OPTIONS: {"off": 0, "on": 1},
+            },
+            "a5": {
+                NAME: "set_storm_guard_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+                STATE_NAME: "storm_guard_switch",
+                VALUE_STATE: "storm_guard_switch",
+                VALUE_OPTIONS: {"off": 0, "on": 1},
+            },
+            "a6": {
+                NAME: "set_unknown_switch_005e_a6",
+                TYPE: DeviceHexDataTypes.ui.value,
+                STATE_NAME: "unknown_switch_005e_a6",
+                VALUE_STATE: "unknown_switch_005e_a6",
+                VALUE_OPTIONS: {"off": 0, "on": 1},
+            },
+            "a7": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 10,
+                BYTES: {
+                    "00": {
+                        NAME: "set_backup_max_soc",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_FOLLOWS: "max_soc",
+                    },
+                    "01": {
+                        NAME: "set_unknown_a7_01?",  # only 0 observed so far
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 0,
+                    },
+                    "02": {
+                        NAME: "set_backup_start_timestamp",
+                        TYPE: DeviceHexDataTypes.var.value,
+                        STATE_NAME: "backup_start_timestamp",
+                        VALUE_STATE: "backup_start_timestamp",
+                    },
+                    "06": {
+                        NAME: "set_backup_end_timestamp",
+                        TYPE: DeviceHexDataTypes.var.value,
+                        STATE_NAME: "backup_end_timestamp",
+                        VALUE_STATE: "backup_end_timestamp",
+                    },
+                },
+            },
+        },
         "0090": {
             # TOU command group
             COMMAND_LIST: [
