@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from typing import Final
 
 from .apitypes import DeviceHexDataTypes
+from .helpers import convert_port_protocols
 
 # common mapping keys to be used for status and command descriptions
 EMBEDDED: Final[str] = (
@@ -185,6 +186,7 @@ class SolixMqttCommands:
     battery_charge_limits: str = "battery_charge_limits"
     reverse_charge_limits: str = "reverse_charge_limits"
     charger_usage_mode: str = "charger_usage_mode"
+    charger_custom_usage_mode: str = "charger_custom_usage_mode"
     port_priority: str = "port_priority"
     knob_mode_select: str = "knob_mode_select"
     clock_mode_select: str = "clock_mode_select"
@@ -1617,7 +1619,7 @@ CMD_DISPLAY_BRIGHTNESS = CMD_COMMON | {
 }
 
 CMD_CHARGER_USAGE_MODE = CMD_COMMON | {
-    # Command: Set charger mode: 1 (AI Power mode), 2 (Connection Prio), 3 (Dual Laptop mode), 4 (Low power mode)
+    # Command: Set charger mode: 1 (AI Power mode), 2 (Connection Prio), 3 (Dual Laptop mode), 4 (Low power mode), 5 (Custom)
     COMMAND_NAME: SolixMqttCommands.charger_usage_mode,
     "a2": {
         NAME: "set_usage_mode",
@@ -1628,10 +1630,126 @@ CMD_CHARGER_USAGE_MODE = CMD_COMMON | {
             "port_priority": 2,
             "dual_laptop": 3,
             "low_power": 4,
-            "custom": 5,
         },
     },
 }
+
+CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
+    # Command: Set charger custom usage mode: 5 with additional port settings
+    COMMAND_NAME: SolixMqttCommands.charger_custom_usage_mode,
+    "a2": {
+        NAME: "set_usage_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "usage_mode",
+        VALUE_DEFAULT: 5,
+    },
+    "a3": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # Byte pattern: profile_number:auto_exit:c1_pwr:c2_pwr:c3_pwr:c4_pwr:a_pwr
+        # Example: 02:01:1e:1c:2c:35:18
+        LENGTH: 7,
+        BYTES: {
+            "00": {
+                NAME: "set_custom_profile_number",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 255,
+                STATE_NAME: "custom_profile_number",
+            },
+            "01": {
+                NAME: "set_auto_exit_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_OPTIONS: {"on": 1, "off": 0},
+            },
+            "02": {
+                NAME: "set_usb_c1_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 140,
+                VALUE_DEFAULT: 0,
+            },
+            "03": {
+                NAME: "set_usb_c2_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 100,
+                VALUE_DEFAULT: 0,
+            },
+            "04": {
+                NAME: "set_usb_c3_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 100,
+                VALUE_DEFAULT: 0,
+            },
+            "05": {
+                NAME: "set_usb_c4_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 100,
+                VALUE_DEFAULT: 0,
+            },
+            "06": {
+                NAME: "set_usb_a_power_limit",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 24,
+                VALUE_DEFAULT: 0,
+            },
+        },
+    },
+    "a4": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # USB-C Port protocols, 3 bytes each port
+        # Protocol bitmask: xiaomi:huawei:pps20v:pps16v:pps11v:pd12v:ufcs:scp
+        # Example: 08:00:00:0b:00:00:0b:00:00:02:00:00
+        LENGTH: 12,
+        BYTES: {
+            "00": {
+                NAME: "set_usb_c1_protocols",
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                STATE_CONVERTER: lambda value, state, cache: (
+                    convert_port_protocols(value)
+                    if value is not None
+                    else convert_port_protocols(state)
+                ),
+            },
+            "03": {
+                NAME: "set_usb_c2_protocols",
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                STATE_CONVERTER: lambda value, state, cache: (
+                    convert_port_protocols(value)
+                    if value is not None
+                    else convert_port_protocols(state)
+                ),
+            },
+            "06": {
+                NAME: "set_usb_c3_protocols",
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                STATE_CONVERTER: lambda value, state, cache: (
+                    convert_port_protocols(value)
+                    if value is not None
+                    else convert_port_protocols(state)
+                ),
+            },
+            "09": {
+                NAME: "set_usb_c4_protocols",
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                STATE_CONVERTER: lambda value, state, cache: (
+                    convert_port_protocols(value)
+                    if value is not None
+                    else convert_port_protocols(state)
+                ),
+            },
+        },
+    },
+}
+
+
 
 CMD_CHARGER_CLOCK_MODE = CMD_COMMON | {
     # Command: Set charger clock mode: 0 (12h), 1 (24h)

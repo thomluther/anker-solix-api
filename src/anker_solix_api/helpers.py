@@ -300,6 +300,56 @@ def convert_weekdays(
     return None
 
 
+def convert_port_protocols(
+    value: bytes | bytearray | list | set,
+) -> bytes | list | None:
+    """Convert list with eligible USB-C port protocols between bitmask used in MQTT messages and list formats.
+
+    Automatically detects input value type and converts accordingly. The typical Bitmask is:
+    xiaomi:huawei:pps20v:pps16v:pps11v:pd12v:ufcs:scp
+
+    Args:
+        value: Protocols in a byte bitmask (1 byte, 0-0xff)
+              or list|set with port protocols or "all", format ["pps16v", "ufcs"] or ["all"].
+              Note: Restrictions may apply and all protocols together may not be supported.
+
+    Returns:
+        List with protocols if input is bytes/bytearray.
+        1 Byte with the bitmask (0-0xff) if input is list or set.
+        None if input is invalid or unsupported type.
+
+    """
+    protocols = [
+        "scp",
+        "ufcs",
+        "pd12v",
+        "pps11v",
+        "pps16v",
+        "pps20v",
+        "huawei",
+        "xiaomi",
+    ]
+    if isinstance(value, bytes | bytearray) and len(value) == 1:
+        # Convert bitmask to list
+        return [
+            name
+            for idx, name in enumerate(protocols)
+            if int.from_bytes(value) & (1 << idx)
+        ]
+    if isinstance(value, list | set) and (0 <= len(set(value)) <= 10):
+        # convert elements to lower case string and "all" to weekdays
+        value = set(map(str.lower, map(str, value)))
+        if "all" in value:
+            value = (value - {"all"}) | set(protocols)
+        # Convert valid weekdays into bitmask byte
+        return sum(
+            1 << protocols.index(day.lower())
+            for day in value
+            if isinstance(day, str) and day in protocols
+        ).to_bytes()
+    return None
+
+
 def convert_pps_custom_schedule(
     value: bytes | bytearray | dict,
 ) -> bytearray | dict | None:
@@ -445,7 +495,11 @@ def convert_pps_tou_schedule(
                 hexvalue.extend(int(slot.get("tariff", 0)).to_bytes(byteorder="little"))
                 start = slot.get("start_time", "").split(":")
                 end = slot.get("end_time", "").split(":")
-                hexvalue.extend(int((start[:1] or [])[0] or 0).to_bytes(byteorder="little"))
-                hexvalue.extend(int((end[:1] or [])[0] or 0).to_bytes(byteorder="little"))
+                hexvalue.extend(
+                    int((start[:1] or [])[0] or 0).to_bytes(byteorder="little")
+                )
+                hexvalue.extend(
+                    int((end[:1] or [])[0] or 0).to_bytes(byteorder="little")
+                )
             return hexvalue
     return None

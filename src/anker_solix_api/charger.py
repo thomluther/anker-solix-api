@@ -57,6 +57,48 @@ async def get_charger_custom_mode_list(
     return data
 
 
+def get_charger_custom_mode_profile(
+    self: AnkerSolixApi,
+    deviceSn: str,
+    profile_number: str | int | None = None,
+    profile_name: str | None = None,
+) -> dict:
+    """Get the mini charger custom charging mode profile by number or name from existing profiles."""
+    if isinstance(deviceSn, str):
+        if not isinstance(profile_number, str | int) or profile_number == "":
+            profile_number = None
+        if not isinstance(profile_name, str) or profile_name == "":
+            profile_name = None
+        profiles = self.devices.get(deviceSn, {}).get("charging_mode_list") or []
+        return next(
+            (
+                profile
+                for profile in profiles
+                if profile.get("name", "") == profile_name
+                or str(profile.get("number", "")) == str(profile_number)
+            ),
+            {},
+        )
+    return {}
+
+
+def get_charger_custom_mode_options(
+    self: AnkerSolixApi,
+    deviceSn: str,
+    by_number: bool = False,
+) -> list:
+    """Get the mini charger custom charging mode options by name or optionally by number from existing profiles."""
+    # check if custom mode feature is enabled
+    if isinstance(deviceSn, str) and (dev := self.devices.get(deviceSn, {})).get(
+        "device_setting", {}
+    ).get("charging_mode_status"):
+        return [
+            str(profile.get("number" if by_number else "name", ""))
+            for profile in dev.get("charging_mode_list") or []
+        ]
+    return []
+
+
 async def get_charger_device_setting(
     self: AnkerSolixApi,
     deviceSn: str,

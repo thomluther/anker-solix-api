@@ -77,6 +77,7 @@ FEATURES = {
     SolixMqttCommands.modbus_switch: MODELS,
     SolixMqttCommands.port_priority: MODELS,
     SolixMqttCommands.charger_usage_mode: MODELS,
+    SolixMqttCommands.charger_custom_usage_mode: MODELS,
     SolixMqttCommands.charger_mode_select: MODELS,
     SolixMqttCommands.theme_request: MODELS,
     SolixMqttCommands.charger_theme: MODELS,
