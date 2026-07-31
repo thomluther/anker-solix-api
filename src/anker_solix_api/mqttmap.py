@@ -409,9 +409,9 @@ _A1761_0405 = {
 
 _A1753_0405 = {
     # PPS C800 (A1753) param info
-    # Field layout partly matches the C1000 (_A1761_0405). Only fields verified
-    # against real C800 MQTT dumps are mapped below; remaining fields (SOH,
-    # output modes, timeout settings) still need verification before being added.
+    # Field layout matches the C1000 (_A1761_0405). Settings fields d2, d3, d9,
+    # dc, dd were verified against real C800 MQTT dumps via app/monitor control
+    # session; remaining fields (SOH, output modes in f8) still unverified.
     TOPIC: "param_info",
     "a2": {
         NAME: "ac_output_timeout_seconds"
@@ -464,15 +464,15 @@ _A1753_0405 = {
     },  # Max AC charge setting (W), verified 750/600/300/200
     "d2": {
         NAME: "device_timeout_minutes"
-    },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
-    "d3": {NAME: "display_timeout_seconds"},  # Options: 20, 30, 60, 300, 1800 seconds
+    },  # verified: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+    "d3": {NAME: "display_timeout_seconds"},  # verified: 20, 30, 60, 300, 1800 seconds
     "d7": {NAME: "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d8": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
-    "d9": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
+    "d9": {NAME: "display_mode"},  # Brightness, verified: Low (1), Medium (2), High (3), no Off option on C800
     "da": {NAME: "ac_frequency"},  # AC frequency (Hz): 50 / 60
-    "dc": {NAME: "light_mode"},  # LED bar: Off (0), Low (1), Medium (2), High (3)
+    "dc": {NAME: "light_mode"},  # LED bar, verified: Off (0), Low (1), Medium (2), High (3), SOS/Blinking (4)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
-    "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
+    "dd": {NAME: "temp_unit_fahrenheit"},  # verified: Celsius (0) or Fahrenheit (1)
     "fd": {NAME: "exp_1_type"},  # Expansion battery type identifier
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
 }
@@ -4269,7 +4269,7 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS C800
     "A1753": {
-        "0040": CMD_STATUS_REQUEST,  # Device status request, to be verified (one time status messages 0405 etc)
+        "0040": CMD_STATUS_REQUEST,  # Device status request, verified: returns a single 0405 message, also used by the app
         "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,  # field a2, range 0-86400, step 300, 0 = disabled.
         "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # field a2, range 0-86400, step 300, 0 = disabled.
         "0044": CMD_AC_CHARGE_LIMIT  # AC Recharge Limit options as offered by app slider
@@ -4279,21 +4279,47 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_OPTIONS: [200, 300, 400, 500, 600, 700, 750],
             }
         },  # status field d1 verified with app changes 750/600/300/200
-        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
-        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # verified incl. all options, status field d2; app offers same options as A1761
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # verified incl. options, status field d3; app offers same options as A1761
         "004a": CMD_AC_OUTPUT_SWITCH,  # status fields bb/d7 verified
         "004b": CMD_DC_OUTPUT_SWITCH,  # status fields cc/d8 verified
-        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
-        "004f": CMD_LIGHT_MODE  # status field dc verified: Off (0) - High (3), no blinking mode
+        "004c": CMD_DISPLAY_MODE  # verified, status field d9; app offers no Off option on C800
         | {
             "a2": {
-                **CMD_LIGHT_MODE["a2"],
-                VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
+                **CMD_DISPLAY_MODE["a2"],
+                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
             },
         },
-        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
+        "004f": CMD_LIGHT_MODE,  # status field dc verified: 0-3 via light control, Blinking (4) via app SOS toggle
+        "0050": CMD_TEMP_UNIT,  # verified, status field dd: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # status field de verified
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # App traces on C800 show inverted mode values compared to A1761 description:
+        # Normal/energy saving Off (0), Smart/energy saving On (1)
+        "0076": CMD_DC_12V_OUTPUT_MODE
+        | {
+            "a2": {
+                **CMD_DC_12V_OUTPUT_MODE["a2"],
+                VALUE_OPTIONS: {"normal": 0, "smart": 1},
+                STATE_CONVERTER: lambda value, state: (
+                    {1: 2, 0: 1}.get(value, 2)
+                    if value is not None
+                    else {2: 1, 1: 0}.get(state, 0)
+                ),  # Smart setting represented with state 2
+            },
+        },  # verified via app command trace (energy saving switch of car socket)
+        "0077": CMD_AC_OUTPUT_MODE
+        | {
+            "a2": {
+                **CMD_AC_OUTPUT_MODE["a2"],
+                VALUE_OPTIONS: {"normal": 0, "smart": 1},
+                STATE_CONVERTER: lambda value, state: (
+                    {1: 2, 0: 1}.get(value, 2)
+                    if value is not None
+                    else {2: 1, 1: 0}.get(state, 0)
+                ),  # Smart setting represented with state 2
+            },
+        },  # verified via app command trace (AC output smart mode switch)
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1753_0405,
         # Interval: varies, probably upon change
