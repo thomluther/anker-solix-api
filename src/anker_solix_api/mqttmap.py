@@ -4301,7 +4301,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "a2": {
                 **CMD_DC_12V_OUTPUT_MODE["a2"],
                 VALUE_OPTIONS: {"normal": 0, "smart": 1},
-                STATE_CONVERTER: lambda value, state: (
+                STATE_CONVERTER: lambda value, state, cache=None: (
                     {1: 2, 0: 1}.get(value, 2)
                     if value is not None
                     else {2: 1, 1: 0}.get(state, 0)
@@ -4313,7 +4313,7 @@ SOLIXMQTTMAP: Final[dict] = {
             "a2": {
                 **CMD_AC_OUTPUT_MODE["a2"],
                 VALUE_OPTIONS: {"normal": 0, "smart": 1},
-                STATE_CONVERTER: lambda value, state: (
+                STATE_CONVERTER: lambda value, state, cache=None: (
                     {1: 2, 0: 1}.get(value, 2)
                     if value is not None
                     else {2: 1, 1: 0}.get(state, 0)
