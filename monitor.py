@@ -773,7 +773,7 @@ class AnkerSolixApiMonitor:
             )
             m1 = cm and mqtt.get("country_code", "")
             CONSOLE.info(
-                f"{'Serial [' + (get_solix_product_code(sn) or '----') + ']':<{col1}}: {sn:<{col2}} {m1 and cm}{('(' + m1 + ')') if m1 else ''}"
+                f"{'Serial [' + (get_solix_product_code(sn) or '----') + ']':<{col1}}: {sn:<{col2-6}} {m1 and (c or cm)}{('(' + m1 + ')') if m1 else '':<{col2-18}}{co} "
                 f"{'Admin':<{col3}}: {'YES' if admin else 'NO'}"
             )
             if m1 := cm and mqtt.get("local_timestamp", 0):

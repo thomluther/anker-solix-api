@@ -1227,7 +1227,7 @@ _A1782_0421 = (
                     NAME: "port_memory_switch",  # Output Port Memory switch: Disabled (0) or Enabled (1)
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
-                "26": {NAME: "region", TYPE: DeviceHexDataTypes.str.value, LENGTH: 2},
+                "26": {NAME: "country_code", TYPE: DeviceHexDataTypes.str.value, LENGTH: 2},
             }
         },
         "a5": {
@@ -1696,7 +1696,7 @@ _A1790_0405 = {
         # sile type that contains 2 chars
         BYTES: {
             "00": {
-                NAME: "region",
+                NAME: "country_code",
                 TYPE: DeviceHexDataTypes.str.value,
                 LENGTH: 2,
             },  # Value 21333 ("US")
@@ -3349,7 +3349,7 @@ _AS220_0421 = {
                 NAME: "min_soc",  # min_soc %
                 TYPE: DeviceHexDataTypes.ui.value,
             },
-            "26": {NAME: "region", TYPE: DeviceHexDataTypes.str.value, LENGTH: 2},
+            "26": {NAME: "country_code", TYPE: DeviceHexDataTypes.str.value, LENGTH: 2},
             "28": {
                 NAME: "ac_output_timeout_minutes",  # minutes; AS220 replaces ac_output_timeout_seconds (live: 240=4h, 720=12h)
                 TYPE: DeviceHexDataTypes.sile.value,
