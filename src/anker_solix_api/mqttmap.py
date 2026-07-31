@@ -332,6 +332,12 @@ _A1728_0405 = {
 _A1761_0405 = {
     # PPS C1000(X) parm info
     TOPIC: "param_info",
+    "a2": {
+        NAME: "ac_output_timeout_seconds"
+    },  # Active AC output auto-off countdown in seconds, range 0-86400, step 300
+    "a3": {
+        NAME: "dc_output_timeout_seconds"
+    },  # Active DC output auto-off countdown in seconds, range 0-86400, step 300
     "a4": {
         NAME: "remaining_time_hours",
         FACTOR: 0.1,
@@ -349,7 +355,9 @@ _A1761_0405 = {
     "b3": {NAME: "sw_version", "values": 1},  # Main firmware version
     "b9": {NAME: "sw_expansion", "values": 1},  # Expansion firmware version
     "ba": {NAME: "sw_controller", "values": 1},  # Controller firmware version
-    "bb": {NAME: "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "bb": {
+        NAME: "ac_output_status"
+    },  # AC inverter: Off (0), On (1); mirrors switch state d7
     "bd": {NAME: "temperature", SIGNED: True},  # Main device temperature (°C)
     "be": {
         NAME: "exp_1_temperature",
@@ -360,12 +368,20 @@ _A1761_0405 = {
     "c3": {NAME: "battery_soh"},  # Main battery state of health (%)
     "c4": {NAME: "exp_1_soh"},  # Expansion battery 1 state of health (%)
     "c5": {NAME: "expansion_packs"},  # number of expansion batteries
+    "c6": {NAME: "usbc_1_status"},  # 0:0ff, 1:On
+    "c7": {NAME: "usbc_2_status"},  # 0:0ff, 1:On
+    "c8": {NAME: "usba_1_status"},  # 0:0ff, 1:On
+    "c9": {NAME: "usba_2_status"},  # 0:0ff, 1:On
+    "cc": {
+        NAME: "dc_12v_1_status"
+    },  # 12V car socket: Off (0), On (1); mirrors switch state d8
     "d0": {NAME: "device_sn"},  # Device serial number
     "d1": {NAME: "ac_input_limit"},  # Max AC charge setting (W)
     "d2": {
         NAME: "device_timeout_minutes"
     },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
     "d3": {NAME: "display_timeout_seconds"},  # Options: 20, 30, 60, 300, 1800 seconds
+    "d7": {NAME: "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d8": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d9": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
     "da": {NAME: "ac_frequency"},  # 60 / 50 Hz
@@ -416,18 +432,48 @@ _A1753_0405 = {
     "aa": {NAME: "usba_2_power"},  # USB-A port 2 output power (W)
     "ae": {NAME: "dc_input_power"},  # DC input power (solar/car charging) (W)
     "af": {NAME: "photovoltaic_power"},  # Solar input power (W)
-    "b0": {NAME: "output_power_total"},  # Combined AC + DC output power (W), includes LED lamp (1-3 W)
-    "bb": {NAME: "ac_output_status"},  # AC inverter: Off (0), On (1); mirrors switch state d7
+    "b0": {
+        NAME: "output_power_total"
+    },  # Combined AC + DC output power (W), includes LED lamp (1-3 W)
+    "b3": {NAME: "sw_version", "values": 1},  # Main firmware version
+    "b9": {NAME: "sw_expansion", "values": 1},  # Expansion firmware version
+    "ba": {NAME: "sw_controller", "values": 1},  # Controller firmware version
+    "bb": {
+        NAME: "ac_output_status"
+    },  # AC inverter: Off (0), On (1); mirrors switch state d7
     "bd": {NAME: "temperature", SIGNED: True},  # Main device temperature (°C)
-    "c1": {NAME: "main_battery_soc"},  # Main battery state of charge (%), verified on real device
-    "cc": {NAME: "dc_12v_status"},  # 12V car socket: Off (0), On (1); mirrors switch state d8
+    "be": {
+        NAME: "exp_1_temperature",
+        SIGNED: True,
+    },  # Expansion battery 1 temperature (°C)
+    "c1": {
+        NAME: "main_battery_soc"
+    },  # Main battery state of charge (%), verified on real device
+    "c2": {NAME: "exp_1_soc"},  # Expansion battery 1 state of charge (%)
+    "c5": {NAME: "expansion_packs"},  # number of expansion batteries
+    "c6": {NAME: "usbc_1_status"},  # 0:0ff, 1:On
+    "c7": {NAME: "usbc_2_status"},  # 0:0ff, 1:On
+    "c8": {NAME: "usba_1_status"},  # 0:0ff, 1:On
+    "c9": {NAME: "usba_2_status"},  # 0:0ff, 1:On
+    "cc": {
+        NAME: "dc_12v_1_status"
+    },  # 12V car socket: Off (0), On (1); mirrors switch state d8
     "d0": {NAME: "device_sn"},  # Device serial number
-    "d1": {NAME: "ac_input_limit"},  # Max AC charge setting (W), verified 750/600/300/200
+    "d1": {
+        NAME: "ac_input_limit"
+    },  # Max AC charge setting (W), verified 750/600/300/200
+    "d2": {
+        NAME: "device_timeout_minutes"
+    },  # Device auto-off timeout (minutes): 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+    "d3": {NAME: "display_timeout_seconds"},  # Options: 20, 30, 60, 300, 1800 seconds
     "d7": {NAME: "ac_output_power_switch"},  # Disabled (0) or Enabled (1)
     "d8": {NAME: "dc_output_power_switch"},  # Disabled (0) or Enabled (1)
+    "d9": {NAME: "display_mode"},  # Brightness: Off (0), Low (1), Medium (2), High (3)
     "da": {NAME: "ac_frequency"},  # AC frequency (Hz): 50 / 60
     "dc": {NAME: "light_mode"},  # LED bar: Off (0), Low (1), Medium (2), High (3)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
+    "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
+    "fd": {NAME: "exp_1_type"},  # Expansion battery type identifier
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
 }
 
@@ -4211,12 +4257,8 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS C800
     "A1753": {
-        # Standby timer = AC output auto-off timeout. Command field a2 (var), seconds,
-        # range 0-86400, step 300, 0 = disabled. Verified against a real C800 MQTT dump.
-        "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,
-        # Following commands re-used from A1761; the corresponding status fields in
-        # 0405 were verified by toggling each control in the app on a real device.
-        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout; status field a3 verified
+        "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,  # field a2, range 0-86400, step 300, 0 = disabled.
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # field a2, range 0-86400, step 300, 0 = disabled.
         "0044": CMD_AC_CHARGE_LIMIT  # AC Recharge Limit options as offered by app slider
         | {
             "a2": {
@@ -4224,8 +4266,11 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_OPTIONS: [200, 300, 400, 500, 600, 700, 750],
             }
         },  # status field d1 verified with app changes 750/600/300/200
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # status fields bb/d7 verified
         "004b": CMD_DC_OUTPUT_SWITCH,  # status fields cc/d8 verified
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE  # status field dc verified: Off (0) - High (3), no blinking mode
         | {
             "a2": {
@@ -4233,15 +4278,20 @@ SOLIXMQTTMAP: Final[dict] = {
                 VALUE_OPTIONS: {"off": 0, "low": 1, "medium": 2, "high": 3},
             },
         },
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # status field de verified
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1753_0405,
+        # Interval: varies, probably upon change
+        "0407": _0407,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
     },
     # PPS C1000(X) + B1000 Extension
     "A1761": {
+        "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,  # field a2, range 0-86400, step 300, 0 = disabled.
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # field a2, range 0-86400, step 300, 0 = disabled.
         "0044": CMD_AC_CHARGE_LIMIT
         | {
             "a2": {
@@ -4257,7 +4307,6 @@ SOLIXMQTTMAP: Final[dict] = {
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
-        # "00x0": CMD_AC_CHARGE_LIMIT,  # TODO: Update correct message type, What is the range/steps/options? 100-800 W, step 100?
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
