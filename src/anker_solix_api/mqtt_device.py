@@ -169,6 +169,7 @@ class SolixMqttDevice:
                                             # check if validator can be initialized, will throw ValueError or TypeError
                                             if (
                                                 VALUE_STATE not in descriptors
+                                                and STATE_CONVERTER not in descriptors
                                                 and VALUE_DEFAULT not in descriptors
                                                 and VALUE_FOLLOWS not in descriptors
                                             ):
@@ -303,14 +304,15 @@ class SolixMqttDevice:
                         # check if control is a single number control
                         control["is_number"] = bool(required_number)
                         self.controls[cmd] = control
-                    except (ValueError, TypeError) as _:
+                    except (ValueError, TypeError) as e:
                         self._logger.error(
-                            "MQTT device %s (%s) control setup error - Command '%s' has invalid description for parameter '%s': %s",
+                            "MQTT device %s (%s) control setup error - Command '%s' has invalid description for parameter '%s': %s\n{%s}",
                             self.sn,
                             self.pn,
                             cmd or "",
                             name or "",
                             str(descriptors or {}),
+                            str(e),
                         )
 
     def update_device(
@@ -578,9 +580,18 @@ class SolixMqttDevice:
                 if isinstance(hextime := convert_time(value), bytes)
                 else None
             )
-        elif name.endswith("_weekdays"):
-            # special case for fields indicating weekday list to be validated
-            value = convert_weekdays(convert_weekdays(value))
+        elif isinstance(value, list | dict):
+            # special case for values with list and dict using a converter for binaries
+            if (converter := desc.get(STATE_CONVERTER)) is None or converter(None, value, None) is None:
+                self._logger.error(
+                    "MQTT device %s (%s) control error - Command '%s' parameter '%s' value cannot be converted: %s",
+                    self.sn,
+                    self.pn,
+                    cmd,
+                    parm,
+                    value,
+                )
+                return None
         elif desc.get("is_text"):
             # limit text value if length specified
             value = (
@@ -620,7 +631,8 @@ class SolixMqttDevice:
                     options=desc.get(VALUE_OPTIONS),
                 ).check(value)
                 if value != desc.get(VALUE_DEFAULT)
-                and not desc.get(STATE_NAME, "").endswith(("_time", "_weekdays"))
+                and not isinstance(value, list | dict)
+                and not desc.get(STATE_NAME, "").endswith("_time")
                 and not desc.get("is_text")
                 else value
             )
@@ -836,6 +848,13 @@ class SolixMqttDevice:
                             > 0
                         ):
                             state_fields[state_name] = state_value[:length]
+                        # special case to convert binary back to state structure
+                        elif isinstance(state_value, bytes | bytearray) and converter:
+                            state_fields[state_name] = converter(
+                                state_value,
+                                None,
+                                self.get_status(fromFile=True) | parameters,
+                            )
                         else:
                             state_fields[state_name] = state_value
                         # keep mocking of mask_value fields while bits are changed
@@ -914,6 +933,13 @@ class SolixMqttDevice:
                             if val is not None:
                                 state_fields[mask_state] = val
                                 dynamic_descriptions = True
+                        # special case to convert binary back to state structure
+                        elif isinstance(state_value, bytes | bytearray) and converter:
+                            state_fields[state_name] = converter(
+                                state_value,
+                                None,
+                                self.get_status(fromFile=True) | parameters,
+                            )
                     # mark required parameter as defined
                     req_parms.discard(par)
             # finally add command parameters that follow another parameter and convert their state

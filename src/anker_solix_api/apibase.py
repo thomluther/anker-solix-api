@@ -649,9 +649,6 @@ class AnkerSolixBaseApi:
                                 "generator_to_battery_power",
                                 "generator_to_home_power",
                                 "generator_power",
-                                "charge_priority_limit",
-                                "pv_limit",
-                                "ac_input_limit",
                                 "ac_input_limit_max",
                                 "min_load",
                                 "max_load",
@@ -669,14 +666,13 @@ class AnkerSolixBaseApi:
                                 "power_l1",
                                 "power_l2",
                                 "power_l3",
-                                "min_current_limit",
-                                "max_current_limit",
-                                "main_breaker_limit",
                                 "max_evcharge_current",
                                 "solar_evcharge_min_current",
                                 "light_brightness",
                                 "display_brightness",
                             ]
+                            or (
+                                key.endswith("_limit"))
                             or (
                                 key.startswith(("device_", "pv_"))
                                 and (
@@ -864,6 +860,7 @@ class AnkerSolixBaseApi:
                                         "_tariff",
                                         "_count",
                                         "_schedule",
+                                        "_protocols",
                                         "_settings",
                                         # "?", # Add for decoder testing in monitor
                                     )

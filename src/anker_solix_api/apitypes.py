@@ -1743,6 +1743,14 @@ class SolixBatteryStatus(StrEnum):
     sleep = "3"
     unknown = "unknown"
 
+class SolixPpsBatteryStatus(StrEnum):
+    """Str Enumeration for Anker Solix PPS battery status."""
+
+    inactive = "0"
+    discharging = "1"
+    charging = "2"
+    unknown = "unknown"
+
 
 class SolixRoleStatus(StrEnum):
     """Str Enumeration for Anker Solix role status of devices."""

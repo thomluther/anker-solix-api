@@ -47,10 +47,10 @@ from anker_solix_api.apitypes import (
     SolixPhaseMode,
     SolixPlantStatus,
     SolixPlugTimerMode,
+    SolixPpsBatteryStatus,
     SolixPpsChargingStatus,
     SolixPpsDcChargingStatus,
     SolixPpsDisplayMode,
-    SolixPpsLoadMode,
     SolixPpsOutputMode,
     SolixPpsOutputModeV2,
     SolixPpsPortStatus,
@@ -1511,15 +1511,15 @@ class AnkerSolixApiMonitor:
                 m2 = cm and mqtt.get("battery_status", "")
                 if str(m1) or str(m2):
                     CONSOLE.info(
-                        f"{'Plant Status':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixPlantStatus, str(m1), 'unknown' if str(m1) else '-----').capitalize() + ' (' + (str(m1) or '-') + ')':<12}{'':<{col2 - 12}}{co} "
+                        f"{'Plant Status':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixPlantStatus, str(m1), 'unknown' if str(m1) else '-----').title() + ' (' + (str(m1) or '-') + ')':<12}{'':<{col2 - 12}}{co} "
                         f"{'Battery Status':<{col1}}: {str(m2) and (c or cm)}"
-                        f"{get_enum_name(SolixBatteryStatus, str(m2), 'unknown' if str(m2) else '-----').capitalize() + ' (' + (str(m2) or '-') + ')'}{co} "
+                        f"{get_enum_name(SolixBatteryStatus, str(m2), 'unknown' if str(m2) else '-----').title() + ' (' + (str(m2) or '-') + ')'}{co} "
                     )
                 m1 = cm and mqtt.get("working_status", "")
                 m2 = cm and mqtt.get("mode", "")
                 if str(m1) or str(m2):
                     CONSOLE.info(
-                        f"{'Work Status':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixWorkingStatus, str(m1), 'unknown' if str(m1) else '-----').capitalize() + ' (' + (str(m1) or '-') + ')':<12}{'':<{col2 - 12}}{co} "
+                        f"{'Work Status':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixWorkingStatus, str(m1), 'unknown' if str(m1) else '-----').title() + ' (' + (str(m1) or '-') + ')':<12}{'':<{col2 - 12}}{co} "
                         f"{'Mode':<{col1}}: {str(m2) and (c or cm)}"
                         f"{get_enum_name(SolixMode, str(m2), 'unknown' if str(m2) else '-----').capitalize() + ' (' + (str(m2) or '-') + ')'}{co} "
                     )
@@ -1913,11 +1913,13 @@ class AnkerSolixApiMonitor:
                     )
                 m1 = cm and str(mqtt.get("last_update", ""))
                 m2 = cm and mqtt.get("remaining_time_hours", "")
-                if m1 or str(m2):
+                m4 = cm and str(mqtt.get("battery_status", ""))
+                if m1 or str(m2) or m4:
                     CONSOLE.info(
                         f"{'Last Update':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
                         f"{'Time Remaining':<{col1}}: {str(m2) and (c or cm)}"
-                        f"{(timedelta(hours=m2) if str(m2) else '--:--')!s}{co}"
+                        f"{(timedelta(hours=m2) if str(m2) else '--:--')!s}{co} / "
+                        f"{m4 and (c or cm)}{get_enum_name(SolixPpsBatteryStatus, m4, 'unknown' if m4 else '-----').title() + ' (' + (m4 or '-') + ')'}{co}"
                     )
                 m1 = cm and mqtt.get("light_switch", "")
                 m3 = cm and str(mqtt.get("light_timeout_minutes", ""))
@@ -2179,6 +2181,8 @@ class AnkerSolixApiMonitor:
                 m1 = cm and mqtt.get("dc_output_power_total", "")
                 if m2 := cm and str(mqtt.get("dc_output_timeout_seconds", "")):
                     m2 = str(timedelta(seconds=int(m2)))
+                elif m2 := cm and str(mqtt.get("dc_output_timeout_minutes", "")):
+                    m2 = str(timedelta(minutes=int(m2)))
                 if m1 or m2:
                     if "." in str(m1):
                         m1 = f"{float(m1):.2f}"
@@ -2207,6 +2211,8 @@ class AnkerSolixApiMonitor:
                 m2 = cm and mqtt.get("output_power_total", "")
                 if m4 := cm and str(mqtt.get("ac_output_timeout_seconds", "")):
                     m4 = str(timedelta(seconds=int(m4)))
+                elif m4 := cm and str(mqtt.get("ac_output_timeout_minutes", "")):
+                    m4 = str(timedelta(minutes=int(m4)))
                 if m1 or m2 or m3 or m4:
                     CONSOLE.info(
                         f"{'AC Output Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{m3 and (c or cm)}{' / ' + (m3 or '--') + ' Hz':<{col2 - 6}}{co} "

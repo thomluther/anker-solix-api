@@ -796,12 +796,10 @@ class DeviceHexDataField:
             fieldtype = DeviceHexDataTypes.ui.value if mask else self.f_type
         # Ignore options for fields following, since their value was already updated during validation
         options = None if desc.get(VALUE_FOLLOWS) else desc.get(VALUE_OPTIONS)
-        if (name := desc.get(NAME, "") or desc.get(STATE_NAME, "")).endswith("_time"):
+        name = desc.get(NAME, "") or desc.get(STATE_NAME, "")
+        if name.endswith("_time"):
             # special case for time strings HH:MM[:SS], convert to bytes already
             fieldvalue = convert_time(str(value)) or bytes.fromhex("000000")
-        elif name.endswith("_weekdays"):
-            # special case for weekday list converting to integer bitmask for range validation
-            fieldvalue = convert_weekdays(value) or bytes.fromhex("00")
         elif isinstance(value, str | int | float):
             # for provided default, state or follow values without value validation descriptions, use value as is
             if not (options or VALUE_MIN in desc or VALUE_MAX in desc):

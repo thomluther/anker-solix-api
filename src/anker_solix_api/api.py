@@ -58,6 +58,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     # import outsourced methods
     from .charger import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
         get_charger_custom_mode_list,
+        get_charger_custom_mode_options,
+        get_charger_custom_mode_profile,
         get_charger_device_setting,
         get_charger_manual_screensavers,
         get_charger_port_remarks,
@@ -315,6 +317,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "time_zone",
                             "grid_export_limit",
                             "owner_user_id",
+                            "img_url",
                         ]
                         and value
                     ):

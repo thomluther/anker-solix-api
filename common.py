@@ -19,7 +19,7 @@ from anker_solix_api.apitypes import (
     SolixPpsLoadMode,
     SolixTariffTypes,
 )
-from anker_solix_api.helpers import convert_weekdays, get_enum_name, round_by_factor
+from anker_solix_api.helpers import get_enum_name, round_by_factor
 from anker_solix_api.mqtt_device import SolixMqttDevice
 from anker_solix_api.mqttcmdmap import (
     LENGTH,
@@ -494,17 +494,16 @@ def query_mqtt_command(  # noqa: C901
         for parm, desc in mdev.get_cmd_parms(cmd=cmd, defaults=True).items():
             value_info = ""
             step = 1
+            state_name = str(desc.get(STATE_NAME, ""))
             if v := desc.get(VALUE_OPTIONS):
                 value_info = f"{Color.YELLOW}{v}"
-            elif str(desc.get(STATE_NAME)).endswith("_time"):
+            elif state_name.endswith("_time"):
                 # special case for fields indicating (seconds), minutes, hours per byte
                 value_info = f"{Color.YELLOW}({'00:00-23:59' if 0 <= desc.get(VALUE_MAX, 0) <= 5947 else '00:00:00-23:59:59'})"
-            elif str(desc.get(STATE_NAME)).endswith("_weekdays"):
-                # special case for fields indicating bitmask for weekdays
-                value_info = (
-                    f"{Color.YELLOW}({['all', *convert_weekdays(b'\x7f')]})".replace(
-                        ", ", "|"
-                    )
+            elif (converter := desc.get(STATE_CONVERTER)) and desc.get(LENGTH, 0) == 1:
+                # special case for fields indicating bitmask for a list
+                value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
+                    ", ", "|"
                 )
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
@@ -555,17 +554,16 @@ def query_mqtt_command(  # noqa: C901
             value_info = ""
             step = 1
             state = None
+            state_name = str(desc.get(STATE_NAME, ""))
             if v := desc.get(VALUE_OPTIONS):
                 value_info = f"{Color.YELLOW}{v}"
-            elif str(desc.get(STATE_NAME)).endswith("_time"):
+            elif state_name.endswith("_time"):
                 # special case for fields indicating (seconds), minutes, hours per byte
                 value_info = f"{Color.YELLOW}({'00:00-23:59' if 0 <= desc.get(VALUE_MAX, 0) <= 5947 else '00:00:00-23:59:59'})"
-            elif str(desc.get(STATE_NAME)).endswith("_weekdays"):
-                # special case for fields indicating bitmask for weekdays
-                value_info = (
-                    f"{Color.YELLOW}({['all', *convert_weekdays(b'\x7f')]})".replace(
-                        ", ", "|"
-                    )
+            elif (converter := desc.get(STATE_CONVERTER)) and desc.get(LENGTH, 0) == 1:
+                # special case for fields indicating bitmask for a list
+                value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
+                    ", ", "|"
                 )
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"

@@ -3,7 +3,12 @@
 from typing import Final
 
 from .apitypes import DeviceHexDataTypes
-from .helpers import convert_pps_custom_schedule, convert_pps_tou_schedule
+from .helpers import (
+    convert_port_protocols,
+    convert_pps_custom_schedule,
+    convert_pps_tou_schedule,
+    convert_weekdays,
+)
 from .mqttcmdmap import (
     BYTES,
     CMD_AC_CHARGE_LIMIT,
@@ -165,13 +170,13 @@ _A1722_0405 = {
     "aa": {NAME: "usba_1_power"},  # USB-A port 1 output power
     "ac": {NAME: "dc_input_power_total"},  # DC input power (solar/car charging)
     "ad": {NAME: "ac_input_power_total"},  # Total AC Input in W (int)
-    "ae": {NAME: "ac_output_power_total"},  # Total AC Output in W (int)
+    "ae": {NAME: "output_power_total"},  # Total Output in W (int)
     "b7": {
         NAME: "ac_output_power_switch"
     },  # AC output switch: Disabled (0) or Enabled (1)
     "b8": {NAME: "dc_charging_status"},  # None (0), Charging (1)
     "b9": {NAME: "temperature", SIGNED: True},  # In Celsius
-    "ba": {NAME: "charging_status"},  # None (0), Discharging (1), Charging (2) ???
+    "ba": {NAME: "battery_status"},  # Inactive (0), Discharging (1), Charging (2) ???
     "bb": {NAME: "battery_soc"},  # Battery SOC
     "bc": {NAME: "battery_soh"},  # Battery Health
     "c1": {
@@ -213,7 +218,7 @@ _A1725_0405 = {
     "ad": {NAME: "dc_output_power_total"},  # Total USB output power
     "af": {NAME: "battery_soc_ah", FACTOR: 0.001},  # Battery SOC (Ah)
     "b5": {NAME: "temperature", SIGNED: True},  # In Celsius
-    "b6": {NAME: "charging_status"},  # Power state: 0=idle, 1=discharge, 2=charge
+    "b6": {NAME: "battery_status"},  # Battery status: 0=idle, 1=discharge, 2=charge
     "b7": {NAME: "battery_soc"},  # Battery state of charge (%)
     "b8": {NAME: "battery_soh"},  # Battery health
     "b9": {NAME: "usbc_1_status"},  # USB-C1 top status: Inactive (0), Discharging (1)
@@ -282,7 +287,7 @@ _A1728_0405 = {
     # "b4": {NAME: "version4?", "values": 1},  # Same as main firmware version
     "b5": {NAME: "temperature", SIGNED: True},  # In Celsius
     "b6": {
-        NAME: "charging_status",  # Total status: Inactive (0), Discharging (1), Charging (2)
+        NAME: "battery_status",  # Battery status: Inactive (0), Discharging (1), Charging (2)
     },
     "b7": {NAME: "battery_soc"},  # Battery SOC
     "b8": {NAME: "battery_soh"},  # Battery health
@@ -363,11 +368,15 @@ _A1753_0405 = {
     "bb": {
         NAME: "ac_output_status"
     },  # AC inverter: Off (0), On (1); mirrors switch state d7
+    "bc": {
+        NAME: "charging_status",  # Inactive (0), Solar (1), AC Input (2), Both (3)
+    },
     "bd": {NAME: "temperature", SIGNED: True},  # Main device temperature (°C)
     "be": {
         NAME: "exp_1_temperature",
         SIGNED: True,
     },  # Expansion battery 1 temperature (°C)
+    "bf": {NAME: "battery_status"},  # 0=standby, 1=discharge, 2=Charge
     "c1": {
         NAME: "main_battery_soc"
     },  # Main battery state of charge (%), verified on real device
@@ -399,6 +408,18 @@ _A1753_0405 = {
     "dc": {NAME: "light_mode"},  # LED bar: Off (0), Low (1), Medium (2), High (3)
     "de": {NAME: "display_switch"},  # Off (0) or On (1)
     "dd": {NAME: "temp_unit_fahrenheit"},  # Celsius (0) or Fahrenheit (1)
+    "f8": {
+        BYTES: {
+            "00": {
+                NAME: "dc_12v_output_mode",  # Normal (1), Smart (2) - auto-off below 3W
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "01": {
+                NAME: "ac_output_mode",  # Normal (1), Smart (2) - auto-off when not charging and low power
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
     "fd": {NAME: "exp_1_type"},  # Expansion battery type identifier
     "fe": {NAME: "msg_timestamp"},  # Message timestamp
 }
@@ -432,6 +453,9 @@ _A1761_0405 = {
     "bb": {
         NAME: "ac_output_status"
     },  # AC inverter: Off (0), On (1); mirrors switch state d7
+    "bc": {
+        NAME: "charging_status",  # Inactive (0), Solar (1), AC Input (2), Both (3)
+    },
     "bd": {NAME: "temperature", SIGNED: True},  # Main device temperature (°C)
     "be": {
         NAME: "exp_1_temperature",
@@ -1084,6 +1108,9 @@ _A1780_0405 = {
     "b3": {NAME: "sw_version", "values": 1},  # Main firmware version
     "b9": {NAME: "sw_expansion", "values": 1},  # Expansion firmware version
     "ba": {NAME: "sw_controller", "values": 1},  # Controller firmware version
+    "bc": {
+        NAME: "charging_status",  # Inactive (0), Solar (1), AC Input (2), Both (3)
+    },
     "bd": {NAME: "temperature", SIGNED: True},  # Main device temperature (°C)
     "be": {
         NAME: "exp_1_temperature",
@@ -3026,6 +3053,25 @@ _A2345_0a00 = (
         "b6": {
             NAME: "unknown_b6",
         },
+        "b8": {
+            BYTES: {
+                "00": {
+                    NAME: "custom_profile_number",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "01": {
+                    NAME: "auto_exit_switch",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+            }
+            | {
+                f"{2 + idx:02d}": {
+                    NAME: f"custom_usb_{port}_power_limit",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                }
+                for idx, port in enumerate(["c1", "c2", "c3", "c4", "a"])
+            },
+        },
         "b9": {
             BYTES: {
                 "00": {
@@ -3049,6 +3095,21 @@ _A2345_0a00 = (
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
             },
+        },
+        "ba": {
+            BYTES: {
+                f"{0 + idx * 3:02d}": {
+                    NAME: f"custom_usb_{port}_protocols",
+                    TYPE: DeviceHexDataTypes.bin.value,
+                    LENGTH: 1,
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        convert_port_protocols(value)
+                        if value is not None
+                        else convert_port_protocols(state)
+                    ),
+                }
+                for idx, port in enumerate(["c1", "c2", "c3", "c4"])
+            }
         },
         # "bd" same as 0303 a8
         # "be" same as 0303 a9
@@ -4301,6 +4362,9 @@ SOLIXMQTTMAP: Final[dict] = {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # status field de verified
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
+        # "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
+        # "0077": CMD_AC_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1753_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -4332,6 +4396,9 @@ SOLIXMQTTMAP: Final[dict] = {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
+        # "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
+        # "0077": CMD_AC_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1753_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -4363,6 +4430,9 @@ SOLIXMQTTMAP: Final[dict] = {
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch: Disabled (0) or Enabled (1)
+        # "0076": CMD_DC_12V_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
+        # "0077": CMD_AC_OUTPUT_MODE,  # Normal (0), Smart (1), Status to be confirmed
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1753_0405,
         # Interval: Irregular, triggered on app actions, no fixed interval
@@ -4801,9 +4871,23 @@ SOLIXMQTTMAP: Final[dict] = {
                     NAME: "set_backup_soc",  # range as [min_soc + 6, max_soc], step 1%
                     TYPE: DeviceHexDataTypes.ui.value,
                     STATE_NAME: "backup_soc",
-                    VALUE_MIN: 1,
+                    VALUE_MIN: 5,
                     VALUE_MAX: 100,
                     VALUE_STEP: 1,
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        value
+                        if value is not None
+                        # ensure backup is min + 5 < backup <= max if not specified
+                        else min(
+                            int(cache.get("max_soc") or 80),
+                            max(
+                                int(cache.get("min_soc") or 20) + 5,
+                                state,
+                            ),
+                        )
+                        if state is not None
+                        else None
+                    ),
                     VALUE_MIN_STATE: "min_soc",
                     VALUE_MAX_STATE: "max_soc",
                 },
@@ -4841,11 +4925,15 @@ SOLIXMQTTMAP: Final[dict] = {
                         },
                         "01": {
                             NAME: "set_silent_mode_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
-                            TYPE: DeviceHexDataTypes.ui.value,
+                            TYPE: DeviceHexDataTypes.bin.value,
+                            LENGTH: 1,
+                            STATE_CONVERTER: lambda value, state, cache: (
+                                convert_weekdays(value)
+                                if value is not None
+                                else convert_weekdays(state)
+                            ),
                             STATE_NAME: "silent_mode_weekdays",
                             VALUE_STATE: "silent_mode_weekdays",
-                            VALUE_MIN: 0,
-                            VALUE_MAX: 127,
                         },
                         "02": {
                             NAME: "set_silent_mode_start_minutes",  # start, minutes of day
@@ -4903,12 +4991,12 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2
             | {
                 "a4": {
-                    NAME: "set_ac_input_limit",  # in W; min: 200, max: 1200, step: 100 # TODO: To be verified
+                    NAME: "set_ac_input_limit",  # in W; min: 100, max: 1200, step: 100
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "ac_input_limit",
-                    VALUE_MIN: 200,
+                    VALUE_MIN: 100,
                     VALUE_MAX: 1200,  # lowest limit
-                    VALUE_MAX_STATE: "ac_input_limit_max",  # adopt limit based on device variant # TODO: is limit in data?
+                    VALUE_MAX_STATE: "ac_input_limit_max",  # adopt limit based on device variant
                     VALUE_STEP: 100,
                 },
             },
@@ -4924,7 +5012,7 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.ac_output_timeout_minutes: CMD_COMMON_V2
             | {
                 "aa": {
-                    NAME: "set_ac_output_timeout_minutes",  # Timeout seconds, custom range: 0-1440, step 5
+                    NAME: "set_ac_output_timeout_minutes",  # Timeout minutes, custom range: 0-1440, step 5
                     TYPE: DeviceHexDataTypes.sile.value,
                     STATE_NAME: "ac_output_timeout_minutes",
                     VALUE_MIN: 0,
@@ -4939,6 +5027,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.display_switch,  # field a2
                 SolixMqttCommands.display_mode_select,  # field a3
                 SolixMqttCommands.display_timeout_seconds,  # field a4
+                SolixMqttCommands.temp_unit_switch,  # field a5
                 SolixMqttCommands.device_timeout_minutes,  # field a6
                 SolixMqttCommands.port_memory_switch,  # field a8
                 SolixMqttCommands.soc_limits,  # field aa, ab
@@ -4970,6 +5059,10 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
                 },
             },
+            SolixMqttCommands.temp_unit_switch: {  # field a5: Off (0), On (1)
+                k: v for k, v in CMD_TEMP_UNIT_V2.items() if k != "b2"
+            }
+            | {"a5": CMD_TEMP_UNIT_V2["b2"]},
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
             | {
                 "a6": {

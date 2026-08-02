@@ -69,11 +69,12 @@ def get_charger_custom_mode_profile(
             profile_number = None
         if not isinstance(profile_name, str) or profile_name == "":
             profile_name = None
-        profiles = self.devices.get(deviceSn, {}).get("charging_mode_list") or []
         return next(
             (
                 profile
-                for profile in profiles
+                for profile in self.devices.get(deviceSn, {})
+                .get("custom_modes", {})
+                .values()
                 if profile.get("name", "") == profile_name
                 or str(profile.get("number", "")) == str(profile_number)
             ),
@@ -94,7 +95,7 @@ def get_charger_custom_mode_options(
     ).get("charging_mode_status"):
         return [
             str(profile.get("number" if by_number else "name", ""))
-            for profile in dev.get("charging_mode_list") or []
+            for profile in dev.get("custom_modes", {}).values()
         ]
     return []
 

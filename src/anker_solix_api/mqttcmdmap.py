@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 from typing import Final
 
 from .apitypes import DeviceHexDataTypes
-from .helpers import convert_port_protocols
+from .helpers import convert_port_protocols, convert_weekdays
 
 # common mapping keys to be used for status and command descriptions
 EMBEDDED: Final[str] = (
@@ -1705,8 +1705,8 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
         # Example: 08:00:00:0b:00:00:0b:00:00:02:00:00
         LENGTH: 12,
         BYTES: {
-            "00": {
-                NAME: "set_usb_c1_protocols",
+            f"{0 + idx * 3:02d}": {
+                NAME: f"set_usb_{port}_protocols",
                 TYPE: DeviceHexDataTypes.bin.value,
                 LENGTH: 1,
                 STATE_CONVERTER: lambda value, state, cache: (
@@ -1714,41 +1714,11 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
                     if value is not None
                     else convert_port_protocols(state)
                 ),
-            },
-            "03": {
-                NAME: "set_usb_c2_protocols",
-                TYPE: DeviceHexDataTypes.bin.value,
-                LENGTH: 1,
-                STATE_CONVERTER: lambda value, state, cache: (
-                    convert_port_protocols(value)
-                    if value is not None
-                    else convert_port_protocols(state)
-                ),
-            },
-            "06": {
-                NAME: "set_usb_c3_protocols",
-                TYPE: DeviceHexDataTypes.bin.value,
-                LENGTH: 1,
-                STATE_CONVERTER: lambda value, state, cache: (
-                    convert_port_protocols(value)
-                    if value is not None
-                    else convert_port_protocols(state)
-                ),
-            },
-            "09": {
-                NAME: "set_usb_c4_protocols",
-                TYPE: DeviceHexDataTypes.bin.value,
-                LENGTH: 1,
-                STATE_CONVERTER: lambda value, state, cache: (
-                    convert_port_protocols(value)
-                    if value is not None
-                    else convert_port_protocols(state)
-                ),
-            },
+            }
+            for idx, port in enumerate(["c1", "c2", "c3", "c4"])
         },
     },
 }
-
 
 
 CMD_CHARGER_CLOCK_MODE = CMD_COMMON | {
@@ -1808,9 +1778,13 @@ CMD_CHARGER_CLOCK_DISPLAY = (
                 },
                 "04": {
                     NAME: "set_clock_display_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
-                    TYPE: DeviceHexDataTypes.ui.value,
-                    VALUE_MIN: 0,
-                    VALUE_MAX: 127,
+                    TYPE: DeviceHexDataTypes.bin.value,
+                    LENGTH: 1,
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        convert_weekdays(value)
+                        if value is not None
+                        else convert_weekdays(state)
+                    ),
                     STATE_NAME: "clock_display_weekdays",
                     VALUE_STATE: "clock_display_weekdays",
                 },
@@ -2012,9 +1986,13 @@ CMD_PORT_SCHEDULE = CMD_COMMON | {
             },
             "03": {
                 NAME: "set_port_time_weekdays",  # Bitmask: 0:sun:sat:fri:thu:wed:tue:mon
-                TYPE: DeviceHexDataTypes.ui.value,
-                VALUE_MIN: 0,
-                VALUE_MAX: 127,
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                STATE_CONVERTER: lambda value, state, cache: (
+                    convert_weekdays(value)
+                    if value is not None
+                    else convert_weekdays(state)
+                ),
             },
         },
     },
