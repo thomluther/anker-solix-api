@@ -11,7 +11,7 @@ import contextlib
 from typing import TYPE_CHECKING, Any
 
 from .apitypes import DeviceHexDataTypes, SolixDefaults
-from .helpers import convert_time, convert_weekdays, round_by_factor
+from .helpers import convert_time, round_by_factor
 from .mqtt import generate_mqtt_command
 from .mqttcmdmap import (
     BYTES,
@@ -407,6 +407,7 @@ class SolixMqttDevice:
                     and VALUE_STATE not in desc
                     and VALUE_FOLLOWS not in desc
                 )
+                or (defaults and VALUE_DEFAULT in desc)
                 or (state_parms and VALUE_STATE in desc)
                 or (follow_parms and VALUE_FOLLOWS in desc)
             }
@@ -573,7 +574,7 @@ class SolixMqttDevice:
         # use default if value not provided
         value = desc.get(VALUE_DEFAULT) if value is None else value
         # if value is string make further conversions to get the actual value
-        if (name := desc.get(STATE_NAME, "")).endswith("_time"):
+        if (desc.get(STATE_NAME, "")).endswith("_time"):
             # special case for fields indicating (seconds), minutes, hours per byte
             value = (
                 convert_time(hextime)
@@ -582,7 +583,9 @@ class SolixMqttDevice:
             )
         elif isinstance(value, list | dict):
             # special case for values with list and dict using a converter for binaries
-            if (converter := desc.get(STATE_CONVERTER)) is None or converter(None, value, None) is None:
+            if (converter := desc.get(STATE_CONVERTER)) is None or converter(
+                None, value, None
+            ) is None:
                 self._logger.error(
                     "MQTT device %s (%s) control error - Command '%s' parameter '%s' value cannot be converted: %s",
                     self.sn,
@@ -806,6 +809,7 @@ class SolixMqttDevice:
             parameters = {}
             state_fields = {}
             user_parms = {}
+            # first cycle through all provided parameters
             for par, val in parm_map.items():
                 if (
                     fieldvalue := self.validate_cmd_value(
@@ -878,9 +882,9 @@ class SolixMqttDevice:
                     user_parms[par] = val if isinstance(val, str) else fieldvalue
                     # mark required parameter as defined
                     req_parms.discard(par)
-            # add command parameters that may need current state value
+            # add command parameters that may need current state value or have defaults
             for par, desc in self.get_cmd_parms(
-                cmd=cmd, state_parms=True, follow_parms=False
+                cmd=cmd, defaults=True, state_parms=True, follow_parms=False
             ).items():
                 if (
                     par not in parameters

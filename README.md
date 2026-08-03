@@ -12,7 +12,7 @@
 ![python badge](https://img.shields.io/badge/Made%20with-Python-orange)
 [![GitHub repo Good Issues for newbies](https://img.shields.io/github/issues/thomluther/anker-solix-api/good%20first%20issue?style=flat&logo=github&logoColor=green&label=Good%20First%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) [![GitHub Help Wanted issues](https://img.shields.io/github/issues/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub Help Wanted PRs](https://img.shields.io/github/issues-pr/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20PRs)](https://github.com/thomluther/anker-solix-api/pulls?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub repo Issues](https://img.shields.io/github/issues/thomluther/anker-solix-api?style=flat&logo=github&logoColor=red&label=Issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen)
 
-This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter, Portable Power Stations etc). Currently it is not planned to release the library as a packge on PyPI, however you can [install the package locally](#install-as-local-package) to use it in your own code.
+This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter, Portable Power Stations etc). Currently it is not planned to release the library as a package on PyPI, however you can [install the package locally](#install-as-local-package) to use it in your own code.
 
 > [!WARNING]
 > 🚨 This is by no means an official Anker Api. It can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
@@ -42,7 +42,7 @@ This is an experimental Python library for Anker Solix Power devices (Solarbank,
      - [Command line options for mqtt_monitor tool](#command-line-options-for-mqtt_monitor-tool)
    * [energy_csv.py](#energy_csvpy)
 1. **[Contributing](#contributing)**
-1. **[Acknowledgements / Credits / Additional ressources](#acknowledgements--credits--additional-ressources)**
+1. **[Acknowledgements / Credits / Additional resources](#acknowledgements--credits--additional-resources)**
 1. **[Showing Your Appreciation](#showing-your-appreciation)**
 
 # Python Versions
@@ -266,7 +266,7 @@ Device type | Description
 `inverter` | Anker Solix standalone inverter or configured in the system:<br>- A5140: MI60 Inverter (out of service)<br>- A5143: MI80 Inverter
 `smartmeter` | Smart meter configured in the system:<br>- A17X7: Anker 3 Phase Wifi Smart Meter **(with MQTT monitoring)**<br>- A17X7US: Anker Smart Meter for US grid **(with MQTT monitoring)**<br>- SHEM3: Shelly 3EM Smart Meter<br>- SHEMP3: Shelly 3EM Pro Smart Meter **(with MQTT monitoring)**
 `smartplug` | Anker Solix smart plugs configured in the system:<br>- A17X8: Smart Plug 2500 W **(with MQTT monitoring & control)**
-`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1725/A1727/A1729: C200(X) (DC) Portable Power Station **(MQTT monitoring & control)**<br>- A1753: C800 Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1781: F2600 Portable Power Station **(MQTT monitoring & control)**<br>- A1783: C2000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**- AS220: S2000 Portable Power Station **(MQTT monitoring & control)**<br>
+`pps` | Anker Solix Portable Power Stations stand alone devices (only minimal Api data):<br>- A1722/A1723: C300(X) AC Portable Power Station **(MQTT monitoring & control)**<br>- A1726/A1728: C300(X) DC Portable Power Station **(MQTT monitoring & control)**<br>- A1725/A1727/A1729: C200(X) (DC) Portable Power Station **(MQTT monitoring & control)**<br>- A1753/A1754/A1755: C800(P/X) Portable Power Station **(MQTT monitoring & control)**<br>- A1761: C1000(X) Portable Power Station **(MQTT monitoring & control)**<br>- A1763: C1000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1780(P): F2000(P) Portable Power Station **(MQTT monitoring & control)**<br>- A1781: F2600 Portable Power Station **(MQTT monitoring & control)**<br>- A1783: C2000 Gen 2 Portable Power Station **(MQTT monitoring & control)**<br>- A1790(P): F3800(P) Portable Power Station **(MQTT monitoring & control)**- AS220: S2000 Portable Power Station **(MQTT monitoring & control)**<br>
 `solarbank_pps` | Anker Solix Portable Power Stations coupled with Smart Meter (Api and MQTT monitoring):<br>- A1782: F3000 Portable Power Station **(MQTT monitoring)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(basic Api & MQTT monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api & MQTT monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
@@ -667,11 +667,11 @@ Pull requests are the best way to propose changes to the codebase.
 1. Test your contribution.
 1. Issue that pull request!
 
-# Acknowledgements / Credits / Additional ressources
+# Acknowledgements / Credits / Additional resources
 
 - [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
 - [solix2mqtt](https://github.com/tomquist/solix2mqtt)
-- [Anker Solix BLE library - Local Bluetooth interface only (Inofficial)](https://github.com/flip-dots/SolixBLE)
+- [Anker Solix BLE library - Local Bluetooth interface only (Unofficial)](https://github.com/flip-dots/SolixBLE)
 - [Anker Solix Api exploration](https://github.com/moag1000/anker-solix-api-exploration)
 
 

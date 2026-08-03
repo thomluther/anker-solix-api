@@ -561,7 +561,7 @@ CMD_USB_PORT_SWITCH = {
 
 CMD_AC_PORT_SWITCH = CMD_COMMON | {
     # Command: Charger AC port switch setting
-    # COMMAND_NAME: Must be added depdning on which port is to be switched,
+    # COMMAND_NAME: Must be added depending on which port is to be switched,
     "a2": {
         NAME: "set_ac_port_switch_select",
         TYPE: DeviceHexDataTypes.ui.value,
@@ -863,7 +863,7 @@ CMD_SB_DISABLE_GRID_EXPORT_SWITCH = CMD_COMMON | {
 }
 
 CMD_SB_PV_LIMIT = CMD_COMMON | {
-    # Command: Solarbank Set max photovoltaik input limit (MPPT limit)
+    # Command: Solarbank Set max photovoltaic input limit (MPPT limit)
     COMMAND_NAME: SolixMqttCommands.sb_pv_limit_select,
     "a7": {
         NAME: "set_sb_pv_limit_select",  # 2000 or 3600
@@ -1641,6 +1641,7 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
         NAME: "set_usage_mode",
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "usage_mode",
+        VALUE_OPTIONS: {"custom": 5},
         VALUE_DEFAULT: 5,
     },
     "a3": {
@@ -1660,6 +1661,7 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
                 NAME: "set_auto_exit_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
                 VALUE_OPTIONS: {"on": 1, "off": 0},
+                STATE_NAME: "auto_exit_switch",
             },
             "02": {
                 NAME: "set_usb_c1_power_limit",
@@ -1667,6 +1669,7 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
                 VALUE_MIN: 0,
                 VALUE_MAX: 140,
                 VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_c1_power_limit",
             },
             "03": {
                 NAME: "set_usb_c2_power_limit",
@@ -1674,6 +1677,7 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
                 VALUE_MIN: 0,
                 VALUE_MAX: 100,
                 VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_c2_power_limit",
             },
             "04": {
                 NAME: "set_usb_c3_power_limit",
@@ -1681,6 +1685,7 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
                 VALUE_MIN: 0,
                 VALUE_MAX: 100,
                 VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_c3_power_limit",
             },
             "05": {
                 NAME: "set_usb_c4_power_limit",
@@ -1688,6 +1693,7 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
                 VALUE_MIN: 0,
                 VALUE_MAX: 100,
                 VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_c4_power_limit",
             },
             "06": {
                 NAME: "set_usb_a_power_limit",
@@ -1695,6 +1701,7 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
                 VALUE_MIN: 0,
                 VALUE_MAX: 24,
                 VALUE_DEFAULT: 0,
+                STATE_NAME: "custom_usb_a_power_limit",
             },
         },
     },
@@ -1709,6 +1716,7 @@ CMD_CHARGER_CUSTOM_USAGE_MODE = CMD_CHARGER_USAGE_MODE | {
                 NAME: f"set_usb_{port}_protocols",
                 TYPE: DeviceHexDataTypes.bin.value,
                 LENGTH: 1,
+                STATE_NAME: f"custom_usb_{port}_protocols",
                 STATE_CONVERTER: lambda value, state, cache: (
                     convert_port_protocols(value)
                     if value is not None
