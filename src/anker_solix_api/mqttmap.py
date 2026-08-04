@@ -4306,32 +4306,12 @@ SOLIXMQTTMAP: Final[dict] = {
         "0052": CMD_DISPLAY_SWITCH,  # status field de verified
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "005e": CMD_AC_FAST_CHARGE_SWITCH,  # Ultrafast charge switch; offered in app, status mapping TBC
-        # Status bytes in f8 match A1761 (Normal=1, Smart=2). App command values on
-        # C800 are inverted vs A1761 VALUE_OPTIONS (C800: Normal/Off=0, Smart/On=1).
-        "0076": CMD_DC_12V_OUTPUT_MODE
-        | {
-            "a2": {
-                **CMD_DC_12V_OUTPUT_MODE["a2"],
-                VALUE_OPTIONS: {"normal": 0, "smart": 1},
-                STATE_CONVERTER: lambda value, state, cache=None: (
-                    {1: 2, 0: 1}.get(value, 2)
-                    if value is not None
-                    else {2: 1, 1: 0}.get(state, 0)
-                ),  # Smart setting represented with state 2
-            },
-        },  # car socket energy-saving; status f8[00] verified
-        "0077": CMD_AC_OUTPUT_MODE
-        | {
-            "a2": {
-                **CMD_AC_OUTPUT_MODE["a2"],
-                VALUE_OPTIONS: {"normal": 0, "smart": 1},
-                STATE_CONVERTER: lambda value, state, cache=None: (
-                    {1: 2, 0: 1}.get(value, 2)
-                    if value is not None
-                    else {2: 1, 1: 0}.get(state, 0)
-                ),  # Smart setting represented with state 2
-            },
-        },  # AC output smart mode; status f8[01] verified
+        # Commands confirmed via app traces. Status in f8 matches A1761 (Normal=1,
+        # Smart=2). Observed app command polarity on C800 differs from A1761
+        # VALUE_OPTIONS (C800: Normal/Off=0, Smart/On=1); no custom converter —
+        # leave shared CMD definitions until polarity is confirmed upstream.
+        "0076": CMD_DC_12V_OUTPUT_MODE,  # car socket energy-saving; status f8[00] verified
+        "0077": CMD_AC_OUTPUT_MODE,  # AC output smart mode; status f8[01] verified
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A1753_0405,
         # Interval: varies, probably upon change
