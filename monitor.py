@@ -62,7 +62,6 @@ from anker_solix_api.apitypes import (
     SolixSmartTouchMode,
     SolixSwitchMode,
     SolixSwitchModeV2,
-    SolixTariffTypes,
     SolixVehicle,
     SolixWorkingStatus,
 )
@@ -773,7 +772,7 @@ class AnkerSolixApiMonitor:
             )
             m1 = cm and mqtt.get("country_code", "")
             CONSOLE.info(
-                f"{'Serial [' + (get_solix_product_code(sn) or '----') + ']':<{col1}}: {sn:<{col2-6}} {m1 and (c or cm)}{('(' + m1 + ')') if m1 else '':<{col2-18}}{co} "
+                f"{'Serial [' + (get_solix_product_code(sn) or '----') + ']':<{col1}}: {sn:<{col2 - 6}} {m1 and (c or cm)}{('(' + m1 + ')') if m1 else '':<{col2 - 18}}{co} "
                 f"{'Admin':<{col3}}: {'YES' if admin else 'NO'}"
             )
             if m1 := cm and mqtt.get("local_timestamp", 0):
@@ -2011,7 +2010,7 @@ class AnkerSolixApiMonitor:
                 m4 = cm and str(mqtt.get("dc_12v_output_mode", ""))
                 if str(m1) or str(m2) or m3 or m4:
                     # V2 PPS have different smart mode states than V1
-                    v2 = mdev.pn == "A1763"
+                    v2 = get_enum_name(SolixPpsOutputModeV2, mdev.pn)
                     CONSOLE.info(
                         f"{'AC Out Ctrl':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3}{co} / "
                         f"{m3 and (c or cm)}{get_enum_name(SolixPpsOutputModeV2 if v2 else SolixPpsOutputMode, m3, 'unknown').capitalize().split('_', maxsplit=1)[0] + ' (' + (m3 or '-') + ')':<{col2 - 6}}{co} "
@@ -2055,6 +2054,16 @@ class AnkerSolixApiMonitor:
                     CONSOLE.info(
                         f"{'Battery SoC Tot':<{col1}}: {m1 and (c or cm)}{m1 or '---':>4} %{co} (Expansions: {m3 and (c or cm)}{m3 or '-'}{co}{')':<{col2 - 20}}"
                         f"{'SoC Min/Max':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} % / {m4 or '---':>3} %{co}"
+                    )
+                m1 = cm and str(mqtt.get("backup_soc", ""))
+                m3 = cm and mqtt.get("backup_soc_switch", "")
+                m2 = cm and str(mqtt.get("active_discharge_soc", ""))
+                m4 = cm and str(mqtt.get("active_charge_soc", ""))
+                if m1 or m2 or m3 or m4:
+                    CONSOLE.info(
+                        f"{'Backup SoC/Sw.':<{col1}}: {m1 and (c or cm)}{(m1 or '---')!s:>4} %  "
+                        f"({str(m3) and c}{get_enum_name(SolixSwitchMode, m3, str(m3) or '---').upper():>3}{')':<{col2 - 12}}{co} "
+                        f"{'Act SoC Min/Max':<{col3}}: {m2 and (c or cm)}{(m2 or '--')!s:>4} %{co} / {m4 and (c or cm)}{(m4 or '--')!s:>3} %{co}"
                     )
                 if m1 := cm and (
                     mqtt.get("main_battery_soc", "") or mqtt.get("battery_soc", "")
@@ -2261,7 +2270,7 @@ class AnkerSolixApiMonitor:
                             m5 = cm and mqtt.get("usba_switch", "")
                         idxstr = (
                             idx.replace("usb", "usb-" if idx != "usb" else idx)
-                            .replace("_", " ")
+                            .replace("_", "" if idx.startswith("usb") else " ")
                             .upper()
                         )
                         CONSOLE.info(
@@ -2272,6 +2281,7 @@ class AnkerSolixApiMonitor:
                     m1 = cm and mqtt.get(f"{idx}_timer_seconds", "")
                     m3 = cm and mqtt.get(f"{idx}_timer_switch", "")
                     m6 = cm and mqtt.get(f"{idx}_priority", "")
+                    idxstr = idx.replace("usb", "usb-").replace("_", "").upper()
                     if str(m1) or str(m3) or str(m6):
                         m2 = cm and mqtt.get(f"{idx}_timer_remaining_seconds", "")
                         m4 = cm and mqtt.get(f"{idx}_timer_remaining_timestamp", "")
@@ -2295,7 +2305,6 @@ class AnkerSolixApiMonitor:
                                 )
                                 else ""
                             )
-                        idxstr = idx.replace("usb", "usb-").replace("_", " ").upper()
                         CONSOLE.info(
                             f"{idxstr + ' Timer':<{col1}}: {m1 and (c or cm)}{str(m1) or '--:--:--':>8} {str(m3) and (c or cm)}({get_enum_name(SolixSwitchMode, m3, str(m3) or '--').upper() + ')':<{col2 - 10}}{co} "
                             f"{idxstr + ' Remain':<{col3}}: {m2 and (c or cm)}{str(m2) or '--:--:--':>8}{co}  {str(m6) and (c or cm)}(Prio {str(m6) or '-'}){co}"
@@ -2313,7 +2322,7 @@ class AnkerSolixApiMonitor:
                         )
                         CONSOLE.info(
                             f"{idxstr + ' Start':<{col1}}: {m1 and (c or cm)}{m1 or '--:--':>5}{co} {str(m3) and (c or cm)}({get_enum_name(SolixSwitchMode, m3, str(m3) or '--').upper() + ')':<{col2 - 7}}{co} "
-                            f"{idxstr + ' Wkdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
+                            f"{idxstr + ' Weekdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
                         )
                     m1 = cm and str(mqtt.get(f"{idx}_end_hour", ""))
                     m3 = cm and mqtt.get(f"{idx}_end_switch", "")
@@ -2328,7 +2337,7 @@ class AnkerSolixApiMonitor:
                         )
                         CONSOLE.info(
                             f"{idxstr + ' End':<{col1}}: {m1 and (c or cm)}{m1 or '--:--':>5}{co} {str(m3) and (c or cm)}({get_enum_name(SolixSwitchMode, m3, str(m3) or '--').upper() + ')':<{col2 - 7}}{co} "
-                            f"{idxstr + ' Wkdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
+                            f"{idxstr + ' Weekdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
                         )
                 if (m1 := cm and mqtt.get("ac_1_voltage", "")) and "." in m1:
                     m1 = f"{float(m1):>5.2f}"
