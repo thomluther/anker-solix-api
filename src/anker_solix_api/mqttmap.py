@@ -5137,7 +5137,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     },
                 }
             },
-            "fd": {NAME: "utc_timestamp"},
+            "fd": {NAME: "local_timestamp"},
             "fe": {NAME: "msg_timestamp"},
         },
         # Interval: Irregular, triggered on app actions, no fixed interval
