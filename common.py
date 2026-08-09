@@ -141,6 +141,67 @@ def country() -> str:
     return countrycode
 
 
+def print_field_values(fieldmap: dict, print_topics: bool = False) -> None:
+    """Print the field values as table with color highlighting."""
+    col1 = 25
+    col2 = 35
+    col3 = 25
+    fields = []
+    topics = None
+    for key, value in fieldmap.items():
+        if key != "topics":
+            # convert timestamps to readable data and time for printout
+            if "timestamp" in key and isinstance(value, int|float):
+                value = f"{value!s} ({datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')})"
+            elif key.endswith("_settings"):
+                # print integer as bitmask
+                value = f"{value!s} ({value:08b})"
+            fields.append((key, value))
+        else:
+            topics = value
+        if len(fields) >= 2:
+            # print row
+            c1 = (
+                Color.RED
+                if (
+                    (fields[0][0]).endswith("?")
+                    or (fields[0][0]).startswith(("unknown_", "tbd_"))
+                )
+                else Color.CYAN
+                if (fields[0][0]).endswith("_settings")
+                else ""
+            )
+            c2 = (
+                Color.RED
+                if (
+                    (fields[1][0]).endswith("?")
+                    or (fields[1][0]).startswith(("unknown_", "tbd_"))
+                )
+                else Color.CYAN
+                if (fields[1][0]).endswith("_settings")
+                else ""
+            )
+            CONSOLE.info(
+                f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}}{Color.OFF} "
+                f"{c2}{fields[1][0]:<{col3}}: {fields[1][1]!s}{Color.OFF}"
+            )
+            fields.clear()
+    if fields:
+        c1 = (
+            Color.RED
+            if (
+                (fields[0][0]).endswith("?")
+                or (fields[0][0]).startswith(("unknown_", "tbd_"))
+            )
+            else Color.CYAN
+            if (fields[0][0]).endswith("_settings")
+            else ""
+        )
+        CONSOLE.info(f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}{Color.OFF}")
+    if topics and print_topics:
+        CONSOLE.info(f"{'Received Topics':<{col1}}: {topics!s}")
+
+
 def print_schedule(schedule: dict) -> None:
     """Print the schedule ranges as table."""
     t2 = 2

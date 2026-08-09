@@ -456,9 +456,6 @@ class AnkerSolixApiMonitor:
         # print header
         if self.use_file:
             CONSOLE.info("Using input source folder: %s", self.api.testDir())
-        col1 = 25
-        col2 = 35
-        col3 = 25
         for sn, dev in [
             (sn, dev)
             for sn, dev in self.api.devices.items()
@@ -468,63 +465,9 @@ class AnkerSolixApiMonitor:
             CONSOLE.info(
                 f"{' ' + ((Color.YELLOW + 'UPDATED ' + datetime.now().strftime('%H:%M:%S --> ')) if sn == deviceSn else Color.MAG) + dev.get('alias', 'NoAlias') + ' - ' + dev.get('name', 'NoName') + ' (' + dev.get('device_pn', '') + ') ' + Color.OFF:-^129}"
             )
-            fields = []
-            topics = None
             mdev: SolixMqttDevice = self.mqtt_devices.get(sn)
             mqtt = mdev.get_status(fromFile=self.use_file) if mdev else {}
-            for key, value in mqtt.items():
-                if key != "topics":
-                    if "timestamp" in key:
-                        value = f"{value!s} ({datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')})"
-                    elif key.endswith("_settings"):
-                        # print integer as bitmask
-                        value = f"{value!s} ({value:08b})"
-                    fields.append((key, value))
-                else:
-                    topics = value
-                if len(fields) >= 2:
-                    # print row
-                    c1 = (
-                        Color.RED
-                        if (
-                            (fields[0][0]).endswith("?")
-                            or (fields[0][0]).startswith(("unknown_", "tbd_"))
-                        )
-                        else Color.CYAN
-                        if (fields[0][0]).endswith("_settings")
-                        else ""
-                    )
-                    c2 = (
-                        Color.RED
-                        if (
-                            (fields[1][0]).endswith("?")
-                            or (fields[1][0]).startswith(("unknown_", "tbd_"))
-                        )
-                        else Color.CYAN
-                        if (fields[1][0]).endswith("_settings")
-                        else ""
-                    )
-                    CONSOLE.info(
-                        f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}}{Color.OFF} "
-                        f"{c2}{fields[1][0]:<{col3}}: {fields[1][1]!s}{Color.OFF}"
-                    )
-                    fields.clear()
-            if fields:
-                c1 = (
-                    Color.RED
-                    if (
-                        (fields[0][0]).endswith("?")
-                        or (fields[0][0]).startswith(("unknown_", "tbd_"))
-                    )
-                    else Color.CYAN
-                    if (fields[0][0]).endswith("_settings")
-                    else ""
-                )
-                CONSOLE.info(
-                    f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}{Color.OFF}"
-                )
-            if topics:
-                CONSOLE.info(f"{'Received Topics':<{col1}}: {topics!s}")
+            common.print_field_values(mqtt,print_topics=True)
         CONSOLE.info(f"{'-' * 120}")
         # Print MQTT stats
         if self.use_file:

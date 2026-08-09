@@ -1877,7 +1877,7 @@ class SolixPpsOutputModeV2(StrEnum):
     A1763 = "A1763"
     A1782 = "A1782"
     A1783 = "A1783"
-
+    A1785 = "A1785"
 
 
 class SolixPpsLoadMode(StrEnum):

@@ -1849,6 +1849,14 @@ CMD_CHARGER_THEME = CMD_COMMON | {
                     STATE_NAME: "holiday_switch",
                     VALUE_STATE: "holiday_switch",
                 },
+                {
+                    NAME: "set_theme_type",
+                    VALUE_OPTIONS: {"stock": 1, "custom": 2},
+                    MASK: 0x06, # Stock is bit 1, custom is bit 2
+                    MASK_STATE: "clock_settings",
+                    STATE_NAME: "theme_type",
+                    VALUE_DEFAULT: 1,
+                },
             ]
         },
     },
