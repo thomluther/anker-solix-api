@@ -877,6 +877,14 @@ _A1783_0421 = {
                 NAME: "port_memory_switch",  # Output Port Memory switch: Disabled (0) or Enabled (1)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "23": {
+                NAME: "max_soc",  # max_soc: 80, 85, 90, 95, 100 %
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "24": {
+                NAME: "min_soc",  # min_soc: 1, 5, 10, 15, 20 %
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
         }
     },
     "a5": {
@@ -1048,28 +1056,62 @@ _A1783_0421 = {
         }
     },
     "d9": {
-        BYTES: {
-            "03": {
-                NAME: "max_soc",  # max_soc: 80, 85, 90, 95, 100 %
+        # AS220: TOU mode selector + backup + Time-of-Use plan
+        BYTES: [
+            {
+                NAME: "usage_mode_raw",  # 0=Standard/UPS, 3=Time-of-Use
                 TYPE: DeviceHexDataTypes.ui.value,
             },
-            "04": {
-                NAME: "min_soc",  # min_soc: 1, 5, 10, 15, 20 %
+            {
+                NAME: "usage_mode",  # 0=Standard, 1=Time-of-Use
                 TYPE: DeviceHexDataTypes.ui.value,
             },
-            "05": {
-                NAME: "unknown_d9_05?",
-                TYPE: DeviceHexDataTypes.sile.value,
+            {
+                NAME: "backup_soc",  # backup reserve % (discharge floor for tou)
+                TYPE: DeviceHexDataTypes.ui.value,
             },
-            "07": {
-                NAME: "unknown_d9_07?",
-                TYPE: DeviceHexDataTypes.sile.value,
+            {
+                NAME: "tou_max_soc?",  # max_soc % (for tou usage?)
+                TYPE: DeviceHexDataTypes.ui.value,
             },
-            "11": {
-                NAME: "unknown_d9_11?",
-                TYPE: DeviceHexDataTypes.sile.value,
+            {
+                NAME: "tou_min_soc?",  # min_soc % (for tou usage?)
+                TYPE: DeviceHexDataTypes.ui.value,
             },
-        }
+            # Byte 5 is the tou schedule slot count and 6+ holds the TOU schedule:
+            # (tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr) * tou_slot_count
+            # App allows max 6 slots, remainder of field has different purpose
+            {
+                NAME: "tou_mode_schedule",
+                TYPE: DeviceHexDataTypes.bin.value,
+                # Define both conversions since length of schedule is flexible within binary
+                STATE_CONVERTER: lambda value, state, cache: (
+                    convert_pps_tou_schedule(value)
+                    if value is not None
+                    else convert_pps_tou_schedule(state)
+                ),
+            },
+            {
+                NAME: "unknown_backup_state_d9_1",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "storm_guard_switch",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "unknown_backup_state_d9_3",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "backup_start_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+            {
+                NAME: "backup_end_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+            },
+        ]
     },
     "da": {
         BYTES: {
@@ -1087,7 +1129,7 @@ _A1783_0421 = {
             },
         }
     },
-    "fd": {NAME: "local_timestamp"},
+    "fd": {NAME: "unknown_timestamp_fd"},
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -3444,7 +3486,7 @@ _AS220_0421 = {
         }
     },
     "d9": {
-        # AS220: AC-output mode selector + backup + Time-of-Use plan (layout differs from A1783).
+        # AS220: TOU mode selector + backup + Time-of-Use plan
         BYTES: [
             {
                 NAME: "usage_mode_raw",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
@@ -3468,7 +3510,7 @@ _AS220_0421 = {
             },
             # Byte 5 is the tou schedule slot count and 6+ holds the TOU schedule:
             # (tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr) * tou_slot_count
-            # App allows max 6 slots, byte groups show max 7 groups with last group empty? Or different purpose for last group?
+            # App allows max 6 slots, remainder of field has different purpose
             {
                 NAME: "tou_mode_schedule",
                 TYPE: DeviceHexDataTypes.bin.value,
@@ -4506,6 +4548,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.display_switch,  # field a2
                 SolixMqttCommands.display_mode_select,  # field a3
                 SolixMqttCommands.display_timeout_seconds,  # field a4
+                SolixMqttCommands.temp_unit_switch,  # field a5
                 SolixMqttCommands.device_timeout_minutes,  # field a6
                 SolixMqttCommands.port_memory_switch,  # field a8
                 SolixMqttCommands.soc_limits,  # field aa, ab
@@ -4537,6 +4580,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
                 },
             },
+            SolixMqttCommands.temp_unit_switch: CMD_TEMP_UNIT_V2,  # Celsius (0) | Fahrenheit (1)
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
             | {
                 "a6": {
@@ -4577,6 +4621,24 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS C2000 Gen 2
     "A1783": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0421 etc
+        "0090": {
+            # TOU command group
+            COMMAND_LIST: [
+                SolixMqttCommands.pps_usage_mode,  # field a2
+            ],
+            SolixMqttCommands.pps_usage_mode: CMD_COMMON_V2
+            | {
+                "a2": {  # 0=Standard, 1=Time-of-Use
+                    NAME: "set_usage_mode",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "usage_mode",
+                    VALUE_OPTIONS: {
+                        "standard": 0,  # UPS mode
+                        "time_of_use": 1,
+                    },
+                },
+            },
+        },
         "0101": {
             # AC command group
             COMMAND_LIST: [
@@ -4668,6 +4730,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.display_switch,  # field a2
                 SolixMqttCommands.display_mode_select,  # field a3
                 SolixMqttCommands.display_timeout_seconds,  # field a4
+                SolixMqttCommands.temp_unit_switch,  # field a5
                 SolixMqttCommands.device_timeout_minutes,  # field a6
                 SolixMqttCommands.port_memory_switch,  # field a8
                 SolixMqttCommands.soc_limits,  # field aa, ab
@@ -4699,6 +4762,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
                 },
             },
+            SolixMqttCommands.temp_unit_switch: CMD_TEMP_UNIT_V2,  # Celsius (0) | Fahrenheit (1)
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
             | {
                 "a6": {
@@ -4732,6 +4796,53 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS C2000X Gen 2
     "A1785": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0421 etc
+        "0090": {
+            # TOU command group
+            COMMAND_LIST: [
+                SolixMqttCommands.pps_usage_mode,  # field a2
+                SolixMqttCommands.backup_soc,  # field a5
+            ],
+            SolixMqttCommands.pps_usage_mode: CMD_COMMON_V2
+            | {
+                "a2": {  # 0=Standard, 1=Time-of-Use
+                    NAME: "set_usage_mode",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "usage_mode",
+                    VALUE_OPTIONS: {
+                        "standard": 0,  # UPS mode
+                        "time_of_use": 1,
+                    },
+                },
+            },
+            SolixMqttCommands.backup_soc: CMD_COMMON_V2
+            | {
+                "a5": {
+                    NAME: "set_backup_soc",  # range as [min_soc + 5, max_soc], step 1%
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "backup_soc",
+                    VALUE_MIN: 5,
+                    VALUE_MAX: 100,
+                    VALUE_STEP: 1,
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        value
+                        if value is not None
+                        # ensure backup is min + 5 < backup <= max if not specified
+                        else min(
+                            int(cache.get("max_soc") or 80),
+                            max(
+                                int(cache.get("power_cutoff") or 20) + 5,
+                                int(state),
+                            ),
+                        )
+                        if state is not None
+                        and str(state).replace(".", "", 1).isdigit()
+                        else None
+                    ),
+                    VALUE_MIN_STATE: "power_cutoff",
+                    VALUE_MAX_STATE: "max_soc",
+                },
+            },
+        },
         "0101": {
             # AC command group
             COMMAND_LIST: [
@@ -4823,6 +4934,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.display_switch,  # field a2
                 SolixMqttCommands.display_mode_select,  # field a3
                 SolixMqttCommands.display_timeout_seconds,  # field a4
+                SolixMqttCommands.temp_unit_switch,  # field a5
                 SolixMqttCommands.device_timeout_minutes,  # field a6
                 SolixMqttCommands.port_memory_switch,  # field a8
                 SolixMqttCommands.soc_limits,  # field aa, ab
@@ -4854,6 +4966,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
                 },
             },
+            SolixMqttCommands.temp_unit_switch: CMD_TEMP_UNIT_V2,  # Celsius (0) | Fahrenheit (1)
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
             | {
                 "a6": {
@@ -4974,7 +5087,7 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.backup_soc: CMD_COMMON_V2
             | {
                 "a5": {
-                    NAME: "set_backup_soc",  # range as [min_soc + 6, max_soc], step 1%
+                    NAME: "set_backup_soc",  # range as [min_soc + 5, max_soc], step 1%
                     TYPE: DeviceHexDataTypes.ui.value,
                     STATE_NAME: "backup_soc",
                     VALUE_MIN: 5,
@@ -4988,10 +5101,11 @@ SOLIXMQTTMAP: Final[dict] = {
                             int(cache.get("max_soc") or 80),
                             max(
                                 int(cache.get("power_cutoff") or 20) + 5,
-                                state,
+                                int(state),
                             ),
                         )
                         if state is not None
+                        and str(state).replace(".", "", 1).isdigit()
                         else None
                     ),
                     VALUE_MIN_STATE: "power_cutoff",
@@ -5163,10 +5277,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_OPTIONS: [10, 20, 30, 60, 300, 1800],
                 },
             },
-            SolixMqttCommands.temp_unit_switch: {  # field a5: Off (0), On (1)
-                k: v for k, v in CMD_TEMP_UNIT_V2.items() if k != "b2"
-            }
-            | {"a5": CMD_TEMP_UNIT_V2["b2"]},
+            SolixMqttCommands.temp_unit_switch: CMD_TEMP_UNIT_V2,  # Celsius (0) | Fahrenheit (1)
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
             | {
                 "a6": {
@@ -6552,7 +6663,10 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_STATE: "device_timeout_switch",
                 },
             },
-            SolixMqttCommands.temp_unit_switch: CMD_TEMP_UNIT_V2,  # Off (0), On (1)
+            SolixMqttCommands.temp_unit_switch: {  # field b2: Celsius (0) | Fahrenheit (1)
+                k: v for k, v in CMD_TEMP_UNIT_V2.items() if k != "a5"
+            }
+            | {"b2": CMD_TEMP_UNIT_V2["a5"]},
             SolixMqttCommands.device_power_mode: CMD_COMMON_V2
             | {
                 # Command: Device shutdown, needs physical power on button afterwards

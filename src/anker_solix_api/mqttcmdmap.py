@@ -308,7 +308,7 @@ CMD_TEMP_UNIT = CMD_COMMON | {
 CMD_TEMP_UNIT_V2 = CMD_COMMON_V2 | {
     # Command: Set temperature unit
     COMMAND_NAME: SolixMqttCommands.temp_unit_switch,
-    "b2": {
+    "a5": {
         NAME: "set_temp_unit_fahrenheit",  # Celsius (0) | Fahrenheit (1)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "temp_unit_fahrenheit",
