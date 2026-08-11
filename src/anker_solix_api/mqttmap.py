@@ -28,6 +28,7 @@ from .mqttcmdmap import (
     CMD_CHARGER_KNOB_MODE,
     CMD_CHARGER_THEME,
     CMD_CHARGER_USAGE_MODE,
+    CMD_CIRCUIT_PRIORITY,
     CMD_COMMON,
     CMD_COMMON_V2,
     CMD_DC_12V_OUTPUT_MODE,
@@ -2398,6 +2399,10 @@ _A17E1_040a = (
                     TYPE: DeviceHexDataTypes.ui.value,
                     SIGNED: True,
                 },
+                "27": {  # 0:idle, 1:charging, 2:discharging
+                    NAME: f"exp_{idx}_battery_status",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
                 "28": {
                     NAME: f"exp_{idx}_soc",
                     TYPE: DeviceHexDataTypes.ui.value,
@@ -2423,15 +2428,17 @@ _AX170_0405 = (
         "a6": {NAME: "battery_soc_total"},  # Average SOC of all devices in system
         "a7": {NAME: "sw_version", "values": 4},
         "a8": {NAME: "sw_controller", "values": 4},
-        "a9": {NAME: "hw_version?", "values": 4},
+        "a9": {NAME: "hw_version", "values": 4},
         "ab": {
             NAME: "pv_power_total"
         },  # Total PV power from all devices in system? Only verified with 1 E10 Module
         "ac": {
             NAME: "battery_power_signed_total"
         },  # Power draw from battery. Negative is discharging, positive is charging.
-        "b2": {NAME: "battery_current?"},
-        "b4": {NAME: "battery_voltage?"},
+        "b0": {NAME: "pv_yield?"},
+        "b1": {NAME: "charged_energy?"},
+        "b2": {NAME: "discharged_energy?"},
+        "b4": {NAME: "grid_import_energy?"},
         "b5": {
             NAME: "backup_soc"
         },  # Minimum Self Consumption reserve %, Not overall reserve. Battery will stay above this level, unless grid fault.
@@ -2441,6 +2448,7 @@ _AX170_0405 = (
         },  # It's 200 on tests, so its a good chance its the 200AMP?
         "bf": {NAME: "timestamp_0405_bf?"},
         "c0": {NAME: "timestamp_0405_c0?"},
+        "c2": {NAME: "input_power_total"},  # PV + Grid
         "c3": {
             NAME: "use_time_band?"
         },  # use_time_band: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
@@ -2472,115 +2480,27 @@ _AX170_0405 = (
                 "00": {
                     NAME: "low_backup_soc",  # SOC when low prio circuits stop during backup discharge
                     TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "01": {
-                    NAME: "pair_id_circuit_01",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "02": {
-                    NAME: "id_circuit_01",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "04": {
-                    NAME: "pair_id_circuit_02",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "05": {
-                    NAME: "id_circuit_02",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "07": {
-                    NAME: "pair_id_circuit_03",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "08": {
-                    NAME: "id_circuit_03",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "10": {
-                    NAME: "pair_id_circuit_04",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "11": {
-                    NAME: "id_circuit_04",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "13": {
-                    NAME: "pair_id_circuit_05",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "14": {
-                    NAME: "id_circuit_05",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "16": {
-                    NAME: "pair_id_circuit_06",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "17": {
-                    NAME: "id_circuit_06",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "19": {
-                    NAME: "pair_id_circuit_07",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "20": {
-                    NAME: "id_circuit_07",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "22": {
-                    NAME: "pair_id_circuit_08",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "23": {
-                    NAME: "id_circuit_08",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "25": {
-                    NAME: "pair_id_circuit_09",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "26": {
-                    NAME: "id_circuit_09",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "28": {
-                    NAME: "pair_id_circuit_10",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "29": {
-                    NAME: "id_circuit_10",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "31": {
-                    NAME: "pair_id_circuit_11",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "32": {
-                    NAME: "id_circuit_11",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
-                "34": {
-                    NAME: "pair_id_circuit_12",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                },
-                "35": {
-                    NAME: "id_circuit_12",
-                    TYPE: DeviceHexDataTypes.sile.value,
-                    SIGNED: False,
-                },
+                }
+            }
+            | {
+                k: v
+                for idx in range(1, 13)
+                for k, v in {
+                    f"{0x01 + (idx - 1) * 3:02d}": {
+                        NAME: f"pair_id_circuit_{idx:02d}",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                    f"{0x02 + (idx - 1) * 3:02d}": {
+                        NAME: f"priority_circuit_{idx:02d}",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        SIGNED: False,
+                    },
+                    f"{0x03 + (idx - 1) * 3:02d}": {
+                        NAME: f"id_circuit_{idx:02d}",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        SIGNED: False,
+                    },
+                }.items()
             }
         },
         "e4": {
@@ -2621,19 +2541,19 @@ _AX170_0405 = (
                 },
                 "42": {
                     NAME: f"device_{idx}_pv_1_power",
-                    TYPE: DeviceHexDataTypes.sfle.value,
+                    TYPE: DeviceHexDataTypes.sile.value,
                 },
-                "45": {
+                "46": {
                     NAME: f"device_{idx}_pv_2_power",
-                    TYPE: DeviceHexDataTypes.sfle.value,
+                    TYPE: DeviceHexDataTypes.sile.value,
                 },
                 "58": {
                     NAME: f"device_{idx}_battery_power",
                     TYPE: DeviceHexDataTypes.sile.value,
                 },
                 "66": {
-                    NAME: f"device_{idx}_unknown_power?",
-                    TYPE: DeviceHexDataTypes.sile.value,
+                    NAME: f"device_{idx}_exp_packs",
+                    TYPE: DeviceHexDataTypes.ui.value,
                 },
             }
         }
@@ -2676,30 +2596,32 @@ _AX170_0408 = {
             },
         }
     },
-    "f7": {
+} | {
+    f"{0xF6 + idx:02x}": {
         BYTES: {
             "00": {
-                NAME: "device_1_pn",
+                NAME: f"device_{idx}_pn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "11": {
-                NAME: "device_1_sn",
+                NAME: f"device_{idx}_sn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "29": {
-                NAME: "device_1_soc",
+                NAME: f"device_{idx}_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "34": {
-                NAME: "device_1_ac_output_power_signed",
+                NAME: f"device_{idx}_ac_output_power_signed",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "42": {
-                NAME: "device_1_pv_power?",
+                NAME: f"device_{idx}_pv_power?",
                 TYPE: DeviceHexDataTypes.sfle.value,
             },
         },
-    },
+    }
+    for idx in range(1, 5)
 }
 
 _A7320_0405 = {
@@ -6027,9 +5949,9 @@ SOLIXMQTTMAP: Final[dict] = {
             },  # charging_status: 0=inactive, 1=discharging, 2=charging
             "a5": {NAME: "temperature", SIGNED: True},
             "a6": {NAME: "battery_soc?"},
-            "a7": {NAME: "sw_version?", "values": 4},
-            "a8": {NAME: "sw_controller?", "values": 4},
-            "a9": {NAME: "sw_expansion?", "values": 4},  # Expansion firmware version
+            "a7": {NAME: "sw_version", "values": 4},
+            "a8": {NAME: "sw_controller", "values": 4},
+            "a9": {NAME: "sw_expansion", "values": 4},  # Expansion firmware version
             "ab": {NAME: "photovoltaic_power"},
             "ac": {NAME: "battery_power_signed"},
             "ad": {NAME: "ac_output_power"},  # inverter AC output
@@ -6098,6 +6020,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0405": _AX170_0405,
         "0408": _AX170_0408,
+        "0412": CMD_CIRCUIT_PRIORITY,  # for circuit priority and backup low/high SOC
         "0666": {
             EMBEDDED: "tlv",  # Name of field with embedded hexdata
             "a2": {NAME: "sn"},
@@ -6452,7 +6375,11 @@ SOLIXMQTTMAP: Final[dict] = {
             "fe": {NAME: "msg_timestamp"},
         },
         "0311": {
-            "a2": {NAME: "theme_id"},
+            "a2": {
+                NAME: "theme_id",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+            },
             "a4": {
                 BYTES: {
                     "00": [

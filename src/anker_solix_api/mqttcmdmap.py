@@ -193,6 +193,7 @@ class SolixMqttCommands:
     clock_holiday_switch: str = "clock_holiday_switch"
     charger_theme: str = "charger_theme"
     charger_theme_custom: str = "charger_theme_custom"
+    circuit_priority: str = "circuit_priority"
     tbd_switch: str = "tbd_switch"
 
     def asdict(self) -> dict:
@@ -2147,6 +2148,59 @@ CMD_PORT_PRIORITY = CMD_COMMON | {
             "c2_c4": 10,
             "c3_c4": 12,
         },
+    },
+}
+
+CMD_CIRCUIT_PRIORITY = CMD_COMMON | {
+    # Command: AX170 power dock circuit priority
+    COMMAND_NAME: SolixMqttCommands.circuit_priority,
+    "a2": {
+        NAME: "set_low_backup_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "low_backup_soc",
+        VALUE_MIN: 10,  # Range to be confirmed!
+        VALUE_MAX: 99,
+        VALUE_MAX_STATE: "high_backup_soc",
+        VALUE_STATE: "low_backup_soc",
+    },
+    "a3": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # Circuit Priority, group ID per circuit
+        # group ID must be assigned by algorithm (helper method)
+        # Counting starts from last to first circuit, each priority/circuit group start counting from 1
+        # Example: 01:08 01:07 01:06 01:05 01:04 01:04 02:01 01:03 01:02 01:02 01:01 01:01
+        LENGTH: 24,
+        BYTES: {
+            k: v
+            for idx in range(1, 13)
+            for k, v in {
+                f"{0 + (idx-1) * 2:02d}": {
+                    NAME: f"set_priority_circuit_{idx:02d}",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_OPTIONS: {
+                        "must_have": 1,
+                        "nice_to_have": 2,
+                    },
+                    STATE_NAME: f"priority_circuit_{idx:02d}",
+                },
+                f"{1 + (idx-1) * 2:02d}": {
+                    NAME: f"set_id_circuit_{idx:02d}",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    VALUE_MIN: 1,
+                    VALUE_MAX: 12,
+                    STATE_NAME: f"id_circuit_{idx:02d}",
+                },
+            }.items()
+        }
+    },
+    "a4": {
+        NAME: "set_high_backup_soc",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "high_backup_soc",
+        VALUE_MIN: 11,  # Range to be confirmed!
+        VALUE_MAX: 100,
+        VALUE_MIN_STATE: "low_backup_soc",
+        VALUE_STATE: "high_backup_soc",
     },
 }
 

@@ -629,6 +629,8 @@ class AnkerSolixBaseApi:
                                 "main_battery_soc",
                                 "max_soc",
                                 "backup_soc",
+                                "low_backup_soc",
+                                "high_backup_soc",
                                 "active_charge_soc",
                                 "active_discharge_soc",
                                 "temperature",
@@ -872,6 +874,7 @@ class AnkerSolixBaseApi:
                                     (
                                         "pair_id_circuit_",
                                         "id_circuit_",
+                                        "priority_circuit_",
                                         # "unknown_",  # Add for decoder testing monitor
                                     )
                                 )
@@ -886,8 +889,10 @@ class AnkerSolixBaseApi:
                                     + int(check_values.get("voltage_l3", 0) > 0)
                                 )
                             elif key.startswith("id_circuit_"):
-                                # assign physical ids to logical ids
-                                circuits[value] = [*circuits.get(value, []), key[-2:]]
+                                # assign physical ids to logical groups with same id and priority
+                                prio = check_values.get(f"priority_circuit_{key[-2:]}",0)
+                                group = f"{prio!s}:{value}"
+                                circuits[group] = [*circuits.get(group, []), key[-2:]]
                             elif (
                                 key == "reverse_remaining_time_hours"
                                 and check_values.get("charger_mode")
@@ -1072,27 +1077,27 @@ class AnkerSolixBaseApi:
                         device_mqtt["circuits"] = circuits
                     if "home_demand_circuit_01" in check_values:
                         # Paired circuits must be consecutive and are limited to 2
-                        for physicals in [
-                            p
-                            for p in device_mqtt.get("circuits", {}).values()
-                            if len(p) > 1
+                        for group in [
+                            g
+                            for g in device_mqtt.get("circuits", {}).values()
+                            if len(g) > 1
                         ]:
                             combined = 0
                             with contextlib.suppress(ValueError):
                                 combined = int(
                                     device_mqtt.get(
-                                        f"home_demand_circuit_{physicals[0]}", 0
+                                        f"home_demand_circuit_{group[0]}", 0
                                     )
                                 )
-                                for p in physicals[1:]:
+                                for g in group[1:]:
                                     combined += int(
-                                        device_mqtt.pop(f"home_demand_circuit_{p}", 0)
+                                        device_mqtt.pop(f"home_demand_circuit_{g}", 0)
                                     )
-                                device_mqtt[f"home_demand_circuit_{physicals[0]}"] = (
+                                device_mqtt[f"home_demand_circuit_{group[0]}"] = (
                                     f"{float(combined):.0f}"
                                 )
-                                device_mqtt[f"peers_circuit_{physicals[0]}"] = list(
-                                    map(int, physicals[1:])
+                                device_mqtt[f"peers_circuit_{group[0]}"] = list(
+                                    map(int, group[1:])
                                 )
                     elif "usbc_1_priority" in check_values:
                         # update bitmask field for actual priority setting

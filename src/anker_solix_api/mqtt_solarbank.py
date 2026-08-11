@@ -22,7 +22,8 @@ MODELS = {
     "A17C2",  # Solarbank 2 E1600 AC
     "A17C3",  # Solarbank 2 E1600 Plus
     "A17C5",  # Solarbank 3 E2700 Pro
-    "AE100",  # Power Dock
+    "AE100",  # Power Dock Solarbank
+    "AX170",  # Power Dock Home Backup System
 }
 # Define possible controls per Model
 # Those commands are only supported once also described for a message type in the model mapping (except realtime trigger)
@@ -48,6 +49,7 @@ FEATURES = {
     SolixMqttCommands.sb_pv_limit_select: MODELS,
     # SolixMqttCommands.sb_3rd_party_pv_switch: MODELS, # TODO: requires also Api support
     # SolixMqttCommands.sb_ev_charger_switch: {"AE100"}, # TODO: requires also Api support
+    SolixMqttCommands.circuit_priority: MODELS,
 }
 
 
@@ -115,3 +117,74 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             value=limit,
             toFile=toFile,
         )
+
+    async def set_circuit_priority(
+        self,
+        circuit: str | int,
+        priority: str | int,
+        toFile: bool = False,
+    ) -> dict | None:
+        """Set the power dock circuit priority.
+
+        Args:
+            circuit: Number of the physical circuit 1-12, e.g. "1"
+            priority: Name or value of the priority, 1="must_have", 2="nice_to_have"
+            toFile: If True, save mock response (for testing compatibility)
+
+        Returns:
+            dict: Mocked state if successful, None otherwise
+
+        Example:
+            await mydevice.set_clock_theme(circuit=10, priority="nice_to_have")
+
+        """
+        # response and commands
+        resp = {}
+        cmd1 = SolixMqttCommands.circuit_priority
+        parm_map = {}
+        # find profile in Api cache
+        circuit = (
+            int(circuit)
+            if (
+                isinstance(circuit, int | float)
+                or (isinstance(circuit, str) and circuit.isdigit())
+            )
+            else None
+        )
+        priority = (
+            int(priority)
+            if (isinstance(circuit, int | float) or str(priority).isdigit())
+            else priority
+            if isinstance(priority, str)
+            else None
+        )
+        # lookup value if option name provided
+        if isinstance(priority, str) and circuit is not None:
+            priority = self.get_cmd_parm_option_map(
+                cmd=cmd1, parm=f"set_priority_circuit_{circuit:02d}"
+            ).get(priority)
+        # Build parameter map
+        index = {}
+        circuits = self.mqttdata.get("circuits", {})
+        for idx in range(12, 0, -1):
+            prio = (
+                priority
+                if idx == circuit
+                else self.mqttdata.get(f"priority_circuit_{idx:02d}", 0)
+            )
+            pair_id = self.mqttdata.get(f"pair_id_circuit_{idx:02d}")
+            group_id = index.get(str(prio), 0) + int(
+                pair_id <= 1
+            )  # increase prio index for next group
+            index[str(prio)] = group_id
+            parm_map[f"set_priority_circuit_{idx:02d}"] = prio
+        # if (
+        #     result := await self.run_command(
+        #         cmd=cmd1,
+        #         parm_map=parm_map,
+        #         toFile=toFile,
+        #     )
+        # ) is None:
+        #     return None
+        # resp.update(result)
+        return resp or None
