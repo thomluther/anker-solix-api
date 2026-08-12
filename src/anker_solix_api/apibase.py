@@ -149,12 +149,9 @@ class AnkerSolixBaseApi:
                     and value
                 ):
                     # dynamic price related updates should always be triggered if customized, independent of existing keys
-                    if key == "dynamic_price":
+                    if key == "dynamic_price" and isinstance(value, str):
                         # convert a provider string to dict
-                        if isinstance(value, str):
-                            customized[key] = SolixPriceProvider(
-                                provider=value
-                            ).asdict()
+                        customized[key] = SolixPriceProvider(provider=value).asdict()
                     # update whole dynamic price forecast
                     self._update_site(
                         siteId=id,
@@ -673,8 +670,7 @@ class AnkerSolixBaseApi:
                                 "light_brightness",
                                 "display_brightness",
                             ]
-                            or (
-                                key.endswith("_limit"))
+                            or (key.endswith("_limit"))
                             or (
                                 key.startswith(("device_", "pv_"))
                                 and (
@@ -729,25 +725,20 @@ class AnkerSolixBaseApi:
                                 key == f"device_{x}_pv_1_power"
                                 and f"device_{x}_pv_power" not in check_values
                                 for x in range(1, 7)
+                            ) and (
+                                str(idx := (key.split("_")[1:2] or ["0"])[0]).isdigit()
+                                and int(idx) > 0
                             ):
-                                if (
-                                    str(
-                                        idx := (key.split("_")[1:2] or ["0"])[0]
-                                    ).isdigit()
-                                    and int(idx) > 0
-                                ):
-                                    # accumulate all PV channels
-                                    pv_power = 0
-                                    for i in range(1, 5):
-                                        pv_power += float(
-                                            check_values.get(
-                                                f"device_{idx}_pv_{i}_power"
-                                            )
-                                            or 0
-                                        )
-                                    device_mqtt[f"device_{idx}_pv_power"] = (
-                                        f"{pv_power:.0f}"
+                                # accumulate all PV channels
+                                pv_power = 0
+                                for i in range(1, 5):
+                                    pv_power += float(
+                                        check_values.get(f"device_{idx}_pv_{i}_power")
+                                        or 0
                                     )
+                                device_mqtt[f"device_{idx}_pv_power"] = (
+                                    f"{pv_power:.0f}"
+                                )
                         elif (
                             key
                             in [
@@ -890,7 +881,9 @@ class AnkerSolixBaseApi:
                                 )
                             elif key.startswith("id_circuit_"):
                                 # assign physical ids to logical groups with same id and priority
-                                prio = check_values.get(f"priority_circuit_{key[-2:]}",0)
+                                prio = check_values.get(
+                                    f"priority_circuit_{key[-2:]}", 0
+                                )
                                 group = f"{prio!s}:{value}"
                                 circuits[group] = [*circuits.get(group, []), key[-2:]]
                             elif (
@@ -903,7 +896,9 @@ class AnkerSolixBaseApi:
                             elif key.endswith("_remaining_seconds"):
                                 # add timestamp of remaining seconds
                                 device_mqtt[key.replace("_seconds", "_timestamp")] = (
-                                    int(datetime.now().timestamp()) if value > 0 else 0
+                                    int(datetime.now().astimezone().timestamp())
+                                    if value > 0
+                                    else 0
                                 )
                             elif key == "set_port_priority":
                                 device_mqtt["port_priority"] = value
@@ -1010,7 +1005,7 @@ class AnkerSolixBaseApi:
                                     )
                                     device_mqtt[
                                         f"{port_name}_timer_remaining_timestamp"
-                                    ] = int(datetime.now().timestamp())
+                                    ] = int(datetime.now().astimezone().timestamp())
                         else:
                             value_updated = False
                         updated = updated or value_updated
@@ -1028,15 +1023,14 @@ class AnkerSolixBaseApi:
                                     float(charge),
                                     max(0, float(out) + float(charge) - float(pv)),
                                 )
-                        elif not charge:
+                        elif not charge and pv and out:
                             # calculate charge if discharge available but charge not
                             # Out = PV - battery loss, where battery loss = charge - discharge
                             # charge = PV - Out + discharge
-                            if pv and out:
-                                charge = max(
-                                    float(discharge),
-                                    float(pv) - float(out) + float(discharge),
-                                )
+                            charge = max(
+                                float(discharge),
+                                float(pv) - float(out) + float(discharge),
+                            )
                         # consider consumed energy for efficiency, since that probably reduces the reported pv_yield and charge energy
                         consumed = device_mqtt.get("consumed_energy") or 0
                         # Consumed = loss + ac socket ?
@@ -1131,18 +1125,19 @@ class AnkerSolixBaseApi:
                                 ]
                             )
                         # calculate device overall soc if expansions are available and no overall soc in mqtt cache
-                        if not (tsoc := mqtt.get("battery_soc")):
-                            # calculate overall soc based on expansions
-                            if soclist := [
+                        if not (tsoc := mqtt.get("battery_soc")) and (
+                            soclist := [
                                 float(device_mqtt.get(k))
                                 for k in (
                                     ["main_battery_soc"]
                                     + [f"exp_{i!s}_soc" for i in range(1, 6)]
                                 )
                                 if device_mqtt.get(k)
-                            ]:
-                                tsoc = round(sum(soclist) / len(soclist))
-                                device_mqtt["battery_soc"] = f"{float(tsoc):.0f}"
+                            ]
+                        ):
+                            # calculate overall soc based on expansions
+                            tsoc = round(sum(soclist) / len(soclist))
+                            device_mqtt["battery_soc"] = f"{float(tsoc):.0f}"
                         # trigger capacity calculation if no Api SOC available or MQTT overlay
                         if tsoc and (
                             not device.get("battery_soc") or device.get("mqtt_overlay")
@@ -1158,17 +1153,16 @@ class AnkerSolixBaseApi:
                                 api = self
                             api._update_dev({"device_sn": sn, "battery_capacity": cap})
                     # trigger device cache update for display theme
-                    if "theme_id" in check_values:
+                    if "theme_id" in check_values and str(
+                        check_values.get("theme_id")
+                    ) != device.get("display_theme", {}).get("id"):
                         # update only if cached value different
-                        if str(check_values.get("theme_id")) != device.get(
-                            "display_theme", {}
-                        ).get("id"):
-                            self._update_dev(
-                                {
-                                    "device_sn": sn,
-                                    "theme_id": check_values.get("theme_id"),
-                                }
-                            )
+                        self._update_dev(
+                            {
+                                "device_sn": sn,
+                                "theme_id": check_values.get("theme_id"),
+                            }
+                        )
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated or dynamic description state changed
@@ -1524,11 +1518,10 @@ class AnkerSolixBaseApi:
                 dev_switches[device_sn] = dev_upgrade
         # Loop through provided device list and compose the request data device list that needs to be send
         for sn, upgrade in devices.items():
-            if sn in dev_switches:
-                if upgrade != dev_switches[sn]:
-                    change_list.append({"device_sn": sn, "auto_upgrade": upgrade})
-                    if upgrade:
-                        main = True
+            if sn in dev_switches and upgrade != dev_switches[sn]:
+                change_list.append({"device_sn": sn, "auto_upgrade": upgrade})
+                if upgrade:
+                    main = True
         if change_list:
             # json example for endpoint
             # {"main_switch": False, "device_list": [{"device_sn": "9JVB42LJK8J0P5RY","auto_upgrade": True}]}
@@ -2187,7 +2180,7 @@ class AnkerSolixBaseApi:
         lastpoll = spot_prices.get("poll_time") or (now - timedelta(days=2)).strftime(
             "%Y-%m-%d %H:%M"
         )
-        lastpoll = datetime.fromisoformat(lastpoll)
+        lastpoll = datetime.fromisoformat(lastpoll).astimezone()
         # fetch provider prices max once per hour or if missing
         if (
             forceRefresh
@@ -2285,7 +2278,7 @@ class AnkerSolixBaseApi:
                     if vat.replace("-", "", 1).replace(".", "", 1).isdigit()
                     else 0
                 )
-                date = datetime.fromisoformat(poll_time)
+                date = datetime.fromisoformat(poll_time).astimezone()
                 trend = []
                 # calculate total dynamic price
                 # TODO: Other providers than Nordpool may send final price for kWh (including fee and VAT?)

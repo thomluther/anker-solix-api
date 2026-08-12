@@ -202,19 +202,22 @@ class DeviceHexDataField:
                         self.f_value = hexbytes[3 : 2 + self.f_length]
                     self._check_json()
                     # check if str field length is correct or missing last byte
-                    if self.f_type == DeviceHexDataTypes.str.value and (
-                        next_byte := hexbytes[
-                            1 + self._len_bytes + self.f_length : 2
-                            + self._len_bytes
-                            + self.f_length
-                        ]
+                    if (
+                        self.f_type == DeviceHexDataTypes.str.value
+                        and (
+                            next_byte := hexbytes[
+                                1 + self._len_bytes + self.f_length : 2
+                                + self._len_bytes
+                                + self.f_length
+                            ]
+                        )
+                        and next_byte < self.f_name
                     ):
-                        if next_byte < self.f_name:
-                            # byte is no fieldsname, include in string if decodable
-                            with contextlib.suppress(UnicodeDecodeError):
-                                next_byte.decode()
-                                self.f_length += 1
-                                self.f_value += next_byte
+                        # byte is no field name, include in string if decodable
+                        with contextlib.suppress(UnicodeDecodeError):
+                            next_byte.decode()
+                            self.f_length += 1
+                            self.f_value += next_byte
                 else:
                     # field with single byte value
                     self.f_type = bytearray()
@@ -1062,7 +1065,7 @@ class DeviceHexData:
                         and f.f_type
                         in [DeviceHexDataTypes.str.value, DeviceHexDataTypes.var.value]
                     ):
-                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value)) or 0).strftime('%Y-%m-%d %H:%M:%S')})"
+                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(f.f_value, ms=(f.f_type == DeviceHexDataTypes.str.value)) or 0).astimezone().strftime('%Y-%m-%d %H:%M:%S')})"
                     s += f"\n{f.decode().rstrip()}"
                     if name:
                         s += (
@@ -1182,7 +1185,7 @@ class DeviceHexData:
         datafield = DeviceHexDataField(
             f_name=fieldname,
             f_type=fieldtype,
-            f_value=convert_timestamp(datetime.now().timestamp()),
+            f_value=convert_timestamp(datetime.now().astimezone().timestamp()),
         )
         self.update_field(datafield=datafield)
 
@@ -1193,7 +1196,7 @@ class DeviceHexData:
         datafield = DeviceHexDataField(
             f_name=fieldname,
             f_type=DeviceHexDataTypes.str.value,
-            f_value=convert_timestamp(datetime.now().timestamp(), ms=True),
+            f_value=convert_timestamp(datetime.now().astimezone().timestamp(), ms=True),
         )
         self.update_field(datafield=datafield)
 
@@ -1426,7 +1429,7 @@ class DeviceJsonData:
                     factor = fld.get(FACTOR) or None
                     divider = fld.get(VALUE_DIVIDER) or None
                     if isinstance(value, float | int) and "timestamp" in str(name):
-                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(value, ms=(isinstance(value, float)))).strftime('%Y-%m-%d %H:%M:%S')})"
+                        name = f"{name} ({datetime.fromtimestamp(convert_timestamp(value, ms=(isinstance(value, float)))).astimezone().strftime('%Y-%m-%d %H:%M:%S')})"
                     if name:
                         lines[i] = (
                             f"{line}  {Color.CYAN} --> {name}{('' if factor is None else ' (' + FACTOR + ' ' + str(factor) + ')')}"
@@ -1502,8 +1505,7 @@ class MqttDataStats:
 
     def __post_init__(self, msg_data) -> None:
         """Init the dataclass from optional DeviceHexData for first stats."""
-        if not isinstance(self.start_time, datetime):
-            self.start_time = datetime.now()
+        self.start_time = self.start_time.astimezone() if isinstance(self.start_time, datetime) else datetime.now().astimezone()
         if not isinstance(self.dev_messages, dict):
             self.dev_messages = {}
         if isinstance(msg_data, DeviceHexData | DeviceJsonData | bytes | dict):
@@ -1519,7 +1521,7 @@ class MqttDataStats:
 
     def update(self) -> None:
         """Update calculated stats."""
-        elapsed = max(1, (datetime.now() - self.start_time).total_seconds()) / 3600
+        elapsed = max(1, (datetime.now().astimezone() - self.start_time).total_seconds()) / 3600
         self.kb_hourly_sent = self.bytes_sent / 1024 / elapsed
         self.kb_hourly_received = self.bytes_received / 1024 / elapsed
 

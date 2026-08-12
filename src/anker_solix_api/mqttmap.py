@@ -2477,17 +2477,17 @@ _AX170_0405 = (
         "ac": {
             NAME: "battery_power_signed_total"
         },  # Power draw from battery. Negative is discharging, positive is charging.
-        "b0": {NAME: "pv_yield?"},
-        "b1": {NAME: "charged_energy?"},
-        "b2": {NAME: "discharged_energy?"},
-        "b4": {NAME: "grid_import_energy?"},
+        "b0": {NAME: "pv_yield"},
+        "b1": {NAME: "charged_energy"},
+        "b2": {NAME: "discharged_energy"},
+        "b4": {NAME: "grid_import_energy"},
         "b5": {
             NAME: "backup_soc"
         },  # Minimum Self Consumption reserve %, Not overall reserve. Battery will stay above this level, unless grid fault.
-        "b7": {NAME: "max_soc?"},  # Maybe battery health??
+        "b7": {NAME: "max_soc?"},  # Statix at 100, Maybe battery health, but from which device??
         "b9": {
             NAME: "main_breaker_limit?"
-        },  # It's 200 on tests, so its a good chance its the 200AMP?
+        },  # Static, maybe installation setting, It's 200 on tests, so its a good chance its the 200AMP?
         "bf": {NAME: "timestamp_0405_bf?"},
         "c0": {NAME: "timestamp_0405_c0?"},
         "c2": {NAME: "input_power_total"},  # PV + Grid
@@ -2499,11 +2499,11 @@ _AX170_0405 = (
         "cc": {
             BYTES: {
                 "00": {
-                    NAME: "powerdock_state_code_1",
+                    NAME: "powerdock_state_code_1?",
                     TYPE: DeviceHexDataTypes.ui.value,
                 },  # Not very reliable, not sure what the setting is exactly.
                 "01": {
-                    NAME: "powerdock_charging_status",
+                    NAME: "powerdock_charging_status?",
                     TYPE: DeviceHexDataTypes.ui.value,
                 },  # 32 idle, 48 = charging, 64 = discharging, Is this only a upper half byte usage?
             }

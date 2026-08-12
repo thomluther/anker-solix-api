@@ -23,14 +23,24 @@ class RequestCounter:
 
     def add(self, request_time: datetime | None = None, request_info: str = "") -> None:
         """Add new tuple with timestamp and optional request info to end of counter."""
-        self.elements.append((request_time or datetime.now(), request_info))
+        self.elements.append(
+            (
+                request_time.astimezone()
+                if isinstance(request_time, datetime)
+                else datetime.now().astimezone(),
+                request_info,
+            )
+        )
         # limit the counter entries to 1 hour when adding new
         self.recycle()
 
-    def recycle(
-        self, last_time: datetime = datetime.now() - timedelta(hours=1)
-    ) -> None:
+    def recycle(self, last_time: datetime | None = None) -> None:
         """Remove oldest timestamps from beginning of counter until last_time is reached, default is 1 hour ago."""
+        last_time = (
+            last_time.astimezone()
+            if isinstance(last_time, datetime)
+            else datetime.now().astimezone() - timedelta(hours=1)
+        )
         self.elements = [x for x in self.elements if x[0] > last_time]
 
     def add_throttle(self, endpoint: str) -> None:
@@ -40,13 +50,13 @@ class RequestCounter:
 
     def last_minute(self, details: bool = False) -> int | list:
         """Get number of timestamps or all details for last minute."""
-        last_time = datetime.now() - timedelta(minutes=1, seconds=2)
+        last_time = datetime.now().astimezone() - timedelta(minutes=1, seconds=2)
         requests = [x for x in self.elements if x[0] > last_time]
         return requests if details else len(requests)
 
     def last_hour(self, details: bool = False) -> int | list:
         """Get number of timestamps or details for last hour."""
-        last_time = datetime.now() - timedelta(hours=1)
+        last_time = datetime.now().astimezone() - timedelta(hours=1)
         requests = [x for x in self.elements if x[0] > last_time]
         return requests if details else len(requests)
 
@@ -82,7 +92,7 @@ def getTimezoneGMTString() -> str:
 
 def generateTimestamp(in_ms: bool = False) -> str:
     """Generate unix epoche timestamp from local time in seconds or milliseconds."""
-    return str(int(datetime.now().timestamp() * (1000 if in_ms else 1)))
+    return str(int(datetime.now().astimezone().timestamp() * (1000 if in_ms else 1)))
 
 
 def convertToKwh(val: str | float, unit: str, decimals: int = 2) -> str | float | None:
@@ -241,17 +251,15 @@ def convert_time(value: bytes | bytearray | str) -> bytes | str | None:
         isinstance(value, str)
         and (parts := value.split(":"))
         and (2 <= len(parts) <= 3)
+    ) and (
+        (parts[0].isdigit() and 0 <= int(parts[0]) <= 23)
+        and (parts[1].isdigit() and 0 <= int(parts[1]) <= 59)
+        and (len(parts) < 3 or (parts[2].isdigit() and 0 <= int(parts[2]) <= 59))
     ):
         # Convert string to bytes
-        if (
-            (parts[0].isdigit() and 0 <= int(parts[0]) <= 23)
-            and (parts[1].isdigit() and 0 <= int(parts[1]) <= 59)
-            and (len(parts) < 3 or (parts[2].isdigit() and 0 <= int(parts[2]) <= 59))
-        ):
-            return bytes(
-                ([int(parts[2])] if len(parts) > 2 else [])
-                + [int(parts[1]), int(parts[0])]
-            )
+        return bytes(
+            ([int(parts[2])] if len(parts) > 2 else []) + [int(parts[1]), int(parts[0])]
+        )
     return None
 
 

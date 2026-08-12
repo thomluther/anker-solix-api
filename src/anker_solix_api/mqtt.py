@@ -128,11 +128,15 @@ class AnkerSolixMqttSession:
         # default MQTT payload decode is UTF-8
         message = json.loads(msg.payload.decode())
         # Extract timestamp field from expected dictionary in message
-        timestamp = datetime.fromtimestamp(
-            (message.get("head") or {}).get("timestamp")
-            if isinstance(message, dict)
-            else 0
-        ).strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = (
+            datetime.fromtimestamp(
+                (message.get("head") or {}).get("timestamp")
+                if isinstance(message, dict)
+                else 0
+            )
+            .astimezone()
+            .strftime("%Y-%m-%d %H:%M:%S")
+        )
         # extract message payload
         payload = json.loads(message.get("payload") or "[]")
         # Third party models not included in payload
@@ -381,7 +385,7 @@ class AnkerSolixMqttSession:
                 "seed": secrets.token_hex(16)
                 if isinstance(encoding_type, int)
                 else 1,  # random 16 Bytes seed if any encoding type provided
-                "timestamp": int(datetime.now().timestamp()),
+                "timestamp": int(datetime.now().astimezone().timestamp()),
                 "cmd_status": 2,
                 "cmd": cmd,
                 "sign_code": 1,
@@ -694,7 +698,7 @@ class AnkerSolixMqttSession:
             triggered_devices = set()
             # register devices to be triggered for real time data
             self.triggered_devices = trigger_devices
-            start = datetime.now() - timedelta(seconds=timeout)
+            start = datetime.now().astimezone() - timedelta(seconds=timeout)
             while True:
                 # Update subscribed topics
                 if topics != subscribed_topics:
@@ -729,7 +733,10 @@ class AnkerSolixMqttSession:
                     subscribed_topics = topics.copy()
                 # check if updates must be retriggered, also upon changes in trigger devices
                 if (
-                    restart := int((datetime.now() - start).total_seconds()) + 5
+                    restart := int(
+                        (datetime.now().astimezone() - start).total_seconds()
+                    )
+                    + 5
                     >= timeout
                 ) or (trigger_devices - triggered_devices):
                     # republish update trigger or status request to subscribed and yet untriggered devices
@@ -780,7 +787,7 @@ class AnkerSolixMqttSession:
                     triggered_devices = trigger_devices - request_devices
                     # restart timeout interval
                     if restart:
-                        start = datetime.now()
+                        start = datetime.now().astimezone()
                 await asyncio.sleep(5)
         except asyncio.CancelledError:
             self._logger.info(
@@ -846,7 +853,9 @@ class AnkerSolixMqttSession:
                             ).items():
                                 if (
                                     timestamp := int(
-                                        datetime.fromisoformat(timestr).timestamp()
+                                        datetime.fromisoformat(timestr)
+                                        .astimezone()
+                                        .timestamp()
                                     )
                                     if timestr
                                     else 0
@@ -861,7 +870,9 @@ class AnkerSolixMqttSession:
                                 60, timestamps[len(timestamps) - 1] - timestamps[0]
                             )
                             speedstart = timestamps[0]
-                            cycleoffset = datetime.now().timestamp() - speedstart
+                            cycleoffset = (
+                                datetime.now().astimezone().timestamp() - speedstart
+                            )
                             addtime = 0
                             # write cycle progress into folderdict
                             folderdict["progress"] = 0
@@ -872,7 +883,11 @@ class AnkerSolixMqttSession:
                 if timestamps:
                     cycle_now = (
                         speedstart
-                        + (datetime.now().timestamp() - cycleoffset - speedstart)
+                        + (
+                            datetime.now().astimezone().timestamp()
+                            - cycleoffset
+                            - speedstart
+                        )
                         * speed
                     )
                     while time_idx < len(timestamps) and (
@@ -895,9 +910,9 @@ class AnkerSolixMqttSession:
                             self._logger.debug(
                                 "Api %s MQTT session loaded message from %s:\n%s",
                                 self.apisession.nickname,
-                                datetime.fromtimestamp(timestamps[time_idx]).strftime(
-                                    "%Y-%m-%d %H:%M:%S"
-                                ),
+                                datetime.fromtimestamp(timestamps[time_idx])
+                                .astimezone()
+                                .strftime("%Y-%m-%d %H:%M:%S"),
                                 message,
                             )
                             # mock timestamp in message for subsequent cycles
@@ -931,14 +946,18 @@ class AnkerSolixMqttSession:
                         time_idx = 0
                         # reset cycle offset with 5 sec gap between last and first message
                         speedstart = timestamps[0]
-                        cycleoffset = datetime.now().timestamp() - speedstart
+                        cycleoffset = (
+                            datetime.now().astimezone().timestamp() - speedstart
+                        )
                         addtime += duration + 5
                     # check for speed change at runtime
                     if (newspeed := folderdict.get("speed")) and speed != newspeed:
                         # reset the offset into the cycle
                         speed = newspeed
                         speedstart = timestamps[max(0, time_idx - 1)]
-                        cycleoffset = datetime.now().timestamp() - speedstart
+                        cycleoffset = (
+                            datetime.now().astimezone().timestamp() - speedstart
+                        )
                     # check steps or playmode change at runtime
                     if steps != (newsteps := folderdict.get("steps")):
                         # reset the offset into the cycle
@@ -946,7 +965,9 @@ class AnkerSolixMqttSession:
                         if steps is None:
                             # restart play mode
                             speedstart = timestamps[max(0, time_idx - 1)]
-                            cycleoffset = datetime.now().timestamp() - speedstart
+                            cycleoffset = (
+                                datetime.now().astimezone().timestamp() - speedstart
+                            )
                 await asyncio.sleep(0.5)
         except asyncio.CancelledError:
             self._logger.info(
@@ -1013,7 +1034,11 @@ class AnkerSolixMqttSession:
                 # add message timestamp to data
                 await file.write(
                     json.dumps(
-                        {"msg_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+                        {
+                            "msg_time": datetime.now()
+                            .astimezone()
+                            .strftime("%Y-%m-%d %H:%M:%S")
+                        }
                         | data
                     )
                     + "\n"
@@ -1150,13 +1175,22 @@ def generate_mqtt_command(
                             value = parameters.get(name)
                             ms = bitfield.get(MASK_STATE)
                             # Init datafield with old byte value if bitmask control and new mask_state
-                            if ms != mask_state and (mask_state := ms):
-                                if (ms_value := dynamic_descriptions.get(name,{}).get(
-                                    MASK_VALUE)) is not None:
-                                    # Extend with zeros if needed
-                                    if len(datafield.f_value) < pos + 1:
-                                        datafield.f_value.extend(b"\x00" * (pos + 1 - len(datafield.f_value)))
-                                    datafield.f_value[pos] = ms_value
+                            if (
+                                ms != mask_state
+                                and (mask_state := ms)
+                                and (
+                                    ms_value := dynamic_descriptions.get(name, {}).get(
+                                        MASK_VALUE
+                                    )
+                                )
+                                is not None
+                            ):
+                                # Extend with zeros if needed
+                                if len(datafield.f_value) < pos + 1:
+                                    datafield.f_value.extend(
+                                        b"\x00" * (pos + 1 - len(datafield.f_value))
+                                    )
+                                datafield.f_value[pos] = ms_value
                             datafield.update(
                                 value=value,
                                 offset=pos,  # use same position for bitmask updates

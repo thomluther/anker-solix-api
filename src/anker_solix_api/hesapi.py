@@ -289,7 +289,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             self.devices.update({str(sn): device})
         return sn
 
-    async def update_sites(  # noqa: C901
+    async def update_sites(
         self,
         siteId: str | None = None,
         fromFile: bool = False,
@@ -520,12 +520,13 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             (mysite.get("energy_details") or {}).pop("intraday", None)
 
                     # Extract actual dynamic price if supported and not excluded
-                    if {ApiCategories.site_price} - exclude:
-                        if dp := self.extractPriceData(siteId=myid):
-                            # save the actual extracted dynamic price details
-                            self._update_site(
-                                siteId=myid, details={"dynamic_price_details": dp}
-                            )
+                    if {ApiCategories.site_price} - exclude and (
+                        dp := self.extractPriceData(siteId=myid)
+                    ):
+                        # save the actual extracted dynamic price details
+                        self._update_site(
+                            siteId=myid, details={"dynamic_price_details": dp}
+                        )
 
                     new_sites.update({myid: mysite})
         # Write back the updated sites
@@ -564,14 +565,13 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             )
             await self.get_system_running_info(siteId=site_id, fromFile=fromFile)
             # First fetch details that only work for site admins
-            if site.get("site_admin", False):
+            if site.get("site_admin", False) and {ApiCategories.site_price} - exclude:
                 # Fetch site price and CO2 settings
-                if {ApiCategories.site_price} - exclude:
-                    self._logger.debug(
-                        "Getting api %s price and CO2 settings for site",
-                        self.apisession.nickname,
-                    )
-                    await self.get_site_price(siteId=site_id, fromFile=fromFile)
+                self._logger.debug(
+                    "Getting api %s price and CO2 settings for site",
+                    self.apisession.nickname,
+                )
+                await self.get_site_price(siteId=site_id, fromFile=fromFile)
             # Fetch details that work for all account types
             # Fetch CO2 Ranking if not excluded
             if not ({ApiCategories.hes_energy} & exclude):
@@ -591,7 +591,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     if m in ["A5101", "A5102", "A5103"]
                 }:
                     # fetch provider list for supported models only once per day
-                    if (datetime.now().strftime("%Y-%m-%d")) != (
+                    if (datetime.now().astimezone().strftime("%Y-%m-%d")) != (
                         self.account.get(f"price_providers_{model}") or {}
                     ).get("date"):
                         self._logger.debug(
@@ -670,7 +670,9 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 # Cloud server energy stat updates may be delayed by 3 minutes for HES
                 # min Offset in seconds to last valid record, reduce by 5 minutes to ensure last record is made
                 energy_offset = (site.get("energy_offset_seconds") or 0) - 300
-                time: datetime = datetime.now() + timedelta(seconds=energy_offset)
+                time: datetime = datetime.now().astimezone() + timedelta(
+                    seconds=energy_offset
+                )
                 today = time.strftime("%Y-%m-%d")
                 yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today or both days
@@ -684,7 +686,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
-                            startDay=datetime.fromisoformat(yesterday),
+                            startDay=datetime.fromisoformat(yesterday).astimezone(),
                             numDays=1 if skip_today else 2,
                             dayTotals=True,
                             devTypes=query_types,
@@ -695,7 +697,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
-                            startDay=datetime.fromisoformat(today),
+                            startDay=datetime.fromisoformat(today).astimezone(),
                             numDays=1,
                             dayTotals=True,
                             devTypes=query_types,
@@ -739,6 +741,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     )
                     await self.get_hes_wifi_info(deviceSn=sn, fromFile=fromFile)
                 # Fetch details that work for shared accounts
+                else:
+                    pass
         return self.devices
 
     async def get_system_running_info(
@@ -875,7 +879,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         entry: dict = {}
         # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
         if not (timestring := avg_data.get("last_check")) or (
-            datetime.now() - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S")
+            datetime.now().astimezone()
+            - datetime.strptime(timestring, "%Y-%m-%d %H:%M:%S").astimezone()
         ) >= timedelta(minutes=5):
             self._logger.debug(
                 "Updating api %s power average values from energy statistics of HES site ID %s",
@@ -883,7 +888,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 siteId,
             )
             offset = timedelta(seconds=avg_data.get("offset_seconds") or 0)
-            validtime = datetime.now() + offset
+            validtime = datetime.now().astimezone() + offset
             validdata = {}
             old_valid = avg_data.get("valid_time") or ""
             for source in ["hes", "solar", "home", "grid"] + (
@@ -921,20 +926,21 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 endDay=checkdate,
                             )
                         # generate list of SOC timestamps different from 0 and pick last one
-                        if soclist := [
-                            item
-                            for item in (data.get("chargeLevel") or [])
-                            if (item.get("value") or "0") != "0"
-                        ]:
-                            if soclist[-1].get("time"):
-                                last = datetime.strptime(
-                                    checkdate.strftime("%Y-%m-%d")
-                                    + soclist[-1].get("time"),
-                                    "%Y-%m-%d%H:%M",
-                                )
-                                future: datetime = last + timedelta(minutes=5)
-                                validdata = data
-                                break
+                        if (
+                            soclist := [
+                                item
+                                for item in (data.get("chargeLevel") or [])
+                                if (item.get("value") or "0") != "0"
+                            ]
+                        ) and soclist[-1].get("time"):
+                            last = datetime.strptime(
+                                checkdate.strftime("%Y-%m-%d")
+                                + soclist[-1].get("time"),
+                                "%Y-%m-%d%H:%M",
+                            ).astimezone()
+                            future: datetime = last + timedelta(minutes=5)
+                            validdata = data
+                            break
                     # get min offset to first invalid timestamp to find best check time (smallest delay after new value from cloud)
                     if future:
                         offset = min(
@@ -942,12 +948,12 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             timedelta(days=2)
                             if offset.total_seconds() == 0
                             # reset offset if significantly higher, when previous last valid entry was not really the last one due to 0 value SOC entries
-                            or future - datetime.now() > offset + timedelta(minutes=6)
+                            or future - datetime.now().astimezone() > offset + timedelta(minutes=6)
                             else offset,
                             # set offset few seconds before future invalid time if smaller than previous offset
-                            future - datetime.now() - timedelta(seconds=5),
+                            future - datetime.now().astimezone() - timedelta(seconds=5),
                         )
-                        validtime = datetime.now() + offset
+                        validtime = datetime.now().astimezone() + offset
                         # reuse last valid data from timestamp check to get values
                         data = validdata
                         self._logger.debug(
@@ -988,15 +994,15 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     future
                     and not fromFile
                     and (
-                        future - datetime.now() - timedelta(seconds=5) < offset
+                        future - datetime.now().astimezone() - timedelta(seconds=5) < offset
                         or offset.total_seconds == 0
                     )
                 ):
                     avg_data["last_check"] = (
-                        datetime.now() - timedelta(minutes=5)
+                        datetime.now().astimezone() - timedelta(minutes=5)
                     ).strftime("%Y-%m-%d %H:%M:%S")
                 else:
-                    avg_data["last_check"] = datetime.now().strftime(
+                    avg_data["last_check"] = datetime.now().astimezone().strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )
                 avg_data["valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
@@ -1137,10 +1143,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             "dateType": rangeType if rangeType in ["day", "week", "year"] else "day",
             "start": startDay.strftime("%Y-%m-%d")
             if startDay
-            else datetime.today().strftime("%Y-%m-%d"),
+            else datetime.today().astimezone().strftime("%Y-%m-%d"),
             "end": endDay.strftime("%Y-%m-%d")
             if endDay
-            else datetime.today().strftime("%Y-%m-%d"),
+            else datetime.today().astimezone().strftime("%Y-%m-%d"),
         }
         resp = await self.apisession.request(
             "post", API_HES_SVC_ENDPOINTS["energy_statistics"], json=data
@@ -1150,7 +1156,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
     async def energy_daily(  # noqa: C901
         self,
         siteId: str,
-        startDay: datetime = datetime.today(),
+        startDay: datetime | None = None,
         numDays: int = 1,
         dayTotals: bool = False,
         devTypes: set | None = None,
@@ -1166,9 +1172,14 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "battery_discharge": "1.06", "battery_charge": "1.39"}}
         """
         table = {}
+        startDay = (
+            startDay.astimezone()
+            if isinstance(startDay, datetime)
+            else datetime.today().astimezone()
+        )
         if not devTypes or not isinstance(devTypes, set):
             devTypes = set()
-        future = datetime.today() + timedelta(days=7)
+        future = datetime.today().astimezone() + timedelta(days=7)
         # check daily range and limit to 1 year max and avoid future days in more than 1 week
         if startDay > future:
             startDay = future
@@ -1203,7 +1214,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1292,7 +1303,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1380,7 +1391,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1428,7 +1439,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1515,7 +1526,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -1771,6 +1782,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             ),
                         }
                     )
+                else:
+                    pass
         return entry
 
     async def get_hes_wifi_info(self, deviceSn: str, fromFile: bool = False) -> dict:
@@ -1811,7 +1824,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
     async def get_system_profit(
         self,
         siteId: str,
-        startDay: datetime = datetime.today(),
+        startDay: datetime | None = None,
         rangeType: str = "day",
         fromFile: bool = False,
     ) -> dict:
@@ -1826,7 +1839,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             "title": "Proportion of self-use","value":"47%","unit":"","type":"","percent":"","imported":false,"showPercent":""}],
         "percents": [{"type": "hes","value": "27%"},{"type": "solar","value": "20%"},{"type": "grid","value": "53%"}],"selfPowerPercent": "47%"}
         """
-        startDay = startDay if isinstance(startDay, datetime) else datetime.today()
+        startDay = startDay.astimezone() if isinstance(startDay, datetime) else datetime.today().astimezone()
         # TODO: Format of start for week type is actually unknown and may have to be corrected
         data = {
             "siteId": siteId,

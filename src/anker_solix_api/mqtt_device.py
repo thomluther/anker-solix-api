@@ -636,7 +636,11 @@ class SolixMqttDevice:
         ):
             value = float(val)
         # otherwise convert state value if converter defined but not an option parameter
-        elif (converter := desc.get(STATE_CONVERTER)) and callable(converter) and VALUE_OPTIONS not in desc:
+        elif (
+            (converter := desc.get(STATE_CONVERTER))
+            and callable(converter)
+            and VALUE_OPTIONS not in desc
+        ):
             value = converter(None, value, self.get_status(fromFile=True))
         if value is None:
             if desc:
@@ -686,18 +690,21 @@ class SolixMqttDevice:
         """Update the mask state for testing."""
 
         if (
-            isinstance(description, dict)
-            and isinstance(value, int)
-            and isinstance(mask_value, int)
-        ):
-            if (mask := description.get(MASK)) is not None and (
+            (
+                isinstance(description, dict)
+                and isinstance(value, int)
+                and isinstance(mask_value, int)
+            )
+            and (mask := description.get(MASK)) is not None
+            and (
                 val := DeviceHexDataField().encode_value(
                     value=value,
                     fieldtype=description.get(TYPE, DeviceHexDataTypes.ui.value),
                     desc=description,
                 )
-            ):
-                return (val[0] & mask) | (mask_value & ~mask)
+            )
+        ):
+            return (val[0] & mask) | (mask_value & ~mask)
         return None
 
     async def _send_mqtt_command(
@@ -755,12 +762,11 @@ class SolixMqttDevice:
         else:
             try:
                 # Ensure MQTT session is started and connected
-                if not self.is_connected():
-                    if not await self.api.startMqttSession():
-                        self._logger.error(
-                            "Failed to start MQTT session for device control"
-                        )
-                        return None
+                if not self.is_connected() and not await self.api.startMqttSession():
+                    self._logger.error(
+                        "Failed to start MQTT session for device control"
+                    )
+                    return None
                 # Publish MQTT command
                 _, mqtt_info = self.api.mqttsession.publish(
                     deviceDict=self.device,
@@ -1009,7 +1015,9 @@ class SolixMqttDevice:
                     # Convert state again for Follow parms with given value to consider all final set parameters
                     parameters[par] = (
                         converter(
-                            None, parameters[par], self.get_status(fromFile=True) | parameters
+                            None,
+                            parameters[par],
+                            self.get_status(fromFile=True) | parameters,
                         )
                         if callable(converter)
                         else parameters[par]

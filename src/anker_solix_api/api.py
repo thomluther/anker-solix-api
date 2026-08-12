@@ -1,5 +1,5 @@
 """Class for interacting with the Anker Power / Solix API."""
-# ruff: noqa: N806
+# ruff: noqa: PLC0415, N806
 
 import contextlib
 from datetime import datetime, timedelta
@@ -56,7 +56,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     """Define the API class to handle API data for Anker balcony power sites and devices using power_service endpoints."""
 
     # import outsourced methods
-    from .charger import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from .charger import (  # pylint: disable=import-outside-toplevel
         get_charger_custom_mode_list,
         get_charger_custom_mode_options,
         get_charger_custom_mode_profile,
@@ -69,7 +69,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         get_charger_themes,
         set_charger_port_remark,
     )
-    from .energy import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from .energy import (  # pylint: disable=import-outside-toplevel
         device_pv_energy_daily,
         energy_analysis,
         energy_daily,
@@ -79,7 +79,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         home_load_chart,
         refresh_pv_forecast,
     )
-    from .schedule import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from .schedule import (  # pylint: disable=import-outside-toplevel
         get_device_load,
         get_device_parm,
         set_device_load,
@@ -89,7 +89,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         set_sb2_home_load,
         set_sb2_use_time,
     )
-    from .vehicle import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
+    from .vehicle import (  # pylint: disable=import-outside-toplevel
         create_vehicle,
         get_brand_list,
         get_brand_models,
@@ -486,7 +486,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     ):
                         # handle Solarbank PPS charging status
                         device[key] = str(value)
-                        # TODO: Use proper status definitions once all state descriptions are known
                         description = get_enum_name(
                             SolarbankPpsStatus,
                             str(value),
@@ -725,13 +724,20 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         tz_offset = (
                             self.sites.get(device.get("site_id") or "") or {}
                         ).get("energy_offset_tz") or 0
-                        now = datetime.now() + timedelta(seconds=tz_offset)
+                        now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
                         now_time = now.time().replace(microsecond=0)
                         sys_power = None
                         dev_power = None
                         # set now to new daytime if close to end of day
-                        if now_time >= datetime.strptime("23:59:58", "%H:%M:%S").time():
-                            now_time = datetime.strptime("00:00", "%H:%M").time()
+                        if (
+                            now_time
+                            >= datetime.strptime("23:59:58", "%H:%M:%S")
+                            .astimezone()
+                            .time()
+                        ):
+                            now_time = (
+                                datetime.strptime("00:00", "%H:%M").astimezone().time()
+                            )
                         if generation >= 2:
                             # Solarbank 2+ schedule, weekday starts with 0=Sunday)
                             # datetime isoweekday starts with 1=Monday - 7 = Sunday, strftime('%w') starts also 0 = Sunday
@@ -759,19 +765,27 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             )
                             for slot in day_ranges:
                                 with contextlib.suppress(ValueError):
-                                    start_time = datetime.strptime(
-                                        slot.get("start_time") or "00:00", "%H:%M"
-                                    ).time()
+                                    start_time = (
+                                        datetime.strptime(
+                                            slot.get("start_time") or "00:00", "%H:%M"
+                                        )
+                                        .astimezone()
+                                        .time()
+                                    )
                                     end_time = slot.get("end_time") or "00:00"
                                     # "24:00" format not supported in strptime
                                     if end_time == "24:00":
-                                        end_time = datetime.strptime(
-                                            "23:59:59", "%H:%M:%S"
-                                        ).time()
+                                        end_time = (
+                                            datetime.strptime("23:59:59", "%H:%M:%S")
+                                            .astimezone()
+                                            .time()
+                                        )
                                     else:
-                                        end_time = datetime.strptime(
-                                            end_time, "%H:%M"
-                                        ).time()
+                                        end_time = (
+                                            datetime.strptime(end_time, "%H:%M")
+                                            .astimezone()
+                                            .time()
+                                        )
                                     if start_time <= now_time < end_time:
                                         sys_power = slot.get("power")
                                         device["preset_system_output_power"] = sys_power
@@ -865,19 +879,27 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # Solarbank 1 schedule
                             for slot in value.get("ranges") or []:
                                 with contextlib.suppress(ValueError):
-                                    start_time = datetime.strptime(
-                                        slot.get("start_time") or "00:00", "%H:%M"
-                                    ).time()
+                                    start_time = (
+                                        datetime.strptime(
+                                            slot.get("start_time") or "00:00", "%H:%M"
+                                        )
+                                        .astimezone()
+                                        .time()
+                                    )
                                     end_time = slot.get("end_time") or "00:00"
                                     # "24:00" format not supported in strptime
                                     if end_time == "24:00":
-                                        end_time = datetime.strptime(
-                                            "23:59:59", "%H:%M:%S"
-                                        ).time()
+                                        end_time = (
+                                            datetime.strptime("23:59:59", "%H:%M:%S")
+                                            .astimezone()
+                                            .time()
+                                        )
                                     else:
-                                        end_time = datetime.strptime(
-                                            end_time, "%H:%M"
-                                        ).time()
+                                        end_time = (
+                                            datetime.strptime(end_time, "%H:%M")
+                                            .astimezone()
+                                            .time()
+                                        )
                                     if start_time <= now_time < end_time:
                                         preset_power = (
                                             slot.get("appliance_loads") or [{}]

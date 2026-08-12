@@ -573,7 +573,9 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 # Cloud server energy stat updates may be delayed by 3 minutes for Power Panel
                 # min Offset in seconds to last valid record, reduce by 5 minutes to ensure last record is made
                 energy_offset = (site.get("energy_offset_seconds") or 0) - 300
-                time: datetime = datetime.now() + timedelta(seconds=energy_offset)
+                time: datetime = datetime.now().astimezone() + timedelta(
+                    seconds=energy_offset
+                )
                 today = time.strftime("%Y-%m-%d")
                 yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
                 # Fetch energy from today or both days
@@ -587,7 +589,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
-                            startDay=datetime.fromisoformat(yesterday),
+                            startDay=datetime.fromisoformat(yesterday).astimezone(),
                             numDays=1 if skip_today else 2,
                             dayTotals=True,
                             devTypes=query_types,
@@ -598,7 +600,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     data.update(
                         await self.energy_daily(
                             siteId=site_id,
-                            startDay=datetime.fromisoformat(today),
+                            startDay=datetime.fromisoformat(today).astimezone(),
                             numDays=1,
                             dayTotals=True,
                             devTypes=query_types,
@@ -708,7 +710,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             self.sites[siteId] = mysite
         return data
 
-    async def get_avg_power_from_energy(  # noqa: C901
+    async def get_avg_power_from_energy(
         self, siteId: str, fromFile: bool = False
     ) -> dict:
         """Get the last 5 min average power from energy statistics.
@@ -750,7 +752,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         entry: dict = {}
         # verify last runtime and avoid re-query in less than 5 minutes since no new values available in energy stats
         if not (timestring := avg_data.get("last_check")) or (
-            datetime.now() - datetime.fromisoformat(timestring)
+            datetime.now().astimezone()
+            - datetime.fromisoformat(timestring).astimezone()
         ) >= timedelta(minutes=5):
             self._logger.debug(
                 "Updating api %s power average values from energy statistics of Power Panel site ID %s",
@@ -758,7 +761,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 siteId,
             )
             offset = timedelta(seconds=avg_data.get("offset_seconds") or 0)
-            validtime = datetime.now() + offset
+            validtime = datetime.now().astimezone() + offset
             validdata = {}
             old_valid = avg_data.get("valid_time") or ""
             for source in ["hes", "solar", "home", "grid"]:
@@ -794,20 +797,21 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 endDay=checkdate,
                             )
                         # generate list of SOC timestamps different from 0 and pick last one
-                        if soclist := [
-                            item
-                            for item in (data.get("chargeLevel") or [])
-                            if (item.get("value") or "0") != "0"
-                        ]:
-                            if soclist[-1].get("time"):
-                                last = datetime.strptime(
-                                    checkdate.strftime("%Y-%m-%d")
-                                    + soclist[-1].get("time"),
-                                    "%Y-%m-%d%H:%M",
-                                )
-                                future: datetime = last + timedelta(minutes=5)
-                                validdata = data
-                                break
+                        if (
+                            soclist := [
+                                item
+                                for item in (data.get("chargeLevel") or [])
+                                if (item.get("value") or "0") != "0"
+                            ]
+                        ) and soclist[-1].get("time"):
+                            last = datetime.strptime(
+                                checkdate.strftime("%Y-%m-%d")
+                                + soclist[-1].get("time"),
+                                "%Y-%m-%d%H:%M",
+                            ).astimezone()
+                            future: datetime = last + timedelta(minutes=5)
+                            validdata = data
+                            break
                     # get min offset to first invalid timestamp to find best check time (smallest delay after new value from cloud)
                     if future:
                         offset = min(
@@ -815,12 +819,13 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             timedelta(days=2)
                             if offset.total_seconds() == 0
                             # reset offset if significantly higher, when previous last valid entry was not really the last one due to 0 value SOC entries
-                            or future - datetime.now() > offset + timedelta(minutes=6)
+                            or future - datetime.now().astimezone()
+                            > offset + timedelta(minutes=6)
                             else offset,
                             # set offset few seconds before future invalid time if smaller than previous offset
-                            future - datetime.now() - timedelta(seconds=5),
+                            future - datetime.now().astimezone() - timedelta(seconds=5),
                         )
-                        validtime = datetime.now() + offset
+                        validtime = datetime.now().astimezone() + offset
                         # reuse last valid data from timestamp check to get values
                         data = validdata
                         self._logger.debug(
@@ -861,16 +866,17 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     future
                     and not fromFile
                     and (
-                        future - datetime.now() - timedelta(seconds=5) < offset
+                        future - datetime.now().astimezone() - timedelta(seconds=5)
+                        < offset
                         or offset.total_seconds == 0
                     )
                 ):
                     avg_data["last_check"] = (
-                        datetime.now() - timedelta(minutes=5)
+                        datetime.now().astimezone() - timedelta(minutes=5)
                     ).strftime("%Y-%m-%d %H:%M:%S")
                 else:
-                    avg_data["last_check"] = datetime.now().strftime(
-                        "%Y-%m-%d %H:%M:%S"
+                    avg_data["last_check"] = (
+                        datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S")
                     )
                 avg_data["valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
                 avg_data["offset_seconds"] = round(offset.total_seconds())
@@ -976,8 +982,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                         (
                                             datetime.fromisoformat(
                                                 avg_data["valid_time"]
-                                            )
-                                            - datetime.fromisoformat(old_valid)
+                                            ).astimezone()
+                                            - datetime.fromisoformat(
+                                                old_valid
+                                            ).astimezone()
                                         ).total_seconds()
                                         / interval
                                     ),
@@ -1054,12 +1062,12 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             if sourceType in ["solar", "hes", "home", "grid", "pps", "diesel"]
             else "solar",
             "dateType": rangeType if rangeType in ["day", "week", "year"] else "day",
-            "start": startDay.strftime("%Y-%m-%d")
-            if startDay
-            else datetime.today().strftime("%Y-%m-%d"),
-            "end": endDay.strftime("%Y-%m-%d")
-            if endDay
-            else datetime.today().strftime("%Y-%m-%d"),
+            "start": startDay.astimezone().strftime("%Y-%m-%d")
+            if isinstance(startDay, datetime)
+            else datetime.today().astimezone().strftime("%Y-%m-%d"),
+            "end": endDay.astimezone().strftime("%Y-%m-%d")
+            if isinstance(endDay, datetime)
+            else datetime.today().astimezone().strftime("%Y-%m-%d"),
             "global": isglobal,
             "productCode": productCode,
         }
@@ -1071,7 +1079,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
     async def energy_daily(  # noqa: C901
         self,
         siteId: str,
-        startDay: datetime = datetime.today(),
+        startDay: datetime | None = None,
         numDays: int = 1,
         dayTotals: bool = False,
         devTypes: set | None = None,
@@ -1087,9 +1095,14 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         "2023-09-30": {"date": "2023-09-30", "solar_production": "3.07", "battery_discharge": "1.06", "battery_charge": "1.39"}}
         """
         table = {}
+        startDay = (
+            startDay.astimezone()
+            if isinstance(startDay, datetime)
+            else datetime.today().astimezone()
+        )
         if not devTypes or not isinstance(devTypes, set):
             devTypes = set()
-        future = datetime.today() + timedelta(days=7)
+        future = datetime.today().astimezone() + timedelta(days=7)
         # check daily range and limit to 1 year max and avoid future days if more than 1 week
         if startDay > future:
             startDay = future
@@ -1126,7 +1139,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1215,7 +1228,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1302,7 +1315,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
             # for file usage ensure that last item is used if today is included
             start = (
                 len(items) - 1
-                if fromFile and datetime.now().date() == startDay.date()
+                if fromFile and datetime.now().astimezone().date() == startDay.date()
                 else 0
             )
             for idx, item in enumerate(items[start : start + numDays]):
@@ -1405,7 +1418,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
         # for file usage ensure that last item is used if today is included
         start = (
             len(items) - 1
-            if fromFile and datetime.now().date() == startDay.date()
+            if fromFile and datetime.now().astimezone().date() == startDay.date()
             else 0
         )
         for idx, item in enumerate(items[start : start + numDays]):
@@ -1597,6 +1610,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                             ),
                         }
                     )
+                else:
+                    pass
         return entry
 
     async def get_disaster_support(
