@@ -566,7 +566,7 @@ class AnkerSolixBaseApi:
                     # cycle through all items and extract what is needed for the device type
                     calc_efficiency = False
                     calc_capacity = False
-                    circuits = {}
+                    circuit_groups = {}
                     # check only received values or all from mqtt session cache
                     check_values = values or mqtt or {}
                     for key, value in check_values.items():
@@ -716,8 +716,8 @@ class AnkerSolixBaseApi:
                             # Remove circuit power while circuit setup unknown
                             elif (
                                 key.startswith("home_demand_circuit")
-                                and not circuits
-                                and not device_mqtt.get("circuits", {})
+                                and not circuit_groups
+                                and not device_mqtt.get("circuit_groups", {})
                             ):
                                 device_mqtt.pop(key, None)
                             # calculate device PV total if not included in MQTT data
@@ -835,6 +835,7 @@ class AnkerSolixBaseApi:
                                 "xt60i_cable",
                                 "theme_id",
                                 "custom_profile_number",
+                                "circuit_setup",
                             ]
                             or (
                                 str(key).endswith(
@@ -860,16 +861,6 @@ class AnkerSolixBaseApi:
                                     )
                                 )
                             )
-                            or (
-                                str(key).startswith(
-                                    (
-                                        "pair_id_circuit_",
-                                        "id_circuit_",
-                                        "priority_circuit_",
-                                        # "unknown_",  # Add for decoder testing monitor
-                                    )
-                                )
-                            )
                         ) and value is not None:
                             device_mqtt[key] = value
                             # determine EV charger model 3 phase capability
@@ -879,13 +870,13 @@ class AnkerSolixBaseApi:
                                     + int(check_values.get("voltage_l2", 0) > 0)
                                     + int(check_values.get("voltage_l3", 0) > 0)
                                 )
-                            elif key.startswith("id_circuit_"):
+                            elif key == "circuit_setup" and isinstance(value,dict):
                                 # assign physical ids to logical groups with same id and priority
-                                prio = check_values.get(
-                                    f"priority_circuit_{key[-2:]}", 0
-                                )
-                                group = f"{prio!s}:{value}"
-                                circuits[group] = [*circuits.get(group, []), key[-2:]]
+                                for index, circuit in value.items():
+                                    group = f"{circuit.get("priority",0)!s}:{circuit.get("id",0)!s}"
+                                    circuit_groups[group] = [*circuit_groups.get(group, []), index]
+                                if circuit_groups:
+                                    device_mqtt["circuit_groups"] = circuit_groups
                             elif (
                                 key == "reverse_remaining_time_hours"
                                 and check_values.get("charger_mode")
@@ -1067,13 +1058,11 @@ class AnkerSolixBaseApi:
                                 f"{min(100, float(discharge) / (float(charge) + max(0, float(consumed) - float(ac_charge))) * 100):.3f}"
                             )
                     # combine power of paired circuits
-                    if circuits:
-                        device_mqtt["circuits"] = circuits
                     if "home_demand_circuit_01" in check_values:
                         # Paired circuits must be consecutive and are limited to 2
                         for group in [
                             g
-                            for g in device_mqtt.get("circuits", {}).values()
+                            for g in device_mqtt.get("circuit_groups", {}).values()
                             if len(g) > 1
                         ]:
                             combined = 0

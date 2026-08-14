@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 from typing import Final
 
 from .apitypes import DeviceHexDataTypes
-from .helpers import convert_port_protocols, convert_weekdays
+from .helpers import convert_circuit_setup, convert_port_protocols, convert_weekdays
 
 # common mapping keys to be used for status and command descriptions
 EMBEDDED: Final[str] = (
@@ -194,6 +194,7 @@ class SolixMqttCommands:
     charger_theme: str = "charger_theme"
     charger_theme_custom: str = "charger_theme_custom"
     circuit_priority: str = "circuit_priority"
+    backup_charge_plan: str = "backup_charge_plan"
     tbd_switch: str = "tbd_switch"
 
     def asdict(self) -> dict:
@@ -373,13 +374,13 @@ CMD_AC_OUTPUT_MODE = CMD_COMMON | {
     # Command: PPS AC output mode setting
     COMMAND_NAME: SolixMqttCommands.ac_output_mode_select,
     "a2": {
-        NAME: "set_ac_output_mode",   # Normal (0), Smart (1)
+        NAME: "set_ac_output_mode",  # Normal (0), Smart (1)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "ac_output_mode",
         STATE_CONVERTER: lambda value, state, _: (
-            {1: 2, 0: 1}.get(value, 1) # switch to state conversion for mocked state
+            {1: 2, 0: 1}.get(value, 1)  # switch to state conversion for mocked state
             if value is not None
-            else state # do not convert state, since that is the provided switch value
+            else state  # do not convert state, since that is the provided switch value
         ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
         VALUE_OPTIONS: {"smart": 1, "normal": 0},
     },
@@ -393,9 +394,9 @@ CMD_AC_OUTPUT_MODE_INV = CMD_COMMON | {
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "ac_output_mode",
         STATE_CONVERTER: lambda value, state, _: (
-            {0: 2, 1: 1}.get(value, 1) # switch to state conversion for mocked state
+            {0: 2, 1: 1}.get(value, 1)  # switch to state conversion for mocked state
             if value is not None
-            else state # do not convert state, since that is the provided switch value
+            else state  # do not convert state, since that is the provided switch value
         ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
         VALUE_OPTIONS: {"smart": 0, "normal": 1},
     },
@@ -437,7 +438,7 @@ CMD_DC_12V_OUTPUT_MODE = CMD_COMMON | {
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "dc_12v_output_mode",
         STATE_CONVERTER: lambda value, state, _: (
-            {1: 2, 0: 1}.get(value, 1) # switch to state conversion for mocked state
+            {1: 2, 0: 1}.get(value, 1)  # switch to state conversion for mocked state
             if value is not None
             else state
         ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
@@ -453,7 +454,7 @@ CMD_DC_12V_OUTPUT_MODE_INV = CMD_COMMON | {
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "dc_12v_output_mode",
         STATE_CONVERTER: lambda value, state, _: (
-            {0: 2, 1: 1}.get(value, 1) # switch to state conversion for mocked state
+            {0: 2, 1: 1}.get(value, 1)  # switch to state conversion for mocked state
             if value is not None
             else state
         ),  # Convert value back for mocked state: Normal state (1), Smart state (2)
@@ -747,7 +748,7 @@ CMD_SB_SOC_LIMITS = CMD_COMMON | {
                 int(cache.get("set_max_soc", cache.get("max_soc") or 1)) - 1,
                 max(
                     int(cache.get("set_min_soc", cache.get("power_cutoff") or -1)) + 1,
-                    #int(cache.get("backup_soc") or 0),
+                    # int(cache.get("backup_soc") or 0),
                     state,
                 ),
             )
@@ -1853,7 +1854,7 @@ CMD_CHARGER_THEME = CMD_COMMON | {
                 {
                     NAME: "set_theme_type",
                     VALUE_OPTIONS: {"stock": 1, "custom": 2},
-                    MASK: 0x06, # Stock is bit 1, custom is bit 2
+                    MASK: 0x06,  # Stock is bit 1, custom is bit 2
                     MASK_STATE: "clock_settings",
                     STATE_NAME: "theme_type",
                     VALUE_DEFAULT: 1,
@@ -2170,28 +2171,16 @@ CMD_CIRCUIT_PRIORITY = CMD_COMMON | {
         # Counting starts from last to first circuit, each priority/circuit group start counting from 1
         # Example: 01:08 01:07 01:06 01:05 01:04 01:04 02:01 01:03 01:02 01:02 01:01 01:01
         LENGTH: 24,
-        BYTES: {
-            k: v
-            for idx in range(1, 13)
-            for k, v in {
-                f"{0 + (idx-1) * 2:02d}": {
-                    NAME: f"set_priority_circuit_{idx:02d}",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                    VALUE_OPTIONS: {
-                        "must_have": 1,
-                        "nice_to_have": 2,
-                    },
-                    STATE_NAME: f"priority_circuit_{idx:02d}",
-                },
-                f"{1 + (idx-1) * 2:02d}": {
-                    NAME: f"set_id_circuit_{idx:02d}",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                    VALUE_MIN: 1,
-                    VALUE_MAX: 12,
-                    STATE_NAME: f"id_circuit_{idx:02d}",
-                },
-            }.items()
-        }
+        NAME: "set_circuit_priority",
+        STATE_CONVERTER: lambda value, state, cache: (
+            convert_circuit_setup(
+                value, merge=(cache or {}).get("set_circuit_priority")
+            )  # provide old setup to merge mocked state
+            if value is not None
+            else convert_circuit_setup(state)
+        ),
+        STATE_NAME: "circuit_setup",
+        VALUE_STATE: "circuit_setup",
     },
     "a4": {
         NAME: "set_high_backup_soc",
@@ -2201,6 +2190,79 @@ CMD_CIRCUIT_PRIORITY = CMD_COMMON | {
         VALUE_MAX: 100,
         VALUE_MIN_STATE: "low_backup_soc",
         VALUE_STATE: "high_backup_soc",
+    },
+}
+
+CMD_BACKUP_CHARGE_PLAN = CMD_COMMON | {
+    # Command: AX170 backup charge plan
+    COMMAND_NAME: SolixMqttCommands.backup_charge_plan,
+    "a2": {
+        NAME: "set_usage_mode?",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"backup": 4},
+        VALUE_DEFAULT: 4,
+    },
+    "a3": {
+        NAME: "set_tbd_a3_switch",  # Disable (0) | Enable (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "tbd_a3_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+    "a4": {
+        NAME: "set_tbd_a4_switch",  # Disable (0) | Enable (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "tbd_a4_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+    "a5": {
+        NAME: "set_tbd_a5_switch",  # Disable (0) | Enable (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "tbd_a5_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+    "a6": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # backup_max_soc, backup_min_soc,start_time,end_time
+        # Example: 64: 18: a8:bb:7c:6a: b8:c9:7c:6a
+        LENGTH: 10,
+        BYTES: {
+            "00": {
+                STATE_NAME: "set_target_backup_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_STATE: "high_backup_soc",
+                VALUE_MIN: 80,  # Range to be confirmed!
+                VALUE_MAX: 100,
+            },
+            "01": {
+                STATE_NAME: "set_unknown_backup_soc?",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_STATE: "unknown_backup_soc",
+                VALUE_MIN: 10,  # Range to be confirmed!
+                VALUE_MAX: 50,
+            },
+            "02": {
+                NAME: "set_backup_start_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 0xFFFFFFFF,
+                STATE_NAME: "backup_start_timestamp",
+                VALUE_STATE: "backup_start_timestamp",
+            },
+            "06": {
+                NAME: "set_backup_end_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                VALUE_MIN: 0,
+                VALUE_MAX: 0xFFFFFFFF,
+                STATE_NAME: "backup_end_timestamp",
+                VALUE_DEFAULT: 0xFFFFFFFF,
+            },
+        },
+    },
+    "fd": {
+        NAME: "set_unknown_fd_pattern",
+        TYPE: DeviceHexDataTypes.var.value,
+        STATE_NAME: "unknown_fd_pattern",
+        VALUE_STATE: "unknown_fd_pattern",
     },
 }
 

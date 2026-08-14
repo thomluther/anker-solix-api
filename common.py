@@ -10,12 +10,14 @@ import os
 from pathlib import Path
 import select
 import sys
+from typing import Any
 
 from anker_solix_api.apitypes import (
     Color,
     SolarbankRatePlan,
     SolarbankSchedulePresetType,
     SolarbankUsageMode,
+    SolixCircuitPriority,
     SolixPpsLoadMode,
     SolixTariffTypes,
 )
@@ -151,7 +153,7 @@ def print_field_values(fieldmap: dict, print_topics: bool = False) -> None:
     for key, value in fieldmap.items():
         if key != "topics":
             # convert timestamps to readable data and time for printout
-            if "timestamp" in key and isinstance(value, int|float):
+            if "timestamp" in key and isinstance(value, int | float):
                 value = f"{value!s} ({datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')})"
             elif key.endswith("_settings"):
                 # print integer as bitmask
@@ -553,7 +555,7 @@ def query_mqtt_command(  # noqa: C901
         )
         # get required parameters
         for parm, desc in mdev.get_cmd_parms(cmd=cmd, defaults=True).items():
-            value_info = ""
+            value_info = None
             step = 1
             state_name = str(desc.get(STATE_NAME, ""))
             if v := desc.get(VALUE_OPTIONS):
@@ -566,6 +568,9 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
                     ", ", "|"
                 )
+            elif converter:
+                # special case for complex prompts and value structures
+                value_info = ""
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
                 if (v := desc.get(VALUE_STEP)) is not None:
@@ -574,7 +579,8 @@ def query_mqtt_command(  # noqa: C901
             elif desc.get("is_text"):
                 value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
             # query default parameters only if value has validation descriptors
-            if value_info:
+            if value_info is not None:
+                prompt = not value_info
                 if (v := desc.get(VALUE_DEFAULT)) is not None or (
                     callable(v := desc.get(STATE_CONVERTER))
                     and (v := v(None, None, mdev.get_status(fromFile=toFile)))
@@ -582,9 +588,14 @@ def query_mqtt_command(  # noqa: C901
                 ):
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
                 while True:
-                    sel = input(
-                        f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
-                    )
+                    if prompt:
+                        sel = _query_mqtt_command_parameter(
+                            mdev=mdev, parm=parm, info=value_info
+                        )
+                    else:
+                        sel = input(
+                            f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
+                        )
                     if sel.upper() in ["C", "CANCEL"]:
                         return None
                     if not sel and (VALUE_DEFAULT in desc or VALUE_FOLLOWS in desc):
@@ -612,7 +623,7 @@ def query_mqtt_command(  # noqa: C901
         for parm, desc in mdev.get_cmd_parms(
             cmd=cmd, state_parms=True, follow_parms=True
         ).items():
-            value_info = ""
+            value_info = None
             step = 1
             state = None
             state_name = str(desc.get(STATE_NAME, ""))
@@ -626,6 +637,9 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
                     ", ", "|"
                 )
+            elif converter:
+                # special case for complex prompts and value structures
+                value_info = ""
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
                 if (v := desc.get(VALUE_STEP)) is not None:
@@ -634,7 +648,8 @@ def query_mqtt_command(  # noqa: C901
             elif desc.get("is_text"):
                 value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
             # query default parameters only if value has validation descriptors
-            if value_info:
+            if value_info is not None:
+                prompt = not value_info
                 if (v := desc.get(VALUE_STATE)) is not None and (
                     state := mdev.get_status(fromFile=toFile).get(v)
                 ) is not None:
@@ -652,9 +667,14 @@ def query_mqtt_command(  # noqa: C901
                 elif (v := desc.get(VALUE_DEFAULT)) is not None:
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
                 while True:
-                    sel = input(
-                        f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
-                    )
+                    if prompt:
+                        sel = _query_mqtt_command_parameter(
+                            mdev=mdev, parm=parm, state=state, info=value_info
+                        )
+                    else:
+                        sel = input(
+                            f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
+                        )
                     if sel.upper() in ["C", "CANCEL"]:
                         return None
                     if not sel and (state is not None or VALUE_DEFAULT in desc):
@@ -683,3 +703,67 @@ def query_mqtt_command(  # noqa: C901
         return None
     else:
         return (cmd, parameters)
+
+
+def _query_mqtt_command_parameter(
+    mdev: SolixMqttDevice, parm: str, state: Any | None = None, info: str | None = None
+) -> str | None:
+    """Query special command parameters with complex structures, return None if parameter unknown."""
+    prompt = {}
+    if parm == "set_circuit_priority" and isinstance(state, dict):
+        prompt["circuit"] = {VALUE_MIN: 1, VALUE_MAX: len(state)}
+        prompt["priority"] = {
+            VALUE_OPTIONS: {
+                e.name: int(e.value)
+                for e in SolixCircuitPriority
+                if e.name != "unknown"
+            }
+        }
+    # Fast quit if parm not supported for prompt
+    if not prompt:
+        return None
+    for p, desc in prompt.items():
+        # update prompt info from definition
+        if v := desc.get(VALUE_OPTIONS):
+            value_info = f"{Color.YELLOW}{v}"
+        elif p.endswith("_time"):
+            # special case for fields indicating (seconds), minutes, hours per byte
+            value_info = f"{Color.YELLOW}({'00:00-23:59' if 0 <= desc.get(VALUE_MAX, 0) <= 5947 else '00:00:00-23:59:59'})"
+        elif (v := desc.get(VALUE_MIN)) is not None:
+            value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
+            if (v := desc.get(VALUE_STEP)) is not None:
+                value_info += f", step {v}"
+        elif desc.get("is_text"):
+            value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
+        sel = None
+        if state is not None:
+            value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use last state ({Color.GREEN}{state}{Color.OFF})"
+        while sel is None:
+            sel = input(
+                f"Provide {Color.YELLOW}{p}{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
+            )
+            if sel.upper() in ["C", "CANCEL"]:
+                return sel
+            if not sel:
+                return sel
+            if VALUE_MIN in desc:
+                sel = (
+                    sel
+                    if sel.isdigit()
+                    and desc.get(VALUE_MIN) <= int(sel) <= desc.get(VALUE_MAX)
+                    else None
+                )
+            elif (v := desc.get(VALUE_OPTIONS)) is not None:
+                sel = (
+                    sel
+                    if sel.isdigit() and sel in list(map(str, v.values()))
+                    else v.get(sel)
+                )
+        desc["value"] = sel
+    if parm == "set_circuit_priority":
+        if d := mdev.update_circuit_priority(
+            circuit=prompt["circuit"].get("value"),
+            priority=prompt["priority"].get("value"),
+        ):
+            return json.dumps(d)
+    return None

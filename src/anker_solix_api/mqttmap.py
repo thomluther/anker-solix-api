@@ -4,6 +4,7 @@ from typing import Final
 
 from .apitypes import DeviceHexDataTypes
 from .helpers import (
+    convert_circuit_setup,
     convert_port_protocols,
     convert_pps_custom_schedule,
     convert_pps_tou_schedule,
@@ -19,6 +20,7 @@ from .mqttcmdmap import (
     CMD_AC_OUTPUT_SWITCH,
     CMD_AC_OUTPUT_TIMEOUT_SEC,
     CMD_AC_PORT_SWITCH,
+    CMD_BACKUP_CHARGE_PLAN,
     CMD_BATTERY_CHARGE_LIMITS,
     CMD_CAR_BATTERY_TYPE,
     CMD_CHARGER_CLOCK_DISPLAY,
@@ -2485,11 +2487,12 @@ _AX170_0405 = (
             NAME: "backup_soc"
         },  # Minimum Self Consumption reserve %, Not overall reserve. Battery will stay above this level, unless grid fault.
         "b7": {NAME: "max_soc?"},  # Statix at 100, Maybe battery health, but from which device??
+        "b8": {NAME: "usage_mode"},  # 2:?, 4:backup_charge, 5:?, 9:?, 10:?
         "b9": {
             NAME: "main_breaker_limit?"
         },  # Static, maybe installation setting, It's 200 on tests, so its a good chance its the 200AMP?
-        "bf": {NAME: "timestamp_0405_bf?"},
-        "c0": {NAME: "timestamp_0405_c0?"},
+        "bf": {NAME: "backup_start_timestamp"},
+        "c0": {NAME: "backup_end_timestamp"},
         "c2": {NAME: "input_power_total"},  # PV + Grid
         "c3": {
             NAME: "use_time_band?"
@@ -2512,6 +2515,7 @@ _AX170_0405 = (
         "ce": {NAME: "generator_plug_status"},
         "d4": {NAME: "pv_power_3rd_party"},  # Power from external solar to home?
         "d6": {NAME: "generator_power"},  # Power from external DC generator
+        "d8": {NAME: "voltage_l1l2"}, # fluctuates around 220
         "dd": {NAME: "display_timeout_seconds"},
         "de": {
             NAME: "max_load_limit_total?"
@@ -2522,27 +2526,17 @@ _AX170_0405 = (
                 "00": {
                     NAME: "low_backup_soc",  # SOC when low prio circuits stop during backup discharge
                     TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "01": {
+                    NAME: "circuit_setup",
+                    TYPE: DeviceHexDataTypes.bin.value,
+                    LENGTH: 36,
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        convert_circuit_setup(value)
+                        if value is not None
+                        else state
+                    ),
                 }
-            }
-            | {
-                k: v
-                for idx in range(1, 13)
-                for k, v in {
-                    f"{0x01 + (idx - 1) * 3:02d}": {
-                        NAME: f"pair_id_circuit_{idx:02d}",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                    },
-                    f"{0x02 + (idx - 1) * 3:02d}": {
-                        NAME: f"priority_circuit_{idx:02d}",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                        SIGNED: False,
-                    },
-                    f"{0x03 + (idx - 1) * 3:02d}": {
-                        NAME: f"id_circuit_{idx:02d}",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                        SIGNED: False,
-                    },
-                }.items()
             }
         },
         "e4": {
@@ -2616,13 +2610,36 @@ _AX170_0408 = {
     "a3": {NAME: "local_timestamp"},
     "a4": {NAME: "utc_timestamp"},
     "a7": {NAME: "battery_soc_total"},  # Average SOC of all devices in system
+    "ad": {NAME: "pv_yield_today?"},
+    "df": {NAME: "pv_yield_today_df?"},
     "b1": {NAME: "tbd_power_total_b1?"},
-    "b4": {NAME: "tbd_power_signed_total_b4?"},
+    "b3": {NAME: "input_energy_today?"},
+    "b4": {NAME: "discharged_energy_today?"},
     "b6": {
-        NAME: "battery_power_signed_total?"
+        NAME: "battery_power_signed_total"
     },  # Power draw from battery. Negative is discharging, positive is charging.
-    "ba": {NAME: "pv_power_total_ba?"},
+    "ba": {NAME: "discharged_energy_today_ba?"},
+    "c0": {NAME: "grid_import_energy_today_c0?"},
     "d6": {NAME: "timestamp_0408_d6?"},
+    "ea": {NAME: "pv_yield_today_ea?"},
+    "eb": {NAME: "pv_yield_today_eb?"},
+    "ee": {NAME: "pv_power_total?"},  # same as 0405 ab,c2
+    "f3": {NAME: "pv_yield_today_f3?"},
+    "f5": {
+        BYTES: {
+            f"{0 + (idx - 1) * 4:02d}": {
+                NAME: f"circuit_{idx:02d}_energy_today",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            }
+            for idx in range(1, 13)
+        }
+        | {
+            "48": {
+                NAME: "other_energy_today",
+                TYPE: DeviceHexDataTypes.sfle.value,
+            },
+        }
+    },
     "f6": {
         BYTES: {
             f"{0 + (idx - 1) * 4:02d}": {
@@ -6129,6 +6146,7 @@ SOLIXMQTTMAP: Final[dict] = {
     # AX170 Power dock for home backup systems A17E1
     "AX170": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": CMD_BACKUP_CHARGE_PLAN,  # TODO: Command to be completed, fields a2,a3,a4,a5,a6,fd
         "0405": _AX170_0405,
         "0408": _AX170_0408,
         "0412": CMD_CIRCUIT_PRIORITY,  # for circuit priority and backup low/high SOC

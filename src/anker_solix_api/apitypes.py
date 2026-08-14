@@ -2112,6 +2112,14 @@ class SolixPortPriority(StrEnum):
     unknown = "unknown"
 
 
+class SolixCircuitPriority(StrEnum):
+    """Str Enumeration for Solix Circuit Priority."""
+
+    must_have = "1"
+    nice_to_have = "2"
+    unknown = "unknown"
+
+
 @dataclass
 class SolarbankTimeslot:
     """Dataclass to define customizable attributes of an Anker Solix Solarbank time slot as used for the schedule definition or update."""

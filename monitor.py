@@ -944,14 +944,15 @@ class AnkerSolixApiMonitor:
                         f"{'Circuit Total':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
                         f"{'Home Other Load':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
+                circuits = cm and mqtt.get("circuit_setup", {})
                 for i in range(1, 13, 2):
                     m1 = cm and mqtt.get(f"home_demand_circuit_{i:02d}", "")
                     m2 = cm and mqtt.get(f"home_demand_circuit_{i + 1:02d}", "")
                     if m1 or m2:
-                        m3 = cm and str(mqtt.get(f"priority_circuit_{i:02d}", ""))
-                        m4 = cm and str(mqtt.get(f"priority_circuit_{i + 1:02d}", ""))
-                        m7 = cm and str(mqtt.get(f"id_circuit_{i:02d}", ""))
-                        m8 = cm and str(mqtt.get(f"id_circuit_{i + 1:02d}", ""))
+                        m3 = str(circuits.get(f"{i:02d}", {}).get("priority", ""))
+                        m4 = str(circuits.get(f"{i + 1:02d}", {}).get("priority", ""))
+                        m7 = str(circuits.get(f"{i:02d}", {}).get("id", ""))
+                        m8 = str(circuits.get(f"{i + 1:02d}", {}).get("id", ""))
                         m5 = mqtt.get(f"peers_circuit_{i:02d}", [])
                         m6 = mqtt.get(f"peers_circuit_{i + 1:02d}", [])
                         CONSOLE.info(

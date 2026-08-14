@@ -9,6 +9,8 @@ from __future__ import annotations  # noqa: TID251
 
 from typing import TYPE_CHECKING
 
+from .apitypes import SolixCircuitPriority
+from .helpers import get_enum_name, get_enum_value
 from .mqtt_device import SolixMqttDevice
 from .mqttcmdmap import SolixMqttCommands
 
@@ -62,6 +64,22 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
         self.features = FEATURES
         super().__init__(api_instance=api_instance, device_sn=device_sn)
 
+    def update_device(
+        self, device: dict, dynamic_descriptions: dict | None = None
+    ) -> None:
+        """Define callback for Api device updates."""
+        super().update_device(device=device, dynamic_descriptions=dynamic_descriptions)
+        if not dynamic_descriptions:
+            return
+        if dynamic_descriptions.get("circuit_setup") and (value := self._filedata.get("circuit_setup")):
+            # update the grouping of mocked circuit setup
+            circuit_groups = {}
+            for index, circuit in value.items():
+                group = f"{circuit.get("priority",0)!s}:{circuit.get("id",0)!s}"
+                circuit_groups[group] = [*circuit_groups.get(group, []), index]
+            self._filedata["circuit_groups"] = circuit_groups
+
+
     async def set_temp_unit(
         self,
         unit: str,
@@ -104,7 +122,7 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             dict: Mock response if successful, False otherwise
 
         Example:
-            await mydevice.set_power_cutoff(limit=10)  # 10 %
+            await mydevice.set_min_soc(limit=10)  # 10 %
 
         """
         # Validate parameters and publish command
@@ -118,33 +136,30 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             toFile=toFile,
         )
 
-    async def set_circuit_priority(
+    def update_circuit_priority(
         self,
         circuit: str | int,
         priority: str | int,
-        toFile: bool = False,
     ) -> dict | None:
-        """Set the power dock circuit priority.
+        """Update the power dock circuit priority in the circuit setup structure.
 
         Args:
             circuit: Number of the physical circuit 1-12, e.g. "1"
             priority: Name or value of the priority, 1="must_have", 2="nice_to_have"
-            toFile: If True, save mock response (for testing compatibility)
 
         Returns:
-            dict: Mocked state if successful, None otherwise
+            dict: New circuit setup if successful, None otherwise
 
         Example:
-            await mydevice.set_clock_theme(circuit=10, priority="nice_to_have")
+            mydevice.update_circuit_priority(circuit=10, priority="nice_to_have")
 
         """
-        # response and commands
-        resp = {}
-        cmd1 = SolixMqttCommands.circuit_priority
-        parm_map = {}
-        # find profile in Api cache
+        # find circuit setup in Api cache
+        status = self.get_status(fromFile=True)
+        setup = status.get("circuit_setup", {})
+        groups = status.get("circuit_groups", {})
         circuit = (
-            int(circuit)
+            f"{int(circuit):02d}"
             if (
                 isinstance(circuit, int | float)
                 or (isinstance(circuit, str) and circuit.isdigit())
@@ -152,39 +167,31 @@ class SolixMqttDeviceSolarbank(SolixMqttDevice):
             else None
         )
         priority = (
-            int(priority)
+            get_enum_value(SolixCircuitPriority,get_enum_name(SolixCircuitPriority,str(int(priority))))
             if (isinstance(circuit, int | float) or str(priority).isdigit())
-            else priority
+            else get_enum_value(SolixCircuitPriority,priority)
             if isinstance(priority, str)
             else None
         )
-        # lookup value if option name provided
-        if isinstance(priority, str) and circuit is not None:
-            priority = self.get_cmd_parm_option_map(
-                cmd=cmd1, parm=f"set_priority_circuit_{circuit:02d}"
-            ).get(priority)
-        # Build parameter map
-        index = {}
-        circuits = self.mqttdata.get("circuits", {})
-        for idx in range(12, 0, -1):
-            prio = (
-                priority
-                if idx == circuit
-                else self.mqttdata.get(f"priority_circuit_{idx:02d}", 0)
-            )
-            pair_id = self.mqttdata.get(f"pair_id_circuit_{idx:02d}")
-            group_id = index.get(str(prio), 0) + int(
-                pair_id <= 1
-            )  # increase prio index for next group
-            index[str(prio)] = group_id
-            parm_map[f"set_priority_circuit_{idx:02d}"] = prio
-        # if (
-        #     result := await self.run_command(
-        #         cmd=cmd1,
-        #         parm_map=parm_map,
-        #         toFile=toFile,
-        #     )
-        # ) is None:
-        #     return None
-        # resp.update(result)
-        return resp or None
+        # check values and Build parameter map
+        if circuit in setup and groups and priority is not None:
+            # first get peers for circuit to be modified
+            peers = next(iter(p for p in groups.values() if circuit in p),[])
+            # cycle through setup and rebuild logical group id based on changed priority
+            prio_index = {}
+            for slot in [f"{i:02d}" for i in range(len(setup),0,-1)]:
+                if c := setup.get(slot):
+                    if slot in peers:
+                        # update prio for any peer
+                        prio = int(priority)
+                        c["priority"] = prio
+                    else:
+                        prio = c.get("priority",0)
+                    # increase index for prio and assign new id to any slot
+                    if c.get("pair_status",0) < 2:
+                        # increase prio index only if no peer slot
+                        prio_index[prio] = prio_index.get(prio,0) + 1
+                    # NOTE: This id assignment assumes peered slots are always adjacent slots
+                    c["id"] = prio_index[prio]
+            return setup
+        return None

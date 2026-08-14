@@ -358,6 +358,79 @@ def convert_port_protocols(
     return None
 
 
+def convert_circuit_setup(
+    value: bytes | bytearray | dict, count: int | None = None, merge: dict | None = None
+) -> bytearray | dict | None:
+    """Convert between Power dock circuits setup dictionary and binary field as used in MQTT messages.
+
+    Automatically detects input value type and converts accordingly. The dictionary structure:
+    12 slots for 12 circuits
+    The state for each slot is: pair_status, priority, id
+    pair_status: 0: not paired, 1: Pair circuit high slot, 2: Pair circuit low slot
+    priority: 1: must have, 2: nice to have in case of backup scenario
+    id: Logical number 1-, increased per group from highest to lowest circuit, where each priority is a different group
+    The value for the circuit priority command uses only 2 bytes per slot: priority, id
+
+    Args:
+        value: dictionary or binary with circuit setup structure
+        count: number of circuits to consider
+        merge: provide existing states that should be merged with the short form of binary data
+
+    Returns:
+        Dictionary with circuit setup if input is bytes/bytearray.
+        Bytearray with circuit priority and id if input is valid dictionary structure.
+        None if conversion failed
+
+    """
+    if isinstance(value, bytes | bytearray):
+        if isinstance(merge, dict):
+            slot_len = 2
+        else:
+            slot_len = 3
+            merge = {}
+        # adjust count of circuits to consider
+        count = max(
+            len(value) // slot_len
+            if not isinstance(count, int | float)
+            else int(count),
+            len(value) // slot_len,
+        )
+        # Convert binary to dict
+        with contextlib.suppress(ValueError, TypeError):
+            circuits = {}
+            for slot in range(count):
+                pair_status = merge.get(f"{slot + 1:02d}", {}).get("pair_status")
+                add = int(pair_status is None)
+                circuits[f"{slot + 1:02d}"] = {
+                    "pair_status": pair_status
+                    if pair_status is not None
+                    else int.from_bytes(
+                        value[0 + slot_len * slot : 1 + slot_len * slot]
+                    ),
+                    "priority": int.from_bytes(
+                        value[0 + add + slot_len * slot : 1 + add + slot_len * slot]
+                    ),
+                    "id": int.from_bytes(
+                        value[1 + add + slot_len * slot : 2 + add + slot_len * slot]
+                    ),
+                }
+            return circuits
+    if isinstance(value, dict):
+        # adjust count of circuits to consider
+        count = max(
+            len(value) if not isinstance(count, int | float) else int(count), len(value)
+        )
+        # convert elements to binary structure as needed for command using only 2 bytes per slot
+        with contextlib.suppress(ValueError, TypeError):
+            hexvalue = bytearray()
+            for slot in range(count):
+                if circuit := value.get(f"{slot + 1:02d}"):
+                    hexvalue.extend(int(circuit.get("priority", 0)).to_bytes())
+                    hexvalue.extend(int(circuit.get("id", 0)).to_bytes())
+            return hexvalue
+    return None
+
+
 def convert_pps_custom_schedule(
     value: bytes | bytearray | dict,
 ) -> bytearray | dict | None:
