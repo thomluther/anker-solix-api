@@ -80,7 +80,6 @@ from .mqttcmdmap import (
     CMD_STATUS_REQUEST,
     CMD_SWIPE_DOWN_MODE,
     CMD_SWIPE_UP_MODE,
-    CMD_TBD_SWITCH,
     CMD_TEMP_UNIT,
     CMD_TEMP_UNIT_V2,
     CMD_TIMER_REQUEST,
@@ -672,7 +671,12 @@ _A1783_0421 = {
     "a3": {
         BYTES: {
             "00": {
-                NAME: "charging_status",  # (0-3): Inactive (0), DC Input (1), AC Input (2), Both (3)
+                # Battery status: Inactive (0), Discharging (1), Charging (2) -- the app
+                # calls it workStatus and also emits 5 (standby/sleep), so do not treat the
+                # set as closed. Same quantity as 0490 .23.7. NOT the source enum this
+                # entry used to document: value 1 occurs with zero input power, and
+                # simultaneous AC+DC input never produces 3.
+                NAME: "battery_status",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
@@ -763,7 +767,21 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "charging_status_a5_1",  # (0-3): mirrors a3
+                # Same tri-state as a3.00 battery_status but tripping far earlier, not a
+                # mirror. Measured against a6.00 output_power_total over 48214 frames:
+                # this field is 0 if and only if output is exactly 0 W (23705 frames, no
+                # exceptions) and reads active from 1 W, whereas a3.00 needs roughly 11 W
+                # and lags. So a5.01 answers "is any current moving" and a3.00 "is the
+                # unit doing real work". a3.00's exact trip rule is unresolved -- observed
+                # transitions rise at 11-17 W and fall at 11-16 W, which no threshold or
+                # trailing average separates, but that capture had a mechanically unstable
+                # load so the sampled wattage need not be what triggered the change. What
+                # is safe either way: a3.00 flickers near the boundary, so treat it as a
+                # coarse state, not an edge-accurate one.
+                # Likely the app's chargeDischargeStatus, which shows exactly this
+                # one-sided split against workStatus in app logs; name not asserted
+                # without a co-observation against an app property dump.
+                NAME: "charging_status_a5_1",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
@@ -793,7 +811,10 @@ _A1783_0421 = {
                 SIGNED: False,
             },
             "08": {
-                NAME: "main_battery_soc?",  # SOC of main battery only?
+                # Still unconfirmed as main-only: equal to a5.02 battery_soc in all 103172
+                # frames of a C2000 G2 corpus, but no expansion pack was attached for any
+                # of them (c0 exp_1_sn all zero), so the two readings stay indistinguishable.
+                NAME: "main_battery_soc?",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         },
@@ -809,11 +830,14 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "03": {
-                NAME: "ac_input_power_switch",  # Off (0), On (1)
+                # app: acInputStatus -- AC input lead present (0/1), not a user switch and
+                # not "charging active": observed 1 for long stretches with ac_input_power
+                # at 0, and never 0 while AC input power flows.
+                NAME: "ac_input_status",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
-                NAME: "ac_input_power", # mirrors a6.02
+                NAME: "ac_input_power",  # mirrors a6.02
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -995,7 +1019,9 @@ _A1783_0490_a2 = {
     ".14#1.4": {NAME: "exp_1_cumulative_discharge_14_4?"},  # expansion slot
     ".14#1.5": {NAME: "exp_1_unknown_14_5?"},  # expansion slot
     ".14#1.6": {NAME: "exp_1_unknown_14_6?"},  # expansion slot
-    ".15.1": {NAME: "battery_capacity_wh?"},  # usable capacity? (nominal 2048 Wh)
+    # usable capacity, 1922 Wh on the C2000 G2 (nominal 2048 Wh); held static across
+    # 2368 frames spanning a full 5-100% SoC sweep, and zeroes per-pack when a pack drops
+    ".15.1": {NAME: "battery_capacity_wh"},
     ".15.2": {NAME: "unknown_15_2?"},  # tbd
     ".15.3": {NAME: "battery_voltage", FACTOR: 0.1},  # decivolts; not in 0421
     ".15.4": {NAME: "battery_voltage_15_4?", FACTOR: 0.1},  # mirrors .15.3 pack voltage
@@ -1060,8 +1086,14 @@ _A1783_0490_a2 = {
     ".23.3": {NAME: "ac_output_power"},  # AC output
     ".23.4": {NAME: "input_power_total"},  # total input; AC in = .23.4 - .23.5
     ".23.5": {NAME: "dc_input_power_total"},  # DC/solar input
-    ".23.6": {NAME: "charge_presence"},  # responds to DC input; unit tbd
-    ".23.7": {NAME: "work_status"},  # app: workStatus -- 0 idle / 1 discharge / 2 charge
+    # Centivolts at the DC input -- it reads the attached source, so it is a measurement
+    # rather than the presence flag the name suggested: ~42 (0.4 V) is a floating input with
+    # nothing plugged in, 3733-4422 (37-44 V) is a 2x PS400 array, and an ES720 cig socket
+    # reads 1687 (16.87 V) open-circuit falling to 1499 (14.99 V) while delivering 125 W.
+    # The apparent anti-correlation with power is just source droop under current.
+    ".23.6": {NAME: "dc_input_voltage", FACTOR: 0.01},
+    # same quantity as 0421 a3.00; app calls it workStatus (and also emits 5)
+    ".23.7": {NAME: "battery_status"},  # 0 inactive / 1 discharging / 2 charging
     ".23.8": {NAME: "remaining_time_hours", FACTOR: 0.1},  # deci-hours, bidirectional
     ".23.9": {NAME: "unknown_23_9?"},  # tbd
     ".23.10": {NAME: "unknown_23_10?"},  # tbd
@@ -1087,7 +1119,9 @@ _A1783_0490_a2 = {
 
 _A1783_0490 = {
     # C1000/C2000 G2 (A1783) periodic device-summary posted over BLE. Absent over MQTT.
-    "a1": {NAME: "summary_generation?"},  # 1 byte, const 0x31 -- family generation marker
+    "a1": {
+        NAME: "summary_generation?"
+    },  # 1 byte, const 0x31 -- family generation marker
     "a2": {
         # LEB128 protobuf rollup; walked and mapped via _A1783_0490_a2 (keys are walker paths)
         TYPE: DeviceHexDataTypes.prtb.value,
@@ -4233,7 +4267,9 @@ _AS220_0421 = {
     "a3": {
         BYTES: {
             "00": {
-                NAME: "charging_status",  # (0-3): Inactive (0), DC Input (1), AC Input (2), Both (3)
+                # Matches upstream, which already names this battery_status on AS220.
+                # Inherited from the A1783 template; not re-validated on AS220 hardware.
+                NAME: "battery_status",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
@@ -4320,7 +4356,9 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "charging_status_a5_1",  # (0-3): Mirrors a3
+                # Inherited from the A1783 template, where this is a superset of a3.00
+                # rather than a mirror of it. Not re-validated on AS220 hardware.
+                NAME: "charging_status_a5_1",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
