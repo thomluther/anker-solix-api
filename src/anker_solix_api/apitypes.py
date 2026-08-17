@@ -2314,7 +2314,7 @@ class DeviceHexDataTypes(Enum):
     # where Length of 0 indicates that first byte contains variable field length, e.g. for str type
     strb = bytes.fromhex("06")
     # FD is a virtual type to mark a LEB128 protobuf(-like) blob (e.g. the A1783 c490
-    # device-summary "a2" field). It is walked to protobuf .path -> value and mapped via a
+    # state-post "a2" field). It is walked to protobuf .path -> value and mapped via a
     # BYTES submap whose keys are walker .paths. Self-delimiting varints make it width-drift
     # proof, unlike the fixed base types above which misread multi-byte varints and >=128
     # leaf values.

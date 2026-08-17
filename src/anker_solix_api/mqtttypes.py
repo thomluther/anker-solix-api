@@ -74,7 +74,7 @@ def walk_protobuf(buf: bytes, prefix: str = "", out: dict | None = None) -> dict
     Keeps repeated tags in wire order (occurrence index appended as ``#n``) and addresses
     every field by ``.path``, so byte offsets never matter -- a leaf value crossing 128
     grows its varint in place without shifting anything. Used for the varint field type
-    (the A1783 c490 device-summary), which the fixed-offset TLV types cannot decode.
+    (the A1783 c490 state post), which the fixed-offset TLV types cannot decode.
 
     Every field is recorded: a length-delimited sub-message is stored as its byte length
     *and* recursed into (so the container and its leaves both appear), and a wire-type 3/4
@@ -757,7 +757,7 @@ class DeviceHexDataField:
                     )
                 )
             case DeviceHexDataTypes.prtb.value:
-                # LEB128 protobuf(-like) blob (e.g. the A1783 c490 device-summary a2 field).
+                # LEB128 protobuf(-like) blob (e.g. the A1783 c490 state-post a2 field).
                 # Walk it to protobuf .path -> value; the BYTES submap keys are walker .paths,
                 # each an optional FACTOR/SIGNED like the base types. Self-delimiting varints
                 # make this width-drift proof (a value crossing 128 grows the field in place).

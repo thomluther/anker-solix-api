@@ -991,10 +991,14 @@ _A1783_0421 = {
     "fe": {NAME: "msg_timestamp"},
 }
 
-# c490 device-summary "a2" protobuf field map: walker .path -> field description.
-# a2 is a LEB128 protobuf(-like) rollup the A1783 (C1000/C2000 G2) posts on its own every
-# ~9 min over BLE; the ".23" sub-message is the live telemetry, the ".14"/".19" blocks are
-# cumulative lifetime energy ledgers split by direction AND source (a category 0421 lacks).
+# c490 state-post "a2" protobuf field map: walker .path -> field description.
+# a2 is a LEB128 protobuf(-like) body the A1783 (C1000/C2000 G2) posts on its own every
+# ~9 min over BLE. It is NOT a summary or rollup of the 0421 stream -- it is an independent,
+# wider slice of live device state (115 leaves across 12 groups against 0421's 22 TLV tags,
+# including repeated groups 0421 never sends), sampled at post time. Values are therefore
+# instantaneous readings rather than anything averaged across the posting interval. The
+# ".23" sub-message is the live telemetry; the ".14"/".19" blocks are cumulative lifetime
+# energy ledgers split by direction AND source (a category 0421 lacks).
 # Paths + names confirmed live on a C2000 G2, cross-validated against VM per-port metrics
 # and the app's own field vocabulary (SOC/output/input/remaining_time/flow match 0421).
 # All a2 leaf fields (walker .path -> field). Confirmed names are unsuffixed; "?" marks
@@ -1122,7 +1126,8 @@ _A1783_0490_a2 = {
 }
 
 _A1783_0490 = {
-    # C1000/C2000 G2 (A1783) periodic device-summary posted over BLE. Absent over MQTT.
+    # C1000/C2000 G2 (A1783) periodic state post over BLE -- a distinct, wider slice of live
+    # device state rather than a rollup of 0421. Absent over MQTT.
     "a1": {
         NAME: "summary_generation?"
     },  # 1 byte, const 0x31 -- family generation marker
