@@ -1057,7 +1057,11 @@ _A1783_0490_a2 = {
     ".19.2": {NAME: "cumulative_ac_charge_19_2"},  # AC-charge-driven; coarse
     ".19.3": {NAME: "cumulative_ac_charge_energy_wh"},  # AC-charge energy (Wh)
     ".19.4": {NAME: "cumulative_ac_discharge_energy"},  # AC-output discharge; unit tbd
-    ".19.5": {NAME: "post_counter_19_5?"},  # post counter, paired with .22
+    # Correlates with posting but is not a second view of .22: it skips posts .22 counts
+    # (stationary ~4 h on 2026-07-21 while .22 ticked every 9 min) and moves independently
+    # across an outage (.22 +574 vs .19.5 +598 at the 2026-07-31 resumption), so the offset
+    # between them drifts rather than holding. Do not derive one from the other.
+    ".19.5": {NAME: "post_counter_19_5?"},
     ".19.6": {NAME: "cumulative_dc_charge_19_6"},  # DC/solar-charge-driven
     ".19.7": {NAME: "cumulative_dc_charge_energy"},  # DC/solar charge; unit tbd
     ".19.8": {NAME: "cumulative_discharge_energy_wh"},  # discharge energy (Wh)
