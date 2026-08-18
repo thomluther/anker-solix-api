@@ -630,6 +630,8 @@ class AnkerSolixBaseApi:
                                 "high_backup_soc",
                                 "active_charge_soc",
                                 "active_discharge_soc",
+                                "backup_charge_soc",
+                                "backup_discharge_soc",
                                 "temperature",
                                 "photovoltaic_power",
                                 "pv_power_3rd_party",

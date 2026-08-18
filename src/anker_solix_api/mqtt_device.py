@@ -34,12 +34,13 @@ from .mqttcmdmap import (
     VALUE_MIN_STATE,
     VALUE_OPTIONS,
     VALUE_OPTIONS_STATE,
+    VALUE_SKIP,
     VALUE_STATE,
     VALUE_STEP,
     SolixMqttCommands,
 )
 from .mqttmap import SOLIXMQTTMAP
-from .mqtttypes import DeviceHexDataField, MqttCmdValidator
+from .mqtttypes import DeviceHexData, DeviceHexDataField, MqttCmdValidator
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -74,6 +75,7 @@ class SolixMqttDevice:
         self.controls: dict = {}
         self._map: dict = {}
         self._filedata: dict = {}
+        self._last_publish: DeviceHexData | None = None
         self.dynamic_descriptions: dict = {}
         self._logger = api_instance.logger()
         # initialize device data
@@ -161,6 +163,7 @@ class SolixMqttDevice:
                                                 STATE_CONVERTER,
                                                 STATE_NAME,
                                                 VALUE_FOLLOWS,
+                                                VALUE_SKIP,
                                                 LENGTH,
                                             ]
                                         }
@@ -404,6 +407,10 @@ class SolixMqttDevice:
     def get_filedata(self) -> dict:
         """Return actual filedata cache for mocked states."""
         return self._filedata
+
+    def get_last_publish(self) -> DeviceHexData | None:
+        """Return last published command."""
+        return self._last_publish
 
     def get_cmd_parms(
         self,
@@ -799,6 +806,7 @@ class SolixMqttDevice:
             )
         else:
             self._logger.debug("MQTT device %s (%s) %s", self.sn, self.pn, description)
+            self._last_publish = hexdata
         return hexdata.hex()
 
     async def run_command(  # noqa: C901
@@ -861,8 +869,17 @@ class SolixMqttDevice:
                 if par:
                     # Validated Command parameters
                     parameters[par] = fieldvalue
+                    # finally check if parameter to be skipped
+                    if (
+                        (skip_fn := desc.get(VALUE_SKIP))
+                        and callable(skip_fn)
+                        and skip_fn(
+                            parameters[par], self.get_status(fromFile=True) | parameters
+                        )
+                    ):
+                        parameters.pop(par, None)
                     # Mock state
-                    if state_name := desc.get(STATE_NAME):
+                    elif state_name := desc.get(STATE_NAME):
                         dynamic_descriptions |= state_name in self.dynamic_descriptions
                         converter = desc.get(STATE_CONVERTER)
                         state_value = (
@@ -929,6 +946,17 @@ class SolixMqttDevice:
                     )
                     is not None
                 ):
+                    # convert state if converter available
+                    if converter := desc.get(STATE_CONVERTER):
+                        state = (
+                            converter(
+                                None,
+                                state,
+                                self.get_status(fromFile=True) | parameters,
+                            )
+                            if callable(converter)
+                            else state
+                        )
                     # limit text value if length specified
                     if desc.get("is_text"):
                         parameters[par] = str(state)[
@@ -941,8 +969,17 @@ class SolixMqttDevice:
                         )
                     else:
                         parameters[par] = state
+                    # finally check if parameter to be skipped
+                    if (
+                        (skip_fn := desc.get(VALUE_SKIP))
+                        and callable(skip_fn)
+                        and skip_fn(
+                            parameters[par], self.get_status(fromFile=True) | parameters
+                        )
+                    ):
+                        parameters.pop(par, None)
                     # Mock state
-                    if state_name := desc.get(STATE_NAME):
+                    elif state_name := desc.get(STATE_NAME):
                         dynamic_descriptions |= state_name in self.dynamic_descriptions
                         converter = desc.get(STATE_CONVERTER)
                         state_value = (
@@ -990,8 +1027,11 @@ class SolixMqttDevice:
                         # get follow state from option map
                         state = options.get(parameters.get(follows, ""))
                     else:
-                        # get follow value from converter
-                        state = parameters.get(follows)
+                        # get follow value from cache or parameters
+                        state = (self.get_status(fromFile=True) | parameters).get(
+                            follows
+                        )
+                    # convert state if converter available
                     state = (
                         converter(
                             None, state, self.get_status(fromFile=True) | parameters
@@ -1022,8 +1062,17 @@ class SolixMqttDevice:
                         if callable(converter)
                         else parameters[par]
                     )
+                # finally check if parameter to be skipped
+                if (
+                    (skip_fn := desc.get(VALUE_SKIP))
+                    and callable(skip_fn)
+                    and skip_fn(
+                        parameters[par], self.get_status(fromFile=True) | parameters
+                    )
+                ):
+                    parameters.pop(par, None)
                 # Mock state
-                if state_name := desc.get(STATE_NAME):
+                elif state_name := desc.get(STATE_NAME):
                     dynamic_descriptions |= state_name in self.dynamic_descriptions
                     state_fields[state_name] = parameters[par]
                     # keep mocking of mask_value fields while bits are changed

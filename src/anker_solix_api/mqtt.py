@@ -30,6 +30,7 @@ from .mqttcmdmap import (
     NAME,
     OFFSET,
     TYPE,
+    VALUE_SKIP,
     SolixMqttCommands,
 )
 from .mqttmap import SOLIXMQTTMAP
@@ -1173,6 +1174,9 @@ def generate_mqtt_command(
                         ):
                             name = bitfield.get(NAME)
                             value = parameters.get(name)
+                            # skip field if no value provided and skip function described
+                            if value is None and bitfield.get(VALUE_SKIP):
+                                continue
                             ms = bitfield.get(MASK_STATE)
                             # Init datafield with old byte value if bitmask control and new mask_state
                             if (
@@ -1199,6 +1203,9 @@ def generate_mqtt_command(
                     hexdata.update_field(datafield)
                 else:
                     value = parameters.get(name)
+                    # skip field if no value provided and skip function described
+                    if value is None and desc.get(VALUE_SKIP):
+                        continue
                     hexdata.update_field(
                         DeviceHexDataField().update(
                             value=value,

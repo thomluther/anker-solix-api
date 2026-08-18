@@ -75,6 +75,9 @@ FEATURES = {
     # SolixMqttCommands.pps_custom_schedule: MODELS,  # TODO: Enable once fully supported
     # SolixMqttCommands.pps_tou_schedule: MODELS,  # TODO: Enable once fully supported
     SolixMqttCommands.backup_soc: MODELS,
+    SolixMqttCommands.backup_charge_storm_guard: MODELS,
+    SolixMqttCommands.backup_charge_plan: MODELS,
+    SolixMqttCommands.backup_charge_timestamps: MODELS,
 }
 
 

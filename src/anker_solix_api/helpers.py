@@ -155,6 +155,19 @@ def convert_time_minutes(val: str | float | time) -> int | time | None:
     return None
 
 
+def convert_isotimestamp(
+    val: str | float, output_fmt: str = "%Y-%m-%d %H:%M:%S"
+) -> str | int | None:
+    """Convert the given iso time or epoche timestamp into the opposite. ms will be ignored."""
+    if isinstance(val, str):
+        with contextlib.suppress(ValueError):
+            return int(datetime.fromisoformat(val).astimezone().timestamp())
+    if isinstance(val, int | float):
+        with contextlib.suppress(ValueError):
+            return datetime.fromtimestamp(val).astimezone().strftime(output_fmt)
+    return None
+
+
 def get_enum_name(
     enum_class: Enum, value: Any, default: Any | None = None
 ) -> Any | None:

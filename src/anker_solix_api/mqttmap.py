@@ -21,6 +21,9 @@ from .mqttcmdmap import (
     CMD_AC_OUTPUT_TIMEOUT_SEC,
     CMD_AC_PORT_SWITCH,
     CMD_BACKUP_CHARGE_PLAN,
+    CMD_BACKUP_PLAN_TIMESTAMPS_V2,
+    CMD_BACKUP_STORM_GUARD_SWITCH_V2,
+    CMD_BACKUP_SWITCH_V2,
     CMD_BATTERY_CHARGE_LIMITS,
     CMD_CAR_BATTERY_TYPE,
     CMD_CHARGER_CLOCK_DISPLAY,
@@ -898,6 +901,7 @@ _A1783_0421 = {
             },
             "01": {
                 NAME: "charging_status_a5_1",  # (0-3): mirrors a3
+                NAME: "charging_status",  # 0=standby, 1=discharge, 2=Charge, 3= Sleep?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
@@ -1058,14 +1062,14 @@ _A1783_0421 = {
         }
     },
     "d9": {
-        # AS220: TOU mode selector + backup + Time-of-Use plan
+        # TOU mode selector + backup + Time-of-Use plan
         BYTES: [
             {
-                NAME: "usage_mode_raw",  # 0=Standard/UPS, 3=Time-of-Use
+                NAME: "active_plan",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "usage_mode",  # 0=Standard, 1=Time-of-Use
+                NAME: "usage_mode",  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -1073,11 +1077,11 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "tou_max_soc?",  # max_soc % (for tou usage?)
+                NAME: "backup_charge_soc",  # changed with max_soc % (for tou and backup usage)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "tou_min_soc?",  # min_soc % (for tou usage?)
+                NAME: "backup_discharge_soc",  # changed with min_soc % (for backup discharge?)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             # Byte 5 is the tou schedule slot count and 6+ holds the TOU schedule:
@@ -1094,7 +1098,11 @@ _A1783_0421 = {
                 ),
             },
             {
-                NAME: "unknown_backup_state_d9_1",
+                NAME: "backup_status", # 0: inactive, 1: planned charge: 2: storm guard charge
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "backup_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -1102,16 +1110,24 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "unknown_backup_state_d9_3",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
                 NAME: "backup_start_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
             },
             {
                 NAME: "backup_end_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+            },
+            {
+                NAME: "old_backup_start_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+            },
+            {
+                NAME: "old_backup_end_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
             },
         ]
     },
@@ -1131,7 +1147,7 @@ _A1783_0421 = {
             },
         }
     },
-    "fd": {NAME: "unknown_timestamp_fd"},
+    "fd": {NAME: "storm_guard_timestamp", SIGNED: False},
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -2106,8 +2122,8 @@ _A17C5_0405 = {
     "bc": {NAME: "grid_to_battery_power"},
     "bd": {NAME: "max_load"},
     "be": {NAME: "max_load_legal"},
-    "bf": {NAME: "backup_start_timestamp"},
-    "c0": {NAME: "backup_end_timestamp"},
+    "bf": {NAME: "backup_start_timestamp", SIGNED: False},
+    "c0": {NAME: "backup_end_timestamp", SIGNED: False},
     "c2": {NAME: "photovoltaic_power?"},
     "c4": {NAME: "grid_power_signed"},
     "c5": {NAME: "home_demand"},
@@ -2486,13 +2502,15 @@ _AX170_0405 = (
         "b5": {
             NAME: "backup_soc"
         },  # Minimum Self Consumption reserve %, Not overall reserve. Battery will stay above this level, unless grid fault.
-        "b7": {NAME: "max_soc?"},  # Statix at 100, Maybe battery health, but from which device??
+        "b7": {
+            NAME: "max_soc?"
+        },  # Statix at 100, Maybe battery health, but from which device??
         "b8": {NAME: "usage_mode"},  # 2:?, 4:backup_charge, 5:?, 9:?, 10:?
         "b9": {
             NAME: "main_breaker_limit?"
         },  # Static, maybe installation setting, It's 200 on tests, so its a good chance its the 200AMP?
-        "bf": {NAME: "backup_start_timestamp"},
-        "c0": {NAME: "backup_end_timestamp"},
+        "bf": {NAME: "backup_start_timestamp", SIGNED: False},
+        "c0": {NAME: "backup_end_timestamp", SIGNED: False},
         "c2": {NAME: "input_power_total"},  # PV + Grid
         "c3": {
             NAME: "use_time_band?"
@@ -2515,7 +2533,7 @@ _AX170_0405 = (
         "ce": {NAME: "generator_plug_status"},
         "d4": {NAME: "pv_power_3rd_party"},  # Power from external solar to home?
         "d6": {NAME: "generator_power"},  # Power from external DC generator
-        "d8": {NAME: "voltage_l1l2"}, # fluctuates around 220
+        "d8": {NAME: "voltage_l1l2"},  # fluctuates around 220
         "dd": {NAME: "display_timeout_seconds"},
         "de": {
             NAME: "max_load_limit_total?"
@@ -2532,11 +2550,9 @@ _AX170_0405 = (
                     TYPE: DeviceHexDataTypes.bin.value,
                     LENGTH: 36,
                     STATE_CONVERTER: lambda value, state, cache: (
-                        convert_circuit_setup(value)
-                        if value is not None
-                        else state
+                        convert_circuit_setup(value) if value is not None else state
                     ),
-                }
+                },
             }
         },
         "e4": {
@@ -3337,7 +3353,7 @@ _AS220_0421 = {
     "a3": {
         BYTES: {
             "00": {
-                NAME: "battery_status",
+                NAME: "charging_status",  # (0-3): Inactive (0), DC Input (1), AC Input (2), Both (3)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
@@ -3423,7 +3439,7 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "charging_status_a5_1",  # (0-3): Mirrors a3
+                NAME: "battery_status",  # 0=standby, 1=discharge, 2=Charge,
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
@@ -3503,10 +3519,10 @@ _AS220_0421 = {
         }
     },
     "d9": {
-        # AS220: TOU mode selector + backup + Time-of-Use plan
+        # TOU mode selector + backup + Time-of-Use plan
         BYTES: [
             {
-                NAME: "usage_mode_raw",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
+                NAME: "active_plan",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -3518,11 +3534,11 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "tou_max_soc?",  # max_soc % (for tou usage?)
+                NAME: "backup_charge_soc",  # changed with max_soc % (for tou and backup usage)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "tou_min_soc?",  # min_soc % (for tou usage?)
+                NAME: "backup_discharge_soc",  # changed with min_soc % (for backup discharge?)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             # Byte 5 is the tou schedule slot count and 6+ holds the TOU schedule:
@@ -3539,7 +3555,11 @@ _AS220_0421 = {
                 ),
             },
             {
-                NAME: "unknown_backup_state_d9_1",
+                NAME: "backup_status", # 0: inactive, 1: planned charge: 2: storm guard charge
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            {
+                NAME: "backup_switch",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -3547,16 +3567,24 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "unknown_backup_state_d9_3",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
                 NAME: "backup_start_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
             },
             {
                 NAME: "backup_end_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+            },
+            {
+                NAME: "old_backup_start_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+            },
+            {
+                NAME: "old_backup_end_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
             },
         ]
     },
@@ -3606,7 +3634,7 @@ _AS220_0421 = {
             },
         }
     },
-    "fd": {NAME: "unknown_fd_timestamp"},
+    "fd": {NAME: "storm_guard_timestamp"},
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -3749,8 +3777,8 @@ _DOCK_0420 = (
     | {
         "c1": {NAME: "main_device_sn?"},
         "c2": {NAME: "pv_power_3rd_party"},
-        "c3": {NAME: "backup_start_timestamp"},
-        "c4": {NAME: "backup_end_timestamp"},
+        "c3": {NAME: "backup_start_timestamp", SIGNED: False},
+        "c4": {NAME: "backup_end_timestamp", SIGNED: False},
     }
 )
 
@@ -3928,7 +3956,7 @@ _EV_CHARGER_0410 = {
     "ac": {
         NAME: "charging_mode?"
     },  # off/paused (0) / grid_charge (1) ? / solar_charge (7)
-    "ab": {NAME: "charging_start_timestamp"},
+    "ab": {NAME: "charging_start_timestamp", SIGNED: False},
     "ad": {NAME: "plug_countdown_seconds"},
     "ae": {NAME: "start_countdown_seconds"},
     "af": {NAME: "charging_window_seconds"},
@@ -4638,6 +4666,17 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS C2000 Gen 2
     "A1783": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0421 etc
+        "005e": {
+            # Backup charge plan command group
+            COMMAND_LIST: [
+                SolixMqttCommands.backup_charge_storm_guard,  # field a3, a4, a5
+                SolixMqttCommands.backup_charge_plan,  # field a3-a5
+                SolixMqttCommands.backup_charge_timestamps,  # field a6-a8
+            ],
+            SolixMqttCommands.backup_charge_storm_guard: CMD_BACKUP_STORM_GUARD_SWITCH_V2,
+            SolixMqttCommands.backup_charge_plan: CMD_BACKUP_SWITCH_V2,
+            SolixMqttCommands.backup_charge_timestamps: CMD_BACKUP_PLAN_TIMESTAMPS_V2,
+        },
         "0090": {
             # TOU command group
             COMMAND_LIST: [
@@ -4813,6 +4852,17 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS C2000X Gen 2
     "A1785": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0421 etc
+        "005e": {
+            # Backup charge plan command group
+            COMMAND_LIST: [
+                SolixMqttCommands.backup_charge_storm_guard,  # field a3, a4, a5
+                SolixMqttCommands.backup_charge_plan,  # field a3-a5
+                SolixMqttCommands.backup_charge_timestamps,  # field a6-a8
+            ],
+            SolixMqttCommands.backup_charge_storm_guard: CMD_BACKUP_STORM_GUARD_SWITCH_V2,
+            SolixMqttCommands.backup_charge_plan: CMD_BACKUP_SWITCH_V2,
+            SolixMqttCommands.backup_charge_timestamps: CMD_BACKUP_PLAN_TIMESTAMPS_V2,
+        },
         "0090": {
             # TOU command group
             COMMAND_LIST: [
@@ -5017,69 +5067,16 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS S2000 - matches A1783 (C2000 Gen 2); 0101-0103 controls inherited, not yet validated
     "AS220": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        "005e": CMD_COMMON_V2  # Backup plan, includes storm guard
-        | {
-            "a3": {
-                NAME: "active_usage_mode_raw",  # is this the actual usage mode raw setting?
-                TYPE: DeviceHexDataTypes.ui.value,
-                STATE_NAME: "usage_mode_raw?",  # is this the actual usage mode raw setting?
-                VALUE_STATE: "usage_mode_raw?",
-                VALUE_OPTIONS: {  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
-                    "standard": 0,  # UPS mode
-                    "time_of_use": 3,
-                    "self_consumption": 4,
-                    "custom": 5,
-                },
-            },
-            "a4": {
-                NAME: "set_unknown_switch_005e_a4",
-                TYPE: DeviceHexDataTypes.ui.value,
-                STATE_NAME: "unknown_backup_switch_d9_1?",
-                VALUE_STATE: "unknown_backup_switch_d9_1?",
-                VALUE_OPTIONS: {"off": 0, "on": 1},
-            },
-            "a5": {
-                NAME: "set_storm_guard_switch",
-                TYPE: DeviceHexDataTypes.ui.value,
-                STATE_NAME: "storm_guard_switch",
-                VALUE_STATE: "storm_guard_switch",
-                VALUE_OPTIONS: {"off": 0, "on": 1},
-            },
-            "a6": {
-                NAME: "set_unknown_switch_005e_a6",
-                TYPE: DeviceHexDataTypes.ui.value,
-                STATE_NAME: "unknown_switch_005e_a6",
-                VALUE_STATE: "unknown_switch_005e_a6",
-                VALUE_OPTIONS: {"off": 0, "on": 1},
-            },
-            "a7": {
-                TYPE: DeviceHexDataTypes.bin.value,
-                LENGTH: 10,
-                BYTES: {
-                    "00": {
-                        NAME: "set_backup_max_soc",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                        VALUE_FOLLOWS: "max_soc",
-                    },
-                    "01": {
-                        NAME: "set_unknown_a7_01?",  # only 0 observed so far
-                        TYPE: DeviceHexDataTypes.ui.value,
-                        VALUE_DEFAULT: 0,
-                    },
-                    "02": {
-                        NAME: "set_backup_start_timestamp",
-                        TYPE: DeviceHexDataTypes.var.value,
-                        STATE_NAME: "backup_start_timestamp",
-                        VALUE_STATE: "backup_start_timestamp",
-                    },
-                    "06": {
-                        NAME: "set_backup_end_timestamp",
-                        TYPE: DeviceHexDataTypes.var.value,
-                        STATE_NAME: "backup_end_timestamp",
-                        VALUE_STATE: "backup_end_timestamp",
-                    },
-                },
-            },
+        "005e": {
+            # Backup charge plan command group
+            COMMAND_LIST: [
+                SolixMqttCommands.backup_charge_storm_guard,  # field a3, a4, a5
+                SolixMqttCommands.backup_charge_plan,  # field a3-a5
+                SolixMqttCommands.backup_charge_timestamps,  # field a6-a8
+            ],
+            SolixMqttCommands.backup_charge_storm_guard: CMD_BACKUP_STORM_GUARD_SWITCH_V2,
+            SolixMqttCommands.backup_charge_plan: CMD_BACKUP_SWITCH_V2,
+            SolixMqttCommands.backup_charge_timestamps: CMD_BACKUP_PLAN_TIMESTAMPS_V2,
         },
         "0090": {
             # TOU command group
@@ -5328,6 +5325,14 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _AS220_0421,
+        # Interval: irregular, may only be sent once backup plan active
+        "0425": {
+            "a2": {
+                NAME: "storm_guard_status?"
+            },  # 10 and 11 seen, same value as in 0c25 cloud command
+            "a3": {NAME: "backup_start_timestamp", SIGNED: False},
+            "a4": {NAME: "backup_end_timestamp", SIGNED: False},
+        },
         # Interval: Irregular, triggered on app actions
         "0504": {
             "a2": {

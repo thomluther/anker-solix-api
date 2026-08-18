@@ -1,6 +1,7 @@
 """Define mapping for MQTT command messages and field conversions."""
 
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from typing import Final
 
 from .apitypes import DeviceHexDataTypes
@@ -60,7 +61,10 @@ VALUE_OPTIONS: Final[str] = (
 )
 VALUE_DEFAULT: Final[str] = "value_default"  # Defines a default value for the field
 VALUE_FOLLOWS: Final[str] = (
-    "value_follows"  # defines setting name the value depends on, the options need to define a map for the dependencies
+    "value_follows"  # defines setting name the value depends on, the options may define a map for the dependencies or the state converter
+)
+VALUE_SKIP: Final[str] = (
+    "value_skip"  # optional lambda function (value, cache) to skip the value if function is true
 )
 VALUE_STATE: Final[str] = (
     "value_state"  # Defines a state name that should be used to obtain the value if found
@@ -195,6 +199,8 @@ class SolixMqttCommands:
     charger_theme_custom: str = "charger_theme_custom"
     circuit_priority: str = "circuit_priority"
     backup_charge_plan: str = "backup_charge_plan"
+    backup_charge_storm_guard: str = "backup_charge_storm_guard"
+    backup_charge_timestamps: str = "backup_charge_timestamps"
     tbd_switch: str = "tbd_switch"
 
     def asdict(self) -> dict:
@@ -1012,6 +1018,7 @@ CMD_SB_USAGE_MODE = (
         "a6": {
             NAME: "set_timestamp_backup_start",
             TYPE: DeviceHexDataTypes.var.value,
+            SIGNED: False,
             STATE_NAME: "timestamp_backup_start",
         },
         "a6_mode_8": {
@@ -1072,6 +1079,7 @@ CMD_SB_USAGE_MODE = (
         "a7": {
             NAME: "set_timestamp_backup_end",
             TYPE: DeviceHexDataTypes.var.value,
+            SIGNED: False,
             STATE_NAME: "timestamp_backup_end",
         },
     }
@@ -2194,10 +2202,10 @@ CMD_CIRCUIT_PRIORITY = CMD_COMMON | {
 }
 
 CMD_BACKUP_CHARGE_PLAN = CMD_COMMON | {
-    # Command: AX170 backup charge plan
+    # Command: backup charge plan
     COMMAND_NAME: SolixMqttCommands.backup_charge_plan,
     "a2": {
-        NAME: "set_usage_mode?",
+        NAME: "set_plan_id",  # 4: backup_plan
         TYPE: DeviceHexDataTypes.ui.value,
         VALUE_OPTIONS: {"backup": 4},
         VALUE_DEFAULT: 4,
@@ -2243,6 +2251,7 @@ CMD_BACKUP_CHARGE_PLAN = CMD_COMMON | {
             "02": {
                 NAME: "set_backup_start_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
                 VALUE_MIN: 0,
                 VALUE_MAX: 0xFFFFFFFF,
                 STATE_NAME: "backup_start_timestamp",
@@ -2251,6 +2260,7 @@ CMD_BACKUP_CHARGE_PLAN = CMD_COMMON | {
             "06": {
                 NAME: "set_backup_end_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
                 VALUE_MIN: 0,
                 VALUE_MAX: 0xFFFFFFFF,
                 STATE_NAME: "backup_end_timestamp",
@@ -2263,6 +2273,124 @@ CMD_BACKUP_CHARGE_PLAN = CMD_COMMON | {
         TYPE: DeviceHexDataTypes.var.value,
         STATE_NAME: "unknown_fd_pattern",
         VALUE_STATE: "unknown_fd_pattern",
+    },
+}
+
+BACKUP_CHARGE_COMMON_V2 = CMD_COMMON_V2 | {
+    # Backup charge plan common fields as used for AS220, A1785
+    "a3": {
+        NAME: "set_plan_id",  # is this the actual usage plan ID being modified?
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {  # 3=backup_plan
+            "backup": 3,
+        },
+        VALUE_DEFAULT: 3,
+    },
+    "a4": {
+        NAME: "set_backup_option_select",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"backup_switch": 0, "storm_guard_switch": 1},
+        # VALUE_DEFAULT must be set by corresponding command
+    },
+    "a5": {
+        NAME: "set_backup_option_switch",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+        # VALUE_STATE must be set by corresponding command
+    },
+}
+
+CMD_BACKUP_STORM_GUARD_SWITCH_V2 = BACKUP_CHARGE_COMMON_V2 | {
+    "a4": BACKUP_CHARGE_COMMON_V2["a4"] | {
+        VALUE_DEFAULT: 1, # Storm Guard switch option
+    },
+    "a5": BACKUP_CHARGE_COMMON_V2["a5"] | {
+        STATE_NAME: "storm_guard_switch",
+        VALUE_STATE: "storm_guard_switch",
+    },
+}
+
+CMD_BACKUP_SWITCH_V2 = BACKUP_CHARGE_COMMON_V2 | {
+    "a4": BACKUP_CHARGE_COMMON_V2["a4"] | {
+        VALUE_DEFAULT: 0, # backup switch option
+    },
+    "a5": BACKUP_CHARGE_COMMON_V2["a5"] | {
+        STATE_NAME: "backup_switch",
+        VALUE_STATE: "backup_switch",
+    },
+}
+
+CMD_BACKUP_PLAN_TIMESTAMPS_V2 = CMD_BACKUP_SWITCH_V2 | {
+    "a6": {
+        NAME: "set_backup_timestamps",  # Must provide a7 timestamps if enabled
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_DEFAULT: 1,
+    },
+    "a7": {
+        TYPE: DeviceHexDataTypes.bin.value,
+        # backup_max_soc, backup_min_soc,start_time,end_time
+        # Example: 64: 18: a8:bb:7c:6a: b8:c9:7c:6a
+        # NOTE: Field is skipped completely if a6 = 0
+        LENGTH: 10,
+        BYTES: {
+            "00": {
+                NAME: "set_backup_charge_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+                VALUE_STATE: "max_soc",
+                VALUE_MIN: 80,
+                VALUE_MAX: 100,
+                VALUE_MAX_STATE: "max_soc",
+            },
+            "01": {
+                NAME: "set_backup_discharge_soc",  # 00 if not changeable for device
+                TYPE: DeviceHexDataTypes.ui.value,
+                # VALUE_FOLLOWS: "backup_soc",
+                VALUE_DEFAULT: 0,
+            },
+            "02": {
+                NAME: "set_backup_start_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+                VALUE_MIN: 0,
+                VALUE_MAX: 0xFFFFFFFF,
+                STATE_CONVERTER: lambda value, state, cache: (
+                    value
+                    if value is not None
+                    else int(max(datetime.now().astimezone().timestamp(), state))
+                    if state is not None
+                    else state
+                ),
+                STATE_NAME: "backup_start_timestamp",
+                VALUE_STATE: "backup_start_timestamp",
+            },
+            "06": {
+                NAME: "set_backup_end_timestamp",
+                TYPE: DeviceHexDataTypes.var.value,
+                SIGNED: False,
+                VALUE_MIN: 0,
+                VALUE_MAX: 0xFFFFFFFF,
+                VALUE_MIN_STATE: "backup_start_timestamp",
+                STATE_CONVERTER: lambda value, state, cache: (
+                    value
+                    if value is not None
+                    else int(
+                        max(
+                            (
+                                cache.get("set_backup_start_timestamp")
+                                or cache.get("backup_start_timestamp")
+                            )
+                            + 60,
+                            datetime.now().astimezone().timestamp() + 60,
+                            v,
+                        )
+                    )
+                    if (v := state or cache.get("backup_end_timestamp") or 0xFFFFFFFF)
+                    else state
+                ),
+                STATE_NAME: "backup_end_timestamp",
+            },
+        },
     },
 }
 

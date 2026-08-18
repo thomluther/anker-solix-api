@@ -27,6 +27,7 @@ from anker_solix_api.apitypes import (
     SolarbankAiemsStatus,
     SolarbankLightMode,
     SolarbankUsageMode,
+    SolixBackupStatus,
     SolixBatteryStatus,
     SolixBatteryType,
     SolixBatteryVoltageType,
@@ -66,7 +67,11 @@ from anker_solix_api.apitypes import (
     SolixWorkingStatus,
 )
 from anker_solix_api.errors import AnkerSolixError
-from anker_solix_api.helpers import get_enum_name, get_solix_product_code
+from anker_solix_api.helpers import (
+    convert_isotimestamp,
+    get_enum_name,
+    get_solix_product_code,
+)
 from anker_solix_api.mqtt_device import SolixMqttDevice
 from anker_solix_api.mqtt_factory import SolixMqttDeviceFactory
 import common
@@ -180,6 +185,7 @@ class AnkerSolixApiMonitor:
         # Set configuration based on command line arguments
         self.interactive: bool = INTERACTIVE and not args.live_cloud
         self.showApiCalls: bool = args.api_calls or SHOWAPICALLS
+        self.showMqttCommands: bool = False
         self.showVehicles: bool = not args.no_vehicles
         self.use_file: bool = not args.live_cloud and INTERACTIVE
         self.api: AnkerSolixApi | None = None
@@ -275,6 +281,9 @@ class AnkerSolixApiMonitor:
                 CONSOLE.info(
                     f"[{Color.YELLOW}I{Color.OFF}]mmediate status request. Only possible if MQTT session is ON"
                 )
+                CONSOLE.info(
+                    f"[MQT{Color.YELLOW}T{Color.OFF}] command display toggle OFF (default) or ON"
+                )
             CONSOLE.info(
                 f"[{Color.YELLOW}C{Color.OFF}]ontrol MQTT device. Only possible if MQTT session is ON"
             )
@@ -298,7 +307,7 @@ class AnkerSolixApiMonitor:
             CONSOLE.info(
                 f"[{Color.YELLOW}K{Color.OFF}]ey menu, [{Color.YELLOW}D{Color.OFF}]ebug/Customi[{Color.YELLOW}Z{Color.OFF}]e cache, [{Color.YELLOW}E{Color.OFF}]V toggle, "
                 f"MQTT [{Color.YELLOW}S{Color.OFF}]ession toggle, [{Color.YELLOW}R{Color.OFF}]eal time trigger, [{Color.YELLOW}I{Color.OFF}]mmediate status, "
-                f"[{Color.YELLOW}M{Color.OFF}]qtt display toggle, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls toggle, "
+                f"[{Color.YELLOW}M{Color.OFF}]qtt display toggle, [MQT{Color.YELLOW}T{Color.OFF}] Cmd display toggle, [{Color.YELLOW}V{Color.OFF}]iew data, [{Color.YELLOW}A{Color.OFF}]pi calls toggle, "
                 f"[{Color.YELLOW}C{Color.OFF}]ontrol/[{Color.YELLOW}F{Color.OFF}]ilter device, [{Color.RED}ESC{Color.OFF}]/[{Color.RED}Q{Color.OFF}]uit"
             )
         return ""
@@ -359,6 +368,9 @@ class AnkerSolixApiMonitor:
                 CONSOLE.info(f"{Color.GREEN}Command published.{Color.OFF}")
                 if self.use_file and response:
                     CONSOLE.info(f"Mocked states:\n{json.dumps(response, indent=2)}")
+                elif self.showMqttCommands and (hexcmd := mdev.get_last_publish()):
+                    # print the decoded command
+                    CONSOLE.info(hexcmd.decode())
                 response = True
             else:
                 CONSOLE.error(f"{Color.RED}Command failed.{Color.OFF}")
@@ -1623,7 +1635,7 @@ class AnkerSolixApiMonitor:
                     f"{'Boost Status':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper()}{co} "
                 )
                 if str(m1 := cm and mqtt.get("charging_start_timestamp", "")):
-                    m1 = datetime.fromtimestamp(m1).strftime("%Y-%m-%d %H:%M:%S")
+                    m1 = convert_isotimestamp(m1)
                 if str(
                     m2 := cm and mqtt.get("charging_duration_seconds", "")
                 ).isdigit():
@@ -1917,10 +1929,13 @@ class AnkerSolixApiMonitor:
                     else ""
                 )
                 m2 = cm and mqtt.get("storm_guard_switch", "")
+                m4 = cm and mqtt.get("storm_guard_timestamp", "")
                 if m1 or str(m2):
+                    if str(m4):
+                        m4 = convert_isotimestamp(m4) or m4
                     CONSOLE.info(
                         f"{'Usage Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPpsUsageMode, m1, '----').replace('_', ' ').replace('_', ' ').title() + ' (' + (m1 or '-') + ')':<{col2}}{co} "
-                        f"{'Storm Guard':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, '---').upper()} ({str(m2) or '-'}){co}"
+                        f"{'Storm Guard':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, '---').upper()} ({str(m2) or '-'}) {m4 or ''!s}{co}"
                     )
                 m1 = (
                     cm and str(mqtt.get("usage_mode", ""))
@@ -2425,16 +2440,25 @@ class AnkerSolixApiMonitor:
                         f"{str(m5) and (c or cm)}({get_enum_name(SolixSwitchMode, m5, str(m5) or '---').upper():>3}{')':<{col2 - 18}}{co} "
                         f"{'Weekdays':<{col3}}: {m2 and (c or cm)}{m2}{co}"
                     )
+                m1 = cm and mqtt.get("backup_switch", "")
+                m3 = cm and str(mqtt.get("backup_status", ""))
+                m2 = cm and str(mqtt.get("backup_charge_soc", ""))
+                if str(m1) or m2:
+                    CONSOLE.info(
+                        f"{'Backup Sw./Stat':<{col1}}: {str(m1) and (c or cm)}{get_enum_name(SolixSwitchMode, m1, str(m1) or '---').upper():>3} / "
+                        f"{get_enum_name(SolixBackupStatus, m3, str(m3) or '-----').replace('_', ' ').title() + ' (' + m3 + ')':<{col2 - 6}}{co} "
+                        f"{'Charge SOC':<{col3}}: {m2 and (c or cm)}{m2 or '---':>4} %{co}"
+                    )
                 m1 = cm and mqtt.get("backup_start_timestamp", "")
                 m2 = cm and mqtt.get("backup_end_timestamp", "")
                 if str(m1) or str(m2):
                     if str(m1):
-                        m1 = datetime.fromtimestamp(m1).strftime("%Y-%m-%d %H:%M:%S")
+                        m1 = convert_isotimestamp(m1) or m1
                     if str(m2):
-                        m2 = datetime.fromtimestamp(m2).strftime("%Y-%m-%d %H:%M:%S")
+                        m2 = convert_isotimestamp(m2) or m2
                     CONSOLE.info(
-                        f"{'Backup Start':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
-                        f"{'Backup End':<{col3}}: {m2 and (c or cm)}{m2}{co}"
+                        f"{'Backup Start':<{col1}}: {m1 and (c or cm)}{m1 or '__-__-__ --:--'!s:<{col2}}{co} "
+                        f"{'Backup End':<{col3}}: {m2 and (c or cm)}{m2 or '__-__-__ --:--'!s}{co}"
                     )
                 if schedule := (c or cm) and mqtt.get("custom_mode_schedule"):
                     CONSOLE.info(f"{'-' * 80}")
@@ -2983,13 +3007,13 @@ class AnkerSolixApiMonitor:
                         f"Active MQTT speed: {Color.CYAN}{self.folderdict.get('speed', 1):.2f}{co}, Message cycle duration: {Color.CYAN}"
                         f"{self.folderdict.get('duration', 0) / self.folderdict.get('speed', 1):.0f} sec ({self.folderdict.get('progress', 0):6.2f} %){Color.OFF}, "
                         f"Timestamp cycle: {Color.CYAN}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}, "
-                        f"Timestamp: {Color.CYAN}{datetime.fromtimestamp(self.folderdict.get('timestamp', 0)).strftime('%Y-%m-%d %H:%M:%S')}{Color.OFF}"
+                        f"Timestamp: {Color.CYAN}{convert_isotimestamp(self.folderdict.get('timestamp', 0))}{Color.OFF}"
                     )
                 else:
                     CONSOLE.info(
                         f"MQTT step mode: {Color.YELLOW}{self.folderdict.get('progress', 0):6.2f} %{Color.OFF}, "
                         f"Timestamp cycle: {Color.YELLOW}{self.folderdict.get('ts_index', 0) + 1:3d} / {self.folderdict.get('timestamps', 0):3d}{Color.OFF}, "
-                        f"Timestamp: {Color.YELLOW}{datetime.fromtimestamp(self.folderdict.get('timestamp', 0)).strftime('%Y-%m-%d %H:%M:%S')}{Color.OFF}"
+                        f"Timestamp: {Color.YELLOW}{convert_isotimestamp(self.folderdict.get('timestamp', 0))}{Color.OFF}"
                     )
             else:
                 trigger_sec = (
@@ -3682,6 +3706,18 @@ class AnkerSolixApiMonitor:
                                             self.showApiCalls = True
                                         if self.use_file:
                                             break_refresh = True
+                                    elif k == "t" and not self.use_file:
+                                        # Toggle MQTT command display for live mode
+                                        if self.showMqttCommands:
+                                            CONSOLE.info(
+                                                f"{Color.RED}\nDisabling MQTT command display...{Color.OFF}"
+                                            )
+                                            self.showMqttCommands = False
+                                        else:
+                                            CONSOLE.info(
+                                                f"{Color.YELLOW}\nEnabling MQTT command display for next control...!{Color.OFF}"
+                                            )
+                                            self.showMqttCommands = True
                                     elif k == "m":
                                         # Toggle Mqtt device or Api device data display
                                         if self.api.mqttsession:

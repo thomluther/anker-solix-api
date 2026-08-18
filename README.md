@@ -53,6 +53,16 @@ The library is currently supported on
 - Python 3.13
 - Python 3.14
 
+If you install the Python runtime on MacOS (especially 3.14), make sure to complete also the root CA certificate installation as described in [Python on MacOS installation steps](https://docs.python.org/3.14/using/mac.html#installation-steps).
+
+Without proper Python root CA's installed, you may see errors like this on Api authentication since the Api requires secure HTTP:
+```shell
+Cannot connect to host ankerpower-api.anker.com:443 ssl:True
+[SSLCertVerificationError: (1, '[SSL: CERTIFICATE_VERIFY_FAILED]
+certificate verify failed: unable to get local issuer certificate')]
+```
+More details on this behavior can be found in issue [#336](https://github.com/thomluther/anker-solix-api/issues/336)
+
 # Required libraries
 
 The dependencies of this project are `cryptography`, `aiohttp`, `aiofiles` and `paho-mqtt` for the Api library modules.

@@ -21,7 +21,7 @@ from anker_solix_api.apitypes import (
     SolixPpsLoadMode,
     SolixTariffTypes,
 )
-from anker_solix_api.helpers import get_enum_name, round_by_factor
+from anker_solix_api.helpers import convert_isotimestamp, get_enum_name, round_by_factor
 from anker_solix_api.mqtt_device import SolixMqttDevice
 from anker_solix_api.mqttcmdmap import (
     LENGTH,
@@ -154,7 +154,7 @@ def print_field_values(fieldmap: dict, print_topics: bool = False) -> None:
         if key != "topics":
             # convert timestamps to readable data and time for printout
             if "timestamp" in key and isinstance(value, int | float):
-                value = f"{value!s} ({datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')})"
+                value = f"{value!s} ({convert_isotimestamp(value)})"
             elif key.endswith("_settings"):
                 # print integer as bitmask
                 value = f"{value!s} ({value:08b})"
@@ -244,8 +244,8 @@ def print_schedule(schedule: dict) -> None:
             )
             for slot in ranges:
                 CONSOLE.info(
-                    f"{datetime.datetime.fromtimestamp(slot.get('start_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}} "
-                    f"{datetime.datetime.fromtimestamp(slot.get('end_time', 0), datetime.UTC).astimezone().strftime('%Y-%m-%d %H:%M'):<{t10 + t10}}"
+                    f"{convert_isotimestamp(slot.get('start_time', 0), '%Y-%m-%d %H:%M'):<{t10 + t10}} "
+                    f"{convert_isotimestamp(slot.get('end_time', 0), '%Y-%m-%d %H:%M'):<{t10 + t10}}"
                 )
         if rate_plan := plan.get(SolarbankRatePlan.use_time) or []:
             tariffs = ["High", "Medium", "Low", "Valley"]
@@ -563,6 +563,9 @@ def query_mqtt_command(  # noqa: C901
             elif state_name.endswith("_time"):
                 # special case for fields indicating (seconds), minutes, hours per byte
                 value_info = f"{Color.YELLOW}({'00:00-23:59' if 0 <= desc.get(VALUE_MAX, 0) <= 5947 else '00:00:00-23:59:59'})"
+            elif state_name.endswith("_timestamp"):
+                # special case for fields indicating a timestamp value
+                value_info = f"{Color.YELLOW}({'YYYY-MM-DD HH:MM:SS'})"
             elif (converter := desc.get(STATE_CONVERTER)) and desc.get(LENGTH, 0) == 1:
                 # special case for fields indicating bitmask for a list
                 value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
@@ -586,6 +589,9 @@ def query_mqtt_command(  # noqa: C901
                     and (v := v(None, None, mdev.get_status(fromFile=toFile)))
                     is not None
                 ):
+                    if state_name.endswith("_timestamp"):
+                        # special case for fields indicating a timestamp value
+                        v = convert_isotimestamp(v)
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
                 while True:
                     if prompt:
@@ -607,6 +613,9 @@ def query_mqtt_command(  # noqa: C901
                     elif sel.startswith(("[", "{")):
                         with contextlib.suppress(json.decoder.JSONDecodeError):
                             sel = json.loads(sel)
+                    elif state_name.endswith("_timestamp"):
+                        # convert string into timestamp value
+                        sel = convert_isotimestamp(sel)
                     else:
                         sel = sel.strip("'\"")
                     if (
@@ -632,12 +641,15 @@ def query_mqtt_command(  # noqa: C901
             elif state_name.endswith("_time"):
                 # special case for fields indicating (seconds), minutes, hours per byte
                 value_info = f"{Color.YELLOW}({'00:00-23:59' if 0 <= desc.get(VALUE_MAX, 0) <= 5947 else '00:00:00-23:59:59'})"
+            elif state_name.endswith("_timestamp"):
+                # special case for fields indicating a timestamp value
+                value_info = f"{Color.YELLOW}({'YYYY-MM-DD HH:MM:SS'})"
             elif (converter := desc.get(STATE_CONVERTER)) and desc.get(LENGTH, 0) == 1:
                 # special case for fields indicating bitmask for a list
                 value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
                     ", ", "|"
                 )
-            elif converter:
+            elif converter and not desc.get(VALUE_FOLLOWS):
                 # special case for complex prompts and value structures
                 value_info = ""
             elif (v := desc.get(VALUE_MIN)) is not None:
@@ -653,6 +665,9 @@ def query_mqtt_command(  # noqa: C901
                 if (v := desc.get(VALUE_STATE)) is not None and (
                     state := mdev.get_status(fromFile=toFile).get(v)
                 ) is not None:
+                    if state_name.endswith("_timestamp"):
+                        # special case for fields indicating a timestamp value
+                        state = convert_isotimestamp(state)
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use last state ({Color.GREEN}{state}{Color.OFF})"
                 elif (v := desc.get(VALUE_FOLLOWS)) is not None:
                     state = (mdev.get_status(fromFile=toFile) | parameters).get(v)
@@ -661,10 +676,16 @@ def query_mqtt_command(  # noqa: C901
                         # get follow state from option map
                         state = options.get(state)
                     elif callable(converter := desc.get(STATE_CONVERTER)):
-                        state = converter(state, None, mdev.get_status(fromFile=toFile))
+                        state = converter(None, state, mdev.get_status(fromFile=toFile))
                     if state is not None:
+                        if state_name.endswith("_timestamp"):
+                            # special case for fields indicating a timestamp value
+                            state = convert_isotimestamp(state)
                         value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use follow state ({Color.GREEN}{state}{Color.OFF})"
                 elif (v := desc.get(VALUE_DEFAULT)) is not None:
+                    if state_name.endswith("_timestamp"):
+                        # special case for fields indicating a timestamp value
+                        v = convert_isotimestamp(v)
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
                 while True:
                     if prompt:
@@ -686,6 +707,9 @@ def query_mqtt_command(  # noqa: C901
                     elif sel.startswith(("[", "{")):
                         with contextlib.suppress(json.decoder.JSONDecodeError):
                             sel = json.loads(sel)
+                    elif state_name.endswith("_timestamp"):
+                        # convert string into timestamp value
+                        sel = convert_isotimestamp(sel)
                     else:
                         sel = sel.strip("'\"")
                     if (
