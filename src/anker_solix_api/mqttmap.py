@@ -672,10 +672,15 @@ _A1783_0421 = {
         BYTES: {
             "00": {
                 # Battery status: Inactive (0), Discharging (1), Charging (2) -- the app
-                # calls it workStatus and also emits 5 (standby/sleep), so do not treat the
-                # set as closed. Same quantity as 0490 .23.7. NOT the source enum this
-                # entry used to document: value 1 occurs with zero input power, and
-                # simultaneous AC+DC input never produces 3.
+                # calls it workStatus, and the decompiled APK carries a matching "PPS Work
+                # Status" enum (0 idle / 1 discharge / 2 charge / 3 sleep / 4 shutdown)
+                # that agrees with this decode on 0-2 from a source independent of
+                # upstream's SolixPpsBatteryStatus. Do NOT treat the set as closed: this
+                # device also emits 5, which that enum does not define. Same quantity as
+                # 0490 .23.7. NOT the source enum this entry used to document: value 1
+                # occurs with zero input power, and simultaneous AC+DC input never
+                # produces 3. Distinct from a5.01 charge_discharge_status, which is the
+                # same tri-state but trips on any flow rather than past a threshold.
                 NAME: "battery_status",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
@@ -778,10 +783,18 @@ _A1783_0421 = {
                 # load so the sampled wattage need not be what triggered the change. What
                 # is safe either way: a3.00 flickers near the boundary, so treat it as a
                 # coarse state, not an edge-accurate one.
-                # Likely the app's chargeDischargeStatus, which shows exactly this
-                # one-sided split against workStatus in app logs; name not asserted
-                # without a co-observation against an app property dump.
-                NAME: "charging_status_a5_1",
+                # CONFIRMED as the app's chargeDischargeStatus (2026-08-19). Co-observed
+                # against the app's own property dump, where workStatus and
+                # chargeDischargeStatus appear on the SAME log line, so the comparison
+                # carries no alignment error: 5977 samples, cross-tab
+                #     ws=0 cds=0 2131 | ws=0 cds=1 1216 | ws=0 cds=2   19
+                #     ws=1 cds=1 1375 | ws=2 cds=2 1221 | ws=5 cds=0    9
+                # Same tri-state, different sensitivity -- cds trips on any flow, a3.00
+                # needs a threshold: the 1216 ws=0/cds=1 rows have a median 1 W output and
+                # the 19 ws=0/cds=2 rows a median 42 W input, while the agreeing rows sit
+                # at 37 W out / 669 W in. All 1250 disagreements run that one direction.
+                # ws=2 <-> cds=2 is exact both ways, and workStatus alone emits 5 (sleep).
+                NAME: "charge_discharge_status",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
@@ -4365,9 +4378,11 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                # Inherited from the A1783 template, where this is a superset of a3.00
-                # rather than a mirror of it. Not re-validated on AS220 hardware.
-                NAME: "charging_status_a5_1",
+                # Inherited from the A1783 template, where this is the app's
+                # chargeDischargeStatus -- the same tri-state as a3.00 but tripping on any
+                # flow rather than past a threshold. Named consistently with the A1783 so
+                # one field does not carry two names; NOT re-validated on AS220 hardware.
+                NAME: "charge_discharge_status",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
