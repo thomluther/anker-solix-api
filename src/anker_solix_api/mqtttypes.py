@@ -541,6 +541,8 @@ class DeviceHexDataField:
                     if "version" in name or "sw_" in name:
                         # convert int to string for version numbering
                         if isinstance(value, list):
+                            if fieldmap.get("reversed"):
+                                value.reverse()
                             value = ".".join(str(v) for v in value)
                         else:
                             value = ".".join(str(value))

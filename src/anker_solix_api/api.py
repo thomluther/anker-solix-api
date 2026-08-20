@@ -1178,14 +1178,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device["display_theme"] = self.get_charger_themes(
                                 deviceSn=sn
                             ).get(str(value), {})
-                except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
-                    self._logger.error(
-                        "Api %s error %s occurred when updating device details for key '%s' with value %s: %s",
+                except Exception:  # pylint: disable=broad-exception-caught
+                    self._logger.exception(
+                        "Api %s exception occurred when updating device details for key %s with value %s",
                         self.apisession.nickname,
-                        type(err),
                         key,
                         value,
-                        err,
                     )
 
             # generate extra values when certain conditions are met
@@ -1197,7 +1195,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     mqtt = device.get("mqtt_data") or {}
                     cap_change = False
                     # calculate size only once based on PN
-                    if not (size := device.get("battery_size")):
+                    if (size := device.get("battery_size")) is None:
                         size = getattr(
                             SolixDeviceCapacity, str(device.get("device_pn")), 0
                         )
@@ -1219,7 +1217,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device["battery_capacity"] = (
                             f"{size * (controller_bat + exp):.0f}"
                         )
-                    cap = device.get("battery_capacity")
+                    cap = int(device.get("battery_capacity") or 0)
                     # get total SOC, prefer value depending on overlay
                     soc = (
                         (mqtt.get("battery_soc", "") or device.get("battery_soc", ""))
@@ -1298,10 +1296,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         """Create/Update device details in api devices cache structure."""
         resp = await poll_device_details(self, fromFile=fromFile, exclude=exclude)
         # Clean up other api class devices cache if used
+        devices = set(self.devices.keys())
         if self.powerpanelApi:
-            self.powerpanelApi.recycleDevices(activeDevices=set(self.devices.keys()))
+            self.powerpanelApi.recycleDevices(
+                activeDevices=devices, extraDevices=devices
+            )
         if self.hesApi:
-            self.hesApi.recycleDevices(activeDevices=set(self.devices.keys()))
+            self.hesApi.recycleDevices(activeDevices=devices, extraDevices=devices)
         return resp
 
     def customizeCacheId(self, id: str, key: str, value: Any) -> None:

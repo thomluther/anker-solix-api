@@ -181,17 +181,18 @@ class AnkerSolixBaseApi:
                 if key in data:
                     self._update_dev(devData={"device_sn": id, key: data[key]})
                     # Ensure to update main device capacity as well if sub device was customized
-                    if (
-                        key == "battery_capacity"
-                        and value
-                        and data.get("is_subdevice")
-                        and (main := data.get("main_sn"))
-                        and (cap := (self.devices.get(main) or {}).get(key))
-                    ):
-                        # first remove any previous customization on main device
-                        (self.devices[main].get("customized") or {}).pop(key, None)
-                        # trigger calculation update
-                        self._update_dev(devData={"device_sn": main, key: cap})
+                    # NOTE: Main capacity update now handled in Api classes
+                    # if (
+                    #     key == "battery_capacity"
+                    #     and value
+                    #     and data.get("is_subdevice")
+                    #     and (main := data.get("main_sn"))
+                    #     and (cap := (self.devices.get(main) or {}).get(key))
+                    # ):
+                    #     # first remove any previous customization on main device
+                    #     (self.devices[main].get("customized") or {}).pop(key, None)
+                    #     # trigger calculation update
+                    #     self._update_dev(devData={"device_sn": main, key: cap})
             elif id == self.apisession.email:
                 data = self.account
                 customized = data.get("customized") or {}
@@ -580,10 +581,6 @@ class AnkerSolixBaseApi:
                                     # keys with value being saved as string
                                     "sub_device_sn",
                                     "local_datetime",
-                                    "hw_version",
-                                    "sw_version",
-                                    "sw_controller",
-                                    "sw_expansion",
                                     "inverter_brand",
                                     "inverter_model",
                                     "wifi_name",
@@ -617,6 +614,11 @@ class AnkerSolixBaseApi:
                                 key != "wifi_name"
                                 and not key.endswith(("_sn", "_pn", "_type", "?"))
                             )
+                        elif (
+                            key.startswith("sw_") or key.endswith("version")
+                        ) and value is not None:
+                            # strip v from version strings
+                            device_mqtt.update({key: str(value).lstrip("v").strip()})
                         elif (
                             key
                             in [
@@ -838,6 +840,7 @@ class AnkerSolixBaseApi:
                                 "theme_id",
                                 "custom_profile_number",
                                 "circuit_setup",
+                                "charging_time",
                             ]
                             or (
                                 str(key).endswith(
@@ -859,10 +862,12 @@ class AnkerSolixBaseApi:
                                         "_schedule",
                                         "_protocols",
                                         "_settings",
+                                        "_data",
                                         # "?", # Add for decoder testing in monitor
                                     )
                                 )
                             )
+                            or str(key).startswith("disaster_protection_")
                         ) and value is not None:
                             device_mqtt[key] = value
                             # determine EV charger model 3 phase capability
@@ -872,11 +877,14 @@ class AnkerSolixBaseApi:
                                     + int(check_values.get("voltage_l2", 0) > 0)
                                     + int(check_values.get("voltage_l3", 0) > 0)
                                 )
-                            elif key == "circuit_setup" and isinstance(value,dict):
+                            elif key == "circuit_setup" and isinstance(value, dict):
                                 # assign physical ids to logical groups with same id and priority
                                 for index, circuit in value.items():
-                                    group = f"{circuit.get("priority",0)!s}:{circuit.get("id",0)!s}"
-                                    circuit_groups[group] = [*circuit_groups.get(group, []), index]
+                                    group = f"{circuit.get('priority', 0)!s}:{circuit.get('id', 0)!s}"
+                                    circuit_groups[group] = [
+                                        *circuit_groups.get(group, []),
+                                        index,
+                                    ]
                                 if circuit_groups:
                                     device_mqtt["circuit_groups"] = circuit_groups
                             elif (
@@ -1059,8 +1067,9 @@ class AnkerSolixBaseApi:
                             device_mqtt["battery_efficiency"] = (
                                 f"{min(100, float(discharge) / (float(charge) + max(0, float(consumed) - float(ac_charge))) * 100):.3f}"
                             )
-                    # combine power of paired circuits
+                    # additional mappings based on keys
                     if "home_demand_circuit_01" in check_values:
+                        # combine power of paired circuits
                         # Paired circuits must be consecutive and are limited to 2
                         for group in [
                             g
@@ -1143,6 +1152,93 @@ class AnkerSolixBaseApi:
                             else:
                                 api = self
                             api._update_dev({"device_sn": sn, "battery_capacity": cap})
+                    # For power panels, make additional mappings since PPS MQTT data is limited
+                    if (self.powerpanelApi and model == "A17B1") and (
+                        pp_dev := self.powerpanelApi.devices.get(sn)
+                    ):
+                        for i in range(1, 3):
+                            if pps_sn := check_values.get(
+                                f"device_{i}_sn"
+                            ) or pp_dev.get("mqtt_data",{}).get(f"device_{i}_sn", ""):
+                                # Ensure to assign site IDs to PPS as they are not provided in Api data
+                                if not self.devices.get(pps_sn, {}).get("site_id"):
+                                    if pps_sn in self.powerpanelApi.devices:
+                                        # update only the merged device
+                                        self._update_dev(
+                                            {"device_sn": pps_sn},
+                                            siteId=pp_dev.get("site_id"),
+                                        )
+                                    else:
+                                        # add merged device to powerpanel class
+                                        pps = self.devices.get(
+                                            pps_sn, {"device_sn": pps_sn}
+                                        )
+                                        self.powerpanelApi.devices[pps_sn] = pps
+                                        # trigger initial update of required powerpanel class keys
+                                        self.powerpanelApi._update_dev(  # noqa: SLF001
+                                            {
+                                                "device_sn": pps_sn,
+                                                "device_pn": pps.get("device_pn"),
+                                                "battery_capacity": pps.get(
+                                                    "battery_capacity", 0
+                                                ),
+                                            },
+                                            siteId=pp_dev.get("site_id"),
+                                        )
+                            if pps := self.powerpanelApi.devices.get(pps_sn):
+                                pps_mqtt = {}
+                                for key, value in {
+                                    k: v
+                                    for k, v in check_values.items()
+                                    if str(k).startswith(f"device_{i}")
+                                }.items():
+                                    if key.endswith("_country_code"):
+                                        pps_mqtt["country_code"] = value
+                                    elif key.endswith("_sw_version"):
+                                        pps_mqtt["sw_version"] = (
+                                            str(value).lstrip("v").strip()
+                                        )
+                                    elif key.endswith("_status"):
+                                        pps_mqtt["charging_status"] = value
+                                    elif key.endswith("_soc"):
+                                        pps_mqtt["battery_soc"] = value
+                                    elif key.endswith("_temperature"):
+                                        pps_mqtt["temperature"] = value
+                                    elif key.endswith("_error"):
+                                        pps_mqtt["err_code"] = value
+                                    elif key.endswith("_data"):
+                                        # and isinstance(value, dict):
+                                        pps_mqtt["battery_soc"] = value.get("soc")
+                                        pps_mqtt["err_code"] = value.get("error")
+                                        # map signed power to unsigned PPS MQTT keys
+                                        if (
+                                            str(power := value.get("power", ""))
+                                            .replace("-", "", 1)
+                                            .replace(".", "", 1)
+                                            .isdigit()
+                                        ):
+                                            power = float(power)
+                                            if power >= 0:
+                                                pps_mqtt["ac_output_power"] = (
+                                                    f"{abs(power):.0f}"
+                                                )
+                                                pps_mqtt["ac_input_power"] = "0"
+                                                pps_mqtt["bat_charge_power"] = "0"
+                                            else:
+                                                pps_mqtt["ac_input_power"] = (
+                                                    f"{abs(power):.0f}"
+                                                )
+                                                pps_mqtt["bat_charge_power"] = (
+                                                    f"{abs(power):.0f}"
+                                                )
+                                                pps_mqtt["ac_output_power"] = "0"
+                                if pps_m := pps.get("mqtt_data"):
+                                    # update in place
+                                    pps_m.update(pps_mqtt)
+                                else:
+                                    # create mqtt data and notify device
+                                    pps["mqtt_data"] = pps_mqtt
+                                    self.notify_device(deviceSn=pps_sn)
                     # trigger device cache update for display theme
                     if "theme_id" in check_values and str(
                         check_values.get("theme_id")
@@ -1444,7 +1540,7 @@ class AnkerSolixBaseApi:
                 self._update_account(
                     {"products": await self.get_products(fromFile=fromFile)}
                 )
-            # Bind devices also lists shared devices, device admin cannot longer be assumed per default and must be determined
+            # Bind devices also list shared devices, device admin cannot longer be assumed per default and must be determined
             if sn := self._update_dev(device.copy()):
                 active_devices.add(sn)
         # avoid removal of passive devices from active sites, since they are not listed in bind_devices

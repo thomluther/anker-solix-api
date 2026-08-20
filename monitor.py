@@ -38,6 +38,7 @@ from anker_solix_api.apitypes import (
     SolixConnectionStatus,
     SolixCpSignalStatus,
     SolixDeviceType,
+    SolixDisasterStatus,
     SolixDisplayTimeoutMode,
     SolixEvChargerSolarMode,
     SolixEvChargerStatus,
@@ -399,20 +400,37 @@ class AnkerSolixApiMonitor:
                 break
         if isinstance(select, int):
             item = itemlist[select - 1]
-            key = input(
-                f"Enter {Color.CYAN}key{Color.OFF} to be customized in '{Color.YELLOW}{item}{Color.OFF}': "
-            )
-            value = input(
-                f"Enter '{Color.YELLOW}{key}{Color.OFF}' {Color.CYAN}value{Color.OFF} in JSON format: "
-            )
-            if value := json.loads(value.replace("'", '"') or "{}"):
+            key = None
+            while key is None:
+                select = input(
+                    f"Enter {Color.CYAN}key{Color.OFF} to be customized in '{Color.YELLOW}{item}{Color.OFF}' or [{Color.RED}C{Color.OFF}]ancel: "
+                )
+                if not select or select.upper() in ["C", "CANCEL", ""]:
+                    break
+                key = select
+            value = None
+            while key is not None and value is None:
+                select = input(
+                    f"Enter '{Color.YELLOW}{key}{Color.OFF}' {Color.CYAN}value{Color.OFF} in JSON format or [{Color.RED}C{Color.OFF}]ancel: "
+                )
+                if not select or select.upper() in ["C", "CANCEL", ""]:
+                    break
+                try:
+                    value = json.loads(select.replace("'", '"') or "{}")
+                except json.decoder.JSONDecodeError as err:
+                    CONSOLE.info(
+                        f"{Color.RED}Invalid JSON format entered{Color.OFF}: {err!s}"
+                    )
+            if value is not None:
                 self.api.customizeCacheId(id=item, key=key, value=value)
                 CONSOLE.info(
                     f"Customized part of {Color.YELLOW}{item}{Color.OFF}:\n"
                     f"{json.dumps(self.api.getCaches().get(item).get('customized') or {}, indent=2)}"
                 )
             else:
-                CONSOLE.info(f"{Color.RED}Invalid value for customization!{Color.OFF}")
+                CONSOLE.info(
+                    f"{Color.RED}Customization cancelled!{Color.OFF}"
+                )
             input(f"Hit [{Color.YELLOW}Enter{Color.OFF}] to refresh all data...")
             self.next_dev_refr = 0
             self.next_refr = datetime.now().astimezone()
@@ -577,6 +595,7 @@ class AnkerSolixApiMonitor:
             admin = dev.get("is_admin", False)
             siteid = dev.get("site_id", "")
             site = self.api.sites.get(siteid) or {}
+            details = site.get("site_details") or {}
             customized = dev.get("customized") or {}
             mdev: SolixMqttDevice = self.mqtt_devices.get(sn)
             mqtt = mdev.get_status(fromFile=self.use_file) if mdev else {}
@@ -644,7 +663,6 @@ class AnkerSolixApiMonitor:
                                 f"{'Switch 0W':<{col3}}: {'ON' if site.get('switch_0w') else 'OFF'}"
                             )
                         # System config and power limit
-                        details = site.get("site_details") or {}
                         if "legal_power_limit" in details:
                             CONSOLE.info(
                                 f"{'Legal Pwr Limit':<{col1}}: {details.get('legal_power_limit', '----'):>4} {unit:<{col2 - 5}} "
@@ -1053,7 +1071,7 @@ class AnkerSolixApiMonitor:
                     else:
                         m4 = f"{m4 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                     CONSOLE.info(
-                        f"{'Battery SoC/SoH':<{col1}}: {m1 and c}{soc} /{m3 and (c or cm)}{m3 or ' --.--':>4} {'%':<{col2 - 15}}{co} "
+                        f"{'Battery SoC/SoH':<{col1}}: {m1 and c}{soc} /{m3 and (c or cm)}{m3 or ' --.-':>6} {'%':<{col2 - 15}}{co} "
                         f"{'Min SoC / Temp':<{col3}}: {m2 and (c or cm)}{m2 or (dev.get('power_cutoff') or dev.get('output_cutoff_data') or '--')!s:>4} %{co} "
                         f"/ {m4 and (c or cm)}{m4}{co}"
                     )
@@ -1478,6 +1496,45 @@ class AnkerSolixApiMonitor:
                         f"{'':<{col2 - 12}}{co} "
                         f"{'Role Status':<{col3}}: {str(hes.get('role_status_desc', '-------')).capitalize()} ({hes.get('master_slave_status', '-')!s})"
                     )
+                if disaster := details.get("disaster_support"):
+                    countries = ",".join(
+                        [
+                            country.get("code")
+                            for country in disaster.get("support_country_code", [])
+                        ]
+                    )
+                    CONSOLE.info(
+                        f"{'Disaster Supp.':<{col1}}: {'Storm Guard' if disaster.get('support_auto_disaster') else 'None' if disaster else '------':<{col2}} "
+                        f"{'Countries':<{col3}}: {countries or '--'}"
+                    )
+                    settings = details.get("device_disaster")
+                    status = details.get("device_disaster_status")
+                    m2 = str(status.get("auto_disaster_status", ""))
+                    CONSOLE.info(
+                        f"{'Storm Guard':<{col1}}: {'Enabled' if settings.get('auto_disaster_switch') else 'Disabled':<{col2}} "
+                        f"{'SG Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
+                    )
+                    m2 = str(status.get("manual_disaster_status", ""))
+                    CONSOLE.info(
+                        f"{'Man. Backup':<{col1}}: {'Enabled' if settings.get('manual_disaster_switch') else 'Disabled':<{col2}} "
+                        f"{'Man. Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
+                    )
+                    if disaster := status.get("current_disaster_detail"):
+                        m1 = str(disaster.get("disaster_type", ""))
+                        if str(m2 := (cm and mqtt.get("backup_charge_time", "")) or disaster.get("charging_time", "")).isdigit():
+                            m2 = str(timedelta(minutes=int(m2)))
+                        CONSOLE.info(
+                            f"{'In Progress':<{col1}}: {get_enum_name(SolixBackupStatus, m1, 'unknown' if m1 else '-----').title() + ' (' + m1 + ')':<{col2}} "
+                            f"{'Charge Time':<{col3}}: {m2 and (c or cm)}{m2 or '--:--'}{co}"
+                        )
+                        if str(m1 := disaster.get("start_time", "")):
+                            m1 = convert_isotimestamp(m1) or m1
+                        if str(m2 := disaster.get("end_time", "")):
+                            m2 = convert_isotimestamp(m2) or m2
+                        CONSOLE.info(
+                            f"{'Backup Start':<{col1}}: {m1 or '----.--.-- --:--'!s:<{col2}} "
+                            f"{'Backup End':<{col3}}: {m2 or '----.--.-- --:--'!s}"
+                        )
                 if "status_desc" in dev:
                     CONSOLE.info(
                         f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} "
@@ -1552,14 +1609,15 @@ class AnkerSolixApiMonitor:
                     )
                 if "battery_capacity" in dev:
                     CONSOLE.info(
-                        f"{'Capacity':<{col1}}: {cc}{customized.get('battery_capacity') or dev.get('battery_capacity', '-----')!s:>5} {'Wh':<{col2 - 6}}{co} "
-                        f"{'Battery Count':<{col3}}: {dev.get('batCount') or '-'}"
+                        f"{'Battery Energy':<{col1}}: {cc}{dev.get('battery_energy', '-----'):>5} {'Wh':<{col2 - 6}}{co} "
+                        f"{'Capacity':<{col3}}: {cc}{customized.get('battery_capacity') or dev.get('battery_capacity', '-----')!s:>5} Wh{co}"
                     )
-                m1 = c and mqtt.get("battery_soc", "")
-                if m1 or avg:
+                m1 = cm and mqtt.get("battery_soc", "")
+                m2 = cm and str(mqtt.get("battery_count", ""))
+                if m1 or m2 or avg:
                     CONSOLE.info(
-                        f"{'Battery SoC':<{col1}}: {m1 and c}{m1 or avg.get('state_of_charge') or '---':>5} {'%':<{col2 - 6}}{co} "
-                        f"{'Battery Energy':<{col3}}: {cc}{dev.get('battery_energy', '-----'):>5} Wh{co}"
+                        f"{'Battery SoC':<{col1}}: {m1 and (c or cm)}{m1 or avg.get('state_of_charge') or '---':>5} {'%':<{col2 - 6}}{co} "
+                        f"{'Battery Count':<{col3}}: {m2 and (c or cm)}{m2 or str(dev.get('batCount', '')) or '-'}{co}"
                     )
                 if m1 := cm and mqtt.get("battery_voltage", ""):
                     m1 = f"{float(m1):6.2f}"
@@ -1923,6 +1981,24 @@ class AnkerSolixApiMonitor:
                         f"{'Display Bright.':<{col1}}: {m1 and (c or cm)}{m1 or '---':>3} {'%':<{col2 - 4}}{co} "
                         f"{'Display Timeout':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixDisplayTimeoutMode, m2, '----').replace('_', ''):>4} Sec.  (Mode: {m2 or '-'}){co}"
                     )
+                if disaster := dev.get("disaster_support"):
+                    countries = ",".join(
+                        [
+                            country.get("code")
+                            for country in disaster.get("support_country_code", [])
+                        ]
+                    )
+                    CONSOLE.info(
+                        f"{'Disaster Supp.':<{col1}}: {'Storm Guard' if disaster.get('support_auto_disaster') else 'None' if disaster else '------':<{col2}} "
+                        f"{'Countries':<{col3}}: {countries or '--'}"
+                    )
+                    settings = dev.get("device_disaster")
+                    status = dev.get("device_disaster_status")
+                    m2 = str(status.get("auto_disaster_status", ""))
+                    CONSOLE.info(
+                        f"{'Storm Guard':<{col1}}: {'Enabled' if settings.get('auto_disaster_switch') else 'Disabled':<{col2}} "
+                        f"{'SG Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
+                    )
                 m1 = (
                     cm and str(mqtt.get("usage_mode", ""))
                     if devtype == SolixDeviceType.PPS.value
@@ -2056,9 +2132,9 @@ class AnkerSolixApiMonitor:
                     else:
                         m2 = f"{m2 or '---':>4} {'°F' if mqtt.get('temp_unit_fahrenheit') else '°C'}"
                     if m3 := cm and mqtt.get("battery_soh", ""):
-                        m3 = f"{float(m3):6.2f}"
+                        m3 = f"{float(m3):6.1f}"
                     CONSOLE.info(
-                        f"{batstr + ' SoC/SoH':<{col1}}: {m1 and (c or cm)}{soc} /{m3 or ' --.--':>7} {'%':<{col2 - 16}}{co} "
+                        f"{batstr + ' SoC/SoH':<{col1}}: {m1 and (c or cm)}{soc} /{m3 or ' --.-':>6} {'%':<{col2 - 15}}{co} "
                         f"{batstr + ' Temp.':<{col3}}: {m2 and (c or cm)}{m2:>7}{co}"
                     )
                 for i in range(1, 6):
@@ -2457,8 +2533,8 @@ class AnkerSolixApiMonitor:
                     if str(m2):
                         m2 = convert_isotimestamp(m2) or m2
                     CONSOLE.info(
-                        f"{'Backup Start':<{col1}}: {m1 and (c or cm)}{m1 or '__-__-__ --:--'!s:<{col2}}{co} "
-                        f"{'Backup End':<{col3}}: {m2 and (c or cm)}{m2 or '__-__-__ --:--'!s}{co}"
+                        f"{'Backup Start':<{col1}}: {m1 and (c or cm)}{m1 or '----.--.-- --:--'!s:<{col2}}{co} "
+                        f"{'Backup End':<{col3}}: {m2 and (c or cm)}{m2 or '----.--.-- --:--'!s}{co}"
                     )
                 if schedule := (c or cm) and mqtt.get("custom_mode_schedule"):
                     CONSOLE.info(f"{'-' * 80}")
@@ -3960,6 +4036,7 @@ class AnkerSolixApiMonitor:
                                 await mqtt_task
                             except asyncio.CancelledError:
                                 CONSOLE.info("MQTT file poller task was cancelled.")
+                                raise
                         wait_task.cancel()
                         try:
                             await wait_task
@@ -4036,5 +4113,6 @@ if __name__ == "__main__":
             CONSOLE.warning("Aborted!")
     except KeyboardInterrupt:
         CONSOLE.warning("Aborted!")
-    except Exception as exception:  # pylint: disable=broad-exception-caught  # noqa: BLE001
+    except Exception as exception:  # pylint: disable=broad-exception-caught
         CONSOLE.exception("%s: %s", type(exception), exception)
+        raise

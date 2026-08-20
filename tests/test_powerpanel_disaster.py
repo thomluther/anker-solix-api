@@ -37,13 +37,13 @@ async def test_disaster_methods(myapi: AnkerSolixPowerpanelApi) -> None:
         myapi.testDir(Path(Path(__file__).parent) / "examples" / JSONFOLDER)
 
     CONSOLE.info("Backup configuration (get_device_disaster):")
-    _out(await myapi.get_device_disaster(siteId=SITE_ID, fromFile=TESTFROMFILE))
+    _out(await myapi.get_device_disaster(identifier=SITE_ID, fromFile=TESTFROMFILE))
 
     CONSOLE.info("Backup status (get_device_disaster_status):")
-    _out(await myapi.get_device_disaster_status(siteId=SITE_ID, fromFile=TESTFROMFILE))
+    _out(await myapi.get_device_disaster_status(identifier=SITE_ID, fromFile=TESTFROMFILE))
 
     CONSOLE.info("Backup support info (get_disaster_support):")
-    _out(await myapi.get_disaster_support(siteId=SITE_ID, fromFile=TESTFROMFILE))
+    _out(await myapi.get_disaster_support(identifier=SITE_ID, fromFile=TESTFROMFILE))
 
 
 async def main() -> None:

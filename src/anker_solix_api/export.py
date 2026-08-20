@@ -47,7 +47,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.7.1.0"
+VERSION: str = "3.8.1.0"
 
 
 class AnkerSolixApiExport:
@@ -1376,7 +1376,7 @@ class AnkerSolixApiExport:
                         replace=[(siteId, "<siteId>")],
                     )
 
-                # Get site device disaster information
+                # Get site disaster information
                 self._logger.info("Exporting Charging site device disaster data...")
                 await self.query(
                     endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
@@ -1408,6 +1408,11 @@ class AnkerSolixApiExport:
                     replace=[(siteId, "<siteId>")],
                     admin=admin,
                 )
+
+            # Ensure stand alone devices may be queried
+            has_charging |= bool(
+                {k for k, d in self.api_power.devices.items() if not d.get("site_id")}
+            )
 
             # skip device queries if no charging system found and charging not enforced
             if not has_charging and not self.export_services & {
@@ -1500,7 +1505,7 @@ class AnkerSolixApiExport:
                             randomkeys=True,
                         )
 
-                # run for proper device types if site owner
+                # run for proper device types if eventually site owner
                 if dev_type in [
                     api.SolixDeviceType.POWERPANEL.value,
                     api.SolixDeviceType.PPS.value,
@@ -1529,6 +1534,43 @@ class AnkerSolixApiExport:
                         replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],
                         admin=admin,
                     )
+                    # Get device disaster information for devices not assigned to a site
+                    # Note: Only shared or owned standalone devices will be listed for account, admin does not need to be checked
+                    if not siteId:
+                        self._logger.info(
+                            "Exporting Charging device disaster data for standalone device..."
+                        )
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS[
+                                "get_disaster_support_func"
+                            ],
+                            filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(sn, 'device_sn')}.json",
+                            payload={
+                                "identifier_id": sn,
+                                "type": 1,
+                            },  # Validated against shared S2000 device
+                            replace=[(sn, "<deviceSn>")],
+                        )
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
+                            filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(sn, 'device_sn')}.json",
+                            payload={
+                                "identifier_id": sn,
+                                "type": 1,
+                            },  # Validated against shared S2000 device
+                            replace=[(sn, "<deviceSn>")],
+                        )
+                        await self.query(
+                            endpoint=API_CHARGING_ENDPOINTS[
+                                "get_site_device_disaster_status"
+                            ],
+                            filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(sn, 'device_sn')}.json",
+                            payload={
+                                "identifier_id": sn,
+                                "type": 1,
+                            },  # Validated against shared S2000 device
+                            replace=[(sn, "<deviceSn>")],
+                        )
 
         except (errors.AnkerSolixError, ClientError) as err:
             if isinstance(err, ClientError):
@@ -1947,6 +1989,7 @@ class AnkerSolixApiExport:
                         "_password",
                         "_mac",
                         "err_msg",
+                        "google_code",
                     ]
                 )
                 or k == "sn"

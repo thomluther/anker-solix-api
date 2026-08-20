@@ -105,6 +105,7 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                 if value := devData.get("owner_user_id"):
                     device["owner_user_id"] = value
             calc_capacity = False  # Flag whether capacity may need recalculation
+            site_id = device.get("site_id", "")
             for key, value in devData.items():
                 try:
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
@@ -196,95 +197,157 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # This key is used to trigger recalculation from customization
                         calc_capacity = True
                         device[key] = value
-                    # generate extra values when certain conditions are met
-                    if calc_capacity:
-                        # generate battery values for main device only when soc updated or battery modules count change
-                        # init calculated fields with 0 if not existing
-                        if "battery_capacity" not in device:
-                            device["battery_capacity"] = "0"
-                        is_primary = device.get("is_primary") or devData.get(
-                            "is_primary"
-                        )
-                        if (
-                            not (cap := device.get("battery_capacity")) or calc_capacity
-                        ) and is_primary:
-                            cap = 0
-                            for dev in [
-                                d
-                                for d in self.devices.values()
-                                if d.get("main_sn") == sn
-                                and d.get("is_subdevice")
-                                and str(d.get("battery_capacity")).isdigit()
-                            ]:
-                                # consider customized capacity for calculation
-                                cap += (
-                                    int(c)
-                                    if (
-                                        c := (dev.get("customized") or {}).get(
-                                            "battery_capacity"
-                                        )
-                                    )
-                                    and str(c).isdigit()
-                                    else int(dev.get("battery_capacity"))
-                                )
-                        device["battery_capacity"] = str(cap)
-                        # Calculate remaining energy in Wh and add values
-                        # Calculate energy only for primary device
-                        site_id = device.get("site_id", "")
-                        if is_primary:
-                            prim_dev = device
-                        else:
-                            prim_dev = next(
-                                iter(
-                                    [
-                                        d
-                                        for d in self.devices.values()
-                                        if site_id == d.get("site_id")
-                                        and d.get("is_primary")
-                                    ]
-                                ),
-                                {},
-                            )
-                        soc = (devData.get("average_power") or {}).get(
-                            "state_of_charge"
-                        ) or (prim_dev.get("average_power") or {}).get(
-                            "state_of_charge"
-                        )
-                        if prim_dev and soc and str(soc).isdigit():
-                            # Get optional customized capacity for correct energy calculation if adjusted externally
-                            custom_cap = 0
-                            # consider customized capacity for calculation from main devices only
-                            for dev in [
-                                d
-                                for d in self.devices.values()
-                                if site_id == d.get("site_id")
-                                and (d.get("batCount") or 0) > 0
-                                and str(d.get("battery_capacity")).isdigit()
-                            ]:
-                                custom_cap += (
-                                    int(c)
-                                    if (
-                                        c := (dev.get("customized") or {}).get(
-                                            "battery_capacity"
-                                        )
-                                    )
-                                    and str(c).isdigit()
-                                    else int(dev.get("battery_capacity"))
-                                )
-                            prim_dev["battery_energy"] = str(
-                                int(int(custom_cap) * int(soc) / 100)
-                            )
-                        calc_capacity = False
 
-                except Exception as err:  # pylint: disable=broad-exception-caught  # noqa: BLE001
-                    self._logger.error(
-                        "Api %s error %s occurred when updating device details for key %s with value %s: %s",
+                except Exception:  # pylint: disable=broad-exception-caught
+                    self._logger.exception(
+                        "Api %s exception occurred when updating device details for key %s with value %s",
                         self.apisession.nickname,
-                        type(err),
                         key,
                         value,
-                        err,
                     )
+
+            # generate extra values when certain conditions are met
+            if calc_capacity:
+                # get some data optionally from mqtt data
+                mqtt = device.get("mqtt_data") or {}
+                # init calculated fields with 0 if not existing
+                if "battery_capacity" not in device:
+                    device["battery_capacity"] = "0"
+                if "battery_energy" not in device:
+                    device["battery_energy"] = "0"
+                cap_change = False
+                # calculate size only once based on PN
+                if (size := device.get("battery_size")) is None:
+                    size = getattr(SolixDeviceCapacity, str(device.get("device_pn")), 0)
+                    device["battery_size"] = size
+                    cap_change = True
+                if (
+                    exp := device.get("sub_package_num")
+                    or mqtt.get("expansion_packs")
+                    or 0
+                ) != device.get("expansion_packs"):
+                    # update calculated exp number in Api cache
+                    device["expansion_packs"] = exp
+                    cap_change = True
+                # recalculate capacity if required
+                if cap_change and str(size).isdigit() and str(exp).isdigit():
+                    # NOTE: E10 controller has no battery, but needs 1-5 battery expansions
+                    controller_bat = 0 if device.get("device_pn") == "A17E1" else 1
+                    device["battery_capacity"] = f"{size * (controller_bat + exp):.0f}"
+                # generate battery values for main device only when soc updated or battery modules count change
+                is_primary = bool(device.get("is_primary"))
+                # get primary device to update capacity and energy values as well
+                prim_dev = (
+                    (
+                        [
+                            d
+                            for d in self.devices.values()
+                            if site_id == d.get("site_id") and d.get("is_primary")
+                        ]
+                        or [{}]
+                    )[0]
+                    if not is_primary
+                    else {}
+                )
+                if (
+                    not (cap := device.get("battery_capacity"))
+                    or cap_change
+                    or (
+                        prim_dev
+                        and device.get("customized", {}).get("battery_capacity")
+                    )
+                ):
+                    # refresh (customized) capacity from sub devices in system
+                    if not (
+                        pri_cap := (device if is_primary else prim_dev)
+                        .get("customized", {})
+                        .get("battery_capacity", 0)
+                    ):
+                        # calculate only if primary dev has no customized capacity
+                        pri_cap = 0
+                        for dev in [
+                            d
+                            for d in self.devices.values()
+                            if d.get("main_sn") == (prim_dev.get("device_sn") or sn)
+                            and d.get("is_subdevice")
+                            and str(d.get("battery_capacity")).isdigit()
+                        ]:
+                            # consider customized capacity for calculation
+                            pri_cap += (
+                                int(c)
+                                if (
+                                    c := (dev.get("customized") or {}).get(
+                                        "battery_capacity"
+                                    )
+                                )
+                                and str(c).isdigit()
+                                else int(dev.get("battery_capacity"))
+                            )
+                    if is_primary:
+                        cap = pri_cap
+                    elif prim_dev:
+                        # refresh capacity of primary in system
+                        prim_dev["battery_capacity"] = str(pri_cap)
+                device["battery_capacity"] = str(cap)
+                # Calculate remaining energy in Wh and add values
+                apisoc = device.get("battery_soc", "") or device.get(
+                    "average_power", {}
+                ).get("state_of_charge", "")
+                # get total SOC, prefer value depending on overlay
+                soc = (
+                    (mqtt.get("battery_soc", "") or apisoc)
+                    if device.get("mqtt_overlay")
+                    else (apisoc or mqtt.get("battery_soc", ""))
+                )
+                custom_cap = (
+                    int(c)
+                    if (c := device.get("customized", {}).get("battery_capacity"))
+                    and str(c).isdigit()
+                    else int(device.get("battery_capacity") or 0)
+                )
+                if soc:
+                    device["battery_energy"] = str(
+                        int(int(custom_cap) * int(soc) / 100)
+                    )
+
+                # if not primary, update the primary dev energy as well
+                if prim_dev:
+                    apisoc = prim_dev.get("battery_soc", "") or prim_dev.get(
+                        "average_power", {}
+                    ).get("state_of_charge", "")
+                    # get total SOC, prefer value depending on overlay
+                    soc = (
+                        (prim_dev.get("mqtt_data", {}).get("battery_soc", "") or apisoc)
+                        if prim_dev.get("mqtt_overlay")
+                        else (
+                            apisoc
+                            or prim_dev.get("mqtt_data", {}).get("battery_soc", "")
+                        )
+                    )
+                    if soc and str(soc).isdigit():
+                        # Get optional customized capacity for correct energy calculation if adjusted externally
+                        custom_cap = 0
+                        # consider customized capacity for calculation from main devices only
+                        for dev in [
+                            d
+                            for d in self.devices.values()
+                            if site_id == d.get("site_id")
+                            and (d.get("batCount") or 0) > 0
+                            and str(d.get("battery_capacity")).isdigit()
+                        ]:
+                            custom_cap += (
+                                int(c)
+                                if (
+                                    c := (dev.get("customized") or {}).get(
+                                        "battery_capacity"
+                                    )
+                                )
+                                and str(c).isdigit()
+                                else int(dev.get("battery_capacity"))
+                            )
+                        prim_dev["battery_energy"] = str(
+                            int(int(custom_cap) * int(soc) / 100)
+                        )
 
             self.devices.update({str(sn): device})
         return sn
@@ -948,7 +1011,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             timedelta(days=2)
                             if offset.total_seconds() == 0
                             # reset offset if significantly higher, when previous last valid entry was not really the last one due to 0 value SOC entries
-                            or future - datetime.now().astimezone() > offset + timedelta(minutes=6)
+                            or future - datetime.now().astimezone()
+                            > offset + timedelta(minutes=6)
                             else offset,
                             # set offset few seconds before future invalid time if smaller than previous offset
                             future - datetime.now().astimezone() - timedelta(seconds=5),
@@ -994,7 +1058,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     future
                     and not fromFile
                     and (
-                        future - datetime.now().astimezone() - timedelta(seconds=5) < offset
+                        future - datetime.now().astimezone() - timedelta(seconds=5)
+                        < offset
                         or offset.total_seconds == 0
                     )
                 ):
@@ -1002,8 +1067,8 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         datetime.now().astimezone() - timedelta(minutes=5)
                     ).strftime("%Y-%m-%d %H:%M:%S")
                 else:
-                    avg_data["last_check"] = datetime.now().astimezone().strftime(
-                        "%Y-%m-%d %H:%M:%S"
+                    avg_data["last_check"] = (
+                        datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S")
                     )
                 avg_data["valid_time"] = validtime.strftime("%Y-%m-%d %H:%M:%S")
                 avg_data["offset_seconds"] = round(offset.total_seconds())
@@ -1839,7 +1904,11 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
             "title": "Proportion of self-use","value":"47%","unit":"","type":"","percent":"","imported":false,"showPercent":""}],
         "percents": [{"type": "hes","value": "27%"},{"type": "solar","value": "20%"},{"type": "grid","value": "53%"}],"selfPowerPercent": "47%"}
         """
-        startDay = startDay.astimezone() if isinstance(startDay, datetime) else datetime.today().astimezone()
+        startDay = (
+            startDay.astimezone()
+            if isinstance(startDay, datetime)
+            else datetime.today().astimezone()
+        )
         # TODO: Format of start for week type is actually unknown and may have to be corrected
         data = {
             "siteId": siteId,

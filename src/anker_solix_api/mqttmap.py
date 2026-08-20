@@ -796,32 +796,34 @@ _A1783_0421 = {
                 NAME: "device_pn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
+            "26": {
+                NAME: "sw_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
+            },
         }
     },
     "a3": {
         BYTES: {
             "00": {
-                NAME: "charging_status",  # (0-3): Inactive (0), DC Input (1), AC Input (2), Both (3)
+                NAME: "work_mode",  # 0 idle / 1 discharge / 2 charge / 3 sleep / 4 shutdown / 5 ???
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
                 NAME: "ac_input_limit_max",  # Max supported charge limit, seems fix
                 TYPE: DeviceHexDataTypes.sile.value,
             },
-            "06": {
-                NAME: "unknown_a3_06",
-                TYPE: DeviceHexDataTypes.sile.value,
-            },
             "07": {
-                NAME: "unknown_a3_07",
+                NAME: "wifi_signal",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "08": {
-                NAME: "unknown_a3_08",
+                NAME: "mtu_size",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "10": {
-                NAME: "unknown_a3_10",
+                NAME: "silent_charge_power",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -834,7 +836,7 @@ _A1783_0421 = {
                 LENGTH: 4,
             },
             "04": {
-                NAME: "ac_input_limit",  # AC charge limit: 100-2400 W, step: 100
+                NAME: "ac_input_limit",  # AC charge limit: 100-1800 W, step: 100
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "06": {
@@ -900,12 +902,15 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "01": {
-                NAME: "charging_status_a5_1",  # (0-3): mirrors a3
-                NAME: "charging_status",  # 0=standby, 1=discharge, 2=Charge, 3= Sleep?
+                NAME: "battery_status",  # 0=standby, 1=discharge, 2=Charge
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "02": {
                 NAME: "battery_soc",  # Total SOC of main + Exp batteries?
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "03": { # Note: This seems to be actually 0 for A1783/85
+                NAME: "battery_soh",  # Battery SOH
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         }
@@ -917,7 +922,7 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "02": {
-                NAME: "ac_input_power_total",  # Input power total charge
+                NAME: "ac_input_power",  # Input power total charge
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "04": {
@@ -931,7 +936,7 @@ _A1783_0421 = {
                 SIGNED: False,
             },
             "08": {
-                NAME: "main_battery_soc?",  # SOC of main battery only?
+                NAME: "main_battery_soc",  # SOC of main battery only
                 TYPE: DeviceHexDataTypes.ui.value,
             },
         },
@@ -951,7 +956,7 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
-                NAME: "ac_input_power",  # mirrors a6.02
+                NAME: "pv_input_power?",  # Supposed PV input, but mirrors a6.02
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -1065,11 +1070,11 @@ _A1783_0421 = {
         # TOU mode selector + backup + Time-of-Use plan
         BYTES: [
             {
-                NAME: "active_plan",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
+                NAME: "active_plan",  # TOUSystemStatus: 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "usage_mode",  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+                NAME: "usage_mode",  # TOUSettingSystemStatus: 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -1098,7 +1103,7 @@ _A1783_0421 = {
                 ),
             },
             {
-                NAME: "backup_status", # 0: inactive, 1: planned charge: 2: storm guard charge
+                NAME: "backup_status",  # 0: inactive, 1: planned charge: 2: storm guard charge
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -1120,30 +1125,43 @@ _A1783_0421 = {
                 SIGNED: False,
             },
             {
-                NAME: "old_backup_start_timestamp",
+                NAME: "auto_backup_start_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
                 SIGNED: False,
             },
             {
-                NAME: "old_backup_end_timestamp",
+                NAME: "auto_backup_end_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
                 SIGNED: False,
             },
         ]
     },
-    "da": {
+    # "da" # Field used for screen schedule and theme settings
+    "f9": {
         BYTES: {
-            "19": {
-                NAME: "charger_status_da_10?",
-                TYPE: DeviceHexDataTypes.ui.value,
+            "00": {
+                NAME: "sw_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
             },
-            "12": {
-                NAME: "unknown_da_12?",
-                TYPE: DeviceHexDataTypes.sile.value,
+            "04": {
+                NAME: "mcu_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
             },
-            "14": {
-                NAME: "unknown_da_14?",
-                TYPE: DeviceHexDataTypes.sile.value,
+            "16": {
+                NAME: "bms_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
+            },
+            "24": {
+                NAME: "hw_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
             },
         }
     },
@@ -1765,7 +1783,7 @@ _A1790_0405 = {
         NAME: "charging_status",  # Publishes the raw integer value (0-3): Inactive (0), Solar (1), AC Input (2), Both (3)
     },
     "be": {NAME: "temperature", SIGNED: True},  # In Celsius
-    "bf": {NAME: "display_status"},  # Asleep (0), Manual Off (1), On (2)
+    "bf": {NAME: "battery_status"},  # 0=standby, 1=discharge, 2=Charge
     "c0": {NAME: "main_battery_soc"},  # Main battery SOC?
     "c1": {NAME: "battery_soh"},
     "c2": {NAME: "usbc_1_status"},
@@ -2077,7 +2095,7 @@ _A17C5_0405 = {
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
     "a3": {NAME: "main_battery_soc"},
-    "a4": {NAME: "battery_status"},  # 0: Standby; ?: Discharging; 2: Charging; ?: Sleep
+    "a4": {NAME: "battery_status"},  # 0: Standby; ?: Discharging; 2: Charging;
     "a5": {NAME: "temperature", SIGNED: True},
     "a6": {NAME: "battery_soc"},
     "a7": {NAME: "sw_version", "values": 4},
@@ -2255,7 +2273,7 @@ _AE103_0405 = {
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
     "a3": {NAME: "main_battery_soc"},
-    "a4": {NAME: "battery_status"},  # 0: Standby; ?: Discharging; 2: Charging; ?: Sleep
+    "a4": {NAME: "battery_status"},  # 0: Standby; ?: Discharging; 2: Charging;
     "a5": {NAME: "temperature", SIGNED: True},
     # "a6": {NAME: "battery_soc"},
     "a7": {NAME: "sw_version", "values": 4},
@@ -3348,38 +3366,45 @@ _AS220_0421 = {
                 NAME: "device_pn",
                 TYPE: DeviceHexDataTypes.str.value,
             },
+            "26": {
+                NAME: "sw_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
+            },
         }
     },
     "a3": {
         BYTES: {
             "00": {
-                NAME: "charging_status",  # (0-3): Inactive (0), DC Input (1), AC Input (2), Both (3)
+                NAME: "work_mode",  # 0 idle / 1 discharge / 2 charge / 3 sleep / 4 shutdown / 5 ???
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
                 NAME: "ac_input_limit_max",  # Max supported charge limit, seems fix
                 TYPE: DeviceHexDataTypes.sile.value,
             },
-            "06": {
-                NAME: "unknown_a3_06",
-                TYPE: DeviceHexDataTypes.sile.value,
-            },
             "07": {
-                NAME: "unknown_a3_07",
+                NAME: "wifi_signal",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "08": {
-                NAME: "unknown_a3_08",
+                NAME: "mtu_size",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "10": {
-                NAME: "unknown_a3_10",
+                NAME: "silent_charge_power",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
     },
     "a4": {
         BYTES: {
+            "00": {
+                NAME: "ac_output_timeout_seconds",  # disable (0), min:0, max: 86400, step 300
+                TYPE: DeviceHexDataTypes.var.value,
+                LENGTH: 4,
+            },
             "04": {
                 NAME: "ac_input_limit",  # AC charge limit: 100-2400 W, step: 100
                 TYPE: DeviceHexDataTypes.sile.value,
@@ -3473,7 +3498,7 @@ _AS220_0421 = {
                 SIGNED: False,
             },
             "08": {
-                NAME: "main_battery_soc",  # SOC of main battery only?
+                NAME: "main_battery_soc",  # SOC of main battery only
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "10": {
@@ -3501,7 +3526,7 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
-                NAME: "ac_input_power_dup?",  # AC input power (dup of a6 ac_input_power) - live-confirmed = input W
+                NAME: "pv_input_power?",  # Supposed PV input (dup of a6 ac_input_power) - live-confirmed = input W
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -3522,11 +3547,11 @@ _AS220_0421 = {
         # TOU mode selector + backup + Time-of-Use plan
         BYTES: [
             {
-                NAME: "active_plan",  # 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
+                NAME: "active_plan",  # TOUSystemStatus: 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
-                NAME: "usage_mode",  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+                NAME: "usage_mode",  # TOUSettingSystemStatus: 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -3555,7 +3580,7 @@ _AS220_0421 = {
                 ),
             },
             {
-                NAME: "backup_status", # 0: inactive, 1: planned charge: 2: storm guard charge
+                NAME: "backup_status",  # 0: inactive, 1: planned charge: 2: storm guard charge
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -3577,12 +3602,12 @@ _AS220_0421 = {
                 SIGNED: False,
             },
             {
-                NAME: "old_backup_start_timestamp",
+                NAME: "auto_backup_start_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
                 SIGNED: False,
             },
             {
-                NAME: "old_backup_end_timestamp",
+                NAME: "auto_backup_end_timestamp",
                 TYPE: DeviceHexDataTypes.var.value,
                 SIGNED: False,
             },
@@ -3631,6 +3656,23 @@ _AS220_0421 = {
             "00": {
                 NAME: "ac_output_power_switch_f0",  # dup of ac_output_power_switch - live-confirmed via isolation test
                 TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+    #"da": # Field used for screen schedule and theme settings, not supported on device
+    "f9": {
+        BYTES: {
+            "00": {
+                NAME: "sw_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
+            },
+            "24": {
+                NAME: "hw_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
             },
         }
     },
@@ -4000,8 +4042,8 @@ _X1_JSON = {
     "subSn": {NAME: "sub_device_sn"},
     "localTime": {NAME: "local_datetime"},
     "ems_data": {
-        "bs": {  # 0: Standby; 1: Charging; 2: Discharging; 3: Sleep
-            NAME: "battery_status"
+        "bs": {  # Inactive (0), Solar (1), AC Input (2), Both (3)
+            NAME: "charging_status",
         },
         "gs": {NAME: "grid_status"},  # 0: OK??
         "ps": {  # 1: On-grid; 2: Off-grid 3: Standby 4: Fault
@@ -4081,7 +4123,7 @@ _PP_JSON = {
         "90bsn": {NAME: "device_2_sn"},
         "ppsbpn": {NAME: "device_2_pn"},
         "90bv": {NAME: "device_2_sw_version"},  # "v3.5.6"
-        "90bs": {NAME: "device_2_status"},  # 2
+        "90bs": {NAME: "device_2_status"},  # 2, maybe 0: idle, 1: discharge, 2 charge
         "90bsoc": {NAME: "device_2_soc"},  # 16
         # power values
         "mcp": {NAME: "max_charge_power"},  # 8000 W
@@ -4113,7 +4155,7 @@ _PP_JSON = {
             NAME: "disaster_protection_status"
         },  # 1 while a backup plan is executing, else 0
         "dpct": {
-            NAME: "charging_time"
+            NAME: "backup_charge_time"
         },  # estimated charge time remaining, decreases with rising charge power; same value as charging_time in HTTP responses; 0 without active charge plan
         "scfg": {
             NAME: "storm_config?"
@@ -4135,8 +4177,8 @@ _PP_JSON = {
             NAME: "plant_status"
         },
         "soc": {NAME: "battery_soc"},  # 62 %
-        "b1t": {NAME: "battery_1_temperature"},
-        "bc": {NAME: "pps_count?"},  # 2
+        "b1t": {NAME: "temperature"},  # 52 °c while device 1 was 34 °C
+        "bc": {NAME: "battery_count"},  # 2
         "90s": {
             NAME: "pps_count"
         },  # 2 in 0500/0505; 0502 carries an incrementing counter in same key (see _PP_JSON_0502)
@@ -4154,7 +4196,7 @@ _PP_JSON = {
         "acc": {NAME: "country_code"},  # "US"
         "90aacc": {NAME: "device_1_country_code"},  # "US"
         "90bacc": {NAME: "device_2_country_code"},  # "US"
-        "b1e": {NAME: "battery_1_error?"},  # 0
+        "b1e": {NAME: "err_code"},  # 0
         "tu": {NAME: "temperature_unit?"},  # 1
         "ep": {
             NAME: "ep_unknown?"
@@ -4165,7 +4207,7 @@ _PP_JSON = {
         "ts": {
             NAME: "ts_unknown?"
         },  # constant 0 observed, does not change during grid outage
-        "b1s": {NAME: "battery_1_status?"},  # 0502 only, 1 observed
+        "b1s": {NAME: "device_status?"},  # 0502 only, 1 observed
         "fe": {
             NAME: "fe_energy?"
         },  # 0502 only, fluctuates non-monotonic (~268000-272000), possibly alternating per PPS
