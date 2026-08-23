@@ -541,7 +541,7 @@ def convert_pps_tou_schedule(
     Automatically detects input value type and converts accordingly. The dictionary structure:
     Byte with slot count
     Each slot has 3 bytes: tariff: (1=Peak,2=Mid,3=Off), start_hr, end_hr
-    max 6 slots are allowed in the app, the field may have max 7 slots
+    max 6 slots are allowed in the app
     The price per tariff is not part of the structure, this may be maintained by App/Cloud only
 
     Args:
@@ -594,6 +594,79 @@ def convert_pps_tou_schedule(
                 )
                 hexvalue.extend(
                     int((end[:1] or [])[0] or 0).to_bytes(byteorder="little")
+                )
+            return hexvalue
+    return None
+
+
+def convert_pps_output_schedule(
+    value: bytes | bytearray | dict, min_slots: int = 0, max_slots: int = 5
+) -> bytearray | dict | None:
+    """Convert between PPS output schedule dictionary and binary field as used in MQTT messages.
+
+    Automatically detects input value type and converts accordingly. The dictionary structure:
+    1st Byte with slot count: 0-max_slots
+    Each slot has 5 bytes: slot status (0=inactive,1=active), weekday bitmask (00-7f),
+                           output toggle: (0=0ff, 1=On), minutes of day (0-1435)
+    max 5 slots are allowed in the app
+
+    Args:
+        value: dictionary or binary with schedule structure
+        min_slots: Trailing bytes will be added if min slots > found slots (ignored for dictionary extract)
+        max_slots: Max bytes slots to be extracted, None returned if dictionary exceeds max
+
+    Returns:
+        Dictionary with schedule if input is bytes/bytearray.
+        Bytearray with schedule data if input is valid dictionary structure.
+        None if conversion failed
+
+    """
+    if isinstance(value, bytes | bytearray):
+        # Convert binary to dict
+        with contextlib.suppress(ValueError, TypeError):
+            pos = 0
+            schedule = {}
+            if slots := int.from_bytes(value[:1]):
+                schedule["slots"] = []
+                pos += 1
+            for _ in range(slots):
+                daytime = convert_time_minutes(
+                    int.from_bytes(value[pos + 3 : pos + 5], byteorder="little")
+                )
+                slot = {
+                    "active": bool(
+                        int.from_bytes(value[pos : pos + 1], byteorder="little")
+                    ),
+                    "weekdays": convert_weekdays(value[pos + 1 : pos + 2]) or [],
+                    "switch": int.from_bytes(
+                        value[pos + 2 : pos + 3], byteorder="little"
+                    ),
+                    "time": daytime.isoformat(timespec="minutes")
+                    if daytime
+                    else "00:00",
+                }
+                schedule["slots"].append(slot)
+                pos += 5
+            return schedule
+    if isinstance(value, dict):
+        # convert elements to binary structure
+        with contextlib.suppress(ValueError, TypeError):
+            hexvalue = bytearray()
+            slots = value.get("slots", [])
+            # limit count to max converted slots
+            hexvalue.extend(min(len(slots), max_slots).to_bytes(byteorder="little"))
+            # adopt slot list according to limits
+            if len(slots) < min_slots:
+                slots.extend({} for _ in range(min_slots - len(slots)))
+            slots = slots[:max_slots]
+            for slot in slots:
+                hexvalue.extend(int(slot.get("active", 0)).to_bytes(byteorder="little"))
+                hexvalue.extend(convert_weekdays(slot.get("weekdays", [])))
+                hexvalue.extend(int(slot.get("switch", 0)).to_bytes(byteorder="little"))
+                hexvalue.extend(
+                    int(
+                        min(1439, convert_time_minutes(slot.get("time", "00:00")) or 0)
+                    ).to_bytes(length=2, byteorder="little")
                 )
             return hexvalue
     return None

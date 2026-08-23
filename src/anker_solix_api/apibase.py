@@ -644,6 +644,7 @@ class AnkerSolixBaseApi:
                                 "bat_discharge_power",
                                 "battery_to_grid_power",
                                 "battery_to_home_power",
+                                "silent_charge_power",
                                 "device_output_power_signed_total",
                                 "ac_socket_power",
                                 "ac_frequency",
@@ -841,6 +842,8 @@ class AnkerSolixBaseApi:
                                 "custom_profile_number",
                                 "circuit_setup",
                                 "charging_time",
+                                "mtu_size",
+                                "active_plan",
                             ]
                             or (
                                 str(key).endswith(
@@ -1157,34 +1160,34 @@ class AnkerSolixBaseApi:
                         pp_dev := self.powerpanelApi.devices.get(sn)
                     ):
                         for i in range(1, 3):
-                            if pps_sn := check_values.get(
-                                f"device_{i}_sn"
-                            ) or pp_dev.get("mqtt_data",{}).get(f"device_{i}_sn", ""):
+                            if (
+                                pps_sn := check_values.get(f"device_{i}_sn")
+                                or pp_dev.get("mqtt_data", {}).get(f"device_{i}_sn", "")
+                            ) and not self.devices.get(pps_sn, {}).get("site_id"):
                                 # Ensure to assign site IDs to PPS as they are not provided in Api data
-                                if not self.devices.get(pps_sn, {}).get("site_id"):
-                                    if pps_sn in self.powerpanelApi.devices:
-                                        # update only the merged device
-                                        self._update_dev(
-                                            {"device_sn": pps_sn},
-                                            siteId=pp_dev.get("site_id"),
-                                        )
-                                    else:
-                                        # add merged device to powerpanel class
-                                        pps = self.devices.get(
-                                            pps_sn, {"device_sn": pps_sn}
-                                        )
-                                        self.powerpanelApi.devices[pps_sn] = pps
-                                        # trigger initial update of required powerpanel class keys
-                                        self.powerpanelApi._update_dev(  # noqa: SLF001
-                                            {
-                                                "device_sn": pps_sn,
-                                                "device_pn": pps.get("device_pn"),
-                                                "battery_capacity": pps.get(
-                                                    "battery_capacity", 0
-                                                ),
-                                            },
-                                            siteId=pp_dev.get("site_id"),
-                                        )
+                                if pps_sn in self.powerpanelApi.devices:
+                                    # update only the merged device
+                                    self._update_dev(
+                                        {"device_sn": pps_sn},
+                                        siteId=pp_dev.get("site_id"),
+                                    )
+                                else:
+                                    # add merged device to powerpanel class
+                                    pps = self.devices.get(
+                                        pps_sn, {"device_sn": pps_sn}
+                                    )
+                                    self.powerpanelApi.devices[pps_sn] = pps
+                                    # trigger initial update of required powerpanel class keys
+                                    self.powerpanelApi._update_dev(  # noqa: SLF001
+                                        {
+                                            "device_sn": pps_sn,
+                                            "device_pn": pps.get("device_pn"),
+                                            "battery_capacity": pps.get(
+                                                "battery_capacity", 0
+                                            ),
+                                        },
+                                        siteId=pp_dev.get("site_id"),
+                                    )
                             if pps := self.powerpanelApi.devices.get(pps_sn):
                                 pps_mqtt = {}
                                 for key, value in {
@@ -1960,7 +1963,7 @@ class AnkerSolixBaseApi:
                 {
                     f"price_providers_{model}": {
                         # Add poll date to verify if re-polling makes sense
-                        "date": datetime.now().strftime("%Y-%m-%d")
+                        "date": datetime.now().astimezone().strftime("%Y-%m-%d")
                     }
                     | data
                 }
@@ -2204,7 +2207,11 @@ class AnkerSolixBaseApi:
         ):
             return {}
         # validate date
-        polldate = date if isinstance(date, datetime) else datetime.now()
+        polldate = (
+            date.astimezone()
+            if isinstance(date, datetime)
+            else datetime.now().astimezone()
+        )
         data = {
             # country parameter is not required for query
             "company": provider.company,
@@ -2258,7 +2265,9 @@ class AnkerSolixBaseApi:
         ):
             return
         # consider different timezone if recognized in energy data
-        now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
+        now = datetime.now().astimezone() + timedelta(
+            seconds=site.get("energy_offset_tz") or 0
+        )
         # get existing price information
         spot_prices = (
             self.account.get(f"price_details_{str(provider).replace('/', '_')}") or {}
@@ -2335,7 +2344,9 @@ class AnkerSolixBaseApi:
             or {}
         ):
             # consider different timezone if recognized in energy data
-            now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
+            now = datetime.now().astimezone() + timedelta(
+                seconds=site.get("energy_offset_tz") or 0
+            )
             nowstring = now.strftime("%Y-%m-%d %H:%M")
             last_details = details.get("dynamic_price_details") or {}
             # get last poll time from site details
@@ -2473,7 +2484,9 @@ class AnkerSolixBaseApi:
             or {}
         ):
             # consider different timezone if recognized in energy data
-            now = datetime.now() + timedelta(seconds=site.get("energy_offset_tz") or 0)
+            now = datetime.now().astimezone() + timedelta(
+                seconds=site.get("energy_offset_tz") or 0
+            )
             thishour = (
                 (now + timedelta(hours=1)).replace(minute=0).strftime("%Y-%m-%d %H:%M")
             )

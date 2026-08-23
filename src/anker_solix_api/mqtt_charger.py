@@ -127,11 +127,12 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
                 # Remove plug lock control for cabled versions
                 self.controls.pop(SolixMqttCommands.plug_lock_switch, None)
 
-    def ev_charger_mode_state(self) -> str | None:
+    def ev_charger_mode_state(self, fromFile: bool = False) -> str | None:
         """Get the EV charger operational mode based on its status."""
-        if (status := self.mqttdata.get("ev_charger_status")) is not None:
+        cache = self.get_status(fromFile)
+        if (status := cache.get("ev_charger_status")) is not None:
             # First check if last command was boost
-            if bool(self.mqttdata.get("boost_status")):
+            if bool(cache.get("boost_status")):
                 return SolixEvChargerMode.boost_charge.name
             # Get last command from status
             # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
@@ -140,9 +141,9 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
                 SolixEvChargerStatus, str(status), SolixEvChargerStatus.unknown.name
             )
             if state == SolixEvChargerStatus.preparing.name:
-                if self.mqttdata.get("plug_countdown_seconds", 0) > 0:
+                if cache.get("plug_countdown_seconds", 0) > 0:
                     return SolixEvChargerMode.wait_plug.name
-                if self.mqttdata.get("start_countdown_seconds", 0) > 0:
+                if cache.get("start_countdown_seconds", 0) > 0:
                     return SolixEvChargerMode.wait_start.name
                 return SolixEvChargerMode.start_charge.name
             if state in [
@@ -154,15 +155,15 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
             return SolixEvChargerMode.stop_charge.name
         return None
 
-    def ev_charger_mode_options(self) -> list:
+    def ev_charger_mode_options(self, fromFile: bool = False) -> list:
         """Get the EV charger operational mode options based on its state."""
         options = set()
         status = get_enum_name(
             SolixEvChargerStatus,
-            str(self.mqttdata.get("ev_charger_status")),
+            str(self.get_status(fromFile).get("ev_charger_status")),
             SolixEvChargerStatus.unknown.name,
         )
-        if state := self.ev_charger_mode_state():
+        if state := self.ev_charger_mode_state(fromFile):
             options.add(state)
             if state in [
                 SolixEvChargerMode.wait_plug.name,
@@ -331,7 +332,9 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
                 self.sn,
                 self.pn,
                 name or number or profile_id or "",
-                json.dumps(profile, indent=2 if len(json.dumps(profile)) < 200 else None),
+                json.dumps(
+                    profile, indent=2 if len(json.dumps(profile)) < 200 else None
+                ),
             )
             # Build parameter map
             parm_map = {

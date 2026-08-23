@@ -7,6 +7,7 @@ from .helpers import (
     convert_circuit_setup,
     convert_port_protocols,
     convert_pps_custom_schedule,
+    convert_pps_output_schedule,
     convert_pps_tou_schedule,
     convert_weekdays,
 )
@@ -72,6 +73,7 @@ from .mqttcmdmap import (
     CMD_PORT_PRIORITY,
     CMD_PORT_START,
     CMD_PORT_TIMER,
+    CMD_PPS_USAGE_MODE_V2,
     CMD_REALTIME_TRIGGER,
     CMD_REVERSE_CHARGE_LIMITS,
     CMD_SB_3RD_PARTY_PV_SWITCH,
@@ -99,6 +101,7 @@ from .mqttcmdmap import (
     CMD_TEMP_UNIT,
     CMD_TEMP_UNIT_V2,
     CMD_TIMER_REQUEST,
+    CMD_TOU_PLAN_V2,
     CMD_USB_PORT_SWITCH,
     COMMAND_LIST,
     COMMAND_NAME,
@@ -807,7 +810,7 @@ _A1783_0421 = {
     "a3": {
         BYTES: {
             "00": {
-                NAME: "work_mode",  # 0 idle / 1 discharge / 2 charge / 3 sleep / 4 shutdown / 5 ???
+                NAME: "working_status",  # 0 idle / 1 discharge / 2 charge / 3 sleep / 4 shutdown / 5 ???
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
@@ -831,7 +834,7 @@ _A1783_0421 = {
     "a4": {
         BYTES: {
             "00": {
-                NAME: "ac_output_timeout_seconds",  # disable (0), min:0, max: 86400, step 300
+                NAME: "ac_output_timeout_seconds",  # disabled (0), min:0, max: 86400, step 300
                 TYPE: DeviceHexDataTypes.var.value,
                 LENGTH: 4,
             },
@@ -909,7 +912,7 @@ _A1783_0421 = {
                 NAME: "battery_soc",  # Total SOC of main + Exp batteries?
                 TYPE: DeviceHexDataTypes.ui.value,
             },
-            "03": { # Note: This seems to be actually 0 for A1783/85
+            "03": {  # Note: This seems to be actually 0 for A1783/85
                 NAME: "battery_soh",  # Battery SOH
                 TYPE: DeviceHexDataTypes.ui.value,
             },
@@ -3377,7 +3380,7 @@ _AS220_0421 = {
     "a3": {
         BYTES: {
             "00": {
-                NAME: "work_mode",  # 0 idle / 1 discharge / 2 charge / 3 sleep / 4 shutdown / 5 ???
+                NAME: "working_status",  # 0 idle / 1 discharge / 2 charge / 3 sleep / 4 shutdown / 5 ???
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
@@ -3401,7 +3404,7 @@ _AS220_0421 = {
     "a4": {
         BYTES: {
             "00": {
-                NAME: "ac_output_timeout_seconds",  # disable (0), min:0, max: 86400, step 300
+                NAME: "ac_output_timer_seconds",  # AC off timer: disabled (0), min:0, max: 86400, step 300
                 TYPE: DeviceHexDataTypes.var.value,
                 LENGTH: 4,
             },
@@ -3451,7 +3454,7 @@ _AS220_0421 = {
             },
             "26": {NAME: "country_code", TYPE: DeviceHexDataTypes.str.value, LENGTH: 2},
             "28": {
-                NAME: "ac_output_timeout_minutes",  # minutes; AS220 replaces ac_output_timeout_seconds (live: 240=4h, 720=12h)
+                NAME: "ac_output_timeout_minutes",  # minutes; AS220 Smart AC output timeout (live: 240=4h, 720=12h)
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -3528,6 +3531,10 @@ _AS220_0421 = {
             "04": {
                 NAME: "pv_input_power?",  # Supposed PV input (dup of a6 ac_input_power) - live-confirmed = input W
                 TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "07": {
+                NAME: "ac_output_timer_remaining_seconds",
+                TYPE: DeviceHexDataTypes.var.value,
             },
         }
     },
@@ -3613,6 +3620,20 @@ _AS220_0421 = {
             },
         ]
     },
+    "de": {
+        # AC Output switch schedule (live-confirmed vs app). Flexible structure!!!
+        # 0-5 time slots, each can be activated or deactivated separately
+        # per slot: active:u8 (0=disabled, 1=enabled), weekdays:u8 (bit0=Mon..bit6=Sun)
+        # per slot: switch:u8 (1=On, 2=Off), daytime_minutes:u16 LE
+        # a3  0c 04    02: 01: 5f: 01: 1e:00:  01: 04: 00: 6e:05
+        #        bin   cnt act wkd sw  00:30   act wkd sw  1390
+        NAME: "ac_output_schedule",
+        STATE_CONVERTER: lambda value, state, cache: (
+            convert_pps_output_schedule(value)
+            if value is not None
+            else convert_pps_output_schedule(state)
+        ),
+    },
     "dd": {
         # Custom-mode charge/discharge schedule (live-confirmed vs app). Flexible structure!!!
         # groups:u8  1: weekend same, 2: weekday + weekend
@@ -3659,7 +3680,7 @@ _AS220_0421 = {
             },
         }
     },
-    #"da": # Field used for screen schedule and theme settings, not supported on device
+    # "da": # Field used for screen schedule and theme settings, not supported on device
     "f9": {
         BYTES: {
             "00": {
@@ -4102,7 +4123,7 @@ _X1_JSON = {
         "mt": {NAME: "m_temperature?"},  # 38.7,
         "ct": {NAME: "c_temperature?"},  # 41,
         "wm": {
-            NAME: "work_mode"
+            NAME: "usage_mode"
         },  # 0: Self-consumption; 1: TOU; 2: Backup only, 3: 3rd party control (VPP, etc) 4. User-Defined 5. Socket Aggregation
     },
 }
@@ -5124,22 +5145,11 @@ SOLIXMQTTMAP: Final[dict] = {
             # TOU command group
             COMMAND_LIST: [
                 SolixMqttCommands.pps_usage_mode,  # field a2
+                SolixMqttCommands.pps_tou_schedule,  # field a2, a3, a4, a6, a7 => CLOUD CMD!!!
                 SolixMqttCommands.backup_soc,  # field a5
             ],
-            SolixMqttCommands.pps_usage_mode: CMD_COMMON_V2
-            | {
-                "a2": {  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
-                    NAME: "set_usage_mode",
-                    TYPE: DeviceHexDataTypes.ui.value,
-                    STATE_NAME: "usage_mode",
-                    VALUE_OPTIONS: {
-                        "standard": 0,  # UPS mode
-                        "time_of_use": 1,
-                        "self_consumption": 2,
-                        "custom": 3,
-                    },
-                },
-            },
+            SolixMqttCommands.pps_usage_mode: CMD_PPS_USAGE_MODE_V2,  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+            SolixMqttCommands.pps_tou_schedule: CMD_TOU_PLAN_V2,
             SolixMqttCommands.backup_soc: CMD_COMMON_V2
             | {
                 "a5": {
@@ -5172,6 +5182,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0093": {
             COMMAND_LIST: [
                 SolixMqttCommands.pps_custom_schedule,  # field a2
+                SolixMqttCommands.pps_output_schedule,  # field a3
                 SolixMqttCommands.silent_schedule,  # field a4
             ],
             SolixMqttCommands.pps_custom_schedule: CMD_COMMON_V2
@@ -5179,10 +5190,24 @@ SOLIXMQTTMAP: Final[dict] = {
                 "a2": {
                     NAME: "set_custom_mode_schedule",
                     TYPE: DeviceHexDataTypes.bin.value,
+                    STATE_NAME: "custom_mode_schedule",
                     STATE_CONVERTER: lambda value, state, cache: (
                         convert_pps_custom_schedule(value)
                         if value is not None
                         else convert_pps_custom_schedule(state)
+                    ),
+                },
+            },
+            SolixMqttCommands.pps_output_schedule: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_ac_output_schedule",
+                    TYPE: DeviceHexDataTypes.bin.value,
+                    STATE_NAME: "ac_output_schedule",
+                    STATE_CONVERTER: lambda value, state, cache: (
+                        convert_pps_output_schedule(value)
+                        if value is not None
+                        else convert_pps_output_schedule(state)
                     ),
                 },
             },
@@ -5251,9 +5276,10 @@ SOLIXMQTTMAP: Final[dict] = {
             # AC command group
             COMMAND_LIST: [
                 SolixMqttCommands.ac_output_switch,  # field a2
+                SolixMqttCommands.ac_output_timer,  # field a3
                 SolixMqttCommands.ac_charge_limit,  # field a4
                 SolixMqttCommands.ac_fast_charge_switch,  # field a7
-                SolixMqttCommands.ac_output_timeout_minutes,  # field aa
+                SolixMqttCommands.ac_output_timeout_minutes,  # Smart timeout field aa
             ],
             SolixMqttCommands.ac_output_switch: CMD_COMMON_V2
             | {
@@ -5262,6 +5288,17 @@ SOLIXMQTTMAP: Final[dict] = {
                     TYPE: DeviceHexDataTypes.ui.value,
                     STATE_NAME: "ac_output_power_switch",
                     VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+            SolixMqttCommands.ac_output_timer: CMD_COMMON_V2
+            | {
+                "a3": {
+                    NAME: "set_ac_output_timer_seconds",  # AC Out countdown seconds, custom range: 0-86400, step 300
+                    TYPE: DeviceHexDataTypes.var.value,
+                    STATE_NAME: "ac_output_timer_seconds",
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 86400,
+                    VALUE_STEP: 300,
                 },
             },
             SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2

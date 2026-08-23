@@ -5,7 +5,12 @@ from datetime import datetime
 from typing import Final
 
 from .apitypes import DeviceHexDataTypes
-from .helpers import convert_circuit_setup, convert_port_protocols, convert_weekdays
+from .helpers import (
+    convert_circuit_setup,
+    convert_port_protocols,
+    convert_pps_tou_schedule,
+    convert_weekdays,
+)
 
 # common mapping keys to be used for status and command descriptions
 EMBEDDED: Final[str] = (
@@ -100,6 +105,7 @@ class SolixMqttCommands:
     ac_output_mode_select: str = "ac_output_mode_select"
     ac_output_timeout_seconds: str = "ac_output_timeout_seconds"
     ac_output_timeout_minutes: str = "ac_output_timeout_minutes"
+    ac_output_timer: str = "ac_output_timer"
     dc_output_switch: str = "dc_output_switch"
     dc_12v_output_mode_select: str = "dc_12v_output_mode_select"
     dc_output_timeout_seconds: str = "dc_output_timeout_seconds"
@@ -139,8 +145,8 @@ class SolixMqttCommands:
     pps_usage_mode: str = "pps_usage_mode"
     pps_tou_schedule: str = "tou_schedule"
     pps_custom_schedule: str = "pps_custom_schedule"
+    pps_output_schedule: str = "pps_output_schedule"
     silent_schedule: str = "silent_schedule"
-    storm_guard_switch: str = "storm_guard_switch"
     sb_status_check: str = "sb_status_check"
     sb_power_cutoff_select: str = "sb_power_cutoff_select"
     sb_min_soc_select: str = "sb_min_soc_select"  # Old command: Does not change App station wide setting, needs Api request as well
@@ -1201,22 +1207,35 @@ CMD_PLUG_DELAYED_TOGGLE = (
     }
 )
 
-CMD_EV_CHARGER_MODE = CMD_COMMON | {
-    # Command: EV Charger mode selection
-    COMMAND_NAME: SolixMqttCommands.ev_charger_mode_select,
-    COMMAND_ENCODING: 2,  # encoding_type 2 seems to be required for this command message
-    # Charger Status: Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
-    "a2": {
-        NAME: "set_ev_charger_mode",  # Start(1), Stop(2), Skip Delay (3), Boost(4)
-        TYPE: DeviceHexDataTypes.ui.value,
-        VALUE_OPTIONS: {
-            "start_charge": 1,
-            "stop_charge": 2,
-            "skip_delay": 3,
-            "boost_charge": 4,
+CMD_EV_CHARGER_MODE = (
+    CMD_COMMON
+    | {
+        # Command: EV Charger mode selection
+        COMMAND_NAME: SolixMqttCommands.ev_charger_mode_select,
+        COMMAND_ENCODING: 2,  # encoding_type 2 seems to be required for this command message
+        # Charger Status: Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
+        "a2": {
+            NAME: "set_ev_charger_mode",  # Start(1), Stop(2), Skip Delay (3), Boost(4)
+            TYPE: DeviceHexDataTypes.ui.value,
+            VALUE_OPTIONS: {
+                "start_charge": 1,
+                "stop_charge": 2,
+                "skip_delay": 3,
+                "boost_charge": 4,
+            },
+            # Convert value back for mocked and different value state:
+            # Standby(0), Preparing(1), Charging(2), Charger_Paused(3), Vehicle_Paused(4), Completed (5), Reserving(6), Disabled(7), Error(8)
+            STATE_NAME: "ev_charger_status",
+            STATE_CONVERTER: lambda value, state, _: (
+                {1: 2, 2: 0, 3: 2, 4: 2}.get(
+                    value, 0
+                )  # switch to state conversion for mocked state. Boost uses different name and cannot be mocked
+                if value is not None
+                else state  # do not convert state, since that is the provided command value
+            ),
         },
-    },
-}
+    }
+)
 
 CMD_DEVICE_POWER_MODE = CMD_COMMON | {
     # Command: EV Charger device power mode
@@ -2211,22 +2230,22 @@ CMD_BACKUP_CHARGE_PLAN = CMD_COMMON | {
         VALUE_DEFAULT: 4,
     },
     "a3": {
-        NAME: "set_tbd_a3_switch",  # Disable (0) | Enable (1)
+        NAME: "set_backup_option_select",
         TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "tbd_a3_switch",
-        VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_OPTIONS: {"backup_switch": 0, "storm_guard_switch": 1},
+        # VALUE_DEFAULT must be set by corresponding command
     },
     "a4": {
-        NAME: "set_tbd_a4_switch",  # Disable (0) | Enable (1)
+        NAME: "set_backup_option_switch",
         TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "tbd_a4_switch",
         VALUE_OPTIONS: {"off": 0, "on": 1},
+        # VALUE_STATE must be set by corresponding command
     },
     "a5": {
-        NAME: "set_tbd_a5_switch",  # Disable (0) | Enable (1)
+        NAME: "set_backup_timestamps",  # Must provide a6 timestamps if enabled
         TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "tbd_a5_switch",
         VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_DEFAULT: 1,
     },
     "a6": {
         TYPE: DeviceHexDataTypes.bin.value,
@@ -2268,12 +2287,6 @@ CMD_BACKUP_CHARGE_PLAN = CMD_COMMON | {
             },
         },
     },
-    "fd": {
-        NAME: "set_unknown_fd_pattern",
-        TYPE: DeviceHexDataTypes.var.value,
-        STATE_NAME: "unknown_fd_pattern",
-        VALUE_STATE: "unknown_fd_pattern",
-    },
 }
 
 BACKUP_CHARGE_COMMON_V2 = CMD_COMMON_V2 | {
@@ -2301,20 +2314,24 @@ BACKUP_CHARGE_COMMON_V2 = CMD_COMMON_V2 | {
 }
 
 CMD_BACKUP_STORM_GUARD_SWITCH_V2 = BACKUP_CHARGE_COMMON_V2 | {
-    "a4": BACKUP_CHARGE_COMMON_V2["a4"] | {
-        VALUE_DEFAULT: 1, # Storm Guard switch option
+    "a4": BACKUP_CHARGE_COMMON_V2["a4"]
+    | {
+        VALUE_DEFAULT: 1,  # Storm Guard switch option
     },
-    "a5": BACKUP_CHARGE_COMMON_V2["a5"] | {
+    "a5": BACKUP_CHARGE_COMMON_V2["a5"]
+    | {
         STATE_NAME: "storm_guard_switch",
         VALUE_STATE: "storm_guard_switch",
     },
 }
 
 CMD_BACKUP_SWITCH_V2 = BACKUP_CHARGE_COMMON_V2 | {
-    "a4": BACKUP_CHARGE_COMMON_V2["a4"] | {
-        VALUE_DEFAULT: 0, # backup switch option
+    "a4": BACKUP_CHARGE_COMMON_V2["a4"]
+    | {
+        VALUE_DEFAULT: 0,  # backup switch option
     },
-    "a5": BACKUP_CHARGE_COMMON_V2["a5"] | {
+    "a5": BACKUP_CHARGE_COMMON_V2["a5"]
+    | {
         STATE_NAME: "backup_switch",
         VALUE_STATE: "backup_switch",
     },
@@ -2391,6 +2408,60 @@ CMD_BACKUP_PLAN_TIMESTAMPS_V2 = CMD_BACKUP_SWITCH_V2 | {
                 STATE_NAME: "backup_end_timestamp",
             },
         },
+    },
+}
+
+CMD_PPS_USAGE_MODE_V2 = CMD_COMMON_V2 | {
+    # PPS Usage mode and plan settings
+    "a2": {  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+        NAME: "set_usage_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "usage_mode",
+        VALUE_OPTIONS: {
+            "standard": 0,  # UPS mode
+            "time_of_use": 1,
+            "self_consumption": 2,
+            "custom": 3,
+        },
+    },
+}
+
+CMD_TOU_PLAN_V2 = CMD_PPS_USAGE_MODE_V2 | {
+    # TOU plan for AS220, A1785, typically sent via cloud
+    "a2": CMD_PPS_USAGE_MODE_V2["a2"]
+    | {
+        VALUE_DEFAULT: 1,  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+    },
+    "a3": {
+        NAME: "set_unknown_a3",  # is this the actual usage plan ID being modified?
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_DEFAULT: 0,
+    },
+    "a4": {
+        NAME: "set_unknown_a4",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_DEFAULT: 0,
+    },
+    "a6": {
+        NAME: "set_unknown_a6",
+        TYPE: DeviceHexDataTypes.ui.value,
+        VALUE_OPTIONS: {
+            "4": 4,
+            "3": 3,
+        },
+    },
+    "a7": {
+        # 1st Byte is the tou schedule slot count and rest holds the TOU schedule with up to 6 slots a 3 bytes:
+        # (tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr) * tou_slot_count
+        NAME: "set_tou_mode_schedule",
+        TYPE: DeviceHexDataTypes.bin.value,
+        STATE_NAME: "tou_mode_schedule",
+        STATE_CONVERTER: lambda value, state, cache: (
+            # Define both conversions since length of schedule is flexible within binary
+            convert_pps_tou_schedule(value)
+            if value is not None
+            else convert_pps_tou_schedule(state)
+        ),
     },
 }
 

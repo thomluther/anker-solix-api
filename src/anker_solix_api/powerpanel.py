@@ -148,6 +148,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 update_main = True
                     elif key == "alias_name" and value:
                         device.update({"alias": str(value)})
+                    elif key == "mqtt_overlay" and value is not None:
+                        # keys that are customized
+                        custom = (device.get("customized") or {}).get(key)
+                        device[key] = custom if custom is not None else value
                     elif key == "status":
                         device.update({"status": str(value)})
                         # decode the status into a description
@@ -219,7 +223,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 if "battery_capacity" not in device:
                     device["battery_capacity"] = "0"
                 if "battery_energy" not in device:
-                    device["battery_energy"] = "0"
+                    # leave energy empty until it can be calculated
+                    device["battery_energy"] = ""
                 cap_change = False
                 # calculate size only once based on PN
                 if (size := device.get("battery_size")) is None:

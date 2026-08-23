@@ -1248,11 +1248,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             }
                         )
                 else:
-                    # init calculated fields with 0 if not existing
+                    # init calculated fields if not existing
                     if "battery_capacity" not in device:
                         device["battery_capacity"] = "0"
                     if "battery_energy" not in device:
-                        device["battery_energy"] = "0"
+                        # leave energy empty until it can be calculated
+                        device["battery_energy"] = ""
 
             self.devices[str(sn)] = device
         return sn
@@ -1308,19 +1309,19 @@ class AnkerSolixApi(AnkerSolixBaseApi):
     def customizeCacheId(self, id: str, key: str, value: Any) -> None:
         """Customize a cache identifier with a key and value pair."""
         if isinstance(id, str) and isinstance(key, str):
-            # make sure to customize caches of sub instances and merge them again with Api
+            # make sure to customize shared caches of sub instances through that class
             if self.powerpanelApi and id in self.powerpanelApi.getCaches():
                 self.powerpanelApi.customizeCacheId(id=id, key=key, value=value)
                 if id in self.sites:
                     (self.sites.get(id)).update(self.powerpanelApi.sites.get(id))
-                elif id in self.devices:
-                    (self.devices.get(id)).update(self.powerpanelApi.devices.get(id))
+                # elif id in self.devices:
+                #     (self.devices.get(id)).update(self.powerpanelApi.devices.get(id))
             elif self.hesApi and id in self.hesApi.getCaches():
                 self.hesApi.customizeCacheId(id=id, key=key, value=value)
                 if id in self.sites:
                     (self.sites.get(id)).update(self.hesApi.sites.get(id))
-                elif id in self.devices:
-                    (self.devices.get(id)).update(self.hesApi.devices.get(id))
+                # elif id in self.devices:
+                #     (self.devices.get(id)).update(self.hesApi.devices.get(id))
             else:
                 super().customizeCacheId(id=id, key=key, value=value)
 

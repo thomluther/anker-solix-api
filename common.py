@@ -19,6 +19,7 @@ from anker_solix_api.apitypes import (
     SolarbankUsageMode,
     SolixCircuitPriority,
     SolixPpsLoadMode,
+    SolixSwitchMode,
     SolixTariffTypes,
 )
 from anker_solix_api.helpers import convert_isotimestamp, get_enum_name, round_by_factor
@@ -27,6 +28,7 @@ from anker_solix_api.mqttcmdmap import (
     LENGTH,
     STATE_CONVERTER,
     STATE_NAME,
+    TYPE,
     VALUE_DEFAULT,
     VALUE_FOLLOWS,
     VALUE_MAX,
@@ -35,6 +37,7 @@ from anker_solix_api.mqttcmdmap import (
     VALUE_STATE,
     VALUE_STEP,
 )
+from anker_solix_api.mqtttypes import DeviceHexDataTypes
 
 # platform dependent imports for key press handling
 if sys.platform.startswith("win"):
@@ -390,6 +393,18 @@ def print_pps_schedule(schedule: dict, color: str = "") -> None:
                         f"{str(get_enum_name(SolixPpsLoadMode, mode, '')).replace('_', ' ').title() + ' (' + (mode or '-') + ')':<{t9 + t9}} "
                         f"{','.join(weekdays):<{t6}}{Color.OFF}"
                     )
+        if name == "ac_output_schedule":
+            if slots := plan.get("slots") or []:
+                CONSOLE.info(
+                    f"{'Sl':>{t2}} {'Activ':<{t5}} {'Time':<{t6}} {'Switch':<{t9 + t9}} {'Weekdays':<{t6}}             <== {name}"
+                )
+            row = ""
+            for idx, slot in enumerate(slots, 1):
+                weekdays = list(map(str.title, slot.get("weekdays", [])))
+                CONSOLE.info(
+                    f"{color}{idx!s:>{t2}} {slot.get('active')!s:<{t5}} {slot.get('time', '')!s:<{t6}} "
+                    f"{str(get_enum_name(SolixSwitchMode, slot.get('switch'), '')).upper() + ' (' + str(slot.get('switch')) + ')':<{t9 + t9}} {','.join(weekdays):<{t6}}{Color.OFF}"
+                )
         if name == "tou_mode_schedule":
             if ranges := plan.get("ranges") or []:
                 CONSOLE.info(
@@ -571,7 +586,7 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
                     ", ", "|"
                 )
-            elif converter:
+            elif converter and desc.get(TYPE) == DeviceHexDataTypes.bin.value:
                 # special case for complex prompts and value structures
                 value_info = ""
             elif (v := desc.get(VALUE_MIN)) is not None:
@@ -594,11 +609,12 @@ def query_mqtt_command(  # noqa: C901
                         v = convert_isotimestamp(v)
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
                 while True:
+                    sel = None
                     if prompt:
                         sel = _query_mqtt_command_parameter(
                             mdev=mdev, parm=parm, info=value_info
                         )
-                    else:
+                    if sel is None:
                         sel = input(
                             f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
                         )
@@ -649,7 +665,11 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
                     ", ", "|"
                 )
-            elif converter and not desc.get(VALUE_FOLLOWS):
+            elif (
+                converter
+                and not desc.get(VALUE_FOLLOWS)
+                and desc.get(TYPE) == DeviceHexDataTypes.bin.value
+            ):
                 # special case for complex prompts and value structures
                 value_info = ""
             elif (v := desc.get(VALUE_MIN)) is not None:
@@ -688,11 +708,12 @@ def query_mqtt_command(  # noqa: C901
                         v = convert_isotimestamp(v)
                     value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] for default ({Color.GREEN}{v}{Color.OFF})"
                 while True:
+                    sel = None
                     if prompt:
                         sel = _query_mqtt_command_parameter(
                             mdev=mdev, parm=parm, state=state, info=value_info
                         )
-                    else:
+                    if sel is None:
                         sel = input(
                             f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
                         )
