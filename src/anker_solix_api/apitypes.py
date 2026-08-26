@@ -1905,6 +1905,7 @@ class SolixPpsOutputModeV2(StrEnum):
     smart = "1"
     unknown = "unknown"
     A1763 = "A1763"
+    A1765 = "A1765"
     A1782 = "A1782"
     A1783 = "A1783"
     A1785 = "A1785"

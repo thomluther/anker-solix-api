@@ -772,19 +772,30 @@ _A1763_0421 = {
             },
         }
     },
-    "da": {
+    # "da": # Field used for screen schedule and theme settings, not supported on device
+    "f9": {
         BYTES: {
-            "12": {
-                NAME: "unknown_2",
-                TYPE: DeviceHexDataTypes.sile.value,
+            "00": {
+                NAME: "sw_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
             },
-            "14": {
-                NAME: "unknown_3",
-                TYPE: DeviceHexDataTypes.sile.value,
+            "16": {
+                NAME: "bms_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
+            },
+            "24": {
+                NAME: "hw_version",
+                TYPE: DeviceHexDataTypes.var.value,
+                "values": 4,
+                "reversed": True,
             },
         }
     },
-    "fd": {NAME: "local_timestamp"},
+    "fd": {NAME: "storm_guard_timestamp", SIGNED: False},
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -4101,7 +4112,7 @@ _X1_JSON = {
         "le": {NAME: "home_consumption_today", FACTOR: 0.001},  # 13241.26 Wh
         "de": {NAME: "generator_energy_today", FACTOR: 0.001},
         "d2be": {NAME: "generator_charged_today", FACTOR: 0.001},
-        "d2le": {NAME: "generator_consumed_today", FACTOR: 0.001},
+        "d2le": {NAME: "generator_consumtion_today", FACTOR: 0.001},
         # aggregated energies in Wh?
         "pae": {NAME: "pv_yield", FACTOR: 0.001},  # 5143662.5 Wh
         "bac": {NAME: "charged_energy", FACTOR: 0.001},  # 2675350.25 Wh
@@ -4132,7 +4143,7 @@ _PP_JSON = {
     "localtime": {NAME: "local_datetime"},
     "data": {
         "sn": {NAME: "device_sn"},
-        "b1sn": {NAME: "device_sn"},
+        "b1sn": {NAME: "device_sn?"},
         "wf": {NAME: "wifi_name"},
         "mv": {NAME: "sw_version"},  # v1.5.7
         "mdv": {NAME: "hw_version"},  # v0.2.3.1
@@ -4170,11 +4181,11 @@ _PP_JSON = {
         "gmp": {NAME: "max_load_power?"},  # 4800 W
         # disaster protection (verified 2026-06 with manual backup plans and breaker test)
         "dpp": {
-            NAME: "disaster_protection_plan_{x}"
+            NAME: "backup_plan_{x}"
         },  # list with next scheduled backup plan(s), e.g. {"start": <epoch>, "end": <epoch>, "type": 1, "soc": 100}, pushed once scheduled in App
         "dps": {
-            NAME: "disaster_protection_status"
-        },  # 1 while a backup plan is executing, else 0
+            NAME: "backup_status"
+        },  # 1 while a backup plan is executing, else 0, may be 2 for auto disaster (storm guard)
         "dpct": {
             NAME: "backup_charge_time"
         },  # estimated charge time remaining, decreases with rising charge power; same value as charging_time in HTTP responses; 0 without active charge plan
@@ -4183,7 +4194,7 @@ _PP_JSON = {
         },  # constant 7 observed; Storm Guard toggles do not change it (cloud side setting)
         # status
         "ws": {
-            NAME: "working_status?"
+            NAME: "working_status"
         },  # 1 = running in 0500/0505; 0502 carries Wi-Fi signal % in same key (see _PP_JSON_0502)
         "m": {
             NAME: "mode"
@@ -4218,7 +4229,7 @@ _PP_JSON = {
         "90aacc": {NAME: "device_1_country_code"},  # "US"
         "90bacc": {NAME: "device_2_country_code"},  # "US"
         "b1e": {NAME: "err_code"},  # 0
-        "tu": {NAME: "temperature_unit?"},  # 1
+        "tu": {NAME: "temp_unit_fahrenheit"},  # 1
         "ep": {
             NAME: "ep_unknown?"
         },  # constant 0 observed, does not change during grid outage
@@ -4239,14 +4250,14 @@ _PP_JSON = {
             NAME: "event_code?"
         },  # observed 105 in event message at grid outage start
         "mps": {NAME: "micro_power_setting?"},
-        "tpp": {NAME: "pv_power_total?"},  # 3045970
+        "tpp": {NAME: "pv_yield", FACTOR: 0.001},  # 3045970
         "tgp": {
-            NAME: "grid_import_energy_total?"
+            NAME: "grid_import_energy", FACTOR: 0.001
         },  # cumulative counter, increase rate proportional to grid import power, halts during outage
         "tlp": {
-            NAME: "home_usage_energy_total?"
+            NAME: "home_consumption", FACTOR: 0.001
         },  # cumulative counter, increase rate proportional to home load power
-        "tsp": {NAME: "battery_power_signed_total?"},  # 50620729
+        "tsp": {NAME: "unknown_total_energy?", FACTOR: 0.001},  # 50620729
         # daily energies in Wh?
         "pe": {NAME: "pv_yield_today", FACTOR: 0.001},  # 6293 Wh
         "p2le": {NAME: "pv_consumption_today", FACTOR: 0.001},  # 4771 Wh
@@ -4263,7 +4274,7 @@ _PP_JSON = {
         "le": {NAME: "home_consumption_today", FACTOR: 0.001},  # 104452 Wh
         "de": {NAME: "generator_energy_today", FACTOR: 0.001},
         "d2be": {NAME: "generator_charged_today", FACTOR: 0.001},
-        "d2le": {NAME: "generator_consumed_today", FACTOR: 0.001},
+        "d2le": {NAME: "generator_consumtion_today", FACTOR: 0.001},
         "o2le": {NAME: "other_consumption_today", FACTOR: 0.001},
         "o2pe": {NAME: "other_pv_yield_today", FACTOR: 0.001},
         "oe": {NAME: "other_energy_today", FACTOR: 0.001},
@@ -4553,6 +4564,181 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # PPS C1000 Gen 2
     "A1763": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0101": {
+            # AC command group
+            COMMAND_LIST: [
+                SolixMqttCommands.ac_output_switch,  # field a2
+                SolixMqttCommands.ac_output_timeout_seconds,  # field a3
+                SolixMqttCommands.ac_charge_limit,  # field a4
+                SolixMqttCommands.ac_output_mode_select,  # field a6
+                SolixMqttCommands.ac_fast_charge_switch,  # field a7
+            ],
+            SolixMqttCommands.ac_output_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_ac_output_switch",  # Disable (0) | Enable (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_output_power_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+            SolixMqttCommands.ac_output_timeout_seconds: CMD_COMMON_V2
+            | {
+                "a3": {
+                    NAME: "set_ac_output_timeout_seconds",  # Timeout seconds, custom range: 0-86400, step 300
+                    TYPE: DeviceHexDataTypes.var.value,
+                    STATE_NAME: "ac_output_timeout_seconds",
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 86400,
+                    VALUE_STEP: 300,
+                },
+            },
+            SolixMqttCommands.ac_charge_limit: CMD_COMMON_V2
+            | {
+                "a4": {
+                    NAME: "set_ac_input_limit",  # in W; min: 100, max: 1200, step: 100
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "ac_input_limit",
+                    VALUE_MIN: 100,
+                    VALUE_MAX: 1200,
+                    VALUE_STEP: 100,
+                },
+            },
+            SolixMqttCommands.ac_output_mode_select: CMD_COMMON_V2
+            | {
+                "a6": {
+                    NAME: "set_ac_output_mode",  # Normal (0), Smart (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_output_mode",
+                    VALUE_OPTIONS: {"normal": 0, "smart": 1},
+                },
+            },
+            SolixMqttCommands.ac_fast_charge_switch: CMD_COMMON_V2
+            | {
+                "a7": {
+                    NAME: "set_ac_fast_charge_switch",  # Disable (0) | Enable (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_fast_charge_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+        },
+        "0102": {
+            # DC command group
+            COMMAND_LIST: [
+                SolixMqttCommands.dc_output_switch,  # field a2
+                SolixMqttCommands.dc_output_timeout_seconds,  # field a3
+                SolixMqttCommands.dc_12v_output_mode_select,  # field a4
+            ],
+            SolixMqttCommands.dc_output_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_dc_output_switch",  # Disable (0) | Enable (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "dc_output_power_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+            SolixMqttCommands.dc_output_timeout_seconds: CMD_COMMON_V2
+            | {
+                "a3": {
+                    NAME: "set_dc_output_timeout_seconds",  # Timeout seconds, custom range: 0-86400, step 300
+                    TYPE: DeviceHexDataTypes.var.value,
+                    STATE_NAME: "dc_output_timeout_seconds",
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 86400,
+                    VALUE_STEP: 300,
+                },
+            },
+            SolixMqttCommands.dc_12v_output_mode_select: CMD_COMMON_V2
+            | {
+                "a4": {
+                    NAME: "set_dc_12v_output_mode",  # Normal (0), Smart (0)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "dc_12v_output_mode",
+                    VALUE_OPTIONS: {"normal": 0, "smart": 1},
+                },
+            },
+        },
+        "0103": {
+            # Other command group
+            COMMAND_LIST: [
+                SolixMqttCommands.display_switch,  # field a2
+                SolixMqttCommands.display_mode_select,  # field a3
+                SolixMqttCommands.display_timeout_seconds,  # field a4
+                SolixMqttCommands.temp_unit_switch,  # field a5
+                SolixMqttCommands.device_timeout_minutes,  # field a6
+                SolixMqttCommands.port_memory_switch,  # field a8
+                SolixMqttCommands.soc_limits,  # field aa, ab
+            ],
+            SolixMqttCommands.display_switch: CMD_COMMON_V2
+            | {
+                "a2": {
+                    NAME: "set_display_switch",  # Off (0), On (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "display_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+            SolixMqttCommands.display_mode_select: CMD_COMMON_V2
+            | {
+                "a3": {
+                    NAME: "set_display_mode",  # Low (1), Medium (2), High (3)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "display_mode",
+                    VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+                },
+            },
+            SolixMqttCommands.display_timeout_seconds: CMD_COMMON_V2
+            | {
+                "a4": {
+                    NAME: "set_display_timeout_sec",  # 0 (Never), 10, 20, 30, 60, 300, 1800
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "display_timeout_seconds",
+                    VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
+                },
+            },
+            SolixMqttCommands.temp_unit_switch: CMD_TEMP_UNIT_V2,  # Celsius (0) | Fahrenheit (1)
+            SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
+            | {
+                "a6": {
+                    NAME: "set_device_timeout_min",  # 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "device_timeout_minutes",
+                    VALUE_OPTIONS: [0, 30, 60, 120, 240, 360, 720, 1440],
+                },
+            },
+            SolixMqttCommands.port_memory_switch: CMD_COMMON_V2
+            | {
+                "a8": {
+                    NAME: "set_port_memory_switch",  # Off (0), On (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "port_memory_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
+            SolixMqttCommands.soc_limits: CMD_SOC_LIMITS_V2,
+            # Contains fields aa ab for the limits
+            # aa = max_soc: 80, 85, 90, 95, 100 %
+            # ab = min_soc: 1, 5, 10, 15, 20 %
+        },
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0421": _A1763_0421,
+        # Interval: Irregular, triggered on app actions, no fixed interval
+        "0830": _PPS_VERSIONS_0830,
+        # Interval: ~300 seconds
+        "0889": {
+            "a4": {NAME: "0889_unknown_1?"},
+            "a5": {NAME: "0889_unknown_2?"},
+            "a6": {NAME: "0889_unknown_3?"},
+            "fd": {NAME: "0889_timestamp?"},
+        },
+        # Interval: Irregular, maybe on changes or as response to App status request? Same content as 0421
+        "0900": _A1763_0421,
+    },
+    # PPS C1000X Gen 2
+    "A1765": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0101": {
             # AC command group

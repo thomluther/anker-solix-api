@@ -203,11 +203,13 @@ class SolixMqttDevicePps(SolixMqttDevice):
         if (
             backup_start is None
             and backup_end is None
-            and backup_duration
+            and backup_duration is None
             and backup_switch is None
         ):
             self._logger.error(
-                "Api %s no valid AC charge options provided", self.apisession.nickname
+                "No valid AC charge options provided for device %s (%s)",
+                self.sn,
+                self.pn,
             )
             return False
         # Consider time zone shifts of device, timestamp conversion is absolute and timezone aware
@@ -215,11 +217,11 @@ class SolixMqttDevicePps(SolixMqttDevice):
         cache = self.get_status(fromFile=toFile)
         if not backup_start:
             backup_start = datetime.fromtimestamp(
-                cache.get("backup_start_timestamp")
+                cache.get("backup_start_timestamp") or 0
             ).astimezone()
         if not backup_end:
             backup_end = datetime.fromtimestamp(
-                cache.get("backup_end_timestamp")
+                cache.get("backup_end_timestamp") or 0
             ).astimezone()
         if backup_switch is None:
             backup_switch = bool(cache.get("backup_switch"))
@@ -237,8 +239,8 @@ class SolixMqttDevicePps(SolixMqttDevice):
             backup_start = min(backup_start or backup_end, backup_end or backup_start)
             if backup_start == backup_end or backup_duration:
                 backup_end = backup_start + (backup_duration or def_duration)
-            parm_map["set_backup_start_timestamp"] = int(backup_start.timestamp())
-            parm_map["set_backup_end_timestamp"] = int(backup_end.timestamp())
+            parm_map["set_backup_start_timestamp"] = round(backup_start.timestamp() / 60) * 60
+            parm_map["set_backup_end_timestamp"] = round(backup_end.timestamp() / 60) * 60
         # Send command if any parameters to update
         if parm_map:
             if (

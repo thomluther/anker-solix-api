@@ -1035,7 +1035,7 @@ class AnkerSolixBaseApi:
                                 float(discharge),
                                 float(pv) - float(out) + float(discharge),
                             )
-                        # consider consumed energy for efficiency, since that probably reduces the reported pv_yield and charge energy
+                        # consider self consumed energy for efficiency, since that probably reduces the reported pv_yield and charge energy
                         consumed = device_mqtt.get("consumed_energy") or 0
                         # Consumed = loss + ac socket ?
                         # Battery loss = charge - discharge
@@ -1166,9 +1166,15 @@ class AnkerSolixBaseApi:
                             ) and not self.devices.get(pps_sn, {}).get("site_id"):
                                 # Ensure to assign site IDs to PPS as they are not provided in Api data
                                 if pps_sn in self.powerpanelApi.devices:
-                                    # update only the merged device
+                                    # update only the merged device and trigger main device cap update
+                                    pps = self.powerpanelApi.devices.get(pps_sn)
                                     self._update_dev(
-                                        {"device_sn": pps_sn},
+                                        {
+                                            "device_sn": pps_sn,
+                                            "battery_capacity": pps.get(
+                                                "battery_capacity", 0
+                                            ),
+                                        },
                                         siteId=pp_dev.get("site_id"),
                                     )
                                 else:
@@ -1190,21 +1196,26 @@ class AnkerSolixBaseApi:
                                     )
                             if pps := self.powerpanelApi.devices.get(pps_sn):
                                 pps_mqtt = {}
+                                pps_update = {"device_sn": pps_sn}
                                 for key, value in {
                                     k: v
                                     for k, v in check_values.items()
                                     if str(k).startswith(f"device_{i}")
                                 }.items():
-                                    if key.endswith("_country_code"):
+                                    if key.endswith("_pn"):
+                                        pps_mqtt["device_pn"] = value
+                                        pps_update["device_pn"] = value
+                                    elif key.endswith("_country_code"):
                                         pps_mqtt["country_code"] = value
                                     elif key.endswith("_sw_version"):
                                         pps_mqtt["sw_version"] = (
                                             str(value).lstrip("v").strip()
                                         )
                                     elif key.endswith("_status"):
-                                        pps_mqtt["charging_status"] = value
+                                        pps_mqtt["battery_status"] = value
                                     elif key.endswith("_soc"):
                                         pps_mqtt["battery_soc"] = value
+                                        pps_update["battery_soc"] = value
                                     elif key.endswith("_temperature"):
                                         pps_mqtt["temperature"] = value
                                     elif key.endswith("_error"):
@@ -1212,6 +1223,7 @@ class AnkerSolixBaseApi:
                                     elif key.endswith("_data"):
                                         # and isinstance(value, dict):
                                         pps_mqtt["battery_soc"] = value.get("soc")
+                                        pps_update["battery_soc"] = value.get("soc")
                                         pps_mqtt["err_code"] = value.get("error")
                                         # map signed power to unsigned PPS MQTT keys
                                         if (
@@ -1242,6 +1254,8 @@ class AnkerSolixBaseApi:
                                     # create mqtt data and notify device
                                     pps["mqtt_data"] = pps_mqtt
                                     self.notify_device(deviceSn=pps_sn)
+                                # update device Api cache for capacity calculations
+                                self.powerpanelApi._update_dev(pps_update)  # noqa: SLF001
                     # trigger device cache update for display theme
                     if "theme_id" in check_values and str(
                         check_values.get("theme_id")

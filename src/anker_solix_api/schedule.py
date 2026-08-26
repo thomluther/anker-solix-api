@@ -2234,7 +2234,12 @@ async def set_sb2_ac_charge(
     backup_end = backup_end.astimezone() if isinstance(backup_end, datetime) else None
     backup_switch = backup_switch if isinstance(backup_switch, bool) else None
     # fast quit if nothing to change
-    if backup_start is None and backup_end is None and backup_switch is None:
+    if (
+        backup_start is None
+        and backup_end is None
+        and backup_duration is None
+        and backup_switch is None
+    ):
         self._logger.error(
             "Api %s no valid AC charge options provided", self.apisession.nickname
         )

@@ -1506,17 +1506,17 @@ class AnkerSolixApiMonitor:
                         f"{'Disaster Supp.':<{col1}}: {'Storm Guard' if disaster.get('support_auto_disaster') else 'None' if disaster else '------':<{col2}} "
                         f"{'Countries':<{col3}}: {countries or '--'}"
                     )
-                    settings = details.get("device_disaster")
-                    status = details.get("device_disaster_status")
+                    settings = details.get("device_disaster", {})
+                    status = details.get("device_disaster_status", {})
                     m2 = str(status.get("auto_disaster_status", ""))
                     CONSOLE.info(
-                        f"{'Storm Guard':<{col1}}: {'Enabled' if settings.get('auto_disaster_switch') else 'Disabled':<{col2}} "
+                        f"{'Storm Guard':<{col1}}: {'Enabled' if (v := settings.get('auto_disaster_switch')) else 'Disabled' if v is not None else '-----':<{col2}} "
                         f"{'SG Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
                     )
                     m2 = str(status.get("manual_disaster_status", ""))
                     CONSOLE.info(
-                        f"{'Man. Backup':<{col1}}: {'Enabled' if settings.get('manual_disaster_switch') else 'Disabled':<{col2}} "
-                        f"{'Man. Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
+                        f"{'Manual Backup':<{col1}}: {'Enabled' if settings.get('manual_disaster_switch') else 'Disabled':<{col2}} "
+                        f"{'Manual Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
                     )
                     if disaster := status.get("current_disaster_detail"):
                         m1 = str(disaster.get("disaster_type", ""))
@@ -1526,7 +1526,7 @@ class AnkerSolixApiMonitor:
                         ).isdigit():
                             m2 = str(timedelta(minutes=int(m2)))
                         CONSOLE.info(
-                            f"{'In Progress':<{col1}}: {get_enum_name(SolixBackupStatus, m1, 'unknown' if m1 else '-----').title() + ' (' + m1 + ')':<{col2}} "
+                            f"{'In Progress':<{col1}}: {get_enum_name(SolixBackupStatus, m1, 'unknown' if m1 else '-----').replace('_', ' ').title() + ' (' + m1 + ')':<{col2}} "
                             f"{'Charge Time':<{col3}}: {m2 and (c or cm)}{m2 or '--:--'}{co}"
                         )
                         if str(m1 := disaster.get("start_time", "")):
@@ -1994,11 +1994,11 @@ class AnkerSolixApiMonitor:
                         f"{'Disaster Supp.':<{col1}}: {'Storm Guard' if disaster.get('support_auto_disaster') else 'None' if disaster else '------':<{col2}} "
                         f"{'Countries':<{col3}}: {countries or '--'}"
                     )
-                    settings = dev.get("device_disaster")
-                    status = dev.get("device_disaster_status")
+                    settings = dev.get("device_disaster", {})
+                    status = dev.get("device_disaster_status", {})
                     m2 = str(status.get("auto_disaster_status", ""))
                     CONSOLE.info(
-                        f"{'Storm Guard':<{col1}}: {'Enabled' if settings.get('auto_disaster_switch') else 'Disabled':<{col2}} "
+                        f"{'Storm Guard':<{col1}}: {'Enabled' if (v := settings.get('auto_disaster_switch')) else 'Disabled' if v is not None else '-----':<{col2}} "
                         f"{'SG Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
                     )
                 m1 = (

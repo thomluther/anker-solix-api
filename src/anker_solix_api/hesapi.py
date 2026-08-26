@@ -23,6 +23,8 @@ from .apitypes import (
 )
 from .errors import AnkerSolixError
 from .helpers import convertToKwh, get_solix_product_code
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -111,6 +113,41 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
                     if key in ["product_code", "device_pn"] and value:
                         device.update({"device_pn": str(value)})
+                        # Get device code features once
+                        if "device_code_features" not in device:
+                            device["device_code_features"] = (
+                                self.account.get("products", {})
+                                .get(str(value), {})
+                                .get("product_codes", {})
+                                .get(device.get("device_code", ""), {})
+                                .get("custom_fields", {})
+                            )
+                        # Flag device for supported mqtt trigger if admin and device not passive
+                        if (
+                            device.get("is_admin") or device.get("owner_user_id")
+                        ) and not (
+                            device.get("is_passive") or devData.get("is_passive")
+                        ):
+                            device["mqtt_supported"] = True
+                            # update customizable setting whether MQTT values should overlay Api values upon cache merge
+                            device["mqtt_overlay"] = bool(
+                                device.get("mqtt_overlay") or False
+                            )
+                            # check once if device supports status requests from description
+                            if "mqtt_status_request" not in device:
+                                device["mqtt_status_request"] = bool(
+                                    [
+                                        cmd
+                                        for cmd in SOLIXMQTTMAP.get(
+                                            str(value), {}
+                                        ).values()
+                                        if SolixMqttCommands.status_request
+                                        in [
+                                            cmd.get(COMMAND_NAME),
+                                            *cmd.get(COMMAND_LIST, []),
+                                        ]
+                                    ]
+                                )
                         # try to get capacity from category definitions
                         if (
                             hasattr(SolixDeviceCapacity, str(value))
@@ -194,6 +231,10 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                             "state_of_charge"
                         ) != value.get("state_of_charge")
                         device[key] = value
+                    elif key == "battery_soc" and value is not None:
+                        # This is a percentage value for the battery state of charge, not power
+                        calc_capacity |= device.get("battery_soc") != str(value)
+                        device["battery_soc"] = str(value)
                     elif key == "batCount" and str(value).isdigit():
                         calc_capacity |= device.get(key) != int(value)
                         device[key] = int(value)

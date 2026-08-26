@@ -16,11 +16,14 @@ from .apitypes import (
     ApiCategories,
     SolixDeviceCapacity,
     SolixDeviceCategory,
+    SolixDeviceNames,
     SolixDeviceStatus,
     SolixDeviceType,
     SolixSiteType,
 )
 from .helpers import convertToKwh, get_solix_product_code
+from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
+from .mqttmap import SOLIXMQTTMAP
 from .session import AnkerSolixClientSession
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -110,6 +113,41 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     # Implement device update code with key filtering, conversion, consolidation, calculation or dependency updates
                     if key in ["product_code", "device_pn"] and value:
                         device.update({"device_pn": str(value)})
+                        # Get device code features once
+                        if "device_code_features" not in device:
+                            device["device_code_features"] = (
+                                self.account.get("products", {})
+                                .get(str(value), {})
+                                .get("product_codes", {})
+                                .get(device.get("device_code", ""), {})
+                                .get("custom_fields", {})
+                            )
+                        # Flag device for supported mqtt trigger if admin and device not passive
+                        if (
+                            device.get("is_admin") or device.get("owner_user_id")
+                        ) and not (
+                            device.get("is_passive") or devData.get("is_passive")
+                        ):
+                            device["mqtt_supported"] = True
+                            # update customizable setting whether MQTT values should overlay Api values upon cache merge
+                            device["mqtt_overlay"] = bool(
+                                device.get("mqtt_overlay") or False
+                            )
+                            # check once if device supports status requests from description
+                            if "mqtt_status_request" not in device:
+                                device["mqtt_status_request"] = bool(
+                                    [
+                                        cmd
+                                        for cmd in SOLIXMQTTMAP.get(
+                                            str(value), {}
+                                        ).values()
+                                        if SolixMqttCommands.status_request
+                                        in [
+                                            cmd.get(COMMAND_NAME),
+                                            *cmd.get(COMMAND_LIST, []),
+                                        ]
+                                    ]
+                                )
                         # try to get capacity from category definitions
                         if (
                             hasattr(SolixDeviceCapacity, str(value))
@@ -146,8 +184,24 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 device["main_sn"] = sn
                                 device["is_primary"] = True
                                 update_main = True
+                    elif key == "device_name" and value:
+                        device["name"] = str(value)
                     elif key == "alias_name" and value:
-                        device.update({"alias": str(value)})
+                        device["alias"] = str(value)
+                        # preset default device name if only alias provided, fallback to alias if product name not listed
+                        if (
+                            pn := device.get("device_pn")
+                            or devData.get("device_pn")
+                            or None
+                        ) and (not device.get("name") or devData.get("device_name")):
+                            device["name"] = (
+                                devData.get("device_name")
+                                or (
+                                    (self.account.get("products") or {}).get(pn) or {}
+                                ).get("name")
+                                or getattr(SolixDeviceNames, pn, "")
+                                or str(value)
+                            )
                     elif key == "mqtt_overlay" and value is not None:
                         # keys that are customized
                         custom = (device.get("customized") or {}).get(key)
@@ -165,6 +219,10 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         # This is used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
                         calc_capacity = True
+                    elif key == "battery_soc" and value is not None:
+                        # This is a percentage value for the battery state of charge, not power
+                        calc_capacity |= device.get("battery_soc") != str(value)
+                        device["battery_soc"] = str(value)
                     elif key == "average_power" and value:
                         # calculate remaining capacity for new SOC
                         calc_capacity |= (device.get("average_power") or {}).get(
@@ -555,7 +613,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 await self.get_device_disaster_status(
                     identifier=site_id, fromFile=fromFile
                 )
-        # cycle through all stand alone devices
+        # cycle through all stand alone devices which support auto disaster
         for device_sn, device in self.devices.items():
             if (
                 {device.get("type")} - exclude
@@ -597,6 +655,16 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     await self.get_disaster_support(
                         identifier=site_id, fromFile=fromFile
                     )
+                # Fetch disaster settings if supported
+                if site.get("site_details").get("disaster_support"):
+                    await self.get_device_disaster(
+                        identifier=site_id, fromFile=fromFile
+                    )
+                    # fetch first status if not done yet by update sites
+                    if not site.get("site_details").get("device_disaster_status"):
+                        await self.update_disaster_status(
+                            fromFile=fromFile, exclude=exclude
+                        )
                 # Fetch site price and CO2 settings
                 if {ApiCategories.site_price} - exclude:
                     self._logger.debug(
