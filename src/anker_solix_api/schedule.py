@@ -3151,15 +3151,17 @@ def _is_pps_hhmm(value) -> bool:
     return 0 <= hour <= 24 and 0 <= minute <= 59
 
 
-def _validate_pps_plan(pps: dict) -> list[str]:
-    """Validate a PPS use time plan; return a list of problems (empty = valid).
+def validate_pps_schedule(ranges, prices) -> list[str]:
+    """Authoritative PPS schedule validation; return a list of problems (empty = valid).
 
     Enforces the device plan limits required by issue #326: 1-6 contiguous slots
-    tiling 00:00-24:00 (a TOU plan has no gaps), valid tariff types, and a
-    well-formed price list.
+    tiling 00:00-24:00 (no gaps, no overlaps, monotonically increasing
+    boundaries, first slot starts 00:00, last ends 24:00), valid tariff types
+    (1/2/3), and a well-formed price list (valid types, non-negative numeric
+    prices) when a price list is provided. This is the single validation path
+    every PPS write goes through immediately before the cloud request.
     """
     problems: list[str] = []
-    ranges = pps.get("ranges")
     if not isinstance(ranges, list) or not ranges:
         problems.append("ranges must be a non-empty list")
     else:
@@ -3202,7 +3204,6 @@ def _validate_pps_plan(pps: dict) -> list[str]:
                         f"({ranges[i].get('end_time')}) and slot {i + 1} "
                         f"({ranges[i + 1].get('start_time')})"
                     )
-    prices = pps.get("prices")
     if prices is not None:
         if not isinstance(prices, list):
             problems.append("prices must be a list")
@@ -3337,6 +3338,38 @@ async def set_pps_use_time(
                 return index
         return -1
 
+    def _resolve_slot(
+        ranges: list[dict],
+        slot: int | None = None,
+        start_hour: str | None = None,
+        end_hour: str | None = None,
+        active_index: int | None = None,
+    ) -> int:
+        """Resolve the 0-based index of the target slot for a PPS partial change.
+
+        Precedence: explicit slot > explicit time > active slot. An explicitly
+        supplied slot is authoritative and is never silently redirected to a
+        different slot: an out-of-range slot, a time that maps to no slot, or the
+        absence of an active slot all raise ValueError so the caller writes
+        nothing rather than mutating an unintended slot.
+        """
+        if slot is not None:
+            if not isinstance(slot, int) or isinstance(slot, bool):
+                raise ValueError("slot must be an integer")
+            if slot < 1 or slot > len(ranges):
+                raise ValueError(
+                    f"slot must be between 1 and {len(ranges)}, got {slot}"
+                )
+            return slot - 1
+        if start_hour is not None or end_hour is not None:
+            index = _slot_at(ranges, start_hour or end_hour)
+            if index < 0:
+                raise ValueError(f"no PPS slot contains {start_hour or end_hour}")
+            return index
+        if active_index is not None and 0 <= active_index < len(ranges):
+            return active_index
+        raise ValueError("no active PPS slot for the current time")
+
     # normalize the parameters
     start_hour = _to_hhmm(start_hour)
     end_hour = _to_hhmm(end_hour)
@@ -3427,22 +3460,22 @@ async def set_pps_use_time(
             # no existing plan; start from a single default off-peak slot
             cur_ranges = [{"start_time": "00:00", "end_time": "24:00", "type": 3}]
         # select the target slot: explicit slot index, else the slot at the given
-        # time, else the active slot
-        if slot is not None:
-            index = slot - 1  # 1-based to 0-based
-        elif start_hour or end_hour:
-            index = _slot_at(cur_ranges, start_hour or end_hour)
-        else:
-            index = _slot_at(cur_ranges, datetime.now().astimezone().strftime("%H:%M"))
-        if index < 0 or index >= len(cur_ranges):
-            if slot is not None:
-                self._logger.warning(
-                    "Api %s PPS slot %s out of range (1-%d); targeting slot 1",
-                    self.apisession.nickname,
-                    slot,
-                    len(cur_ranges),
-                )
-            index = 0
+        # time, else the active slot. An unresolvable target raises (no write)
+        # rather than silently redirecting to slot 1.
+        active_index = (
+            None
+            if (slot is not None or start_hour or end_hour)
+            else _slot_at(
+                cur_ranges, datetime.now().astimezone().strftime("%H:%M")
+            )
+        )
+        index = _resolve_slot(
+            cur_ranges,
+            slot=slot,
+            start_hour=start_hour,
+            end_hour=end_hour,
+            active_index=active_index,
+        )
         if delete:
             if len(cur_ranges) == 1:
                 # a single slot cannot be deleted; reset to the default plan
@@ -3459,6 +3492,11 @@ async def set_pps_use_time(
             if tariff_type:
                 cur_ranges[index]["type"] = tariff_type
             if tariff_price:
+                # Upsert only the target segment's tariff price into the existing
+                # price list: update the entry matching the target slot's tariff
+                # type, or append it if absent. Every other range and price entry
+                # is preserved verbatim (no rebuild/normalize/merge of unrelated
+                # schedule boundaries).
                 slot_type = cur_ranges[index]["type"]
                 for price in cur_prices:
                     if price.get("type") == slot_type:
@@ -3505,8 +3543,11 @@ async def set_pps_use_time(
 
     # validate the final plan before committing (issue #326: enforce the device
     # plan limits - 1-6 contiguous slots tiling 00:00-24:00, valid types/prices);
-    # on failure warn and return the unmodified plan without writing
-    if problems := _validate_pps_plan(pps):
+    # on failure warn and return the unmodified plan without writing. The local
+    # cache is only refreshed by set_device_attributes after a *successful*
+    # cloud write, so a rejected/failed write never leaves optimistic local
+    # state behind.
+    if problems := validate_pps_schedule(pps.get("ranges"), pps.get("prices")):
         self._logger.warning(
             "Api %s invalid PPS use time plan (%s); not writing",
             self.apisession.nickname,
@@ -3514,7 +3555,9 @@ async def set_pps_use_time(
         )
         return original_pps
 
-    # commit to the cloud store; the cloud pushes the plan to the device
+    # commit to the cloud store; the cloud pushes the plan to the device. The
+    # cached plan is updated from the confirmed result only after this write
+    # succeeds, so a failed write cannot corrupt the local state.
     return await self.set_device_attributes(
         deviceSn=deviceSn,
         attributes={"pps_use_time": json.dumps(pps, separators=(",", ":"))},
