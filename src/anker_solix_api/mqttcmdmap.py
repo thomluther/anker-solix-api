@@ -2465,6 +2465,35 @@ CMD_TOU_PLAN_V2 = CMD_PPS_USAGE_MODE_V2 | {
     },
 }
 
+CMD_PPS_BACKUP_SOC_V2 = CMD_COMMON_V2 | {
+    # PPS backup SOC (reserve) setting, field a5
+    "a5": {
+        NAME: "set_backup_soc",  # range as [min_soc + 5, max_soc], step 1%
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "backup_soc",
+        VALUE_MIN: 5,
+        VALUE_MAX: 100,
+        VALUE_STEP: 1,
+        STATE_CONVERTER: lambda value, state, cache: (
+            value
+            if value is not None
+            # ensure backup is min + 5 < backup <= max if not specified
+            else min(
+                int(cache.get("max_soc") or 80),
+                max(
+                    int(cache.get("power_cutoff") or 20) + 5,
+                    int(state),
+                ),
+            )
+            if state is not None
+            and str(state).replace(".", "", 1).isdigit()
+            else None
+        ),
+        VALUE_MIN_STATE: "power_cutoff",
+        VALUE_MAX_STATE: "max_soc",
+    },
+}
+
 CMD_TBD_SWITCH = CMD_COMMON | {
     # Command: Generic switch command with unknown effect
     COMMAND_NAME: SolixMqttCommands.tbd_switch,

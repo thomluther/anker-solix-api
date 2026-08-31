@@ -85,6 +85,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         set_device_load,
         set_device_parm,
         set_home_load,
+        set_pps_use_time,
         set_sb2_ac_charge,
         set_sb2_home_load,
         set_sb2_use_time,

@@ -3135,3 +3135,71 @@ async def set_sb2_use_time(  # noqa: C901
             siteId=siteId, price_type=new_price_type, toFile=toFile
         )
     return resp
+
+
+async def set_pps_use_time(
+    self: AnkerSolixApi,
+    deviceSn: str,
+    ranges: list[dict] | None = None,
+    prices: list[dict] | None = None,
+    unit: str | None = None,
+    reserve_power: int | None = None,
+    toFile: bool = False,
+) -> bool | dict:
+    r"""Set or change the PPS time-of-use (TOU) charging schedule for a given device.
+
+    PPS devices (e.g. SOLIX C1000 Gen 2, model A1763) store their TOU charging
+    plan in the cloud "pps_use_time" device attribute (a JSON string). Writing
+    this attribute via the Api is sufficient to update the plan: the cloud pushes
+    the new schedule down to the device, so no direct MQTT command is required.
+
+    The "pps_use_time" attribute format (as returned by get_device_attributes):
+    "{"ranges": [{"start_time": "00:00", "end_time": "09:00", "type": 1},
+                 {"start_time": "09:00", "end_time": "19:00", "type": 3},
+                 {"start_time": "19:00", "end_time": "24:00", "type": 1}],
+     "prices": [{"price": "0.2", "type": 1}, {"price": "0.001", "type": 3}],
+     "unit": "$", "reserve_power": 6}"
+
+    Tariff types (the cloud calls this "type", the Anker app "tariff"):
+    1=Peak, 2=Mid, 3=Off.
+
+    Applied Parameter logic:
+    - If no parameter is provided, read and return the current pps_use_time plan
+    - ranges: full replacement of the TOU slot plan, a list of
+        {"start_time": "HH:MM", "end_time": "HH:MM", "type": 1|2|3}
+        covering the day 00:00-24:00 with 1-6 contiguous slots
+    - prices: full replacement of the tariff prices, a list of
+        {"price": "<float>", "type": 1|2|3}
+    - unit: currency symbol (e.g. "$")
+    - reserve_power: backup reserve percentage (the app's "TOU Power" setting;
+        "power in use" = 100 - reserve_power). The app steps by 1% and enforces a
+        lower bound (observed floor: min_soc + 5, e.g. 6% when min_soc = 1)
+    - Any parameter left as None is preserved from the current plan
+    - toFile: write to file for testing instead of making the Api call
+    """
+    # Read the current plan (from file when toFile) so unset parameters are preserved
+    data = await self.get_device_attributes(
+        deviceSn=deviceSn, attributes=["pps_use_time"], fromFile=toFile
+    )
+    pps = (data.get("attributes") or {}).get("pps_use_time")
+    if isinstance(pps, str):
+        with contextlib.suppress(ValueError, TypeError):
+            pps = json.loads(pps)
+    if not isinstance(pps, dict):
+        pps = {}
+    # Apply the provided changes, preserving everything else
+    if ranges is not None:
+        pps["ranges"] = ranges
+    if prices is not None:
+        pps["prices"] = prices
+    if unit is not None:
+        pps["unit"] = unit
+    if reserve_power is not None:
+        pps["reserve_power"] = reserve_power
+    # Commit to the cloud store; the cloud pushes the plan to the device
+    return await self.set_device_attributes(
+        deviceSn=deviceSn,
+        attributes={"pps_use_time": json.dumps(pps, separators=(",", ":"))},
+        query_attributes=["pps_use_time"],
+        toFile=toFile,
+    )
