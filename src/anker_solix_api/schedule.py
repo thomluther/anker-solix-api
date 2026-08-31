@@ -3137,6 +3137,90 @@ async def set_sb2_use_time(  # noqa: C901
     return resp
 
 
+PPS_MAX_SLOTS = 6  # maximum TOU slots a PPS plan may define
+
+
+def _is_pps_hhmm(value) -> bool:
+    """True if value is a valid 'HH:MM' string in the 00:00-24:00 range."""
+    if not isinstance(value, str):
+        return False
+    parts = value.split(":")
+    if len(parts) != 2 or not all(part.isdigit() for part in parts):
+        return False
+    hour, minute = int(parts[0]), int(parts[1])
+    return 0 <= hour <= 24 and 0 <= minute <= 59
+
+
+def _validate_pps_plan(pps: dict) -> list[str]:
+    """Validate a PPS use time plan; return a list of problems (empty = valid).
+
+    Enforces the device plan limits required by issue #326: 1-6 contiguous slots
+    tiling 00:00-24:00 (a TOU plan has no gaps), valid tariff types, and a
+    well-formed price list.
+    """
+    problems: list[str] = []
+    ranges = pps.get("ranges")
+    if not isinstance(ranges, list) or not ranges:
+        problems.append("ranges must be a non-empty list")
+    else:
+        if len(ranges) > PPS_MAX_SLOTS:
+            problems.append(f"too many slots ({len(ranges)} > {PPS_MAX_SLOTS})")
+        for i, slot in enumerate(ranges):
+            if not isinstance(slot, dict):
+                problems.append(f"slot {i} is not an object")
+                continue
+            start, end = slot.get("start_time"), slot.get("end_time")
+            if not _is_pps_hhmm(start):
+                problems.append(f"slot {i} start_time {start!r} is not a valid HH:MM")
+            if not _is_pps_hhmm(end):
+                problems.append(f"slot {i} end_time {end!r} is not a valid HH:MM")
+            if (
+                _is_pps_hhmm(start)
+                and _is_pps_hhmm(end)
+                and start >= end
+            ):
+                problems.append(
+                    f"slot {i} start_time {start} is not before end_time {end}"
+                )
+            if slot.get("type") not in (1, 2, 3):
+                problems.append(f"slot {i} type {slot.get('type')!r} must be 1/2/3")
+        if not problems:
+            if ranges[0].get("start_time") != "00:00":
+                problems.append(
+                    "first slot must start at 00:00, "
+                    f"got {ranges[0].get('start_time')!r}"
+                )
+            if ranges[-1].get("end_time") != "24:00":
+                problems.append(
+                    "last slot must end at 24:00, "
+                    f"got {ranges[-1].get('end_time')!r}"
+                )
+            for i in range(len(ranges) - 1):
+                if ranges[i].get("end_time") != ranges[i + 1].get("start_time"):
+                    problems.append(
+                        f"gap/overlap between slot {i} "
+                        f"({ranges[i].get('end_time')}) and slot {i + 1} "
+                        f"({ranges[i + 1].get('start_time')})"
+                    )
+    prices = pps.get("prices")
+    if prices is not None:
+        if not isinstance(prices, list):
+            problems.append("prices must be a list")
+        else:
+            for i, price in enumerate(prices):
+                if not isinstance(price, dict):
+                    problems.append(f"price {i} is not an object")
+                    continue
+                if price.get("type") not in (1, 2, 3):
+                    problems.append(f"price {i} type {price.get('type')!r} must be 1/2/3")
+                try:
+                    if float(price.get("price")) < 0:
+                        problems.append(f"price {i} {price.get('price')!r} is negative")
+                except (TypeError, ValueError):
+                    problems.append(f"price {i} {price.get('price')!r} is not a number")
+    return problems
+
+
 async def set_pps_use_time(
     self: AnkerSolixApi,
     deviceSn: str,
@@ -3189,7 +3273,10 @@ async def set_pps_use_time(
             - If start_hour or end_hour is provided, the slot whose window
               contains that time is modified (the "given slot").
             - Otherwise the *active* slot (the slot containing the current
-              device-local time) is modified.
+              time of the library instance) is modified. No device-local
+              timestamp is exposed by the cloud, so if the device's local
+              time differs from the instance time, pass start_hour or
+              end_hour to target a specific slot explicitly.
         - tariff_type: set the target slot's tariff (1=Peak, 2=Mid, 3=Off);
           the SolixTariffTypes name ("peak"/"mid_peak"/"off_peak") is also
           accepted.
@@ -3206,6 +3293,10 @@ async def set_pps_use_time(
           (max_soc).
         - unit: currency symbol (e.g. "$").
     - If no parameter is provided, the current plan is returned without writing.
+    - The final plan is validated before writing (issue #326): 1-6 contiguous
+      slots tiling 00:00-24:00, valid tariff types and prices. If the result
+      is invalid, a warning is logged and the unmodified current plan is
+      returned without writing.
     - toFile: write to file for testing instead of making the Api call
     """
 
@@ -3281,10 +3372,15 @@ async def set_pps_use_time(
             pps = json.loads(pps)
     if not isinstance(pps, dict):
         pps = {}
+    # snapshot the current plan so an invalid result can be rejected without
+    # losing the unmodified plan
+    original_pps = copy.deepcopy(pps)
     # no option provided -> return the current plan without writing
+    # (ranges/prices count as "provided" when not None, so an explicitly empty
+    # list is validated and rejected rather than silently treated as a no-op)
     if not (
-        ranges
-        or prices
+        ranges is not None
+        or prices is not None
         or start_hour
         or end_hour
         or tariff_type
@@ -3381,6 +3477,17 @@ async def set_pps_use_time(
         pps["unit"] = unit
     if reserve_power is not None:
         pps["reserve_power"] = reserve_power
+
+    # validate the final plan before committing (issue #326: enforce the device
+    # plan limits - 1-6 contiguous slots tiling 00:00-24:00, valid types/prices);
+    # on failure warn and return the unmodified plan without writing
+    if problems := _validate_pps_plan(pps):
+        self._logger.warning(
+            "Api %s invalid PPS use time plan (%s); not writing",
+            self.apisession.nickname,
+            "; ".join(problems),
+        )
+        return original_pps
 
     # commit to the cloud store; the cloud pushes the plan to the device
     return await self.set_device_attributes(
