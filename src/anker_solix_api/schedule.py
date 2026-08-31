@@ -3140,10 +3140,15 @@ async def set_sb2_use_time(  # noqa: C901
 async def set_pps_use_time(
     self: AnkerSolixApi,
     deviceSn: str,
-    ranges: list[dict] | None = None,
-    prices: list[dict] | None = None,
-    unit: str | None = None,
-    reserve_power: int | None = None,
+    ranges: list[dict] | None = None,  # full replacement of the slot plan
+    prices: list[dict] | None = None,  # full replacement of the tariff prices
+    start_hour: int | datetime | time | None = None,  # 0-24
+    end_hour: int | datetime | time | None = None,  # 0-24
+    tariff_type: int | str | None = None,  # 1=Peak, 2=Mid, 3=Off
+    tariff_price: float | str | None = None,
+    delete: bool | None = False,
+    reserve_power: int | None = None,  # "TOU Power" backup reserve %
+    unit: str | None = None,  # currency symbol
     toFile: bool = False,
 ) -> bool | dict:
     r"""Set or change the PPS time-of-use (TOU) charging schedule for a given device.
@@ -3152,6 +3157,14 @@ async def set_pps_use_time(
     plan in the cloud "pps_use_time" device attribute (a JSON string). Writing
     this attribute via the Api is sufficient to update the plan: the cloud pushes
     the new schedule down to the device, so no direct MQTT command is required.
+
+    The helper supports two modes:
+    - Full replacement: pass ranges and/or prices to replace the whole slot plan
+      and/or the whole price list (all other parameters are ignored for the plan).
+    - Flexible partial change (mirroring set_sb2_use_time() but without the
+      seasonal month handling, since a PPS plan is hourly and always covers the
+      day): apply a change to a single slot. All parameters are optional; any
+      parameter left as None is preserved from the current plan.
 
     The "pps_use_time" attribute format (as returned by get_device_attributes):
     "{"ranges": [{"start_time": "00:00", "end_time": "09:00", "type": 1},
@@ -3164,20 +3177,99 @@ async def set_pps_use_time(
     1=Peak, 2=Mid, 3=Off.
 
     Applied Parameter logic:
-    - If no parameter is provided, read and return the current pps_use_time plan
-    - ranges: full replacement of the TOU slot plan, a list of
-        {"start_time": "HH:MM", "end_time": "HH:MM", "type": 1|2|3}
-        covering the day 00:00-24:00 with 1-6 contiguous slots
-    - prices: full replacement of the tariff prices, a list of
-        {"price": "<float>", "type": 1|2|3}
-    - unit: currency symbol (e.g. "$")
-    - reserve_power: backup reserve percentage (the app's "TOU Power" setting;
-        "power in use" = 100 - reserve_power). The app steps by 1% and enforces a
-        lower bound (observed floor: min_soc + 5, e.g. 6% when min_soc = 1)
-    - Any parameter left as None is preserved from the current plan
+    - Full replacement (takes precedence when provided):
+        - ranges: replace the TOU slot plan, a list of
+          {"start_time": "HH:MM", "end_time": "HH:MM", "type": 1|2|3}
+          covering the day 00:00-24:00 with 1-6 contiguous slots
+        - prices: replace the tariff prices, a list of
+          {"price": "<float>", "type": 1|2|3}
+    - Flexible partial change (applied to one target slot when no full
+      replacement is given):
+        - Target slot selection:
+            - If start_hour or end_hour is provided, the slot whose window
+              contains that time is modified (the "given slot").
+            - Otherwise the *active* slot (the slot containing the current
+              device-local time) is modified.
+        - tariff_type: set the target slot's tariff (1=Peak, 2=Mid, 3=Off);
+          the SolixTariffTypes name ("peak"/"mid_peak"/"off_peak") is also
+          accepted.
+        - tariff_price: set the price of the target slot's tariff in "prices".
+        - start_hour: move the target slot's start boundary and adjust the
+          previous slot's end to match (the plan stays contiguous).
+        - end_hour: move the target slot's end boundary and adjust the next
+          slot's start to match (the plan stays contiguous).
+        - delete: remove the target slot and fill the gap with the adjacent slot.
+    - Plan-level options (applied in either mode):
+        - reserve_power: backup reserve percentage (the app's "TOU Power"
+          setting; "power in use" = 100 - reserve_power). The app steps by 1%
+          and enforces a device-specific floor (min_soc + 5) and ceiling
+          (max_soc).
+        - unit: currency symbol (e.g. "$").
+    - If no parameter is provided, the current plan is returned without writing.
     - toFile: write to file for testing instead of making the Api call
     """
-    # Read the current plan (from file when toFile) so unset parameters are preserved
+
+    def _to_hhmm(value) -> str | None:
+        """Convert an int hour / datetime / time / 'HH:MM' to 'HH:MM', or None."""
+        if isinstance(value, datetime):
+            value = value.time()
+        if isinstance(value, time):
+            return f"{value.hour:02d}:{value.minute:02d}"
+        if str(value).isdigit() or isinstance(value, int | float):
+            return f"{max(0, min(24, int(value))):02d}:00"
+        if isinstance(value, str):
+            parts = value.split(":")
+            if len(parts) == 2 and all(part.isdigit() for part in parts):
+                hour, minute = int(parts[0]), int(parts[1])
+                if 0 <= hour <= 24 and 0 <= minute <= 59:
+                    return f"{hour:02d}:{minute:02d}"
+        return None
+
+    def _hhmm_to_min(value: str) -> int:
+        hour, minute = value.split(":")
+        return int(hour) * 60 + int(minute)
+
+    def _min_to_hhmm(value: int) -> str:
+        value = max(0, min(1440, value))
+        return f"{value // 60:02d}:{value % 60:02d}"
+
+    def _slot_at(ranges: list[dict], hhmm: str) -> int:
+        """Index of the slot whose [start_time, end_time) contains hhmm, else -1."""
+        for index, slot in enumerate(ranges):
+            if slot["start_time"] <= hhmm < slot["end_time"]:
+                return index
+        return -1
+
+    # normalize the parameters
+    start_hour = _to_hhmm(start_hour)
+    end_hour = _to_hhmm(end_hour)
+    tariff_type = (
+        # accept the SolixTariffTypes enum name (peak/mid_peak/off_peak) or the
+        # int value; PPS only supports Peak/Mid/Off (no Valley/Unknown)
+        int(getattr(SolixTariffTypes, str(tariff_type).upper()))
+        if hasattr(SolixTariffTypes, str(tariff_type).upper())
+        and getattr(SolixTariffTypes, str(tariff_type).upper()).value in (1, 2, 3)
+        else int(tariff_type)
+        if (str(tariff_type).isdigit() or isinstance(tariff_type, int | float))
+        and int(tariff_type) in (1, 2, 3)
+        else None
+    )
+    tariff_price = (
+        # preserve the price's native precision (PPS prices can be e.g. 0.001),
+        # stripping trailing zeros so 0.2 stays "0.2" and 0.001 stays "0.001"
+        f"{float(tariff_price):.6f}".rstrip("0").rstrip(".")
+        if str(tariff_price).replace(".", "", 1).isdigit()
+        else None
+    )
+    delete = delete if isinstance(delete, bool) else False
+    reserve_power = (
+        max(1, min(100, int(reserve_power)))
+        if (str(reserve_power).isdigit() or isinstance(reserve_power, int | float))
+        else None
+    )
+    unit = str(unit)[0:3] if unit else None
+
+    # read the current plan (from file when toFile) so unset parameters are preserved
     data = await self.get_device_attributes(
         deviceSn=deviceSn, attributes=["pps_use_time"], fromFile=toFile
     )
@@ -3187,16 +3279,108 @@ async def set_pps_use_time(
             pps = json.loads(pps)
     if not isinstance(pps, dict):
         pps = {}
-    # Apply the provided changes, preserving everything else
+    # no option provided -> return the current plan without writing
+    if not (
+        ranges
+        or prices
+        or start_hour
+        or end_hour
+        or tariff_type
+        or tariff_price
+        or delete
+        or reserve_power is not None
+        or unit
+    ):
+        self._logger.info(
+            "Api %s no PPS use time options provided, returning current plan",
+            self.apisession.nickname,
+        )
+        return pps
+
+    # full replacement takes precedence: replace the whole slot plan / price list
     if ranges is not None:
         pps["ranges"] = ranges
     if prices is not None:
         pps["prices"] = prices
-    if unit is not None:
+
+    # flexible partial change: apply to one target slot when the slot plan is not
+    # being fully replaced (ranges left as None)
+    if (
+        start_hour or end_hour or tariff_type or tariff_price or delete
+    ) and ranges is None:
+        cur_ranges: list[dict] = pps.get("ranges") or []
+        cur_prices: list[dict] = pps.get("prices") or []
+        if not cur_ranges:
+            # no existing plan; start from a single default off-peak slot
+            cur_ranges = [{"start_time": "00:00", "end_time": "24:00", "type": 3}]
+        # select the target slot: the slot at the given time, else the active slot
+        if start_hour or end_hour:
+            index = _slot_at(cur_ranges, start_hour or end_hour)
+        else:
+            index = _slot_at(cur_ranges, datetime.now().astimezone().strftime("%H:%M"))
+        if index < 0:
+            index = 0
+        if delete:
+            if len(cur_ranges) == 1:
+                # a single slot cannot be deleted; reset to the default plan
+                cur_ranges = [{"start_time": "00:00", "end_time": "24:00", "type": 3}]
+            elif index > 0:
+                # the previous slot absorbs the deleted slot
+                cur_ranges[index - 1]["end_time"] = cur_ranges[index]["end_time"]
+                del cur_ranges[index]
+            else:
+                # the next slot absorbs the deleted (first) slot
+                cur_ranges[1]["start_time"] = cur_ranges[0]["start_time"]
+                del cur_ranges[0]
+        else:
+            if tariff_type:
+                cur_ranges[index]["type"] = tariff_type
+            if tariff_price:
+                slot_type = cur_ranges[index]["type"]
+                for price in cur_prices:
+                    if price.get("type") == slot_type:
+                        price["price"] = tariff_price
+                        break
+                else:
+                    cur_prices.append({"price": tariff_price, "type": slot_type})
+            if start_hour:
+                if index > 0:
+                    lower = _hhmm_to_min(cur_ranges[index - 1]["start_time"])
+                    upper = _hhmm_to_min(cur_ranges[index]["end_time"])
+                    new_start = _min_to_hhmm(
+                        max(lower, min(upper - 1, _hhmm_to_min(start_hour)))
+                    )
+                    cur_ranges[index]["start_time"] = new_start
+                    cur_ranges[index - 1]["end_time"] = new_start
+                else:
+                    self._logger.warning(
+                        "Api %s cannot move the start of the first slot (stays 00:00)",
+                        self.apisession.nickname,
+                    )
+            if end_hour:
+                if index < len(cur_ranges) - 1:
+                    lower = _hhmm_to_min(cur_ranges[index]["start_time"])
+                    upper = _hhmm_to_min(cur_ranges[index + 1]["end_time"])
+                    new_end = _min_to_hhmm(
+                        max(lower + 1, min(upper, _hhmm_to_min(end_hour)))
+                    )
+                    cur_ranges[index]["end_time"] = new_end
+                    cur_ranges[index + 1]["start_time"] = new_end
+                else:
+                    self._logger.warning(
+                        "Api %s cannot move the end of the last slot (stays 24:00)",
+                        self.apisession.nickname,
+                    )
+        pps["ranges"] = cur_ranges
+        pps["prices"] = cur_prices
+
+    # apply the plan-level options
+    if unit:
         pps["unit"] = unit
     if reserve_power is not None:
         pps["reserve_power"] = reserve_power
-    # Commit to the cloud store; the cloud pushes the plan to the device
+
+    # commit to the cloud store; the cloud pushes the plan to the device
     return await self.set_device_attributes(
         deviceSn=deviceSn,
         attributes={"pps_use_time": json.dumps(pps, separators=(",", ":"))},

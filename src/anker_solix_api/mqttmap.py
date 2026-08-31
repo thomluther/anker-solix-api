@@ -768,7 +768,7 @@ _A1763_0421 = {
         # Use a sequential BYTES list so the parser advances past the variable-length schedule.
         BYTES: [
             {
-                NAME: "active_tariff",  # Active tariff at current time: 0=none (UPS), 1=Peak, 2=Mid, 3=Off (device-computed)
+                NAME: "tou_active_tariff",  # Active tariff at current time: 0=none (UPS), 1=Peak, 2=Mid, 3=Off (device-computed)
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
