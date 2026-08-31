@@ -3231,6 +3231,7 @@ async def set_pps_use_time(
     tariff_type: int | str | None = None,  # 1=Peak, 2=Mid, 3=Off
     tariff_price: float | str | None = None,
     delete: bool | None = False,
+    slot: int | None = None,  # 1-based slot index for explicit targeting
     reserve_power: int | None = None,  # "TOU Power" backup reserve %
     unit: str | None = None,  # currency symbol
     toFile: bool = False,
@@ -3269,13 +3270,16 @@ async def set_pps_use_time(
           {"price": "<float>", "type": 1|2|3}
     - Flexible partial change (applied to one target slot when no full
       replacement is given):
-        - Target slot selection:
+        - Target slot selection (highest precedence first):
+            - slot: a 1-based index into the slot plan explicitly targets that
+              slot (e.g. slot=2 targets the second slot). start_hour/end_hour
+              then only set the target slot's boundaries.
             - If start_hour or end_hour is provided, the slot whose window
               contains that time is modified (the "given slot").
             - Otherwise the *active* slot (the slot containing the current
               time of the library instance) is modified. No device-local
               timestamp is exposed by the cloud, so if the device's local
-              time differs from the instance time, pass start_hour or
+              time differs from the instance time, pass slot, start_hour or
               end_hour to target a specific slot explicitly.
         - tariff_type: set the target slot's tariff (1=Peak, 2=Mid, 3=Off);
           the SolixTariffTypes name ("peak"/"mid_peak"/"off_peak") is also
@@ -3355,6 +3359,11 @@ async def set_pps_use_time(
         else None
     )
     delete = delete if isinstance(delete, bool) else False
+    slot = (
+        int(slot)
+        if (str(slot).isdigit() or isinstance(slot, int)) and int(slot) > 0
+        else None
+    )
     reserve_power = (
         max(1, min(100, int(reserve_power)))
         if (str(reserve_power).isdigit() or isinstance(reserve_power, int | float))
@@ -3386,6 +3395,7 @@ async def set_pps_use_time(
         or tariff_type
         or tariff_price
         or delete
+        or slot is not None
         or reserve_power is not None
         or unit
     ):
@@ -3404,19 +3414,34 @@ async def set_pps_use_time(
     # flexible partial change: apply to one target slot when the slot plan is not
     # being fully replaced (ranges left as None)
     if (
-        start_hour or end_hour or tariff_type or tariff_price or delete
+        start_hour
+        or end_hour
+        or tariff_type
+        or tariff_price
+        or delete
+        or slot is not None
     ) and ranges is None:
         cur_ranges: list[dict] = pps.get("ranges") or []
         cur_prices: list[dict] = pps.get("prices") or []
         if not cur_ranges:
             # no existing plan; start from a single default off-peak slot
             cur_ranges = [{"start_time": "00:00", "end_time": "24:00", "type": 3}]
-        # select the target slot: the slot at the given time, else the active slot
-        if start_hour or end_hour:
+        # select the target slot: explicit slot index, else the slot at the given
+        # time, else the active slot
+        if slot is not None:
+            index = slot - 1  # 1-based to 0-based
+        elif start_hour or end_hour:
             index = _slot_at(cur_ranges, start_hour or end_hour)
         else:
             index = _slot_at(cur_ranges, datetime.now().astimezone().strftime("%H:%M"))
-        if index < 0:
+        if index < 0 or index >= len(cur_ranges):
+            if slot is not None:
+                self._logger.warning(
+                    "Api %s PPS slot %s out of range (1-%d); targeting slot 1",
+                    self.apisession.nickname,
+                    slot,
+                    len(cur_ranges),
+                )
             index = 0
         if delete:
             if len(cur_ranges) == 1:

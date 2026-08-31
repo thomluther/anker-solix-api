@@ -1179,6 +1179,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device["display_theme"] = self.get_charger_themes(
                                 deviceSn=sn
                             ).get(str(value), {})
+                    # PPS TOU plan (pps_use_time): store the raw plan for PPS devices
+                    elif key == "pps_use_time":
+                        device[key] = value
                 except Exception:  # pylint: disable=broad-exception-caught
                     self._logger.exception(
                         "Api %s exception occurred when updating device details for key %s with value %s",
