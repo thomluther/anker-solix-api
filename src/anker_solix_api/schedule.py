@@ -3219,7 +3219,9 @@ async def set_pps_use_time(
             return f"{max(0, min(24, int(value))):02d}:00"
         if isinstance(value, str):
             parts = value.split(":")
-            if len(parts) == 2 and all(part.isdigit() for part in parts):
+            if 2 <= len(parts) <= 3 and all(part.isdigit() for part in parts):
+                # accept "HH:MM" and the "HH:MM:SS" format used by the Home
+                # Assistant time selector (seconds are ignored)
                 hour, minute = int(parts[0]), int(parts[1])
                 if 0 <= hour <= 24 and 0 <= minute <= 59:
                     return f"{hour:02d}:{minute:02d}"
