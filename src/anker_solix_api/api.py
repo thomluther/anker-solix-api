@@ -461,9 +461,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # This key is only used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
                         cap_change = True
-                        # If value is 0, reset customization
-                        if float(value) == 0:
-                            device.get("customized", {}).pop("battery_capacity", None)
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
                     elif key in ["set_load_power", "parallel_home_load"] and value:
                         # Value may include unit, remove unit to have content consistent

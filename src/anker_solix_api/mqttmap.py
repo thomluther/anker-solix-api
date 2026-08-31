@@ -2104,7 +2104,7 @@ _A17C1_040a = (
         f"a{3 + idx}": {
             BYTES: {
                 "00": {
-                    NAME: f"exp_{idx}_controller_sn?",
+                    NAME: f"exp_{idx}_controller_sn",
                     LENGTH: 17,
                     TYPE: DeviceHexDataTypes.str.value,
                 },

@@ -236,9 +236,6 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         # This is used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
                         cap_change = True
-                        # If value is 0, reset customization
-                        if float(value) == 0:
-                            device.get("customized", {}).pop("battery_capacity", None)
                     elif key == "battery_soc" and value is not None:
                         # This is a percentage value for the battery state of charge, not power
                         calc_capacity |= device.get("battery_soc") != str(value)

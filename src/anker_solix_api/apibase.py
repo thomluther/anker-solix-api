@@ -176,6 +176,9 @@ class AnkerSolixBaseApi:
                 data = self.devices.get(id)
                 customized = data.get("customized") or {}
                 customized[key] = value
+                # reset customized keys if required
+                if key == "battery_capacity" and str(value or 0) and float(value) == 0:
+                    customized.pop("battery_capacity", None)
                 data["customized"] = customized
                 # trigger dependent updates by rewriting old value to cache update method
                 # customized keys that are used as alternate value must be handled separately since they may not exist in cache

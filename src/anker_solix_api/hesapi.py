@@ -259,9 +259,6 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                         # This key is used to trigger recalculation from customization
                         cap_change = True
                         device[key] = value
-                        # If value is 0, reset customization
-                        if float(value) == 0:
-                            device.get("customized", {}).pop("battery_capacity", None)
 
                 except Exception:  # pylint: disable=broad-exception-caught
                     self._logger.exception(
