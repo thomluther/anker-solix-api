@@ -16,6 +16,7 @@ from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     SolixDefaults,
+    SolixDeviceCapacity,
     SolixDeviceCategory,
     SolixDeviceNames,
     SolixDeviceType,
@@ -180,19 +181,6 @@ class AnkerSolixBaseApi:
                 # customized keys that are used as alternate value must be handled separately since they may not exist in cache
                 if key in data:
                     self._update_dev(devData={"device_sn": id, key: data[key]})
-                    # Ensure to update main device capacity as well if sub device was customized
-                    # NOTE: Main capacity update now handled in Api classes
-                    # if (
-                    #     key == "battery_capacity"
-                    #     and value
-                    #     and data.get("is_subdevice")
-                    #     and (main := data.get("main_sn"))
-                    #     and (cap := (self.devices.get(main) or {}).get(key))
-                    # ):
-                    #     # first remove any previous customization on main device
-                    #     (self.devices[main].get("customized") or {}).pop(key, None)
-                    #     # trigger calculation update
-                    #     self._update_dev(devData={"device_sn": main, key: cap})
             elif id == self.apisession.email:
                 data = self.account
                 customized = data.get("customized") or {}
@@ -866,7 +854,7 @@ class AnkerSolixBaseApi:
                                         "_protocols",
                                         "_settings",
                                         "_data",
-                                        # "?", # Add for decoder testing in monitor
+                                        # "?",  # Add for decoder testing in monitor
                                     )
                                 )
                             )
@@ -1127,7 +1115,32 @@ class AnkerSolixBaseApi:
                                     )
                                 ]
                             )
+                        # determine size of expansion if not done yet and save in api cache
+                        cap_change = False
+                        expansions = device_mqtt.get("expansion_packs", 0)
+                        for i in range(1, expansions + 1):
+                            if (
+                                device.get(f"exp_{i}_size") is None
+                                and (exp_sn := device_mqtt.get(f"exp_{i}_sn"))
+                                is not None
+                            ):
+                                code = get_solix_product_code(exp_sn)
+                                cap_change = True
+                                if (
+                                    not code
+                                    and device.get("type")
+                                    == SolixDeviceType.SOLARBANK.value
+                                ):
+                                    code = "BP1600"
+                                device[f"exp_{i}_size"] = getattr(
+                                    SolixDeviceCapacity,
+                                    code,
+                                    device.get("battery_size") or 0,
+                                )
+                            else:
+                                break
                         # calculate device overall soc if expansions are available and no overall soc in mqtt cache
+                        size = device.get("battery_size")
                         if not (tsoc := mqtt.get("battery_soc")) and (
                             soclist := [
                                 float(device_mqtt.get(k))
@@ -1139,11 +1152,44 @@ class AnkerSolixBaseApi:
                             ]
                         ):
                             # calculate overall soc based on expansions
-                            tsoc = round(sum(soclist) / len(soclist))
+                            sizelist = [size] if len(soclist) > expansions else []
+                            sizelist.extend(
+                                [
+                                    float(device.get(k))
+                                    for k in (
+                                        [
+                                            f"exp_{i}_size"
+                                            for i in range(1, 1 + expansions)
+                                        ]
+                                    )
+                                    if device.get(k)
+                                ]
+                            )
+                            if len(soclist) == len(sizelist):
+                                # consider different expansion sizes in average, limit to 100 %
+                                tsoc = min(
+                                    100,
+                                    round(
+                                        sum(
+                                            [
+                                                size * soc
+                                                for size, soc in zip(
+                                                    sizelist, soclist, strict=False
+                                                )
+                                            ]
+                                        )
+                                        / sum(sizelist)
+                                    ),
+                                )
+                            else:
+                                # simply take average which ignores different expansion sizes
+                                tsoc = round(sum(soclist) / len(soclist))
                             device_mqtt["battery_soc"] = f"{float(tsoc):.0f}"
-                        # trigger capacity calculation if no Api SOC available or MQTT overlay
+                        # trigger capacity calculation if no Api SOC available or MQTT overlay or expansion size changed
                         if tsoc and (
-                            not device.get("battery_soc") or device.get("mqtt_overlay")
+                            not device.get("battery_soc")
+                            or device.get("mqtt_overlay")
+                            or cap_change
                         ):
                             # trigger correct class with old capacity since this will cause capacity recalculation
                             if self.hesApi and sn in self.hesApi.devices:

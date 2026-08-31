@@ -109,7 +109,7 @@ API_ENDPOINTS: Final[dict] = {
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
-    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 20 23 24 25 26 27 28 29 30 31 32 33 34]
+    "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 20 23 24 25 26 27 28 29 30 31 32 33 34 35]
     "set_device_parm": "power_service/v1/site/set_site_device_param",  # Apply provided settings to a device for the provided site id and param type (e.g. Schedules),
     "energy_analysis": "power_service/v1/site/energy_analysis",  # Fetch energy data for given time frames
     "home_load_chart": "power_service/v1/site/get_home_load_chart",  # Fetch data as displayed in home load chart for schedule adjustments for given site_id and optional device SN (empty if solarbank not connected)
@@ -351,18 +351,22 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     'power_service/v1/app/set_oil_consumption_reminder_plan'
     'power_service/v1/app/set_maintain_parts_ignore_reminders'
 
-related to power V2: 11 + 0 used => 11 total
+related to power V2: 14 + 0 used => 11 total
     'power_service/v2/app/get_custom_branch_icon' # get list of branch icons and url
     'power_service/v2/app/get_hardware_relation'# shows empty list, {"sn_list": [deviceSn]}
-    'power_service/v2/platform_get_pn_region_code'# shows region codes per PN, but purpose unclear, {"product_code": "A5102"}
+    'power_service/v2/platform_get_pn_region_code'# {"product_code": "AE103"})) SB4 => {"product_code": "AE103","region_codes": [{"country_code": "DE","states": [{"state_code": "DE","grid_code": 3,"grid_code_name": "VDE-AR-N 4105"}]},...]}
     'power_service/v2/site/platform_energy_analysis_options'
     'power_service/v2/app/set_device_pv_name'
     'power_service/v2/device/energy_analysis'
+    'power_service/v2/device/energy_options' # shows earliest date for device # {"device_sn": deviceSn}))
+    'power_service/v2/device/timeline/event' # {"device_sn": deviceSn})) => {"total_count": 0,"all_unlocked": false,"top_event": null,"statistics": {"stable_days": 0,"offgrid_consume": 0,"co2": 0},"list": []}
+    'power_service/v2/device/timeline/event/batch_read'
     'power_service/v2/device/report_data'
-    'power_service/v2/platform_get_user_region_param'
+    'power_service/v2/platform_get_user_region_param' # {"product_code": "A17C5", "identifier_id": deviceSn, "scenario_type": 1})) # if supported, CC, grid code, advanced params settings for grid options
     'power_service/v2/platform_set_user_region_param'
-    'power_service/v2/site/get_output_power_info'
-    'power_service/v2/site/platform_get_site_savings'
+    'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC
+    'power_service/v2/site/platform_get_site_savings' # may need special site? {"site_id": siteId, "type": "week", "data_type": 1, "start_time": "2026-08-01, "end_time": "2026-08-04"}))
+
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
@@ -1192,11 +1196,15 @@ class SolixDeviceCapacity:
     A110B: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
     A17C0: int = 1600  # SOLIX Solarbank E1600
     A17C1: int = 1600  # SOLIX Solarbank 2 E1600 Pro
+    BP1600: int = 1600  # Solarbank 2 Expansion (This has no SN or product code)
     A17C2: int = 1600  # SOLIX Solarbank 2 E1600 AC
     A17C3: int = 1600  # SOLIX Solarbank 2 E1600 Plus
     A17C5: int = 2688  # SOLIX Solarbank 3 E2700 Pro
+    DJF: int = 2688  # Solarbank 3 Expansion
     AE103: int = 5024  # SOLIX Solarbank 4 E5000 Pro
+    BP5000: int = 5024 # TODO: Add product code for Solarbank 4 Expansion
     A17E2: int = 7000  # Solarbank Max AC
+    BP7000: int = 7000 # TODO: Add product code for Solarbank Max AC Expansion
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
     A1723: int = 288  # SOLIX C300X Portable Power Station
@@ -1236,7 +1244,8 @@ class SolixDeviceCapacity:
     A1790_1: int = 3840  # SOLIX BP3800 Expansion Battery for F3800
     A1790P: int = 3840  # SOLIX F3800 Plus Portable Power Station
     A5220: int = 5000  # SOLIX X1 Battery module
-    A17E1: int = 6144  # SOLIX E10 Battery module, Controller has no battery?
+    A17E1: int = 6144  # SOLIX E10 Controller, has no battery
+    DJXM: int = 6144  # SOLIX E10 Expansion Battery,
 
 
 @dataclass(frozen=True)
