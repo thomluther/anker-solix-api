@@ -157,6 +157,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                 if value := devData.get("owner_user_id"):
                     device["owner_user_id"] = value
             calc_capacity = False  # Flag whether capacity may need recalculation
+            cap_change = False  # Flag whether capacity change was identified
             for key, value in devData.items():
                 try:
                     if key in ["product_code", "device_pn"] and value:
@@ -180,6 +181,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # update customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
                                 device.get("mqtt_overlay") or False
+                            )
+                            # update customizable setting for desired MQTT status request interval
+                            device["mqtt_status_interval"] = device.get(
+                                "mqtt_status_interval", 0
                             )
                             # check once if device supports status requests from description
                             if "mqtt_status_request" not in device:
@@ -323,10 +328,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         and value
                     ):
                         device[key] = str(value)
-                    elif key == "mqtt_overlay" and value is not None:
+                    elif (
+                        key in ["mqtt_overlay", "mqtt_status_interval"]
+                        and value is not None
+                    ):
                         # keys that are customized
                         custom = (device.get("customized") or {}).get(key)
                         device[key] = custom if custom is not None else value
+                        # If mqtt_status_interval is 0, clear customization
+                        if (
+                            key == "mqtt_status_interval"
+                            and custom is not None
+                            and float(custom) == 0
+                        ):
+                            device.get("customized", {}).pop(
+                                "mqtt_status_interval", None
+                            )
                     elif key == "bt_ble_id" and value and not devData.get("bt_ble_mac"):
                         # Make sure that BT ID is added if mac not in data
                         device["bt_ble_mac"] = str(value).replace(":", "")
@@ -444,7 +461,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key == "battery_capacity" and str(value).isdigit():
                         # This key is only used as trigger for customization to recalculate modified capacity dependent values
                         device[key] = value
-                        calc_capacity = True
+                        cap_change = True
                     # solarbank info shows the load preset per device, which is identical to device parallel_home_load for 2 solarbanks, or current homeload for single solarbank
                     elif key in ["set_load_power", "parallel_home_load"] and value:
                         # Value may include unit, remove unit to have content consistent
@@ -1191,13 +1208,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     )
 
             # generate extra values when certain conditions are met
-            if calc_capacity:
+            if calc_capacity or cap_change:
                 # generate battery values when soc updated or device name changed or PN is known or exp packs changed
                 # recalculate only with valid data, otherwise init extra fields with 0
                 if device.get("data_valid", True):
                     # get some data optionally from mqtt data
                     mqtt = device.get("mqtt_data") or {}
-                    cap_change = False
                     # calculate size only once based on PN
                     if (size := device.get("battery_size")) is None:
                         size = getattr(
@@ -1206,8 +1222,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         device["battery_size"] = size
                         cap_change = True
                     if (
-                        exp := device.get("sub_package_num")
-                        or mqtt.get("expansion_packs")
+                        exp := (
+                            mqtt.get("expansion_packs") or device.get("sub_package_num")
+                            if device.get("mqtt_overlay")
+                            else device.get("sub_package_num")
+                            or mqtt.get("expansion_packs")
+                        )
                         or 0
                     ) != device.get("expansion_packs"):
                         # update calculated exp number in Api cache
@@ -1215,11 +1235,20 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         cap_change = True
                     # recalculate capacity if required
                     if cap_change and str(size).isdigit() and str(exp).isdigit():
-                        # NOTE: Expansions for SB2 + 3 can have mixed capacity, which cannot be identified
+                        # NOTE: Expansions for SB2 + 3 can have mixed capacity, which may be identified only by MQTT battery serials
                         # NOTE: E10 controller has no battery, but needs 1-5 battery expansions
-                        controller_bat = 0 if device.get("device_pn") == "A17E1" else 1
+                        controller_size = (
+                            0 if device.get("device_pn") == "A17E1" else size
+                        )
+                        expansion_size = sum(
+                            [
+                                float(device.get(k, 0))
+                                for k in ([f"exp_{i}_size" for i in range(1, 1 + exp)])
+                            ]
+                        )
+                        # use determined expansion size or assume same size for all expansions
                         device["battery_capacity"] = (
-                            f"{size * (controller_bat + exp):.0f}"
+                            f"{(expansion_size or (size * exp)) + controller_size:.0f}"
                         )
                     cap = int(device.get("battery_capacity") or 0)
                     # get total SOC, prefer value depending on overlay

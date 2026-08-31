@@ -1050,6 +1050,7 @@ class AnkerSolixApiExport:
                             "pps_use_time",
                             "currency",
                             "tag",
+                            "pps_use_time",
                         ],
                     },
                     replace=[(siteId, "<siteId>"), (sn, "<deviceSn>")],

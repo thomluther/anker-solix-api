@@ -859,6 +859,7 @@ _A1763_0421 = {
 }
 
 _A1783_0421 = {
+    TOPIC: "param_info",
     "a2": {
         BYTES: {
             "01": {
@@ -1143,7 +1144,7 @@ _A1783_0421 = {
         # TOU mode selector + backup + Time-of-Use plan
         BYTES: [
             {
-                NAME: "active_plan",  # TOUSystemStatus: 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
+                NAME: "active_tariff",  # TOUSystemStatus: 0=None, 1=Peak, 2=Mid Peak, 3=Off Peak
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -1240,6 +1241,52 @@ _A1783_0421 = {
     },
     "fd": {NAME: "storm_guard_timestamp", SIGNED: False},
     "fe": {NAME: "msg_timestamp"},
+}
+
+_A1783_0503 = {
+    TOPIC: "state_info",
+    "a2": {
+        # Energy stats
+        BYTES: {
+            "00": {
+                NAME: "0503_00_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "04": {
+                NAME: "0503_04_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "08": {
+                NAME: "0503_08_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "12": {
+                NAME: "0503_12_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "16": {
+                NAME: "0503_16_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "20": {
+                NAME: "0503_20_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+        },
+    },
+    "a3": {NAME: "energy_timestamp"},
 }
 
 _A1780_0405 = {
@@ -2116,7 +2163,7 @@ _A17C1_040a = (
         f"a{3 + idx}": {
             BYTES: {
                 "00": {
-                    NAME: f"exp_{idx}_controller_sn?",
+                    NAME: f"exp_{idx}_controller_sn",
                     LENGTH: 17,
                     TYPE: DeviceHexDataTypes.str.value,
                 },
@@ -2348,7 +2395,7 @@ _AE103_0405 = {
     "a3": {NAME: "main_battery_soc"},
     "a4": {NAME: "battery_status"},  # 0: Standby; ?: Discharging; 2: Charging;
     "a5": {NAME: "temperature", SIGNED: True},
-    # "a6": {NAME: "battery_soc"},
+    # "a6": {NAME: "battery_soc"}, # shows 0 , is this a bug? There is no other field indicating overall SOC
     "a7": {NAME: "sw_version", "values": 4},
     "a8": {NAME: "sw_controller?", "values": 4},
     "a9": {NAME: "sw_expansion", "values": 4},
@@ -3429,6 +3476,7 @@ _AS200_0421 = {
 
 # S2000 forked from _A1783_0421 (C2000 Gen 2); extra AS220-only tags TBD
 _AS220_0421 = {
+    TOPIC: "param_info",
     "a2": {
         BYTES: {
             "01": {
@@ -3624,7 +3672,7 @@ _AS220_0421 = {
         # TOU mode selector + backup + Time-of-Use plan
         BYTES: [
             {
-                NAME: "active_plan",  # TOUSystemStatus: 0=Standard/UPS, 3=Time-of-Use, 4=Self-Consumption, 5=Custom
+                NAME: "active_tariff",  # TOUSystemStatus: 0=None, 1=Peak, 2=Mid Peak, 3=Off Peak
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             {
@@ -3769,6 +3817,52 @@ _AS220_0421 = {
     },
     "fd": {NAME: "storm_guard_timestamp"},
     "fe": {NAME: "msg_timestamp"},
+}
+
+_AS220_0503 = {
+    TOPIC: "state_info",
+    "a2": {
+        # Energy stats
+        BYTES: {
+            "00": {
+                NAME: "0503_00_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "04": {
+                NAME: "0503_04_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "08": {
+                NAME: "0503_08_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "12": {
+                NAME: "0503_12_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "16": {
+                NAME: "0503_16_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+            "20": {
+                NAME: "0503_20_energy?",  # unknown
+                TYPE: DeviceHexDataTypes.var.value,
+                FACTOR: 0.001,
+                SIGNED: False,
+            },
+        },
+    },
+    "a3": {NAME: "energy_timestamp"},
 }
 
 _PLUG_TIMER_STATUS = {
@@ -4311,10 +4405,12 @@ _PP_JSON = {
         "mps": {NAME: "micro_power_setting?"},
         "tpp": {NAME: "pv_yield", FACTOR: 0.001},  # 3045970
         "tgp": {
-            NAME: "grid_import_energy", FACTOR: 0.001
+            NAME: "grid_import_energy",
+            FACTOR: 0.001,
         },  # cumulative counter, increase rate proportional to grid import power, halts during outage
         "tlp": {
-            NAME: "home_consumption", FACTOR: 0.001
+            NAME: "home_consumption",
+            FACTOR: 0.001,
         },  # cumulative counter, increase rate proportional to home load power
         "tsp": {NAME: "unknown_total_energy?", FACTOR: 0.001},  # 50620729
         # TODO: daily energies in Wh? All daily factors to be confirmed, values may be 0.1 Wh
@@ -5173,6 +5269,8 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1783_0421,
+        # Interval: Irregular, once every 11? hours
+        "0503": _A1783_0503,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
         # Interval: Irregular, maybe on changes or as response to App status request? Same content as 0421
@@ -5361,6 +5459,8 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1783_0421,
+        # Interval: Irregular, once every 11? hours
+        "0503": _A1783_0503,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
         # Interval: Irregular, maybe on changes or as response to App status request? Same content as 0421
@@ -5624,7 +5724,9 @@ SOLIXMQTTMAP: Final[dict] = {
             "a3": {NAME: "backup_start_timestamp", SIGNED: False},
             "a4": {NAME: "backup_end_timestamp", SIGNED: False},
         },
-        # Interval: Irregular, triggered on app actions
+        # Interval: Irregular, once every 11? hours
+        "0503": _AS220_0503,
+        # Interval: Every 5 min
         "0504": {
             "a2": {
                 BYTES: {
@@ -5641,6 +5743,18 @@ SOLIXMQTTMAP: Final[dict] = {
                     "04": {
                         NAME: "main_battery_soc?",  # SOC of main battery only?
                         TYPE: DeviceHexDataTypes.ui.value,
+                    },
+                }
+            },
+            "a3": {
+                BYTES: {
+                    "00": {
+                        NAME: "output_power_total?",  # Output power total (AC + DC)?
+                        TYPE: DeviceHexDataTypes.sile.value,
+                    },
+                    "02": {
+                        NAME: "ac_input_power?",  # Input power total charge?
+                        TYPE: DeviceHexDataTypes.sile.value,
                     },
                 }
             },
