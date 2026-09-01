@@ -73,6 +73,8 @@ from .mqttcmdmap import (
     CMD_PORT_PRIORITY,
     CMD_PORT_START,
     CMD_PORT_TIMER,
+    CMD_PPS_BACKUP_SOC_V2,
+    CMD_PPS_TOU_0090_TOU_ONLY,
     CMD_PPS_USAGE_MODE_V2,
     CMD_REALTIME_TRIGGER,
     CMD_REVERSE_CHARGE_LIMITS,
@@ -111,6 +113,7 @@ from .mqttcmdmap import (
     MASK,
     NAME,
     OFFSET,
+    PPS_TOU_D9_BYTES,
     SIGNED,
     STATE_CONVERTER,
     STATE_NAME,
@@ -761,16 +764,8 @@ _A1763_0421 = {
         ]
     },
     "d9": {
-        BYTES: {
-            "03": {
-                NAME: "max_soc",  # max_soc: 80, 85, 90, 95, 100 %
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            "04": {
-                NAME: "min_soc",  # min_soc: 1, 5, 10, 15, 20 %
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-        }
+        # TOU system status + backup + Time-of-Use plan.
+        BYTES: PPS_TOU_D9_BYTES,
     },
     # "da": # Field used for screen schedule and theme settings, not supported on device
     "f9": {
@@ -1083,73 +1078,7 @@ _A1783_0421 = {
     },
     "d9": {
         # TOU mode selector + backup + Time-of-Use plan
-        BYTES: [
-            {
-                NAME: "active_tariff",  # TOUSystemStatus: 0=None, 1=Peak, 2=Mid Peak, 3=Off Peak
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "usage_mode",  # TOUSettingSystemStatus: 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_soc",  # backup reserve % (discharge floor for tou)
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_charge_soc",  # changed with max_soc % (for tou and backup usage)
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_discharge_soc",  # changed with min_soc % (for backup discharge?)
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            # Byte 5 is the tou schedule slot count and 6+ holds the TOU schedule:
-            # (tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr) * tou_slot_count
-            # App allows max 6 slots, remainder of field has different purpose
-            {
-                NAME: "tou_mode_schedule",
-                TYPE: DeviceHexDataTypes.bin.value,
-                # Define both conversions since length of schedule is flexible within binary
-                STATE_CONVERTER: lambda value, state, cache: (
-                    convert_pps_tou_schedule(value)
-                    if value is not None
-                    else convert_pps_tou_schedule(state)
-                ),
-            },
-            {
-                NAME: "backup_status",  # 0: inactive, 1: planned charge: 2: storm guard charge
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_switch",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "storm_guard_switch",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_start_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-            {
-                NAME: "backup_end_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-            {
-                NAME: "auto_backup_start_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-            {
-                NAME: "auto_backup_end_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-        ]
+        BYTES: PPS_TOU_D9_BYTES,
     },
     # "da" # Field used for screen schedule and theme settings
     "f9": {
@@ -4661,6 +4590,18 @@ SOLIXMQTTMAP: Final[dict] = {
     # PPS C1000 Gen 2
     "A1763": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "005e": {
+            # Backup charge plan command group
+            COMMAND_LIST: [
+                SolixMqttCommands.backup_charge_storm_guard,  # field a3, a4, a5
+                SolixMqttCommands.backup_charge_plan,  # field a3-a5
+                SolixMqttCommands.backup_charge_timestamps,  # field a6-a8
+            ],
+            SolixMqttCommands.backup_charge_storm_guard: CMD_BACKUP_STORM_GUARD_SWITCH_V2,
+            SolixMqttCommands.backup_charge_plan: CMD_BACKUP_SWITCH_V2,
+            SolixMqttCommands.backup_charge_timestamps: CMD_BACKUP_PLAN_TIMESTAMPS_V2,
+        },
+        "0090": CMD_PPS_TOU_0090_TOU_ONLY,  # A1763: app only supports Standard + Time-of-Use (Self-Consumption/Custom error); the TOU plan is cloud-controlled via pps_use_time
         "0101": {
             # AC command group
             COMMAND_LIST: [
@@ -5228,34 +5169,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     },
                 },
             },
-            SolixMqttCommands.backup_soc: CMD_COMMON_V2
-            | {
-                "a5": {
-                    NAME: "set_backup_soc",  # range as [min_soc + 5, max_soc], step 1%
-                    TYPE: DeviceHexDataTypes.ui.value,
-                    STATE_NAME: "backup_soc",
-                    VALUE_MIN: 5,
-                    VALUE_MAX: 100,
-                    VALUE_STEP: 1,
-                    STATE_CONVERTER: lambda value, state, cache: (
-                        value
-                        if value is not None
-                        # ensure backup is min + 5 < backup <= max if not specified
-                        else min(
-                            int(cache.get("max_soc") or 80),
-                            max(
-                                int(cache.get("power_cutoff") or 20) + 5,
-                                int(state),
-                            ),
-                        )
-                        if state is not None
-                        and str(state).replace(".", "", 1).isdigit()
-                        else None
-                    ),
-                    VALUE_MIN_STATE: "power_cutoff",
-                    VALUE_MAX_STATE: "max_soc",
-                },
-            },
+            SolixMqttCommands.backup_soc: CMD_PPS_BACKUP_SOC_V2,
         },
         "0101": {
             # AC command group
@@ -5436,34 +5350,7 @@ SOLIXMQTTMAP: Final[dict] = {
             ],
             SolixMqttCommands.pps_usage_mode: CMD_PPS_USAGE_MODE_V2,  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
             SolixMqttCommands.pps_tou_schedule: CMD_TOU_PLAN_V2,
-            SolixMqttCommands.backup_soc: CMD_COMMON_V2
-            | {
-                "a5": {
-                    NAME: "set_backup_soc",  # range as [min_soc + 5, max_soc], step 1%
-                    TYPE: DeviceHexDataTypes.ui.value,
-                    STATE_NAME: "backup_soc",
-                    VALUE_MIN: 5,
-                    VALUE_MAX: 100,
-                    VALUE_STEP: 1,
-                    STATE_CONVERTER: lambda value, state, cache: (
-                        value
-                        if value is not None
-                        # ensure backup is min + 5 < backup <= max if not specified
-                        else min(
-                            int(cache.get("max_soc") or 80),
-                            max(
-                                int(cache.get("power_cutoff") or 20) + 5,
-                                int(state),
-                            ),
-                        )
-                        if state is not None
-                        and str(state).replace(".", "", 1).isdigit()
-                        else None
-                    ),
-                    VALUE_MIN_STATE: "power_cutoff",
-                    VALUE_MAX_STATE: "max_soc",
-                },
-            },
+            SolixMqttCommands.backup_soc: CMD_PPS_BACKUP_SOC_V2,
         },
         "0093": {
             COMMAND_LIST: [
