@@ -74,6 +74,7 @@ from .mqttcmdmap import (
     CMD_PORT_START,
     CMD_PORT_TIMER,
     CMD_PPS_BACKUP_SOC_V2,
+    CMD_PPS_TOU_0090_TOU_ONLY,
     CMD_PPS_USAGE_MODE_V2,
     CMD_REALTIME_TRIGGER,
     CMD_REVERSE_CHARGE_LIMITS,
@@ -112,6 +113,7 @@ from .mqttcmdmap import (
     MASK,
     NAME,
     OFFSET,
+    PPS_TOU_D9_BYTES,
     SIGNED,
     STATE_CONVERTER,
     STATE_NAME,
@@ -763,73 +765,7 @@ _A1763_0421 = {
     },
     "d9": {
         # TOU system status + backup + Time-of-Use plan.
-        # VARIABLE-LENGTH field: the TOU schedule region is (1 count byte + 3 bytes/slot x count),
-        # so all fields after the schedule shift with the slot count (total = 25 + 3*count bytes).
-        # Use a sequential BYTES list so the parser advances past the variable-length schedule.
-        BYTES: [
-            {
-                NAME: "tou_active_tariff",  # Active tariff at current time: 0=none (UPS), 1=Peak, 2=Mid, 3=Off (device-computed)
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "usage_mode",  # TOUSettingSystemStatus: 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_soc",  # backup reserve % (app "TOU power"), step 1%, range [min_soc+5, max_soc]
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "max_soc",  # max_soc: 80, 85, 90, 95, 100 %
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "min_soc",  # min_soc: 1, 5, 10, 15, 20 %
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "tou_mode_schedule",  # count byte + (tariff,start_hr,end_hr) x count; count byte INCLUDED
-                TYPE: DeviceHexDataTypes.bin.value,
-                # counted=True (default): the status schedule starts with a slot count byte
-                STATE_CONVERTER: lambda value, state, cache: (
-                    convert_pps_tou_schedule(value)
-                    if value is not None
-                    else convert_pps_tou_schedule(state)
-                ),
-            },
-            {
-                NAME: "backup_status",  # 0: inactive, 1: planned charge, 2: storm guard charge
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_switch",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "storm_guard_switch",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_start_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-            {
-                NAME: "backup_end_timestamp",  # 0xffffffff = no end / ongoing
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-            {
-                NAME: "auto_backup_start_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-            {
-                NAME: "auto_backup_end_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-        ]
+        BYTES: PPS_TOU_D9_BYTES,
     },
     # "da": # Field used for screen schedule and theme settings, not supported on device
     "f9": {
@@ -1142,73 +1078,7 @@ _A1783_0421 = {
     },
     "d9": {
         # TOU mode selector + backup + Time-of-Use plan
-        BYTES: [
-            {
-                NAME: "active_tariff",  # TOUSystemStatus: 0=None, 1=Peak, 2=Mid Peak, 3=Off Peak
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "usage_mode",  # TOUSettingSystemStatus: 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_soc",  # backup reserve % (discharge floor for tou)
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_charge_soc",  # changed with max_soc % (for tou and backup usage)
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_discharge_soc",  # changed with min_soc % (for backup discharge?)
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            # Byte 5 is the tou schedule slot count and 6+ holds the TOU schedule:
-            # (tariff(1=Peak,2=Mid,3=Off), start_hr, end_hr) * tou_slot_count
-            # App allows max 6 slots, remainder of field has different purpose
-            {
-                NAME: "tou_mode_schedule",
-                TYPE: DeviceHexDataTypes.bin.value,
-                # Define both conversions since length of schedule is flexible within binary
-                STATE_CONVERTER: lambda value, state, cache: (
-                    convert_pps_tou_schedule(value)
-                    if value is not None
-                    else convert_pps_tou_schedule(state)
-                ),
-            },
-            {
-                NAME: "backup_status",  # 0: inactive, 1: planned charge: 2: storm guard charge
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_switch",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "storm_guard_switch",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            {
-                NAME: "backup_start_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-            {
-                NAME: "backup_end_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-            {
-                NAME: "auto_backup_start_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-            {
-                NAME: "auto_backup_end_timestamp",
-                TYPE: DeviceHexDataTypes.var.value,
-                SIGNED: False,
-            },
-        ]
+        BYTES: PPS_TOU_D9_BYTES,
     },
     # "da" # Field used for screen schedule and theme settings
     "f9": {
@@ -4731,16 +4601,7 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.backup_charge_plan: CMD_BACKUP_SWITCH_V2,
             SolixMqttCommands.backup_charge_timestamps: CMD_BACKUP_PLAN_TIMESTAMPS_V2,
         },
-        "0090": {
-            # TOU command group; the TOU plan itself is controlled via
-            # the cloud pps_use_time attribute (set_pps_use_time), not via MQTT
-            COMMAND_LIST: [
-                SolixMqttCommands.pps_usage_mode,  # field a2
-                SolixMqttCommands.backup_soc,  # field a5
-            ],
-            SolixMqttCommands.pps_usage_mode: CMD_PPS_USAGE_MODE_V2,  # 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
-            SolixMqttCommands.backup_soc: CMD_PPS_BACKUP_SOC_V2,  # reserve [min_soc + 5, max_soc], step 1%
-        },
+        "0090": CMD_PPS_TOU_0090_TOU_ONLY,  # A1763: app only supports Standard + Time-of-Use (Self-Consumption/Custom error); the TOU plan is cloud-controlled via pps_use_time
         "0101": {
             # AC command group
             COMMAND_LIST: [

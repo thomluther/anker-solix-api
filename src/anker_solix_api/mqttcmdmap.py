@@ -2426,6 +2426,16 @@ CMD_PPS_USAGE_MODE_V2 = CMD_COMMON_V2 | {
     },
 }
 
+# Usage mode restricted to Standard + Time-of-Use. The Anker app on the PPS
+# models that only offer TOU (A1763, A1783, A1785) errors on Self-Consumption
+# and Custom, so those options must not be offered for them.
+CMD_PPS_USAGE_MODE_TOU_ONLY = CMD_PPS_USAGE_MODE_V2 | {
+    "a2": {
+        **CMD_PPS_USAGE_MODE_V2["a2"],
+        VALUE_OPTIONS: {"standard": 0, "time_of_use": 1},
+    },
+}
+
 CMD_TOU_PLAN_V2 = CMD_PPS_USAGE_MODE_V2 | {
     # TOU plan for AS220, A1785, typically sent via cloud
     "a2": CMD_PPS_USAGE_MODE_V2["a2"]
@@ -2493,6 +2503,99 @@ CMD_PPS_BACKUP_SOC_V2 = CMD_COMMON_V2 | {
         VALUE_MAX_STATE: "max_soc",
     },
 }
+
+# PPS TOU 0090 command group: usage mode (a2) + backup SOC (a5).
+# The TOU plan itself is controlled via the cloud pps_use_time attribute
+# (set_pps_use_time), not via MQTT.
+CMD_PPS_TOU_0090 = {
+    COMMAND_LIST: [
+        SolixMqttCommands.pps_usage_mode,
+        SolixMqttCommands.backup_soc,
+    ],
+    SolixMqttCommands.pps_usage_mode: CMD_PPS_USAGE_MODE_V2,
+    SolixMqttCommands.backup_soc: CMD_PPS_BACKUP_SOC_V2,
+}
+
+# PPS TOU 0090 command group with the TOU-only usage-mode options
+# (Standard + Time-of-Use). Use for models whose app errors on
+# Self-Consumption/Custom (A1763, A1783, A1785); AS220 uses the full
+# CMD_PPS_USAGE_MODE_V2 options plus pps_tou_schedule.
+CMD_PPS_TOU_0090_TOU_ONLY = {
+    **CMD_PPS_TOU_0090,
+    SolixMqttCommands.pps_usage_mode: CMD_PPS_USAGE_MODE_TOU_ONLY,
+}
+
+# Shared PPS TOU d9 status BYTES list (A1763 / A1783 / AS220 / ...).
+# The d9 field is VARIABLE-LENGTH: the TOU schedule region is
+# (1 count byte + 3 bytes/slot x count), so all fields after the schedule shift
+# with the slot count (total = 25 + 3*count bytes). A sequential BYTES list is
+# required so the parser advances past the variable-length schedule.
+# Field names use the A1783 nomenclature; the A1763 d9 carries the same bytes
+# (active tariff, usage mode, backup reserve, max/min SOC) under shorter names.
+PPS_TOU_D9_BYTES = [
+    {
+        NAME: "active_tariff",  # TOUSystemStatus: 0=None (UPS), 1=Peak, 2=Mid Peak, 3=Off Peak (device-computed)
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    {
+        NAME: "usage_mode",  # TOUSettingSystemStatus: 0=Standard, 1=Time-of-Use, 2=Self-Consumption, 3=Custom
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    {
+        NAME: "backup_soc",  # backup reserve % (app "TOU power"), step 1%, range [min_soc+5, max_soc]
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    {
+        NAME: "backup_charge_soc",  # max SOC % (for tou and backup usage): 80, 85, 90, 95, 100
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    {
+        NAME: "backup_discharge_soc",  # min SOC % (for backup discharge): 1, 5, 10, 15, 20
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    {
+        NAME: "tou_mode_schedule",  # count byte + (tariff,start_hr,end_hr) x count; count byte INCLUDED
+        TYPE: DeviceHexDataTypes.bin.value,
+        # counted=True (default): the status schedule starts with a slot count byte
+        STATE_CONVERTER: lambda value, state, cache: (
+            convert_pps_tou_schedule(value)
+            if value is not None
+            else convert_pps_tou_schedule(state)
+        ),
+    },
+    {
+        NAME: "backup_status",  # 0: inactive, 1: planned charge, 2: storm guard charge
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    {
+        NAME: "backup_switch",
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    {
+        NAME: "storm_guard_switch",
+        TYPE: DeviceHexDataTypes.ui.value,
+    },
+    {
+        NAME: "backup_start_timestamp",
+        TYPE: DeviceHexDataTypes.var.value,
+        SIGNED: False,
+    },
+    {
+        NAME: "backup_end_timestamp",  # 0xffffffff = no end / ongoing
+        TYPE: DeviceHexDataTypes.var.value,
+        SIGNED: False,
+    },
+    {
+        NAME: "auto_backup_start_timestamp",
+        TYPE: DeviceHexDataTypes.var.value,
+        SIGNED: False,
+    },
+    {
+        NAME: "auto_backup_end_timestamp",
+        TYPE: DeviceHexDataTypes.var.value,
+        SIGNED: False,
+    },
+]
 
 CMD_TBD_SWITCH = CMD_COMMON | {
     # Command: Generic switch command with unknown effect
