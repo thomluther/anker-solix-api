@@ -1233,18 +1233,37 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     if cap_change and str(size).isdigit() and str(exp).isdigit():
                         # NOTE: Expansions for SB2 + 3 can have mixed capacity, which may be identified only by MQTT battery serials
                         # NOTE: E10 controller has no battery, but needs 1-5 battery expansions
-                        controller_size = (
-                            0 if device.get("device_pn") == "A17E1" else size
+                        # TODO: Solarbank gen 4 devices may show expansions differently in MQTT data, data to be merged once understood
+                        controller_cap = (
+                            0
+                            if device.get("device_pn") == "A17E1"
+                            else size
+                            * min(
+                                100,
+                                float(
+                                    device.get("mqtt_data", {}).get("battery_soh")
+                                    or 100
+                                ),
+                            )
+                            / 100
                         )
-                        expansion_size = sum(
+                        expansion_cap = sum(
                             [
-                                float(device.get(k, 0))
-                                for k in ([f"exp_{i}_size" for i in range(1, 1 + exp)])
+                                float(device.get(f"exp_{i}_size", 0))
+                                * min(
+                                    100,
+                                    float(
+                                        device.get("mqtt_data", {}).get(f"exp_{i}_soh")
+                                        or 100
+                                    ),
+                                )
+                                / 100
+                                for i in range(1, 1 + exp)
                             ]
                         )
                         # use determined expansion size or assume same size for all expansions
                         device["battery_capacity"] = (
-                            f"{(expansion_size or (size * exp)) + controller_size:.0f}"
+                            f"{(expansion_cap or (size * exp)) + controller_cap:.0f}"
                         )
                     cap = int(device.get("battery_capacity") or 0)
                     # get total SOC, prefer value depending on overlay

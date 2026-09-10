@@ -762,7 +762,13 @@ class AnkerSolixBaseApi:
                         ) and str(value).replace("-", "", 1).replace(
                             ".", "", 1
                         ).isdigit():
-                            device_mqtt[key] = f"{float(value):.3f}"
+                            if str(key).endswith("_soh"):
+                                if (val := f"{float(value):.3f}") != device_mqtt.get(key):
+                                    # trigger capacity calculation if SOH is changing
+                                    calc_capacity = True
+                                device_mqtt[key] = val
+                            else:
+                                device_mqtt[key] = f"{float(value):.3f}"
                             # accumulate overall port power if not in data
                             if (
                                 key == "usbc_1_power"
@@ -928,12 +934,16 @@ class AnkerSolixBaseApi:
                             ".", "", 1
                         ).isdigit():
                             if str(key).endswith("_soh"):
-                                device_mqtt[key] = f"{float(value):.3f}"
-                            else:
-                                device_mqtt[key] = f"{float(value):.0f}"
-                                # trigger capacity calculation if any soc provided
-                                if "_soc" in key:
+                                if (val := f"{float(value):.3f}") != device_mqtt.get(key):
+                                    # trigger capacity calculation if SOH is changing
                                     calc_capacity = True
+                                device_mqtt[key] = val
+                            else:
+                                # trigger capacity calculation if SOC is changing
+                                val = f"{float(value):.0f}"
+                                if "_soc" in key and val != device_mqtt.get(key):
+                                    calc_capacity = True
+                                device_mqtt[key] = val
                         elif key in ["output_cutoff_data", "min_soc", "power_cutoff"]:
                             device_mqtt["power_cutoff"] = str(value)
                         elif key in [

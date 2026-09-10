@@ -2292,12 +2292,12 @@ _A17C5_040a = (
 _AE103_0404 = {
     # Solarbank 4 Expansion data
     TOPIC: "state_info",
-    "a2": {NAME: "expansion_packs"},
+    "a2": {NAME: "battery_packs"},  # shows 2 even if only 1 expansion is installed
 } | {
     f"a{2 + idx}": {
         BYTES: {
             "00": {
-                NAME: f"exp_{idx}_sn",
+                NAME: f"exp_{idx}_controller_sn",
                 LENGTH: 17,
                 TYPE: DeviceHexDataTypes.str.value,
             },
@@ -2399,7 +2399,7 @@ _AE103_0405 = {
     "c7": {NAME: "pv_2_power"},
     "c8": {NAME: "pv_3_power"},
     "c9": {NAME: "pv_4_power"},
-    "cb": {NAME: "expansion_packs"},
+    "cb": {NAME: "battery_packs"},  # shows 2 even if only 1 expansion is installed
     "f9": {
         BYTES: {
             "00": {NAME: "monitor_device", TYPE: DeviceHexDataTypes.str.value},
@@ -2461,14 +2461,14 @@ _AE103_040a = (
     {
         # Solarbank 4 Expansion data
         TOPIC: "param_info",
-        "a2": {NAME: "expansion_packs"},
+        "a2": {NAME: "battery_packs"},  # shows 2 even if only 1 expansion is installed
         "a3": {NAME: "main_battery_soc"},  # main battery SOC
     }
     | {
         f"a{3 + idx}": {
             BYTES: {
                 "00": {
-                    NAME: f"exp_{idx}_sn",
+                    NAME: f"exp_{idx}_controller_sn",
                     LENGTH: 17,
                     TYPE: DeviceHexDataTypes.str.value,
                 },
@@ -6557,11 +6557,52 @@ SOLIXMQTTMAP: Final[dict] = {
             # "ad": {NAME: "pv_to_grid_power"},
         },
     },
-    # Anker Solarbank Smartmeter
-    "A17X7US": {
+    # Anker Solarbank Smartmeter Gen 2
+    "AE1X0": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
         "0405": {
             # Interval: ~5 seconds, but only with realtime trigger
+            TOPIC: "param_info",
+            "a2": {NAME: "device_sn"},
+            "a6": {NAME: "sw_version", "values": 4, "reversed": True},
+            "a8": {NAME: "grid_power_signed_l1"},
+            "a9": {NAME: "grid_power_signed_l2"},
+            "aa": {NAME: "grid_power_signed_l3"},
+            "ab": {NAME: "grid_power_signed"},  # negative = Export
+            "ac": {NAME: "voltage_l1"},
+            "ad": {NAME: "voltage_l2"},
+            "ae": {NAME: "voltage_l3"},
+            "af": {NAME: "current_l1"},
+            "b0": {NAME: "current_l2"},
+            "b1": {NAME: "current_l3"},
+            "b2": {NAME: "grid_export_energy"},  # net energy
+            "b3": {NAME: "grid_import_energy"},  # net energy
+        },
+        "0428": {
+            # Interval: irregular, maybe on status request
+            TOPIC: "state_info",
+            "a2": {NAME: "grid_power_signed_l1"},
+            "a3": {NAME: "grid_power_signed_l2"},
+            "a4": {NAME: "grid_power_signed_l3"},
+            "a5": {NAME: "grid_power_signed"},  # net power, negative = Export
+            "a6": {NAME: "grid_export_energy_l1"},
+            "a7": {NAME: "grid_export_energy_l2"},
+            "a8": {NAME: "grid_export_energy_l3"},
+            "a9": {NAME: "grid_import_energy_l1"},
+            "aa": {NAME: "grid_import_energy_l2"},
+            "ab": {NAME: "grid_import_energy_l3"},
+            "ac": {NAME: "grid_export_energy"},  # net energy
+            "ad": {NAME: "grid_import_energy"},  # net energy
+            "ae": {NAME: "energy_local_timestamp"},
+            "af": {NAME: "energy_utc_timestamp"},
+            "b0": {NAME: "device_sn"},
+        },
+    },
+    # Anker Solarbank Smartmeter US
+    "A17X7US": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        "0405": {
+            # Interval: ~3 seconds, but only with realtime trigger
             TOPIC: "param_info",
             "a2": {NAME: "device_sn"},
             "a6": {NAME: "sw_version", "values": 4},

@@ -691,6 +691,7 @@ Model  Name                                     Platform
 ----------------------------------------------------------------------------------------------------
 A110A  26K Prime Power Bank                     Power Bank
 A110B  20K Prime Power Bank                     Power Bank
+A110G  20K Prime Power Bank                     Power Bank
 A1722  SOLIX C300                               Portable Power Station
 A1723  SOLIX C300X                              Portable Power Station
 A1725  SOLIX C200(X)                            Portable Power Station
@@ -730,6 +731,7 @@ A17C3  Solarbank 2 E1600 Plus                   Plug-in Home Battery
 A17C5  Solarbank 3 E2700 Pro                    Plug-in Home Battery
 A17E2  Solarbank Max AC                         Plug-in Home Battery
 AE103  Solarbank 4 E5000 Pro                    Plug-in Home Battery
+AE111  Solarbank Max                            Plug-in Home Battery
 A17X7  Smart Meter                              Accessory
 A17X8  Smart Plug                               Accessory
 A1903  150W Charging Base                       Charger
@@ -1029,6 +1031,7 @@ class SolixParmType(Enum):
     SOLARBANK_3RD_PARTY_PV = "26"  # third party PV settings for site
     SOLARBANK_SOC = "27"  # Gen 4 SOC settings (no longer in 18)
     SOLARBANK_GRID_EXPORT = "28"  # Gen 4 grid export settings (no longer in 18)
+    SOLARBANK_CT_CONFIG = "29"  # Smartmeter Gen 2 CT configuration
     SOLARBANK_PEAK_SHAVING = (
         "30"  # Gen 4 peak_shaving_soc, peak_shaving_switch\, peak_shaving_upper_limit
     )
@@ -1194,16 +1197,18 @@ class SolixDeviceCapacity:
 
     A110A: int = 100  # Anker Prime Power Bank 300 W, 25Ah, 99,75 Wh
     A110B: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
+    A110G: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
     A17C0: int = 1600  # SOLIX Solarbank E1600
     A17C1: int = 1600  # SOLIX Solarbank 2 E1600 Pro
-    BP1600: int = 1600  # Solarbank 2 Expansion (This has no SN or product code)
+    BP1600: int = 1600  # Solarbank 2 Expansion BP1600 (This has no SN or product code)
     A17C2: int = 1600  # SOLIX Solarbank 2 E1600 AC
     A17C3: int = 1600  # SOLIX Solarbank 2 E1600 Plus
     A17C5: int = 2688  # SOLIX Solarbank 3 E2700 Pro
-    DJF: int = 2688  # Solarbank 3 Expansion
+    DJF: int = 2688  # Solarbank 3 Expansion BP2700 product code
     AE103: int = 5024  # SOLIX Solarbank 4 E5000 Pro
-    BP5000: int = 5024 # TODO: Add product code for Solarbank 4 Expansion
+    DMVS: int = 5024 # Solarbank 4 Expansion BP5000 product code
     A17E2: int = 7000  # Solarbank Max AC
+    AE111: int = 7000  # Solarbank Max
     BP7000: int = 7000 # TODO: Add product code for Solarbank Max AC Expansion
     A1720: int = 256  # Anker PowerHouse 521 Portable Power Station
     A1722: int = 288  # SOLIX C300 Portable Power Station
@@ -1279,8 +1284,9 @@ class SolixSiteType:
         SolixDeviceType.HOME_BACKUP.value
     )  # Only AX170: Power Dock US market to connect multiple E10
     t_18 = SolixDeviceType.SOLARBANK.value  # Main AE100 Power Dock for SB2+, A17C1, A17C3, A17C5, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS, A5191
-    t_19 = SolixDeviceType.SOLARBANK.value  # Main A17E2 Solarbank Max AC with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
+    t_19 = SolixDeviceType.SOLARBANK.value  # Main A17E2 Solarbank Max AC with AE120, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
     t_20 = SolixDeviceType.SOLARBANK.value  # Main AE103 Solarbank 4 Pro with A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
+    t_21 = SolixDeviceType.SOLARBANK.value  # Main AE111 Solarbank Max with AE120, A17X7, AE1X0, AE1R0, SHEM3, SHEMP3, ECOIR, A17X8, SHPPS
 
 
 @dataclass(frozen=True)
@@ -1310,6 +1316,9 @@ class SolixDeviceCategory:
         SolixDeviceType.SOLARBANK.value + "_4"
     )  # SOLIX Solarbank 4 E5000 Pro, generation 4
     # Station
+    AE111: str = (
+        SolixDeviceType.SOLARBANK.value + "_4"
+    )  # SOLIX Solarbank Max, generation 4
     AE100: str = SolixDeviceType.COMBINER_BOX.value  # SOLIX Power Dock Solarbanks
     AX1S0: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Pro HES system
     AX170: str = SolixDeviceType.COMBINER_BOX.value  # Power Dock Home Backup
@@ -1400,6 +1409,9 @@ class SolixDeviceCategory:
         SolixDeviceType.POWERBANK.value
     )  # Anker Prime Power Bank 300 W, 25Ah, 92 Wh
     A110B: str = (
+        SolixDeviceType.POWERBANK.value
+    )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
+    A110G: str = (
         SolixDeviceType.POWERBANK.value
     )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
     # EV Charger
@@ -1504,6 +1516,26 @@ class SolarbankDeviceMetrics:
     # SOLIX Solarbank Max AC
     A17E2: ClassVar[set[str]] = {
         "sub_package_num",
+        "ac_power",
+        "to_home_load",
+        "pei_heating_power",
+        "grid_to_battery_power",
+        "other_input_power",  # This is AC input for charging typically
+        "power_limit",
+        "pv_power_limit",
+        "ac_input_limit",
+        "power_limit_option",
+        "charge_upper_limit",
+        "discharge_lower_limit",
+        "backup_reserve",
+        "backup_reserve_switch",
+    }
+    # SOLIX Solarbank Max, with 3 high voltage MPPT channel and AC socket
+    AE111: ClassVar[set[str]] = {
+        "sub_package_num",
+        "solar_power_1",
+        "solar_power_2",
+        "solar_power_3",
         "ac_power",
         "to_home_load",
         "pei_heating_power",

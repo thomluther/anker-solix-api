@@ -316,16 +316,36 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 # recalculate capacity if required
                 if cap_change and str(size).isdigit() and str(exp).isdigit():
                     # NOTE: E10 controller has no battery, but needs 1-5 battery expansions
-                    controller_size = 0 if device.get("device_pn") == "A17E1" else size
-                    expansion_size = sum(
+                    controller_cap = (
+                        0
+                        if device.get("device_pn") == "A17E1"
+                        else size
+                        * min(
+                            100,
+                            float(
+                                device.get("mqtt_data", {}).get("battery_soh")
+                                or 100
+                            ),
+                        )
+                        / 100
+                    )
+                    expansion_cap = sum(
                         [
-                            float(device.get(k, 0))
-                            for k in ([f"exp_{i}_size" for i in range(1, 1 + exp)])
+                            float(device.get(f"exp_{i}_size", 0))
+                            * min(
+                                100,
+                                float(
+                                    device.get("mqtt_data", {}).get(f"exp_{i}_soh")
+                                    or 100
+                                ),
+                            )
+                            / 100
+                            for i in range(1, 1 + exp)
                         ]
                     )
                     # use determined expansion size or assume same size for all expansions
                     device["battery_capacity"] = (
-                        f"{(expansion_size or (size * exp)) + controller_size:.0f}"
+                        f"{(expansion_cap or (size * exp)) + controller_cap:.0f}"
                     )
                 # generate battery values for main device only when soc updated or PPS capacity triggered
                 is_primary = bool(device.get("is_primary"))
