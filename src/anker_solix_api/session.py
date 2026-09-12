@@ -7,6 +7,7 @@ from datetime import datetime
 
 # TODO(COMPRESSION): from gzip import compress, decompress
 import hashlib
+import hmac
 import json
 import logging
 import os
@@ -21,10 +22,9 @@ import aiofiles.os
 from aiohttp import ClientSession, ClientTimeout
 from aiohttp.client_exceptions import ClientError
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes, padding, serialization
+from cryptography.hazmat.primitives import padding, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from . import errors
 from .apitypes import (
@@ -33,6 +33,7 @@ from .apitypes import (
     API_HEADERS,
     API_KEY_EXCHANGE,
     API_LOGIN,
+    API_PRESET_KEYS,
     API_SERVERS,
     SolixDefaults,
 )
@@ -58,12 +59,15 @@ class AnkerSolixClientSession:
         """Initialize."""
         self._countryId: str = countryId.upper()
         self._api_base: str | None = None
+        self._region: str | None = None
         for region, countries in API_COUNTRIES.items():
             if self._countryId in countries:
                 self._api_base = API_SERVERS.get(region)
+                self._region = region
         # default to EU server
         if not self._api_base:
             self._api_base = API_SERVERS.get("eu")
+            self._region = self._region or "eu"
         self._email: str = email
         self._password: str = password
         self._session: ClientSession = websession
@@ -361,6 +365,9 @@ class AnkerSolixClientSession:
             # clear retry attempt to allow retry for authentication refresh
             if isinstance(self._retry_attempt, bool):
                 self._retry_attempt = False
+            # a successfully loaded cache is a valid session (end-of-method checks
+            # below reset this if the cached token/user is missing)
+            self._loggedIn = True
         else:
             self._logger.debug("Fetching new Login credentials from server")
             now = datetime.now().astimezone()
@@ -464,13 +471,16 @@ class AnkerSolixClientSession:
         # use required headers and merge provided/optional headers
         merged_headers = self.generate_header()
         merged_headers.update(headers)
-        # TODO(ENCRYPTION): Handle payload encryption once known
+        # base64 ciphertext to send as the request body when payload encryption is on
+        encrypted_body: str | None = None
         if self.encrypt_payload and self._login_response:
             if not self._eh and self._token:
                 # init encryption handler
                 self._eh = AnkerEncryptionHandler(
                     login_response=self._login_response,
                     session=self._session,
+                    preset_key=API_PRESET_KEYS.get(self._region),
+                    request_timeout=self._request_timeout,
                     logger=self._logger,
                 )
             if not self._eh.shared_secret:
@@ -506,19 +516,22 @@ class AnkerSolixClientSession:
             #     "trace_id": "9d0bd9c0a328bcfde9e60f5a33284977",
             #     "data": "ybF4Sg9vCKt3V75DnvTddszD0m6qJH4ZhjcN4DQC2RMlvqCthrJ1qK4DLvJ7l8jwYYbMooaE2QXmtfGebt8d1wfzCnl3XqLhpM8dxXX7ghw="}
 
-            # Mandatory extra api header arguments for key exchange
+            # Mandatory extra api header arguments for encrypted requests
             #     'x-app-key': '' # empty is fine
             #     'x-encryption-info': 'algo_ecdh'
             #     'x-replay-info': 'replay'
-            #     'x-auth-ts': [authentication timestamp] # Unix Timestamp in s as string
-            #     'x-key-ident': [generated key ident] # 16 Byte MD5 hash
-            #     'x-request-once': [generated request once] # 16 Byte MD5 hash
+            #     'x-key-ident': the key pair id, 32 hex chars, constant per session
+            #     'x-request-once': a fresh random nonce, 32 hex chars, per request
             #     'x-request-ts': [request timestamp] # Unix Timestamp in s as string
-            #     'x-signature': [generated signature] # 32 Byte SHA256 hash
-            # Response will return encrypted body and a signature field
+            #     'x-signature': HMAC-SHA256(presetKey_hex, ts+once+encrypted_body)
+            # The body goes on the wire as text/plain base64 ciphertext, and the
+            # response returns an encrypted "data" field alongside a "signature".
             timestamp = generateTimestamp()
+            encrypted_body = self._eh.encrypt_body(json)
             merged_headers.update(
-                self._eh.generate_x_header(timestamp=timestamp, data=json)
+                self._eh.generate_x_header(
+                    timestamp=timestamp, encrypted_body_b64=encrypted_body
+                )
                 | {
                     "content-type": "text/plain",
                 }
@@ -562,7 +575,10 @@ class AnkerSolixClientSession:
                 method,
                 url,
                 headers=merged_headers,
-                json=json,
+                # encrypted requests send base64 ciphertext as text/plain via data,
+                # plain requests let aiohttp serialize the dict via json
+                json=None if encrypted_body is not None else json,
+                data=encrypted_body,
                 # TODO(COMPRESSION): only response encoding seems to be accepted by servers
                 # json=None if self.compress_data else json,
                 # data=compress(str(json).encode()) if self.compress_data else None,
@@ -914,21 +930,39 @@ class AnkerSolixClientSession:
 class AnkerEncryptionHandler:
     """Anker Solix encryption handler class.
 
-    ATTENTION: This class is experimental and does not work yet since various x header field value generation is unknown.
+    Implements the app's ECDH payload encryption for the api and is confirmed working
+    end to end against the live server: the key exchange, x-header composition, request
+    signature, request body encryption and response decryption all round-trip. The
+    handshake signs with the presetKey; every request after it signs and encrypts with
+    the derived session key shared_secret[:16].
     """
 
     def __init__(
         self,
         login_response: dict,
         session: ClientSession,
+        preset_key: str | None = None,
+        request_timeout: int = SolixDefaults.REQUEST_TIMEOUT_DEF,
         logger: logging.Logger | None = None,
     ) -> None:
         """Initialize the encryption handler."""
         self._login_response = login_response
         self._session = session
+        self._request_timeout = request_timeout
+        # region presetKey (API_PRESET_KEYS) as hex string; the HMAC signature keys on
+        # this ascii hex, while the AES envelope keys on its raw bytes - keep both forms.
+        if not preset_key:
+            raise ValueError(
+                "No presetKey configured for this region; payload encryption unavailable"
+            )
+        self._preset_key_hex = preset_key
+        self._preset_key = bytes.fromhex(self._preset_key_hex)
         # Create ECDH key pair for encryption key exchange using NIST P-256 curve
         self.private_key = ec.generate_private_key(ec.SECP256R1())
         self.public_key = self.private_key.public_key()
+        # key_ident is a random id generated once per key pair and sent unchanged as
+        # x-key-ident on every request; the server uses it to look up the shared secret.
+        self.key_ident = os.urandom(16).hex()
         self.server_public_key = None
         self.shared_secret = None
         # initialize logger for class
@@ -940,46 +974,74 @@ class AnkerEncryptionHandler:
         if not self._logger.hasHandlers():
             self._logger.addHandler(logging.StreamHandler())
 
-    def _generate_client_key(self, timestamp: str) -> str:
-        """Generate the client public key in Anker's format."""
-        # Get raw public key bytes
-        raw_public_key = self.public_key.public_bytes(
+    def _preset_encrypt(self, plaintext: bytes) -> str:
+        """AES-128-CBC encrypt with the region presetKey, random IV prepended, base64.
+
+        The 16-byte IV is generated per call and prepended to the ciphertext before
+        base64 encoding, so the wrapped blob is iv(16) + ciphertext.
+        """
+        iv = randbytes(16)
+        padder = padding.PKCS7(128).padder()
+        padded = padder.update(plaintext) + padder.finalize()
+        encryptor = Cipher(algorithms.AES(self._preset_key), modes.CBC(iv)).encryptor()
+        return b64encode(iv + encryptor.update(padded) + encryptor.finalize()).decode()
+
+    def _preset_decrypt(self, blob_b64: str) -> bytes:
+        """Reverse of _preset_encrypt: strip the leading IV, AES-128-CBC decrypt, unpad."""
+        blob = b64decode(blob_b64)
+        iv, ciphertext = blob[:16], blob[16:]
+        decryptor = Cipher(algorithms.AES(self._preset_key), modes.CBC(iv)).decryptor()
+        padded = decryptor.update(ciphertext) + decryptor.finalize()
+        unpadder = padding.PKCS7(128).unpadder()
+        return unpadder.update(padded) + unpadder.finalize()
+
+    def _client_public_key_field(self) -> str:
+        """Return the client public key for the key-exchange body.
+
+        The uncompressed EC point (0x04 + X(32) + Y(32)) is taken as its 130-char
+        ascii hex string, which is what gets wrapped with the region presetKey; the
+        server unwraps it the same way.
+        """
+        raw_point = self.public_key.public_bytes(
             encoding=serialization.Encoding.X962,
             format=serialization.PublicFormat.UncompressedPoint,
         )
-        # Construct the key with timestamp and marker as observed in Api communication
-        key_data = bytearray()
-        key_data.extend(timestamp.encode())  # First 16 bytes: timestamp
-        key_data.append(0x1F)  # Marker byte ?
-        key_data.extend(raw_public_key)  # Public key uncompressed point format in bytes
-        # return base64 encoded string representation of key format
-        return b64encode(key_data).decode()
+        return self._preset_encrypt(raw_point.hex().encode())
 
-    def generate_x_header(self, timestamp: str, data: dict) -> dict:
-        """Generate extra header fields for encryption."""
-        # request_once using timestamp in s and random? data (to be adjusted as required)
-        request_once = md5(timestamp.encode() + randbytes(16))
-        request_once = md5(
-            timestamp.encode() + self._login_response.get("geo_key").encode()
+    def generate_x_header(self, timestamp: str, encrypted_body_b64: str) -> dict:
+        """Generate the encryption x-header fields for a request.
+
+        Args:
+            timestamp: unix seconds string, also sent as x-request-ts.
+            encrypted_body_b64: the base64 body actually placed on the wire - for the
+                key exchange this is the client_public_key value, for normal requests
+                the encrypted request body. The signature is computed over it.
+
+        The signature is HMAC-SHA256 over "<ts>+<once>+<encrypted_body_b64>", keyed on
+        the ascii-hex string (not raw bytes) of:
+        - the presetKey, for the key exchange (no session key exists yet), or
+        - the session key shared_secret[:16] (the securityKey), for every request once
+          the handshake has derived it.
+
+        Both are confirmed live: the key exchange (presetKey) and a normal request
+        (session key) are accepted, and the encrypted response decrypts.
+        """
+        sign_key_hex = (
+            self.shared_secret[:16].hex()
+            if self.shared_secret is not None
+            else self._preset_key_hex
         )
-        # key_ident using timestamp in ms and random? data (to be adjusted as required)
-        key_ident = md5(timestamp.encode() + randbytes(16))
-        key_ident = md5(
-            timestamp.encode() + self._login_response.get("auth_token").encode()
-        )
-        # SHA256 signature using timestamp, request-once, key_ident and body?  (to be adjusted as required)
-        signature = hashlib.sha256(
-            timestamp.encode()
-            + request_once.encode()
-            + key_ident.encode()
-            + json.dumps(data).encode()
+        request_once = os.urandom(16).hex()
+        signature = hmac.new(
+            sign_key_hex.encode(),
+            f"{timestamp}+{request_once}+{encrypted_body_b64}".encode(),
+            hashlib.sha256,
         ).hexdigest()
         return {
-            "content-type": "text/plain",
             "x-app-key": "",  # Can be empty
             "x-encryption-info": "algo_ecdh",
             "x-replay-info": "replay",
-            "x-key-ident": key_ident,
+            "x-key-ident": self.key_ident,
             "x-request-once": request_once,
             "x-request-ts": timestamp,
             "x-signature": signature,
@@ -997,12 +1059,16 @@ class AnkerEncryptionHandler:
         timestamp = generateTimestamp()
         if not auth_ts:
             auth_ts = timestamp
-        # Prepare request
+        # Prepare request. The key-exchange body is plain json holding only the
+        # presetKey-wrapped client public key; the signature is over that value.
         url = f"{api_base}/{API_KEY_EXCHANGE}"
-        data = {"client_public_key": self._generate_client_key(timestamp=auth_ts)}
+        client_public_key = self._client_public_key_field()
+        data = {"client_public_key": client_public_key}
         # obtain encryption header fields and add/modify fields for key exchange request
         headers.update(
-            self.generate_x_header(timestamp=timestamp, data=data)
+            self.generate_x_header(
+                timestamp=timestamp, encrypted_body_b64=client_public_key
+            )
             | {
                 "content-type": "application/json",
                 "x-auth-ts": auth_ts,
@@ -1059,35 +1125,46 @@ class AnkerEncryptionHandler:
                 ) from err
 
     def derive_shared_key(self, server_public_key_b64: str) -> bytes:
-        """Derive the shared AES key from the server's public key."""
-        # Decode server's public key
-        server_key_bytes = b64decode(server_public_key_b64)
-        # Extract the actual key portion (first 96 bytes based on analysis, but may need to be adopted)
-        key_portion = server_key_bytes[:96]
-        # Load server's public key
+        """Derive the ECDH shared secret from the server's public key.
+
+        The server_public_key is presetKey-wrapped exactly like the client key; unwrap
+        it to the 130-char ascii hex point, then ECDH. The shared secret is the raw ECDH
+        output (32 bytes, the X coordinate) used directly - there is no HKDF step.
+        """
+        point = bytes.fromhex(self._preset_decrypt(server_public_key_b64).decode())
         server_public_key = ec.EllipticCurvePublicKey.from_encoded_point(
-            ec.SECP256R1(), key_portion
+            ec.SECP256R1(), point
         )
-        # Compute shared secret
-        shared_secret = self.private_key.exchange(ec.ECDH(), server_public_key)
-        # Derive AES key using HKDF
-        hkdf = HKDF(
-            algorithm=hashes.SHA256(), length=32, salt=None, info=b"ecdh handshake"
-        )
-        self.shared_secret = hkdf.derive(shared_secret)
+        self.shared_secret = self.private_key.exchange(ec.ECDH(), server_public_key)
         return self.shared_secret
 
+    def _body_key(self) -> bytes:
+        """Return the AES-128 key for request/response body encryption.
+
+        shared_secret[:16], the per-auth session key the app calls the securityKey.
+        Confirmed live end to end: a request body encrypted with it is accepted and the
+        encrypted response decrypts with it. Cipher is AES-128-CBC, leading iv, PKCS7.
+        """
+        return self.shared_secret[:16]
+
+    def encrypt_body(self, body: dict) -> str:
+        """Encrypt a request body: AES-128-CBC, random IV prepended, PKCS7, base64.
+
+        The body dict is serialized to compact json (no spaces) before encryption.
+        """
+        plaintext = json.dumps(body, separators=(",", ":")).encode()
+        iv = randbytes(16)
+        padder = padding.PKCS7(128).padder()
+        padded = padder.update(plaintext) + padder.finalize()
+        encryptor = Cipher(algorithms.AES(self._body_key()), modes.CBC(iv)).encryptor()
+        return b64encode(iv + encryptor.update(padded) + encryptor.finalize()).decode()
+
     def decryptApiData(self, encrypted_payload: str) -> str:
-        """Decrypt an encrypted payload using the derived shared AES key."""
-        # Decode base64 payload
+        """Decrypt an encrypted body: strip leading IV, AES-128-CBC decrypt, unpad."""
         encrypted_data = b64decode(encrypted_payload)
-        # Split IV and ciphertext by first 16 bytes
         iv = encrypted_data[:16]
         ciphertext = encrypted_data[16:]
-        # Create AES cipher
-        cipher = Cipher(algorithms.AES(self.shared_secret), modes.CBC(iv))
-        # Decrypt
-        decryptor = cipher.decryptor()
+        decryptor = Cipher(algorithms.AES(self._body_key()), modes.CBC(iv)).decryptor()
         decrypted = decryptor.update(ciphertext) + decryptor.finalize()
         # Remove PKCS7 padding
         padding_length = decrypted[-1]
