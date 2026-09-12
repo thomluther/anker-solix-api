@@ -612,7 +612,7 @@ class AnkerSolixClientSession:
                         url,
                         body_text,
                     )
-                    raise ClientError(
+                    raise ClientError(  # noqa: TRY301
                         f"Api {self.nickname} no data response for request: {method.upper()} {url}"
                     )
                 if endpoint == API_LOGIN:
@@ -638,9 +638,10 @@ class AnkerSolixClientSession:
                 # reset retry flag for normal request retry attempts
                 self._retry_attempt = False
 
-                # TODO(ENCRYPTION): data field has to be decoded when encrypted and signature field in response
+                # data field has to be decoded when encrypted and signature field in response
                 if self.encrypt_payload and data.get("signature"):
                     data["data"] = self._eh.decryptApiData(data.get("data"))
+                    self._logger.debug("Decrypted Data: %s", data["data"])
                 return data
 
         # Exception from ClientSession based on standard response status codes
@@ -952,8 +953,8 @@ class AnkerEncryptionHandler:
         # region presetKey (API_PRESET_KEYS) as hex string; the HMAC signature keys on
         # this ascii hex, while the AES envelope keys on its raw bytes - keep both forms.
         if not preset_key:
-            raise ValueError(
-                "No presetKey configured for this region; payload encryption unavailable"
+            raise ClientError(
+                f"No presetKey defined for region (country {self._login_response.get('country_code', 'unknown')}), payload encryption unavailable!"
             )
         self._preset_key_hex = preset_key
         self._preset_key = bytes.fromhex(self._preset_key_hex)
@@ -1099,7 +1100,7 @@ class AnkerEncryptionHandler:
                 data = await resp.json(content_type=None)
                 if not data:
                     self._logger.error("Response Text: %s", body_text)
-                    raise ClientError(
+                    raise ClientError(  # noqa: TRY301
                         f"No data response while requesting {API_KEY_EXCHANGE}"
                     )
                 self._logger.debug("Response Data: %s", data)
@@ -1160,7 +1161,7 @@ class AnkerEncryptionHandler:
         return b64encode(iv + encryptor.update(padded) + encryptor.finalize()).decode()
 
     def decryptApiData(self, encrypted_payload: str) -> str:
-        """Decrypt an encrypted body: strip leading IV, AES-128-CBC decrypt, unpad."""
+        """Decrypt an encrypted body: strip leading IV, AES-128-CBC decrypt, unpad, deserialize."""
         encrypted_data = b64decode(encrypted_payload)
         iv = encrypted_data[:16]
         ciphertext = encrypted_data[16:]
@@ -1168,4 +1169,4 @@ class AnkerEncryptionHandler:
         decrypted = decryptor.update(ciphertext) + decryptor.finalize()
         # Remove PKCS7 padding
         padding_length = decrypted[-1]
-        return decrypted[:-padding_length].decode()
+        return json.loads(decrypted[:-padding_length].decode())

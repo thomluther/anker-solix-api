@@ -10,12 +10,12 @@ API_SERVERS: Final[dict] = {
     "eu": "https://ankerpower-api-eu.anker.com",
     "com": "https://ankerpower-api.anker.com",
 }
-# presetKey is a region-specific AES-128 key the app provisions into its stored
-# userConfig ("presetKey"): constant per region/build, never returned in a response
-# body. It wraps the ECDH public keys and keys the key-exchange signature. Keyed by
-# region like API_SERVERS; only the "com" value (verified for US) is known so far.
+# The Api preset Key may be a region-specific AES-128 key the app provisions into its stored
+# userConfig ("presetKey"). It is a constant per region/build and never returned in a response.
+# It wraps the ECDH public keys and keys the key-exchange signature.
 API_PRESET_KEYS: Final[dict] = {
-    "com": "e8ad18f61bbd3fbd52d5ed12d14d3b9c",
+    "eu": "e8ad18f61bbd3fbd52d5ed12d14d3b9c",  # Confirmed same key work is working
+    "com": "e8ad18f61bbd3fbd52d5ed12d14d3b9c",  # Confirmed same key work is working
 }
 API_LOGIN: Final[str] = "passport/login"
 API_KEY_EXCHANGE: Final[str] = "openapi/oauth/key/exchange"
