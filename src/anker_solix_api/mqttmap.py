@@ -2105,15 +2105,15 @@ _A17C1_040a = (
             BYTES: {
                 "00": {
                     NAME: f"exp_{idx}_controller_sn",
-                    LENGTH: 17,
+                    LENGTH: 16,
                     TYPE: DeviceHexDataTypes.str.value,
                 },
-                "17": {
-                    NAME: "separator?",
-                    TYPE: DeviceHexDataTypes.ui.value,
+                "16": {
+                    NAME: f"unknown_exp_{idx}_16?",
+                    TYPE: DeviceHexDataTypes.sile.value,
                 },
                 "18": {
-                    NAME: f"exp_{idx}_position?",
+                    NAME: f"exp_{idx}_battery_status?",
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "19": {
@@ -2122,7 +2122,7 @@ _A17C1_040a = (
                     SIGNED: True,
                 },
                 "20": {
-                    NAME: "separator?",
+                    NAME: f"unknown_exp_{idx}_20?",
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "21": {
@@ -2135,11 +2135,19 @@ _A17C1_040a = (
                 },
                 "27": {
                     NAME: f"exp_{idx}_sn",
-                    LENGTH: 17,
+                    LENGTH: 16,
                     TYPE: DeviceHexDataTypes.str.value,
                 },
                 "44": {
-                    NAME: "end_marker?",
+                    NAME: f"unknown_exp_{idx}_44?",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "45": {
+                    NAME: f"unknown_exp_{idx}_45?",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "48": {
+                    NAME: f"unknown_exp_{idx}_48?",
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
             }
@@ -2150,6 +2158,45 @@ _A17C1_040a = (
         "fe": {NAME: "msg_timestamp"},
     }
 )
+
+_A17C1_0500 = {
+    # Solarbank 2 battery data
+    TOPIC: "state_info",
+    "a4": {
+        BYTES: {
+            "00": {
+                NAME: "battery_position",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "143": {
+                NAME: "battery_type",  # c1=BP1600, c2=BP1600, c5=BP2700, ae=BP5000
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "146": {
+                NAME: "main_controller_sn",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    },
+} | {
+    f"a{4 + idx}": {
+        BYTES: {
+            "00": {
+                NAME: f"exp_{idx}_position",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "143": {
+                NAME: f"exp_{idx}_type",  # c1=BP1600, c2=BP1600, c5=BP2700, ae=BP5000
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "146": {
+                NAME: f"exp_{idx}_controller_sn",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+        }
+    }
+    for idx in range(1, 6)
+}
 
 _A17C5_0405 = {
     # Solarbank 3 param info
@@ -2293,12 +2340,52 @@ _AE103_0404 = {
     # Solarbank 4 Expansion data
     TOPIC: "state_info",
     "a2": {NAME: "battery_packs"},  # shows 2 even if only 1 expansion is installed
+    "a3": {
+        BYTES: {
+            "00": {
+                NAME: "main_controller_sn",
+                LENGTH: 16,
+                TYPE: DeviceHexDataTypes.str.value,
+            },
+            "17": {
+                NAME: "main_battery_temperature",
+                TYPE: DeviceHexDataTypes.ui.value,
+                SIGNED: True,
+            },
+            "20": {
+                NAME: "main_battery_soc",
+                TYPE: DeviceHexDataTypes.ui.value,
+            },
+            "21": {
+                NAME: "main_unknown_21?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "23": {
+                NAME: "main_unkonwn_23?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "25": {
+                NAME: "main_unkonwn_25?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "27": {
+                NAME: "battery_voltage",
+                TYPE: DeviceHexDataTypes.sile.value,
+                FACTOR: 0.1,
+                SIGNED: False,
+            },
+            "29": {
+                NAME: "unknown_a3_29?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+        }
+    },
 } | {
-    f"a{2 + idx}": {
+    f"a{3 + idx}": {
         BYTES: {
             "00": {
                 NAME: f"exp_{idx}_controller_sn",
-                LENGTH: 17,
+                LENGTH: 16,
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "17": {
@@ -2310,18 +2397,26 @@ _AE103_0404 = {
                 NAME: f"exp_{idx}_soc",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
+            "21": {
+                NAME: f"exp_{idx}_unknown_21?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "23": {
+                NAME: f"exp_{idx}_unkonwn_23?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
+            "25": {
+                NAME: f"exp_{idx}_unkonwn_25?",
+                TYPE: DeviceHexDataTypes.sile.value,
+            },
             "27": {
-                NAME: f"exp_{idx}_voltage?",
+                NAME: f"exp_{idx}_voltage",
                 TYPE: DeviceHexDataTypes.sile.value,
                 FACTOR: 0.1,
                 SIGNED: False,
             },
             "29": {
                 NAME: f"exp_{idx}_unknown_29?",
-                TYPE: DeviceHexDataTypes.ui.value,
-            },
-            "30": {
-                NAME: f"exp_{idx}_unknown_power_30?",
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -2333,7 +2428,7 @@ _AE103_0405 = {
     # Solarbank 4 param info
     TOPIC: "param_info",
     "a2": {NAME: "device_sn"},
-    "a3": {NAME: "main_battery_soc"},
+    "a3": {NAME: "battery_soc"},
     "a4": {NAME: "battery_status"},  # 0: Standby; ?: Discharging; 2: Charging;
     "a5": {NAME: "temperature", SIGNED: True},
     # "a6": {NAME: "battery_soc"}, # shows 0 , is this a bug? There is no other field indicating overall SOC
@@ -2345,10 +2440,10 @@ _AE103_0405 = {
     "ad": {NAME: "output_power"},
     "ae": {NAME: "ac_output_power_signed"},
     "b0": {NAME: "pv_yield"},
-    "b1": {NAME: "charged_energy?"},
-    "b2": {NAME: "discharged_energy?"},
+    "b1": {NAME: "charged_energy"},
+    "b2": {NAME: "discharged_energy"},
     "b3": {NAME: "output_energy?"},
-    "b4": {NAME: "grid_export_energy?"},
+    "b4": {NAME: "grid_export_energy"},
     "b5": {
         BYTES: {
             "00": {
@@ -2423,28 +2518,32 @@ _AE103_0408 = {
     "a9": {NAME: "usage_mode"},
     "a8": {NAME: "charging_status?"},
     "ab": {NAME: "photovoltaic_power"},
-    "ac": {NAME: "unknown_energy_0408_ac"},
+    "ac": {NAME: "pv_yield"},
     "ad": {NAME: "unknown_energy_0408_ad"},
     "ae": {NAME: "unknown_energy_0408_ae"},
     # "ad": {NAME: "pv_1_energy?"},
     # "ae": {NAME: "pv_2_energy?"},
     # "af": {NAME: "pv_3_energy?"},
     # "b0": {NAME: "pv_4_energy?"},
-    "b1": {NAME: "home_demand?"},
+    "b1": {NAME: "home_demand"},
     "b2": {NAME: "home_consumption?"},
-    "b6": {NAME: "battery_power_signed?"},
-    "b7": {NAME: "charged_energy?"},
-    "b8": {NAME: "discharged_energy?"},
+    "b6": {NAME: "battery_power_signed"},
+    "b7": {NAME: "charged_energy"},
+    "b8": {NAME: "discharged_energy"},
     "bd": {NAME: "grid_power_signed"},
-    "be": {NAME: "grid_import_energy?"},
-    "bf": {NAME: "grid_export_energy?"},
-    "c8": {NAME: "unknown_energy_0408_c8"},
-    "c9": {NAME: "unknown_energy_0408_c9"},
+    "be": {NAME: "grid_import_energy"},
+    "bf": {NAME: "grid_export_energy"},
+    "c7": {NAME: "pv_1_power"},
+    "c8": {NAME: "pv_2_power"},
+    "c9": {NAME: "pv_3_power"},
+    "ca": {NAME: "pv_4_power"},
     "cc": {NAME: "temperature", SIGNED: True},
     "ce": {NAME: "min_soc"},
     "cf": {NAME: "max_soc"},
     "d3": {NAME: "ac_output_power"},
     "d6": {NAME: "timestamp_1?"},
+    "da": {NAME: "max_load_limit"},
+    "db": {NAME: "pv_limit"},
     "dc": {NAME: "max_load"},
     "e0": {
         NAME: "active_discharge_soc"
@@ -2462,32 +2561,82 @@ _AE103_040a = (
         # Solarbank 4 Expansion data
         TOPIC: "param_info",
         "a2": {NAME: "battery_packs"},  # shows 2 even if only 1 expansion is installed
-        "a3": {NAME: "main_battery_soc"},  # main battery SOC
-    }
-    | {
-        f"a{3 + idx}": {
+        "a3": {NAME: "battery_soc"},  # battery SOC
+        "a4": {
             BYTES: {
                 "00": {
-                    NAME: f"exp_{idx}_controller_sn",
-                    LENGTH: 17,
+                    NAME: "main_controller_sn",
+                    LENGTH: 16,
                     TYPE: DeviceHexDataTypes.str.value,
                 },
                 "18": {
-                    NAME: "separator?",
-                    TYPE: DeviceHexDataTypes.ui.value,
+                    NAME: "main_unknown_18?",
+                    TYPE: DeviceHexDataTypes.sile.value,
                 },
-                "21": {
-                    NAME: f"exp_{idx}_position?",
-                    TYPE: DeviceHexDataTypes.ui.value,
+                "20": {
+                    NAME: "main_unknown_20?",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "22": {
+                    NAME: "main_unknown_22?",
+                    TYPE: DeviceHexDataTypes.sile.value,
                 },
                 "24": {
-                    NAME: f"exp_{idx}_unknown_power_24?",
+                    NAME: "main_unknown_24?",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "26": {
+                    NAME: "main_battery_temperature",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    SIGNED: True,
+                },
+                "27": {
+                    NAME: "main_battery_status?",  # 0 standby, 1 discharging, 2 charging,
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "28": {
+                    NAME: "main_battery_soc",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "29": {
+                    NAME: "battery_soh",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+            }
+        },
+    }
+    | {
+        f"a{4 + idx}": {
+            BYTES: {
+                "00": {
+                    NAME: f"exp_{idx}_controller_sn",
+                    LENGTH: 16,
+                    TYPE: DeviceHexDataTypes.str.value,
+                },
+                "18": {
+                    NAME: f"exp_{idx}_unknown_18?",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "20": {
+                    NAME: f"exp_{idx}_unknown_20?",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "22": {
+                    NAME: f"exp_{idx}_unknown_22?",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "24": {
+                    NAME: f"exp_{idx}_unknown_24?",
                     TYPE: DeviceHexDataTypes.sile.value,
                 },
                 "26": {
                     NAME: f"exp_{idx}_temperature",
                     TYPE: DeviceHexDataTypes.ui.value,
                     SIGNED: True,
+                },
+                "27": {
+                    NAME: f"exp_{idx}_status?",  # 0 standby, 1 discharging, 2 charging,
+                    TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "28": {
                     NAME: f"exp_{idx}_soc",
@@ -2518,15 +2667,15 @@ _A17E1_040a = (
             BYTES: {
                 "00": {
                     NAME: f"exp_{idx}_sn",
-                    LENGTH: 17,
+                    LENGTH: 16,
                     TYPE: DeviceHexDataTypes.str.value,
                 },
-                "17": {
-                    NAME: "separator?",
-                    TYPE: DeviceHexDataTypes.ui.value,
+                "16": {
+                    NAME: f"unknown_exp_{idx}_16",
+                    TYPE: DeviceHexDataTypes.sile.value,
                 },
                 "21": {
-                    NAME: "separator?",
+                    NAME: f"unknown_exp_{idx}_21",
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "25": {
@@ -3959,6 +4108,7 @@ _DOCK_0421 = {
         NAME: "max_load_limit_total"
     },  # system defined limit based on given installation
     "a7": {NAME: "battery_soc_total"},  # Average SOC of all solarbank devices in system
+    "a9": {NAME: "pv_limit_total?"},
     "ac": {NAME: "unknown_ac?"},
     "ae": {NAME: "usage_mode"},  # SB usage modes
     "fc": {NAME: "device_sn"},
@@ -6209,6 +6359,8 @@ SOLIXMQTTMAP: Final[dict] = {
         # Expansion data
         # Interval: ~3-5 seconds, but only with realtime trigger
         "040a": _A17C1_040a,
+        # Interval: ~300 seconds
+        "0500": _A17C1_0500,
     },
     # Solarbank 2 E1600 AC
     "A17C2": {
@@ -6272,6 +6424,8 @@ SOLIXMQTTMAP: Final[dict] = {
         # Expansion data
         # Interval: ~3-5 seconds, but only with realtime trigger
         "040a": _A17C5_040a,
+        # Interval: ~300 seconds
+        "0500": _A17C1_0500,
     },
     # Solarbank 2 E1600 Plus
     "A17C3": {
@@ -6333,6 +6487,8 @@ SOLIXMQTTMAP: Final[dict] = {
         # Expansion data
         # Interval: ~3-5 seconds, but only with realtime trigger
         "040a": _A17C1_040a,
+        # Interval: ~300 seconds
+        "0500": _A17C1_0500,
     },
     # Solarbank 3 E2700 Pro
     "A17C5": {
@@ -6422,7 +6578,7 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: ~300 seconds
         "0428": _DOCK_0428,
         # Interval: ~300 seconds
-        "0500": _DOCK_0500,
+        "0500": _A17C1_0500,
     },
     # Solarbank 4 E5000 Pro
     "AE103": {
@@ -6445,8 +6601,6 @@ SOLIXMQTTMAP: Final[dict] = {
         "0421": _DOCK_0421,
         # Interval: ~300 seconds
         "0428": _DOCK_0428,
-        # Interval: ~300 seconds
-        "0500": _DOCK_0500,
     },
     # Anker SOLIX E10
     "A17E1": {

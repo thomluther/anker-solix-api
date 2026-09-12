@@ -600,6 +600,23 @@ class AnkerSolixBaseApi:
                             )
                             and value is not None
                         ):
+                            # update expansion size from type byte value if found and different
+                            if (
+                                key.startswith("exp_")
+                                and key.endswith("_type")
+                                and str(value) != device_mqtt.get(key)
+                                and str(value).isdigit()
+                                and (
+                                    size := getattr(
+                                        SolixDeviceCapacity,
+                                        f"_{int(value).to_bytes(byteorder='little').hex().upper()}",
+                                        None,
+                                    )
+                                )
+                                and device.get(key.replace("_type", "_size")) != size
+                            ):
+                                calc_capacity = True
+                                device[key.replace("_type", "_size")] = size
                             device_mqtt.update({key: str(value)})
                             value_updated = bool(
                                 key != "wifi_name"
@@ -763,7 +780,9 @@ class AnkerSolixBaseApi:
                             ".", "", 1
                         ).isdigit():
                             if str(key).endswith("_soh"):
-                                if (val := f"{float(value):.3f}") != device_mqtt.get(key):
+                                if (val := f"{float(value):.3f}") != device_mqtt.get(
+                                    key
+                                ):
                                     # trigger capacity calculation if SOH is changing
                                     calc_capacity = True
                                 device_mqtt[key] = val
@@ -832,6 +851,7 @@ class AnkerSolixBaseApi:
                                 "tcp_port",
                                 "ip_address",
                                 "mode",  # HA missing, HES meaning not clear
+                                "battery_type",
                                 "car_battery_type",
                                 "car_battery_voltage_type",
                                 "xt60i_cable",
@@ -934,14 +954,18 @@ class AnkerSolixBaseApi:
                             ".", "", 1
                         ).isdigit():
                             if str(key).endswith("_soh"):
-                                if (val := f"{float(value):.3f}") != device_mqtt.get(key):
+                                if (val := f"{float(value):.3f}") != device_mqtt.get(
+                                    key
+                                ):
                                     # trigger capacity calculation if SOH is changing
                                     calc_capacity = True
                                 device_mqtt[key] = val
                             else:
-                                # trigger capacity calculation if SOC is changing
+                                # trigger capacity calculation if SOC or type is changing
                                 val = f"{float(value):.0f}"
-                                if "_soc" in key and val != device_mqtt.get(key):
+                                if str(key).endswith("_soc") and val != device_mqtt.get(
+                                    key
+                                ):
                                     calc_capacity = True
                                 device_mqtt[key] = val
                         elif key in ["output_cutoff_data", "min_soc", "power_cutoff"]:
@@ -1132,9 +1156,13 @@ class AnkerSolixBaseApi:
                         cap_change = False
                         expansions = device_mqtt.get("expansion_packs", 0)
                         for i in range(1, expansions + 1):
+                            # One deterministic approach from serial
                             if (
                                 device.get(f"exp_{i}_size") is None
-                                and (exp_sn := device_mqtt.get(f"exp_{i}_sn"))
+                                and (
+                                    exp_sn := device_mqtt.get(f"exp_{i}_sn")
+                                    or device_mqtt.get(f"exp_{i}_controller_sn")
+                                )
                                 is not None
                             ):
                                 code = get_solix_product_code(exp_sn)
