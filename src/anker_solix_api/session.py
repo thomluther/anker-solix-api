@@ -40,6 +40,14 @@ from .apitypes import (
 from .helpers import RequestCounter, generateTimestamp, getTimezoneGMTString, md5
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
+_MASK_VALUES = [
+    "user_id",
+    "auth_token",
+    "email",
+    "geo_key",
+    "ap_cloud_user_id",
+    "phone",
+]
 
 
 class AnkerSolixClientSession:
@@ -353,14 +361,7 @@ class AnkerSolixClientSession:
             )
             self._logger.debug(
                 "%s",
-                self.mask_values(
-                    data,
-                    "user_id",
-                    "auth_token",
-                    "email",
-                    "geo_key",
-                    "ap_cloud_user_id",
-                ),
+                self.mask_values(data, *_MASK_VALUES),
             )
             # clear retry attempt to allow retry for authentication refresh
             if isinstance(self._retry_attempt, bool):
@@ -397,11 +398,7 @@ class AnkerSolixClientSession:
                 "Login Response: %s",
                 self.mask_values(
                     data,
-                    "user_id",
-                    "auth_token",
-                    "email",
-                    "geo_key",
-                    "ap_cloud_user_id",
+                    *_MASK_VALUES,
                 ),
             )
             self._loggedIn = True
@@ -475,16 +472,13 @@ class AnkerSolixClientSession:
         encrypted_body: str | None = None
         if self.encrypt_payload and self._login_response:
             if not self._eh and self._token:
-                # init encryption handler
+                # initialize the encryption handler
                 self._eh = AnkerEncryptionHandler(
-                    login_response=self._login_response,
-                    session=self._session,
+                    client=self,
                     preset_key=API_PRESET_KEYS.get(self._region),
-                    request_timeout=self._request_timeout,
-                    logger=self._logger,
                 )
             if not self._eh.shared_secret:
-                # Perform key exchange
+                # Perform key exchange for encryption handler to get the shared secret for the session
                 await self._eh.perform_key_exchange(
                     api_base=self._api_base, headers=merged_headers
                 )
@@ -551,13 +545,9 @@ class AnkerSolixClientSession:
             body_text = str(
                 self.mask_values(
                     json,
-                    "user_id",
-                    "auth_token",
-                    "email",
-                    "geo_key",
+                    *_MASK_VALUES,
                     "token",
                     "password",
-                    "ap_cloud_user_id",
                 )
             )
         else:
@@ -577,7 +567,7 @@ class AnkerSolixClientSession:
                 headers=merged_headers,
                 # encrypted requests send base64 ciphertext as text/plain via data,
                 # plain requests let aiohttp serialize the dict via json
-                json=None if encrypted_body is not None else json,
+                json=json if encrypted_body is None else None,
                 data=encrypted_body,
                 # TODO(COMPRESSION): only response encoding seems to be accepted by servers
                 # json=None if self.compress_data else json,
@@ -598,8 +588,7 @@ class AnkerSolixClientSession:
                 )
                 # print response headers
                 self._logger.debug("Response Headers: %s", resp.headers)
-                # get first the body text for usage in error detail logging if necessary
-
+                # first get the body text for usage in error detail logging if necessary
                 body_text = await resp.text()
                 resp.raise_for_status()  # any response status >= 400
                 # get json data without strict checking for json content
@@ -620,11 +609,7 @@ class AnkerSolixClientSession:
                         "Response Data: %s",
                         self.mask_values(
                             data,
-                            "user_id",
-                            "auth_token",
-                            "email",
-                            "geo_key",
-                            "ap_cloud_user_id",
+                            *_MASK_VALUES,
                         ),
                     )
                 else:
@@ -848,12 +833,7 @@ class AnkerSolixClientSession:
                         "Data: %s",
                         self.mask_values(
                             data,
-                            "user_id",
-                            "auth_token",
-                            "email",
-                            "geo_key",
-                            "token",
-                            "ap_cloud_user_id",
+                            *_MASK_VALUES,
                         ),
                     )
                     self.request_count.add(request_info=f"LOAD {masked_filename}")
@@ -940,16 +920,14 @@ class AnkerEncryptionHandler:
 
     def __init__(
         self,
-        login_response: dict,
-        session: ClientSession,
+        client: AnkerSolixClientSession,
         preset_key: str | None = None,
-        request_timeout: int = SolixDefaults.REQUEST_TIMEOUT_DEF,
-        logger: logging.Logger | None = None,
     ) -> None:
         """Initialize the encryption handler."""
-        self._login_response = login_response
-        self._session = session
-        self._request_timeout = request_timeout
+        self._client = client
+        self._login_response = self._client._login_response  # noqa: SLF001
+        self._session = self._client._session  # noqa: SLF001
+        self._request_timeout = self._client._request_timeout  # noqa: SLF001
         # region presetKey (API_PRESET_KEYS) as hex string; the HMAC signature keys on
         # this ascii hex, while the AES envelope keys on its raw bytes - keep both forms.
         if not preset_key:
@@ -967,11 +945,7 @@ class AnkerEncryptionHandler:
         self.server_public_key = None
         self.shared_secret = None
         # initialize logger for class
-        if logger:
-            self._logger = logger
-        else:
-            self._logger = _LOGGER
-            self._logger.setLevel(logging.WARNING)
+        self._logger = self._client._logger  # noqa: SLF001
         if not self._logger.hasHandlers():
             self._logger.addHandler(logging.StreamHandler())
 
@@ -1020,17 +994,14 @@ class AnkerEncryptionHandler:
 
         The signature is HMAC-SHA256 over "<ts>+<once>+<encrypted_body_b64>", keyed on
         the ascii-hex string (not raw bytes) of:
-        - the presetKey, for the key exchange (no session key exists yet), or
+        - the presetKey, for the session key exchange, or
         - the session key shared_secret[:16] (the securityKey), for every request once
           the handshake has derived it.
-
-        Both are confirmed live: the key exchange (presetKey) and a normal request
-        (session key) are accepted, and the encrypted response decrypts.
         """
         sign_key_hex = (
-            self.shared_secret[:16].hex()
-            if self.shared_secret is not None
-            else self._preset_key_hex
+            self._preset_key_hex
+            if self.shared_secret is None
+            else self.shared_secret[:16].hex()
         )
         request_once = os.urandom(16).hex()
         signature = hmac.new(
@@ -1051,20 +1022,18 @@ class AnkerEncryptionHandler:
     async def perform_key_exchange(
         self,
         api_base: str,
-        auth_ts: str | None = None,
         headers: dict | None = None,
     ) -> str | None:
         """Perform the key exchange with Anker's server and return shared secret."""
         if not isinstance(headers, dict):
             headers = {}
-        timestamp = generateTimestamp()
-        if not auth_ts:
-            auth_ts = timestamp
         # Prepare request. The key-exchange body is plain json holding only the
         # presetKey-wrapped client public key; the signature is over that value.
         url = f"{api_base}/{API_KEY_EXCHANGE}"
+        method = "post"
         client_public_key = self._client_public_key_field()
         data = {"client_public_key": client_public_key}
+        timestamp = generateTimestamp()
         # obtain encryption header fields and add/modify fields for key exchange request
         headers.update(
             self.generate_x_header(
@@ -1072,23 +1041,28 @@ class AnkerEncryptionHandler:
             )
             | {
                 "content-type": "application/json",
-                "x-auth-ts": auth_ts,
+                "x-auth-ts": timestamp,
             }
         )
-        self._logger.debug("Request Url: %s %s", "POST", url)
+        self._logger.debug("Request Url: %s %s", method.upper(), url)
         self._logger.debug(
             "Request Headers: %s",
-            headers,
+            self._client.mask_values(headers, "x-auth-token", "gtoken"),
         )
         self._logger.debug("Request Body: %s", str(data))
         async with self._session.request(
-            "post",
+            method,
             url,
             headers=headers,
             json=data,
             timeout=ClientTimeout(total=self._request_timeout),
         ) as resp:
             try:
+                if self._client.request_count:
+                    self._client.request_count.add(
+                        request_time=datetime.now().astimezone(),
+                        request_info=(f"{method.upper()} {url} {data}").strip(),
+                    )
                 self._logger.debug("AnkerEncryptionHandler request response received")
                 # print response headers
                 self._logger.debug("Response Headers: %s", resp.headers)
@@ -1160,7 +1134,7 @@ class AnkerEncryptionHandler:
         encryptor = Cipher(algorithms.AES(self._body_key()), modes.CBC(iv)).encryptor()
         return b64encode(iv + encryptor.update(padded) + encryptor.finalize()).decode()
 
-    def decryptApiData(self, encrypted_payload: str) -> str:
+    def decryptApiData(self, encrypted_payload: str) -> Any:
         """Decrypt an encrypted body: strip leading IV, AES-128-CBC decrypt, unpad, deserialize."""
         encrypted_data = b64decode(encrypted_payload)
         iv = encrypted_data[:16]
