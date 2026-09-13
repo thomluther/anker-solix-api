@@ -2,8 +2,8 @@
 # ruff: noqa: N806
 
 import contextlib
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from aiohttp import ClientSession
@@ -323,8 +323,7 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                         * min(
                             100,
                             float(
-                                device.get("mqtt_data", {}).get("battery_soh")
-                                or 100
+                                device.get("mqtt_data", {}).get("battery_soh") or 100
                             ),
                         )
                         / 100

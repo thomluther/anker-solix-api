@@ -1,9 +1,6 @@
 """Anker Power/Solix Cloud API class to handle a client connection session for an account."""
 
-from asyncio import sleep
-from base64 import b64decode, b64encode
 import contextlib
-from datetime import datetime
 
 # TODO(COMPRESSION): from gzip import compress, decompress
 import hashlib
@@ -11,9 +8,12 @@ import hmac
 import json
 import logging
 import os
+import tempfile
+from asyncio import sleep
+from base64 import b64decode, b64encode
+from datetime import datetime
 from pathlib import Path
 from random import randbytes, randrange
-import tempfile
 from types import SimpleNamespace
 from typing import Any
 
@@ -366,9 +366,6 @@ class AnkerSolixClientSession:
             # clear retry attempt to allow retry for authentication refresh
             if isinstance(self._retry_attempt, bool):
                 self._retry_attempt = False
-            # a successfully loaded cache is a valid session (end-of-method checks
-            # below reset this if the cached token/user is missing)
-            self._loggedIn = True
         else:
             self._logger.debug("Fetching new Login credentials from server")
             now = datetime.now().astimezone()
