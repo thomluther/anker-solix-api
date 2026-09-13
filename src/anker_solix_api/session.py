@@ -161,6 +161,16 @@ class AnkerSolixClientSession:
         """Get the server used for the active session."""
         return self._api_base
 
+    @property
+    def session(self) -> ClientSession:
+        """Get the active client session."""
+        return self._session
+
+    @property
+    def login_response(self) -> dict:
+        """Get the client login response used for the active session."""
+        return self._login_response
+
     def logger(self, logger: logging.Logger | None = None) -> logging.Logger:
         """Get or set the logger for API client."""
         if logger:
@@ -190,6 +200,13 @@ class AnkerSolixClientSession:
             self._logger.setLevel(level)
             self._logger.info("Set api %s log level to: %s", self.nickname, level)
         return self._logger.getEffectiveLevel()
+
+    def payloadEncryption(self, enable: bool | None = None) -> bool:
+        """Get or set the Api payload encryption flag."""
+        if enable is not None and isinstance(enable, bool):
+            self.encrypt_payload = enable
+            self._logger.info("Set api %s payload encryption to: %s", self.nickname, enable)
+        return self.encrypt_payload
 
     def requestDelay(self, delay: float | None = None) -> float:
         """Get or set the api request delay in seconds."""
@@ -257,7 +274,7 @@ class AnkerSolixClientSession:
     def generate_header(self) -> dict:
         """Generate common header fields for Api requests."""
         # Start with fixed header fields
-        header = API_HEADERS
+        header = API_HEADERS.copy()
         # {"content-type": "application/json",
         # "model-type": "DESKTOP",
         # "app-name": "anker_power",
@@ -922,9 +939,9 @@ class AnkerEncryptionHandler:
     ) -> None:
         """Initialize the encryption handler."""
         self._client = client
-        self._login_response = self._client._login_response  # noqa: SLF001
-        self._session = self._client._session  # noqa: SLF001
-        self._request_timeout = self._client._request_timeout  # noqa: SLF001
+        self._session = client.session
+        self._login_response = client.login_response
+        self._request_timeout = client.requestTimeout()
         # region presetKey (API_PRESET_KEYS) as hex string; the HMAC signature keys on
         # this ascii hex, while the AES envelope keys on its raw bytes - keep both forms.
         if not preset_key:
@@ -942,7 +959,7 @@ class AnkerEncryptionHandler:
         self.server_public_key = None
         self.shared_secret = None
         # initialize logger for class
-        self._logger = self._client._logger  # noqa: SLF001
+        self._logger = self._client.logger()
         if not self._logger.hasHandlers():
             self._logger.addHandler(logging.StreamHandler())
 

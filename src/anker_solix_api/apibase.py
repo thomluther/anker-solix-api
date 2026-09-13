@@ -79,6 +79,10 @@ class AnkerSolixBaseApi:
         """Get or set the subfolder for local API test files in the api session."""
         return self.apisession.testDir(subfolder)
 
+    def payloadEncryption(self, enable: bool | None = None) -> bool:
+        """Get or set the api session payload encryption."""
+        return self.apisession.payloadEncryption(enable)
+
     def endpointLimit(self, limit: int | None = None) -> int:
         """Get or set the api request limit per endpoint per minute."""
         return self.apisession.endpointLimit(limit)
