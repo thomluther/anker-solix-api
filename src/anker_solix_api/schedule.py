@@ -3135,3 +3135,432 @@ async def set_sb2_use_time(  # noqa: C901
             siteId=siteId, price_type=new_price_type, toFile=toFile
         )
     return resp
+
+
+PPS_MAX_SLOTS = 6  # maximum TOU slots a PPS plan may define
+
+
+def _is_pps_hhmm(value) -> bool:
+    """True if value is a valid 'HH:MM' string in the 00:00-24:00 range."""
+    if not isinstance(value, str):
+        return False
+    parts = value.split(":")
+    if len(parts) != 2 or not all(part.isdigit() for part in parts):
+        return False
+    hour, minute = int(parts[0]), int(parts[1])
+    return 0 <= hour <= 24 and 0 <= minute <= 59
+
+
+def validate_pps_schedule(ranges, prices) -> list[str]:
+    """Authoritative PPS schedule validation; return a list of problems (empty = valid).
+
+    Enforces the device plan limits required by issue #326: 1-6 contiguous slots
+    tiling 00:00-24:00 (no gaps, no overlaps, monotonically increasing
+    boundaries, first slot starts 00:00, last ends 24:00), valid tariff types
+    (1/2/3), and a well-formed price list (valid types, non-negative numeric
+    prices) when a price list is provided. This is the single validation path
+    every PPS write goes through immediately before the cloud request.
+    """
+    problems: list[str] = []
+    if not isinstance(ranges, list) or not ranges:
+        problems.append("ranges must be a non-empty list")
+    else:
+        if len(ranges) > PPS_MAX_SLOTS:
+            problems.append(f"too many slots ({len(ranges)} > {PPS_MAX_SLOTS})")
+        for i, slot in enumerate(ranges):
+            if not isinstance(slot, dict):
+                problems.append(f"slot {i} is not an object")
+                continue
+            start, end = slot.get("start_time"), slot.get("end_time")
+            if not _is_pps_hhmm(start):
+                problems.append(f"slot {i} start_time {start!r} is not a valid HH:MM")
+            if not _is_pps_hhmm(end):
+                problems.append(f"slot {i} end_time {end!r} is not a valid HH:MM")
+            if (
+                _is_pps_hhmm(start)
+                and _is_pps_hhmm(end)
+                and start >= end
+            ):
+                problems.append(
+                    f"slot {i} start_time {start} is not before end_time {end}"
+                )
+            if slot.get("type") not in (1, 2, 3):
+                problems.append(f"slot {i} type {slot.get('type')!r} must be 1/2/3")
+        if not problems:
+            if ranges[0].get("start_time") != "00:00":
+                problems.append(
+                    "first slot must start at 00:00, "
+                    f"got {ranges[0].get('start_time')!r}"
+                )
+            if ranges[-1].get("end_time") != "24:00":
+                problems.append(
+                    "last slot must end at 24:00, "
+                    f"got {ranges[-1].get('end_time')!r}"
+                )
+            for i in range(len(ranges) - 1):
+                if ranges[i].get("end_time") != ranges[i + 1].get("start_time"):
+                    problems.append(
+                        f"gap/overlap between slot {i} "
+                        f"({ranges[i].get('end_time')}) and slot {i + 1} "
+                        f"({ranges[i + 1].get('start_time')})"
+                    )
+    if prices is not None:
+        if not isinstance(prices, list):
+            problems.append("prices must be a list")
+        else:
+            for i, price in enumerate(prices):
+                if not isinstance(price, dict):
+                    problems.append(f"price {i} is not an object")
+                    continue
+                if price.get("type") not in (1, 2, 3):
+                    problems.append(f"price {i} type {price.get('type')!r} must be 1/2/3")
+                try:
+                    if float(price.get("price")) < 0:
+                        problems.append(f"price {i} {price.get('price')!r} is negative")
+                except (TypeError, ValueError):
+                    problems.append(f"price {i} {price.get('price')!r} is not a number")
+    return problems
+
+
+async def set_pps_use_time(
+    self: AnkerSolixApi,
+    deviceSn: str,
+    ranges: list[dict] | None = None,  # full replacement of the slot plan
+    prices: list[dict] | None = None,  # full replacement of the tariff prices
+    start_hour: int | datetime | time | None = None,  # 0-24
+    end_hour: int | datetime | time | None = None,  # 0-24
+    tariff_type: int | str | None = None,  # 1=Peak, 2=Mid, 3=Off
+    tariff_price: float | str | None = None,
+    delete: bool | None = False,
+    slot: int | None = None,  # 1-based slot index for explicit targeting
+    reserve_power: int | None = None,  # "TOU Power" backup reserve %
+    unit: str | None = None,  # currency symbol
+    toFile: bool = False,
+) -> bool | dict:
+    r"""Set or change the PPS time-of-use (TOU) charging schedule for a given device.
+
+    PPS devices (e.g. SOLIX C1000 Gen 2, model A1763) store their TOU charging
+    plan in the cloud "pps_use_time" device attribute (a JSON string). Writing
+    this attribute via the Api is sufficient to update the plan: the cloud pushes
+    the new schedule down to the device, so no direct MQTT command is required.
+
+    The helper supports two modes:
+    - Full replacement: pass ranges and/or prices to replace the whole slot plan
+      and/or the whole price list (all other parameters are ignored for the plan).
+    - Flexible partial change (mirroring set_sb2_use_time() but without the
+      seasonal month handling, since a PPS plan is hourly and always covers the
+      day): apply a change to a single slot. All parameters are optional; any
+      parameter left as None is preserved from the current plan.
+
+    The "pps_use_time" attribute format (as returned by get_device_attributes):
+    "{"ranges": [{"start_time": "00:00", "end_time": "09:00", "type": 1},
+                 {"start_time": "09:00", "end_time": "19:00", "type": 3},
+                 {"start_time": "19:00", "end_time": "24:00", "type": 1}],
+     "prices": [{"price": "0.2", "type": 1}, {"price": "0.001", "type": 3}],
+     "unit": "$", "reserve_power": 6}"
+
+    Tariff types (the cloud calls this "type", the Anker app "tariff"):
+    1=Peak, 2=Mid, 3=Off.
+
+    Applied Parameter logic:
+    - Full replacement (takes precedence when provided):
+        - ranges: replace the TOU slot plan, a list of
+          {"start_time": "HH:MM", "end_time": "HH:MM", "type": 1|2|3}
+          covering the day 00:00-24:00 with 1-6 contiguous slots
+        - prices: replace the tariff prices, a list of
+          {"price": "<float>", "type": 1|2|3}
+    - Flexible partial change (applied to one target slot when no full
+      replacement is given):
+        - Target slot selection (highest precedence first):
+            - slot: a 1-based index into the slot plan explicitly targets that
+              slot (e.g. slot=2 targets the second slot). start_hour/end_hour
+              then only set the target slot's boundaries.
+            - If start_hour or end_hour is provided, the slot whose window
+              contains that time is modified (the "given slot").
+            - Otherwise the *active* slot (the slot containing the current
+              time of the library instance) is modified. No device-local
+              timestamp is exposed by the cloud, so if the device's local
+              time differs from the instance time, pass slot, start_hour or
+              end_hour to target a specific slot explicitly.
+        - tariff_type: set the target slot's tariff (1=Peak, 2=Mid, 3=Off);
+          the SolixTariffTypes name ("peak"/"mid_peak"/"off_peak") is also
+          accepted.
+        - tariff_price: set the price of the target slot's tariff in "prices".
+        - start_hour: move the target slot's start boundary and adjust the
+          previous slot's end to match (the plan stays contiguous).
+        - end_hour: move the target slot's end boundary and adjust the next
+          slot's start to match (the plan stays contiguous).
+        - delete: remove the target slot and fill the gap with the adjacent slot.
+    - Plan-level options (applied in either mode):
+        - reserve_power: backup reserve percentage (the app's "TOU Power"
+          setting; "power in use" = 100 - reserve_power). The app steps by 1%
+          and enforces a device-specific floor (min_soc + 5) and ceiling
+          (max_soc).
+        - unit: currency symbol (e.g. "$").
+    - If no parameter is provided, the current plan is returned without writing.
+    - The final plan is validated before writing (issue #326): 1-6 contiguous
+      slots tiling 00:00-24:00, valid tariff types and prices. If the result
+      is invalid, a warning is logged and the unmodified current plan is
+      returned without writing.
+    - toFile: write to file for testing instead of making the Api call
+    """
+
+    def _to_hhmm(value) -> str | None:
+        """Convert an int hour / datetime / time / 'HH:MM' to 'HH:MM', or None."""
+        if isinstance(value, datetime):
+            value = value.time()
+        if isinstance(value, time):
+            return f"{value.hour:02d}:{value.minute:02d}"
+        if str(value).isdigit() or isinstance(value, int | float):
+            return f"{max(0, min(24, int(value))):02d}:00"
+        if isinstance(value, str):
+            parts = value.split(":")
+            if 2 <= len(parts) <= 3 and all(part.isdigit() for part in parts):
+                # accept "HH:MM" and the "HH:MM:SS" format used by the Home
+                # Assistant time selector (seconds are ignored)
+                hour, minute = int(parts[0]), int(parts[1])
+                if 0 <= hour <= 24 and 0 <= minute <= 59:
+                    return f"{hour:02d}:{minute:02d}"
+        return None
+
+    def _hhmm_to_min(value: str) -> int:
+        hour, minute = value.split(":")
+        return int(hour) * 60 + int(minute)
+
+    def _min_to_hhmm(value: int) -> str:
+        value = max(0, min(1440, value))
+        return f"{value // 60:02d}:{value % 60:02d}"
+
+    def _slot_at(ranges: list[dict], hhmm: str) -> int:
+        """Index of the slot whose [start_time, end_time) contains hhmm, else -1."""
+        for index, slot in enumerate(ranges):
+            if slot["start_time"] <= hhmm < slot["end_time"]:
+                return index
+        return -1
+
+    def _resolve_slot(
+        ranges: list[dict],
+        slot: int | None = None,
+        start_hour: str | None = None,
+        end_hour: str | None = None,
+        active_index: int | None = None,
+    ) -> int:
+        """Resolve the 0-based index of the target slot for a PPS partial change.
+
+        Precedence: explicit slot > explicit time > active slot. An explicitly
+        supplied slot is authoritative and is never silently redirected to a
+        different slot: an out-of-range slot, a time that maps to no slot, or the
+        absence of an active slot all raise ValueError so the caller writes
+        nothing rather than mutating an unintended slot.
+        """
+        if slot is not None:
+            if not isinstance(slot, int) or isinstance(slot, bool):
+                raise ValueError("slot must be an integer")
+            if slot < 1 or slot > len(ranges):
+                raise ValueError(
+                    f"slot must be between 1 and {len(ranges)}, got {slot}"
+                )
+            return slot - 1
+        if start_hour is not None or end_hour is not None:
+            index = _slot_at(ranges, start_hour or end_hour)
+            if index < 0:
+                raise ValueError(f"no PPS slot contains {start_hour or end_hour}")
+            return index
+        if active_index is not None and 0 <= active_index < len(ranges):
+            return active_index
+        raise ValueError("no active PPS slot for the current time")
+
+    # normalize the parameters
+    start_hour = _to_hhmm(start_hour)
+    end_hour = _to_hhmm(end_hour)
+    tariff_type = (
+        # accept the SolixTariffTypes enum name (peak/mid_peak/off_peak) or the
+        # int value; PPS only supports Peak/Mid/Off (no Valley/Unknown)
+        int(getattr(SolixTariffTypes, str(tariff_type).upper()))
+        if hasattr(SolixTariffTypes, str(tariff_type).upper())
+        and getattr(SolixTariffTypes, str(tariff_type).upper()).value in (1, 2, 3)
+        else int(tariff_type)
+        if (str(tariff_type).isdigit() or isinstance(tariff_type, int | float))
+        and int(tariff_type) in (1, 2, 3)
+        else None
+    )
+    tariff_price = (
+        # preserve the price's native precision (PPS prices can be e.g. 0.001),
+        # stripping trailing zeros so 0.2 stays "0.2" and 0.001 stays "0.001"
+        f"{float(tariff_price):.6f}".rstrip("0").rstrip(".")
+        if str(tariff_price).replace(".", "", 1).isdigit()
+        else None
+    )
+    delete = delete if isinstance(delete, bool) else False
+    slot = (
+        int(slot)
+        if (str(slot).isdigit() or isinstance(slot, int)) and int(slot) > 0
+        else None
+    )
+    reserve_power = (
+        max(1, min(100, int(reserve_power)))
+        if (str(reserve_power).isdigit() or isinstance(reserve_power, int | float))
+        else None
+    )
+    unit = str(unit)[0:3] if unit else None
+
+    # read the current plan (from file when toFile) so unset parameters are preserved
+    data = await self.get_device_attributes(
+        deviceSn=deviceSn, attributes=["pps_use_time"], fromFile=toFile
+    )
+    pps = (data.get("attributes") or {}).get("pps_use_time")
+    if isinstance(pps, str):
+        with contextlib.suppress(ValueError, TypeError):
+            pps = json.loads(pps)
+    if not isinstance(pps, dict):
+        pps = {}
+    # snapshot the current plan so an invalid result can be rejected without
+    # losing the unmodified plan
+    original_pps = copy.deepcopy(pps)
+    # no option provided -> return the current plan without writing
+    # (ranges/prices count as "provided" when not None, so an explicitly empty
+    # list is validated and rejected rather than silently treated as a no-op)
+    if not (
+        ranges is not None
+        or prices is not None
+        or start_hour
+        or end_hour
+        or tariff_type
+        or tariff_price
+        or delete
+        or slot is not None
+        or reserve_power is not None
+        or unit
+    ):
+        self._logger.info(
+            "Api %s no PPS use time options provided, returning current plan",
+            self.apisession.nickname,
+        )
+        return pps
+
+    # full replacement takes precedence: replace the whole slot plan / price list
+    if ranges is not None:
+        pps["ranges"] = ranges
+    if prices is not None:
+        pps["prices"] = prices
+
+    # flexible partial change: apply to one target slot when the slot plan is not
+    # being fully replaced (ranges left as None)
+    if (
+        start_hour
+        or end_hour
+        or tariff_type
+        or tariff_price
+        or delete
+        or slot is not None
+    ) and ranges is None:
+        cur_ranges: list[dict] = pps.get("ranges") or []
+        cur_prices: list[dict] = pps.get("prices") or []
+        if not cur_ranges:
+            # no existing plan; start from a single default off-peak slot
+            cur_ranges = [{"start_time": "00:00", "end_time": "24:00", "type": 3}]
+        # select the target slot: explicit slot index, else the slot at the given
+        # time, else the active slot. An unresolvable target raises (no write)
+        # rather than silently redirecting to slot 1.
+        active_index = (
+            None
+            if (slot is not None or start_hour or end_hour)
+            else _slot_at(
+                cur_ranges, datetime.now().astimezone().strftime("%H:%M")
+            )
+        )
+        index = _resolve_slot(
+            cur_ranges,
+            slot=slot,
+            start_hour=start_hour,
+            end_hour=end_hour,
+            active_index=active_index,
+        )
+        if delete:
+            if len(cur_ranges) == 1:
+                # a single slot cannot be deleted; reset to the default plan
+                cur_ranges = [{"start_time": "00:00", "end_time": "24:00", "type": 3}]
+            elif index > 0:
+                # the previous slot absorbs the deleted slot
+                cur_ranges[index - 1]["end_time"] = cur_ranges[index]["end_time"]
+                del cur_ranges[index]
+            else:
+                # the next slot absorbs the deleted (first) slot
+                cur_ranges[1]["start_time"] = cur_ranges[0]["start_time"]
+                del cur_ranges[0]
+        else:
+            if tariff_type:
+                cur_ranges[index]["type"] = tariff_type
+            if tariff_price:
+                # Upsert only the target segment's tariff price into the existing
+                # price list: update the entry matching the target slot's tariff
+                # type, or append it if absent. Every other range and price entry
+                # is preserved verbatim (no rebuild/normalize/merge of unrelated
+                # schedule boundaries).
+                slot_type = cur_ranges[index]["type"]
+                for price in cur_prices:
+                    if price.get("type") == slot_type:
+                        price["price"] = tariff_price
+                        break
+                else:
+                    cur_prices.append({"price": tariff_price, "type": slot_type})
+            if start_hour:
+                if index > 0:
+                    lower = _hhmm_to_min(cur_ranges[index - 1]["start_time"])
+                    upper = _hhmm_to_min(cur_ranges[index]["end_time"])
+                    new_start = _min_to_hhmm(
+                        max(lower, min(upper - 1, _hhmm_to_min(start_hour)))
+                    )
+                    cur_ranges[index]["start_time"] = new_start
+                    cur_ranges[index - 1]["end_time"] = new_start
+                else:
+                    self._logger.warning(
+                        "Api %s cannot move the start of the first slot (stays 00:00)",
+                        self.apisession.nickname,
+                    )
+            if end_hour:
+                if index < len(cur_ranges) - 1:
+                    lower = _hhmm_to_min(cur_ranges[index]["start_time"])
+                    upper = _hhmm_to_min(cur_ranges[index + 1]["end_time"])
+                    new_end = _min_to_hhmm(
+                        max(lower + 1, min(upper, _hhmm_to_min(end_hour)))
+                    )
+                    cur_ranges[index]["end_time"] = new_end
+                    cur_ranges[index + 1]["start_time"] = new_end
+                else:
+                    self._logger.warning(
+                        "Api %s cannot move the end of the last slot (stays 24:00)",
+                        self.apisession.nickname,
+                    )
+        pps["ranges"] = cur_ranges
+        pps["prices"] = cur_prices
+
+    # apply the plan-level options
+    if unit:
+        pps["unit"] = unit
+    if reserve_power is not None:
+        pps["reserve_power"] = reserve_power
+
+    # validate the final plan before committing (issue #326: enforce the device
+    # plan limits - 1-6 contiguous slots tiling 00:00-24:00, valid types/prices);
+    # on failure warn and return the unmodified plan without writing. The local
+    # cache is only refreshed by set_device_attributes after a *successful*
+    # cloud write, so a rejected/failed write never leaves optimistic local
+    # state behind.
+    if problems := validate_pps_schedule(pps.get("ranges"), pps.get("prices")):
+        self._logger.warning(
+            "Api %s invalid PPS use time plan (%s); not writing",
+            self.apisession.nickname,
+            "; ".join(problems),
+        )
+        return original_pps
+
+    # commit to the cloud store; the cloud pushes the plan to the device. The
+    # cached plan is updated from the confirmed result only after this write
+    # succeeds, so a failed write cannot corrupt the local state.
+    return await self.set_device_attributes(
+        deviceSn=deviceSn,
+        attributes={"pps_use_time": json.dumps(pps, separators=(",", ":"))},
+        query_attributes=["pps_use_time"],
+        toFile=toFile,
+    )

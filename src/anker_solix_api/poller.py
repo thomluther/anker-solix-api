@@ -18,6 +18,7 @@ from .apitypes import (
     SolixPriceProvider,
     SolixSiteType,
 )
+from .errors import AnkerSolixError
 from .hesapi import AnkerSolixHesApi
 from .powerpanel import AnkerSolixPowerpanelApi
 
@@ -1364,6 +1365,18 @@ async def poll_device_details(  # noqa: C901
             # Fetch other charger datails for supported models
             else:
                 pass
+        elif dev_type in ({SolixDeviceType.PPS.value} - exclude):
+            # PPS TOU plan (pps_use_time): only owned (admin) devices can query
+            # their plan; shared devices return an error, so guard with is_admin
+            if device.get("is_admin"):
+                try:
+                    await api.get_device_attributes(
+                        deviceSn=sn, attributes=["pps_use_time"], fromFile=fromFile
+                    )
+                except AnkerSolixError as err:
+                    api._logger.warning(
+                        f"Failed to fetch PPS TOU plan for {sn}: {err}"
+                    )
 
         # Merge additional powerpanel data
         if api.powerpanelApi:
