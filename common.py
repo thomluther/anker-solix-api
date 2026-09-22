@@ -408,24 +408,28 @@ def print_pps_schedule(schedule: dict, color: str = "") -> None:
         if name == "tou_mode_schedule":
             if ranges := plan.get("ranges") or []:
                 CONSOLE.info(
-                    f"{'Sl':<{t2}} {'Start':<{t5}} {'End':<{t6}} {'Tariff':<{t10 + t9}}{'Sl':<{t2}} {'Start':<{t5}} {'End':<{t6}} {'Tariff'}  <== {name}"
+                    f"{'Sl':<{t2}} {'Start':<{t5}} {'End':<{t6}} {'Price':<{t6}} {'Unit':<{t5}}{'Tariff':<{t10 + t6}}"
+                    f"{'Sl':<{t2}} {'Start':<{t5}} {'End':<{t6}} {'Price':<{t6}} {'Unit':<{t5}}{'Tariff'}  <== {name}"
                 )
             row = ""
+            prices = {p.get("type", 0): p.get("price", 0) for p in plan.get("prices")}
+            unit = plan.get("unit", "")
             for idx, slot in enumerate(ranges):
-                tariff = slot.get("tariff", 0)
+                tariff = slot.get("type", 0)
                 start = slot.get("start_time", "")
                 end = slot.get("end_time", "")
+                price = prices.get(tariff, "")
                 if idx % 2:
                     row += (
-                        f"{idx + 1:>{t2}} {start:<{t5}} {end:<{t6}} "
+                        f"{idx + 1:>{t2}} {start:<{t5}} {end:<{t6}} {price:>{t6}} {unit:<{t5}}"
                         f"{(str(get_enum_name(SolixTariffTypes, tariff, '')) + ' (' + str(tariff or '-') + ')').replace('_', ' ').title()}"
                     )
                     CONSOLE.info(f"{row}{Color.OFF}")
                     row = ""
                 else:
                     row = (
-                        f"{color}{idx + 1:>{t2}} {start:<{t5}} {end:<{t6}} "
-                        f"{(str(get_enum_name(SolixTariffTypes, tariff, '')) + ' (' + str(tariff or '-') + ')').replace('_', ' ').title():<{t10 + t9}}"
+                        f"{color}{idx + 1:>{t2}} {start:<{t5}} {end:<{t6}} {price:>{t6}} {unit:<{t5}}"
+                        f"{(str(get_enum_name(SolixTariffTypes, tariff, '')) + ' (' + str(tariff or '-') + ')').replace('_', ' ').title():<{t10 + t6}}"
                     )
             if row:
                 CONSOLE.info(f"{row}{Color.OFF}")

@@ -2580,7 +2580,7 @@ class AnkerSolixApiMonitor:
                     common.print_pps_schedule(
                         {"custom_mode_schedule": schedule}, c or cm
                     )
-                if schedule := (c or cm) and mqtt.get("tou_mode_schedule"):
+                if schedule := dev.get("pps_use_time") or ((c or cm) and mqtt.get("tou_mode_schedule")):
                     CONSOLE.info(f"{'-' * 80}")
                     common.print_pps_schedule({"tou_mode_schedule": schedule}, c or cm)
                 if schedule := (c or cm) and mqtt.get("ac_output_schedule"):
