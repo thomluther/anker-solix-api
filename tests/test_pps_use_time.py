@@ -24,6 +24,9 @@ _LOGGER.setLevel(logging.DEBUG)  # enable for detailed API output
 CONSOLE: logging.Logger = common.CONSOLE
 
 SN = "1234567890"
+DEFAULT_TYPE = 2
+DEFAULT_PRICE = "0.00"
+
 # Baseline plan: 3 slots (00-09 peak, 09-19 off, 19-24 peak)
 PLAN = {
     "ranges": [
@@ -344,8 +347,14 @@ async def test_plan_deletion_options(api: FakeApi) -> None:
     plan = json.loads(api.written)
     ranges = plan.get("ranges", [])
     prices = {p["type"]: p["price"] for p in plan["prices"]}
-    assert len(ranges) == 0, f"Slot deletion did not work for plan removal: {ranges}"
-    assert len(prices) == 0, f"Price deletion did not work for plan removal: {prices}"
+    assert len(ranges) == 1, f"Slot deletion did not work for plan removal: {ranges}"
+    assert ranges[0]["start_time"] == "00:00" and ranges[0]["end_time"] == "24:00", (
+        f"Default time range is not applied for plan deletion: {ranges}"
+    )
+    assert len(prices) == 1, f"Price deletion did not work for plan removal: {prices}"
+    assert prices.get(DEFAULT_TYPE) == DEFAULT_PRICE, (
+        f"Default type {DEFAULT_TYPE} or default price {DEFAULT_PRICE} not applied: {prices}"
+    )
     CONSOLE.info("Remaining plan after deletion: %s", plan)
     CONSOLE.info("All plan deletion tests passed")
 
@@ -369,8 +378,8 @@ async def test_empty_plan_changes(api: FakeApi) -> None:
         f"Wrong end time for slot 3: {ranges[2]} but expected 24:00"
     )
     assert prices[1] == "0.44", f"Type 1 price not changed: {prices} but expected 0.44"
-    assert prices.get(3) == "0.00", (
-        f"Type 3 price not default: {prices} but expected 0.00"
+    assert prices.get(DEFAULT_TYPE) == DEFAULT_PRICE, (
+        f"Default type {DEFAULT_TYPE} price not default: {prices} but expected {DEFAULT_PRICE}"
     )
     # Test full range is created with start range specification for different type and price
     api.change_plan(PLAN_EMPTY)
@@ -382,8 +391,8 @@ async def test_empty_plan_changes(api: FakeApi) -> None:
     prices = {p["type"]: p["price"] for p in plan["prices"]}
     assert len(ranges) == 2, f"Plan gaps are not filled: {ranges}"
     assert ranges[0].get("type") == 1, f"Slot 1 tariff was not set to 1: {ranges}"
-    assert ranges[1].get("type") == 3, (
-        f"Slot 2 tariff was not set to default 3: {ranges}"
+    assert ranges[1].get("type") == DEFAULT_TYPE, (
+        f"Slot 2 tariff was not set to default {DEFAULT_TYPE}: {ranges}"
     )
     assert ranges[0]["end_time"] == "12:00", (
         f"Wrong end time for slot 1: {ranges[0]} but expected 12:00"
@@ -395,8 +404,8 @@ async def test_empty_plan_changes(api: FakeApi) -> None:
         f"Wrong end time for slot 2: {ranges[0]} but expected 24:00"
     )
     assert prices[1] == "0.41", f"Type 1 price not changed: {prices} but expected 0.41"
-    assert prices.get(3) == "0.00", (
-        f"Type 3 price not default: {prices} but expected 0.00"
+    assert prices.get(DEFAULT_TYPE) == "0.00", (
+        f"Default type {DEFAULT_TYPE} price not default: {prices} but expected 0.00"
     )
     # Test full range is created, type is default since not specified times will be extended due to merge of same type slots
     api.change_plan(PLAN_EMPTY)
@@ -405,8 +414,8 @@ async def test_empty_plan_changes(api: FakeApi) -> None:
     ranges = plan["ranges"]
     prices = {p["type"]: p["price"] for p in plan["prices"]}
     assert len(ranges) == 1, f"Expected full range slots are created: {ranges}"
-    assert ranges[0].get("type") == 3, (
-        f"Slot 1 tariff did not use default type 3: {ranges}"
+    assert ranges[0].get("type") == DEFAULT_TYPE, (
+        f"Slot 1 tariff did not use default type {DEFAULT_TYPE}: {ranges}"
     )
     assert ranges[0]["start_time"] == "00:00", (
         f"Wrong start time for slot 1: {ranges[0]} but expected 00:00"
@@ -414,8 +423,8 @@ async def test_empty_plan_changes(api: FakeApi) -> None:
     assert ranges[0]["end_time"] == "24:00", (
         f"Wrong end time for slot 1: {ranges[0]} but expected 24:00"
     )
-    assert prices.get(3) == "0.11", (
-        f"Type 3 price not changed: {prices} but expected 0.11"
+    assert prices.get(DEFAULT_TYPE) == "0.11", (
+        f"Default type {DEFAULT_TYPE} price not changed: {prices} but expected 0.11"
     )
     CONSOLE.info("All empty plan tests passed")
 

@@ -123,13 +123,7 @@ async def poll_sites(  # noqa: C901
             if "currency_list" not in api.account and (
                 {ApiCategories.site_price} - exclude
             ):
-                data = await api.get_currency_list(fromFile=fromFile)
-                api._update_account(
-                    {
-                        "currency_list": data.get("currency_list") or [],
-                        "default_currency": data.get("default_currency") or {},
-                    }
-                )
+                await api.get_currency_list(fromFile=fromFile)
             # Get product list once for device names if no admin and save it in account cache
             if "products" not in api.account:
                 if not admin and ({ApiCategories.account_info} - exclude):
@@ -1318,6 +1312,11 @@ async def poll_device_details(  # noqa: C901
                     attributes=["pps_use_time", "ip_region", "currency"],
                     fromFile=fromFile,
                 )
+            # fetch account currency list once for TOU price unit options
+            if "currency_list" not in api.account and (
+                {ApiCategories.site_price} - exclude
+            ):
+                await api.get_currency_list(fromFile=fromFile)
 
         elif dev_type in ({SolixDeviceType.CHARGER.value} - exclude):
             # Fetch mini charger datails for supported models

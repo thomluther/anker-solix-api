@@ -47,7 +47,6 @@ API_COUNTRIES: Final[dict] = {
         "NG",
         "NZ",
         "RU",
-        "SG",
         "ZA",
         "KR",
         "TW",
@@ -102,6 +101,7 @@ API_COUNTRIES: Final[dict] = {
         "IL",
         "RO",  # See #250, HA #443, #410
         "JP",  # See #317, HA #557
+        "SG",  # See HA #593
     ],
 }  # TODO(2): Expand or update list once ID assignments are wrong or missing
 
@@ -168,9 +168,11 @@ API_ENDPOINTS: Final[dict] = {
     "vehicle_delete": "power_service/v1/app/vehicle/delete_vehicle",
     "vehicle_set_charging": "power_service/v1/app/vehicle/set_charging_vehicle",  #  needs EV_Charger device, {"vehicle_id": vehicleId, "device_sn": deviceSn, "transaction_id": 1}
     "vehicle_set_default": "power_service/v1/app/vehicle/set_default",  # set vehicle id as default, {"vehicle_id": vehicleId}
+    "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
     # Power endpoints */v1/device/*
     "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
-    "get_currency_list": "power_service/v1/currency/get_list",  # get list of supported currencies for power sites
+    # Power endpoints */v2/device/*
+    "get_device_energy": "power_service/v2/device/energy_analysis", # works on newer PPS {"device_sn": deviceSn,"type": "week","start_time": "2026-09-21","end_time": "2026-09-27"}
     # Power endpoints */v1/dynamic_price/*
     "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
     "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
@@ -359,14 +361,14 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     'power_service/v1/app/set_oil_consumption_reminder_plan'
     'power_service/v1/app/set_maintain_parts_ignore_reminders'
 
-related to power V2: 14 + 0 used => 11 total
+related to power V2: 15 + 1 used => 16 total
     'power_service/v2/app/get_custom_branch_icon' # get list of branch icons and url
     'power_service/v2/app/get_hardware_relation'# shows empty list, {"sn_list": [deviceSn]}
     'power_service/v2/platform_get_pn_region_code'# {"product_code": "AE103"})) SB4 => {"product_code": "AE103","region_codes": [{"country_code": "DE","states": [{"state_code": "DE","grid_code": 3,"grid_code_name": "VDE-AR-N 4105"}]},...]}
     'power_service/v2/site/platform_energy_analysis_options'
     'power_service/v2/app/set_device_pv_name'
-    'power_service/v2/device/energy_analysis'
     'power_service/v2/device/energy_options' # shows earliest date for device # {"device_sn": deviceSn}))
+    'power_service/v2/device/energy_options_reconnect' # endpoint yet unknown on server
     'power_service/v2/device/timeline/event' # {"device_sn": deviceSn})) => {"total_count": 0,"all_unlocked": false,"top_event": null,"statistics": {"stable_days": 0,"offgrid_consume": 0,"co2": 0},"list": []}
     'power_service/v2/device/timeline/event/batch_read'
     'power_service/v2/device/report_data'
@@ -374,7 +376,7 @@ related to power V2: 14 + 0 used => 11 total
     'power_service/v2/platform_set_user_region_param'
     'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC
     'power_service/v2/site/platform_get_site_savings' # may need special site? {"site_id": siteId, "type": "week", "data_type": 1, "start_time": "2026-08-01, "end_time": "2026-08-04"}))
-
+    'power_service/v2/site/platform_get_site_scene'  # may need special site?
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
@@ -575,6 +577,7 @@ API_FILEPREFIXES: Final[dict] = {
     "energy_grid": "energy_grid",
     "energy_pps": "energy_pps",
     "energy_ev_charger": "energy_ev_charger",
+    "energy_device": "energy_device",
     "solar_info": "solar_info",
     "compatible_process": "compatible_process",
     "get_cutoff": "power_cutoff",
@@ -1686,6 +1689,15 @@ class SolixDefaults:
         "DEFAULT": 0,
     }
     PPS_BACKUP_SOC_DEF: int = 6
+    # SOLIX Devices supporting device energy queries
+    DEVICE_ENERGY: ClassVar[set[str]] = {
+        "A1763",  # C1000 Gen 2
+        "A1765",  # C1000X Gen 2
+        "AS100", # C1000X Gen 2 LE
+        "A1783", # C2000 Gen 2
+        "A1785", # C2000X Gen 2
+        "AS220", # S2000
+    }
 
 
 class SolixDeviceStatus(StrEnum):

@@ -86,6 +86,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         set_device_load,
         set_device_parm,
         set_home_load,
+        set_pps_use_time,
         set_sb2_ac_charge,
         set_sb2_home_load,
         set_sb2_use_time,
@@ -325,7 +326,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "owner_user_id",
                             "img_url",
                             "currency",
-                            "ip_region"
+                            "ip_region",
                         ]
                         and value
                     ):
@@ -1033,11 +1034,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 # add empty plan since attribute is supported by device MQTT data
                                 device[key] = {}
                             # extract actual tariff and price
+                            # NOTE: Backup SOC in plan is controlled by MQTT command only
                             if (plan := device.get(key)) is not None:
                                 # get actual presets from current slot
                                 # Consider time zone shifts
                                 tz_offset = 0
-                                now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
+                                now = datetime.now().astimezone() + timedelta(
+                                    seconds=tz_offset
+                                )
                                 now_time = now.time().replace(microsecond=0)
                                 # set now to new daytime if close to end of day
                                 if (
@@ -1047,30 +1051,38 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     .time()
                                 ):
                                     now_time = (
-                                        datetime.strptime("00:00", "%H:%M").astimezone().time()
+                                        datetime.strptime("00:00", "%H:%M")
+                                        .astimezone()
+                                        .time()
                                     )
-                                tariff = next(
-                                    iter(
-                                        [
-                                            slot
-                                            for slot in (plan.get("ranges") or [])
-                                            if (slot.get("start_time") or "00:00")
-                                            <= f"{now_time.hour:02d}:00"
-                                            < (slot.get("end_time") or "24:00")
-                                        ]
-                                    ),
-                                    {},
-                                ).get("type") or SolixTariffTypes.UNKNOWN.value
-                                price = next(
-                                    iter(
-                                        [
-                                            slot
-                                            for slot in (plan.get("prices") or [])
-                                            if slot.get("type") == tariff
-                                        ]
-                                    ),
-                                    {},
-                                ).get("price") or SolixDefaults.TARIFF_PRICE_DEF
+                                tariff = (
+                                    next(
+                                        iter(
+                                            [
+                                                slot
+                                                for slot in (plan.get("ranges") or [])
+                                                if (slot.get("start_time") or "00:00")
+                                                <= f"{now_time.hour:02d}:00"
+                                                < (slot.get("end_time") or "24:00")
+                                            ]
+                                        ),
+                                        {},
+                                    ).get("type")
+                                    or SolixTariffTypes.UNKNOWN.value
+                                )
+                                price = (
+                                    next(
+                                        iter(
+                                            [
+                                                slot
+                                                for slot in (plan.get("prices") or [])
+                                                if slot.get("type") == tariff
+                                            ]
+                                        ),
+                                        {},
+                                    ).get("price")
+                                    or SolixDefaults.TARIFF_PRICE_DEF
+                                )
                                 device.update(
                                     {
                                         "preset_tariff": tariff,

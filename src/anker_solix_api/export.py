@@ -37,6 +37,7 @@ from .apitypes import (
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
     ApiEndpointServices,
+    SolixDefaults,
     SolixPriceProvider,
     SolixVehicle,
 )
@@ -1255,6 +1256,45 @@ class AnkerSolixApiExport:
                         payload={"device_sn": sn},
                         replace=[(sn, "<deviceSn>")],
                         admin=admin,
+                    )
+                # export device energy for device types supporting it
+                if device.get("device_pn") in SolixDefaults.DEVICE_ENERGY:
+                    self._logger.info(
+                        "Exporting device energy data for device %s SN %s...",
+                        device.get("name", ""),
+                        self._randomize(sn, "_sn"),
+                    )
+                    stat_type = "device"
+                    await self.query(
+                        endpoint=API_ENDPOINTS["get_device_energy"],
+                        filename=f"{API_FILEPREFIXES['energy_' + stat_type]}_{self._randomize(sn, 'device_sn')}.json",
+                        payload={
+                            "device_sn": sn,
+                            "type": "week",
+                            "start_time": (
+                                datetime.today().astimezone() - timedelta(days=1)
+                            ).strftime("%Y-%m-%d"),
+                            "end_time": datetime.today()
+                            .astimezone()
+                            .strftime("%Y-%m-%d"),
+                        },
+                        replace=[(sn, "<deviceSn>")],
+                    )
+                    # Intraday
+                    await self.query(
+                        endpoint=API_ENDPOINTS["get_device_energy"],
+                        filename=f"{API_FILEPREFIXES['energy_' + stat_type]}_today_{self._randomize(sn, 'device_sn')}.json",
+                        payload={
+                            "device_sn": sn,
+                            "type": "day",
+                            "start_time": datetime.today()
+                            .astimezone()
+                            .strftime("%Y-%m-%d"),
+                            "end_time": datetime.today()
+                            .astimezone()
+                            .strftime("%Y-%m-%d"),
+                        },
+                        replace=[(sn, "<deviceSn>")],
                     )
 
         except (errors.AnkerSolixError, ClientError) as err:

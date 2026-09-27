@@ -2563,10 +2563,10 @@ async def set_sb2_use_time(  # noqa: C901
         or end_hour
         or day_type
         or tariff_type
-        or tariff_price
-        or tariff_sell_price
+        or tariff_price is not None
+        or tariff_sell_price is not None
         or currency
-        or delete
+        or delete is not None
     ):
         self._logger.error(
             "Api %s no valid use time plan options provided", self.apisession.nickname
@@ -3196,7 +3196,8 @@ async def set_pps_use_time(  # noqa: C901
         - Deletion has various scope, depending which other options provided
         - If tariff given, delete tariff and all slots with it
         - Else if start or end hour given, delete the time slot(s) and fill the gap with other slot start and end times
-        - If no time slots left, leave ranges empty
+        - If no time slots left, fill with the default slot, tarif and price
+        NOTE: It seems the whole plan cannot be deleted through the Api, even if it is empty in original condition
     """
 
     # Validate parameters
@@ -3266,36 +3267,15 @@ async def set_pps_use_time(  # noqa: C901
         start_hour is not None
         or end_hour
         or tariff_type
-        or tariff_price
+        or tariff_price is not None
         or currency
         or backup_soc
-        or delete
+        or delete is not None
     ):
         self._logger.error(
             "Api %s no valid use time plan options provided", self.apisession.nickname
         )
         return False
-    # set parameters for the lookup
-    # Consider time zone shifts
-    tz_offset = 0
-    now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
-    find_hour = (
-        start_hour
-        if start_hour is not None
-        else end_hour - 1
-        if end_hour is not None
-        else now.hour
-    )
-    # set parameters for the deletion scope, starting from smallest to largest
-    delete_scope = None
-    if delete:
-        if start_hour is not None or end_hour:
-            delete_scope = "slot"
-        elif tariff_type:
-            delete_scope = "tariff"
-        elif not (tariff_price or currency):
-            delete_scope = "plan"
-
     # set defaults if needed
     def_currency = (
         # get default from device attributes
@@ -3361,177 +3341,204 @@ async def set_pps_use_time(  # noqa: C901
             ),
         }
 
+    # set parameters for the deletion scope, starting from smallest to largest
+    delete_scope = None
+    if delete:
+        if start_hour is not None or end_hour:
+            delete_scope = "slot"
+        elif tariff_type:
+            delete_scope = "tariff"
+        elif not (tariff_price or currency):
+            delete_scope = "plan"
+            # set the defaults for 'supported deletion'
+            start_hour = 0
+            end_hour = 24
+            tariff_price = def_tariff_price
+            tariff_type = SolixTariffTypes.MID_PEAK.value # Neither charge nor discharge
+    # set parameters for the lookup
+    # Consider time zone shifts
+    tz_offset = 0
+    now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
+    find_hour = (
+        start_hour
+        if start_hour is not None
+        else end_hour - 1
+        if end_hour is not None
+        else now.hour
+    )
+
     # traverse plan and update as required
     slots = []
     prices = []
-    if delete_scope != "plan":
-        split_slot: dict = {}
-        find_tariff = set()
-        delay_hour = None
-        day_start_hour = start_hour
-        day_end_hour = end_hour
-        day_tariff_type = tariff_type
-        # flag for allowing tarif change in slot or not
-        # Allow change in slot only if tariff given and if either start or end hour is given
-        day_tariff_change = (
-            tariff_type
-            and (not (tariff_price and start_hour is None and end_hour is None))
-            and delete_scope not in ["tariff", "slot"]
-        )
-        # update ranges, use default range if none exist yet for changes
-        for slot in plan.get("ranges") or [
-            {
-                "start_time": "00:00",
-                "end_time": "24:00",
-                "type": SolixDefaults.TARIFF_DEF,
-            }
-        ]:
-            start = str(slot.get("start_time", "")).split(":")[0]
-            start = int(start) if str(start).isdigit() else None
-            end = str(slot.get("end_time", "")).split(":")[0]
-            end = int(end) if str(end).isdigit() else None
-            tariff = slot.get("type")
-            if delete_scope == "tariff" and tariff == tariff_type:
-                # delete all slots with the given tariff and ensure to adjust other slot times to avoid gaps
-                delay_hour = max(delay_hour or end, end)
+    #if delete_scope != "plan":
+    split_slot: dict = {}
+    find_tariff = set()
+    delay_hour = None
+    day_start_hour = start_hour
+    day_end_hour = end_hour
+    day_tariff_type = tariff_type
+    # flag for allowing tarif change in slot or not
+    # Allow change in slot only if tariff given and if either start or end hour is given
+    day_tariff_change = (
+        tariff_type
+        and (not (tariff_price and start_hour is None and end_hour is None))
+        and delete_scope not in ["tariff", "slot"]
+    )
+    # update ranges, use default range if none exist yet for changes
+    for slot in plan.get("ranges") or [
+        {
+            "start_time": "00:00",
+            "end_time": "24:00",
+            "type": SolixTariffTypes.MID_PEAK.value # Neither charge nor discharge,
+        }
+    ]:
+        start = str(slot.get("start_time", "")).split(":")[0]
+        start = int(start) if str(start).isdigit() else None
+        end = str(slot.get("end_time", "")).split(":")[0]
+        end = int(end) if str(end).isdigit() else None
+        tariff = slot.get("type")
+        if delete_scope == "tariff" and tariff == tariff_type:
+            # delete all slots with the given tariff and ensure to adjust other slot times to avoid gaps
+            delay_hour = max(delay_hour or end, end)
+            if len(slots) > 0:
+                slots[-1]["end_time"] = f"{delay_hour:02d}:00"
+            continue
+        if delay_hour:
+            if len(slots) == 0 and delay_hour < 24:
+                # no previous slot after a deletion that set delay hour, expand slot to beginning and skip remaining changes
+                delay_hour = None
+                slot["start_time"] = "00:00"
+                find_tariff.add(tariff)
+                slots.append(slot)
+                continue
+            if end > delay_hour:
+                slot["start_time"] = (
+                    f"{(0 if len(slots) == 0 else delay_hour):02d}:00"
+                )
+                delay_hour = None
+            else:
+                # skip slot if overwritten
+                continue
+        if start <= find_hour < end:
+            if delete_scope == "slot":
+                # use start hour of found slot, deletion scope can just extend actual slot if range was defined
+                day_start_hour = start
+                day_end_hour = max(
+                    day_end_hour
+                    if not (day_start_hour is None or day_end_hour is None)
+                    else end,
+                    end,
+                )
+                delay_hour = day_end_hour
+                # adjust previous slot to fill gap of deleted slot(s)
                 if len(slots) > 0:
                     slots[-1]["end_time"] = f"{delay_hour:02d}:00"
                 continue
-            if delay_hour:
-                if len(slots) == 0 and delay_hour < 24:
-                    # no previous slot after a deletion that set delay hour, expand slot to beginning and skip remaining changes
-                    delay_hour = None
-                    slot["start_time"] = 0
-                    find_tariff.add(tariff)
-                    slots.append(slot)
-                    continue
-                if end > delay_hour:
-                    slot["start_time"] = (
-                        f"{(0 if len(slots) == 0 else delay_hour):02d}:00"
-                    )
-                    delay_hour = None
+            # use start hour of matching slot if not provided and adjust split slot
+            if day_start_hour is None:
+                day_start_hour = start
+                # overwrite end_hour with slot end to prevent split or expand when no range was given
+                day_end_hour = end
+            elif day_start_hour > start:
+                # split slot by copy or merge with previous
+                if (
+                    len(slots) > 0
+                    and slots[-1]["type"] == tariff
+                    and merge_tariff_slots
+                ):
+                    # merge with previous slot if same tariff type
+                    slots[-1]["end_time"] = f"{day_start_hour:02d}:00"
                 else:
-                    # skip slot if overwritten
-                    continue
-            if start <= find_hour < end:
-                if delete_scope == "slot":
-                    # use start hour of found slot, deletion scope can just extend actual slot if range was defined
-                    day_start_hour = start
-                    day_end_hour = max(
-                        day_end_hour
-                        if not (day_start_hour is None or day_end_hour is None)
-                        else end,
-                        end,
-                    )
-                    delay_hour = day_end_hour
-                    # adjust previous slot to fill gap of deleted slot(s)
-                    if len(slots) > 0:
-                        slots[-1]["end_time"] = f"{delay_hour:02d}:00"
-                    continue
-                # use start hour of matching slot if not provided and adjust split slot
-                if day_start_hour is None:
-                    day_start_hour = start
-                    # overwrite end_hour with slot end to prevent split or expand when no range was given
+                    # Copy and add slot
+                    split_slot = copy.deepcopy(slot)
+                    split_slot["end_time"] = f"{day_start_hour:02d}:00"
+                    find_tariff.add(tariff)
+                    slots.append(split_slot)
+                    split_slot = {}
+            # use end hour of matching slot if not provided and adjust split slot or expanded slot
+            if day_end_hour is None:
+                day_end_hour = end
+            elif day_end_hour > end:
+                delay_hour = day_end_hour
+            elif day_end_hour < end:
+                # split slot by copy if tariff is different to new tariff
+                if (
+                    day_tariff_change and tariff_type != tariff
+                ) or not merge_tariff_slots:
+                    # split slot by copy
+                    split_slot = copy.deepcopy(slot)
+                    split_slot["start_time"] = f"{day_end_hour:02d}:00"
+                else:
                     day_end_hour = end
-                elif day_start_hour > start:
-                    # split slot by copy or merge with previous
-                    if (
-                        len(slots) > 0
-                        and slots[-1]["type"] == tariff
-                        and merge_tariff_slots
-                    ):
-                        # merge with previous slot if same tariff type
-                        slots[-1]["end_time"] = f"{day_start_hour:02d}:00"
-                    else:
-                        # Copy and add slot
-                        split_slot = copy.deepcopy(slot)
-                        split_slot["end_time"] = f"{day_start_hour:02d}:00"
-                        find_tariff.add(tariff)
-                        slots.append(split_slot)
-                        split_slot = {}
-                # use end hour of matching slot if not provided and adjust split slot or expanded slot
-                if day_end_hour is None:
-                    day_end_hour = end
-                elif day_end_hour > end:
-                    delay_hour = day_end_hour
-                elif day_end_hour < end:
-                    # split slot by copy if tariff is different to new tariff
-                    if (
-                        day_tariff_change and tariff_type != tariff
-                    ) or not merge_tariff_slots:
-                        # split slot by copy
-                        split_slot = copy.deepcopy(slot)
-                        split_slot["start_time"] = f"{day_end_hour:02d}:00"
-                    else:
-                        day_end_hour = end
-                # Adjust current slot range
-                slot["start_time"] = f"{day_start_hour:02d}:00"
-                slot["end_time"] = f"{day_end_hour:02d}:00"
-                # make slot tariff adjustments if no price or range given
-                # Price without range is considered as change for the given tariff type only, but not for changing tariff for slots
-                if day_tariff_change:
-                    tariff = tariff_type
-                    slot["type"] = tariff
-                elif not day_tariff_type:
-                    # set dayttype tariff of modified slot for price adjustment if no tariff defined
-                    day_tariff_type = slot.get("type")
-            # Merge with previous slots if they have same tariff and merge allowed
-            if len(slots) > 0 and slots[-1]["type"] == tariff and merge_tariff_slots:
-                # merge with previous slot if same tariff type
-                slots[-1]["end_time"] = slot.get("end_time")
-            else:
-                slots.append(slot)
-                find_tariff.add(tariff)
-            if split_slot:
-                # This split slot should have different tariff or merge is not allowed and must be appended
-                slots.append(split_slot)
-                find_tariff.add(split_slot.get("type"))
-                split_slot = {}
-            if len(slots) > max_ranges:
-                self._logger.error(
-                    "Api %s PPS use time plan change failed because time range limit is reached",
-                    self.apisession.nickname,
-                )
-                return False
-        # update prices, use default if none exist yet
-        for price in plan.get("prices") or [
-            {"price": SolixDefaults.TARIFF_PRICE_DEF, "type": SolixDefaults.TARIFF_DEF}
-        ]:
-            tariff = price.get("type")
-            if clear_unused_tariff and (
-                (delete_scope == "tariff" and tariff == day_tariff_type)
-                or tariff not in find_tariff
-            ):
-                # delete unused tariff price
-                find_tariff.discard(tariff)
-                continue
-            if tariff_price and tariff == day_tariff_type:
-                # update price of tariff if specified
-                price["price"] = tariff_price
-            # remove found tariff to prevent it will be added
+            # Adjust current slot range
+            slot["start_time"] = f"{day_start_hour:02d}:00"
+            slot["end_time"] = f"{day_end_hour:02d}:00"
+            # make slot tariff adjustments if no price or range given
+            # Price without range is considered as change for the given tariff type only, but not for changing tariff for slots
+            if day_tariff_change:
+                tariff = tariff_type
+                slot["type"] = tariff
+            elif not day_tariff_type:
+                # set dayttype tariff of modified slot for price adjustment if no tariff defined
+                day_tariff_type = slot.get("type")
+        # Merge with previous slots if they have same tariff and merge allowed
+        if len(slots) > 0 and slots[-1]["type"] == tariff and merge_tariff_slots:
+            # merge with previous slot if same tariff type
+            slots[-1]["end_time"] = slot.get("end_time")
+        else:
+            slots.append(slot)
+            find_tariff.add(tariff)
+        if split_slot:
+            # This split slot should have different tariff or merge is not allowed and must be appended
+            slots.append(split_slot)
+            find_tariff.add(split_slot.get("type"))
+            split_slot = {}
+        if len(slots) > max_ranges:
+            self._logger.error(
+                "Api %s PPS use time plan change failed because time range limit of %s would be exceeded",
+                self.apisession.nickname,
+                max_ranges,
+            )
+            return False
+    # update prices, use default if none exist yet
+    for price in plan.get("prices") or [
+        {"price": SolixDefaults.TARIFF_PRICE_DEF, "type": SolixTariffTypes.MID_PEAK.value}
+    ]:
+        tariff = price.get("type")
+        if clear_unused_tariff and (
+            (delete_scope == "tariff" and tariff == day_tariff_type)
+            or tariff not in find_tariff
+        ):
+            # delete unused tariff price
             find_tariff.discard(tariff)
-            prices.append(price)
-            # adjust default price to stay in line with prices of existing tariffs, higher types must be cheaper
-            if (
-                not tariff_price
-                and str(day_tariff_type).isdigit()
-                and str(tariff).isdigit()
-                and str(tp := price.get("price") or 0).replace(".", "", 1).isdigit()
-            ):
-                if day_tariff_type < tariff:
-                    # added tariff must be higher price
-                    def_tariff_price = str(max(float(def_tariff_price), float(tp)))
-                elif day_tariff_type > tariff:
-                    # added tariff must be lower price
-                    def_tariff_price = str(min(float(def_tariff_price), float(tp)))
-        # Ensure to append remaining tariffs to price list
-        prices.extend(
-            {
-                "price": tariff_price or def_tariff_price,
-                "type": tariff,
-            }
-            for tariff in find_tariff
-        )
+            continue
+        if tariff_price and tariff == day_tariff_type:
+            # update price of tariff if specified
+            price["price"] = tariff_price
+        # remove found tariff to prevent it will be added
+        find_tariff.discard(tariff)
+        prices.append(price)
+        # adjust default price to stay in line with prices of existing tariffs, higher types must be cheaper
+        if (
+            not tariff_price
+            and str(day_tariff_type).isdigit()
+            and str(tariff).isdigit()
+            and str(tp := price.get("price") or 0).replace(".", "", 1).isdigit()
+        ):
+            if day_tariff_type < tariff:
+                # added tariff must be higher price
+                def_tariff_price = str(max(float(def_tariff_price), float(tp)))
+            elif day_tariff_type > tariff:
+                # added tariff must be lower price
+                def_tariff_price = str(min(float(def_tariff_price), float(tp)))
+    # Ensure to append remaining tariffs to price list
+    prices.extend(
+        {
+            "price": tariff_price or def_tariff_price,
+            "type": tariff,
+        }
+        for tariff in find_tariff
+    )
     # add modified slot(s) and prices into plan
     plan["ranges"] = slots
     plan["prices"] = prices
@@ -3556,8 +3563,11 @@ async def set_pps_use_time(  # noqa: C901
         query_attributes=["pps_use_time"],
         toFile=toFile,
     )
-    if isinstance(resp, dict):
-        resp = resp.get("pps_use_time", {})
-        if isinstance(resp, str):
-            resp = json.loads(resp)
+    # extract the correct plan format from response attributes as return dict
+    if (
+        isinstance(resp, dict)
+        and (resp := resp.get("attributes", {}).get("pps_use_time", {}))
+        and isinstance(resp, str)
+    ):
+        resp = json.loads(resp)
     return resp
