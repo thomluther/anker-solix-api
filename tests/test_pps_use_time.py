@@ -117,6 +117,7 @@ async def test_price_write_preserves_other_ranges_and_prices(api: FakeApi) -> No
     """Test price change does not modify other parts."""
     # Changing a slot's tariff price upserts only that tariff type's price and
     # preserves every other range and price entry (no rebuild/normalize).
+    api.change_plan(PLAN)
     await set_pps_use_time(api, SN, start_hour=10, tariff_price="0.05")
     plan = json.loads(api.written)
     # ranges are unchanged
@@ -200,6 +201,30 @@ async def test_range_split(api: FakeApi) -> None:
     assert ranges[1]["start_time"] == "11:00", (
         f"Wrong start time for slot 2: {ranges[1]} but expected 11:00"
     )
+    # Test first and last slot merged with intermediate slot with same tariff
+    await set_pps_use_time(api, SN, start_hour=11, end_hour=19, tariff_type=1)
+    plan = json.loads(api.written)
+    ranges = plan["ranges"]
+    prices = {p["type"]: p["price"] for p in plan["prices"]}
+    assert len(ranges) == 1, "Slots not merged"
+    assert ranges[0]["start_time"] == "00:00" and ranges[0]["end_time"] == "24:00", (
+        f"Time range of merged slot incorrect: {ranges}"
+    )
+    assert len(prices) == 1, f"Unused prices not deleted: {prices}"
+    # Test deletion of last slot uses default plan
+    await set_pps_use_time(api, SN, tariff_type=1, delete=True)
+    plan = json.loads(api.written)
+    ranges = plan["ranges"]
+    prices = {p["type"]: p["price"] for p in plan["prices"]}
+    assert len(ranges) == 1, f"Default plan not applied: {ranges}"
+    assert ranges[0]["start_time"] == "00:00" and ranges[0]["end_time"] == "24:00", (
+        f"Time range of default plan incorrect: {ranges}"
+    )
+    assert ranges[0]["type"] == DEFAULT_TYPE, f"Default tariff not applied: {ranges}"
+    assert len(prices) == 1, f"Unused prices not deleted: {prices}"
+    assert prices.get(DEFAULT_TYPE) == DEFAULT_PRICE, (
+        f"Default type {DEFAULT_TYPE} price not default: {prices} but expected {DEFAULT_PRICE}"
+    )
     CONSOLE.info("Range split test passed")
 
 
@@ -258,23 +283,24 @@ async def test_backup_reserve(api: FakeApi) -> None:
 async def test_price_changes(api: FakeApi) -> None:
     """Test price and tariff changes."""
     # Test correct interval is selected with given start time (first with type 1) and change type 1 price changed but not interval times
+    api.change_plan(PLAN)
     await set_pps_use_time(api, SN, start_hour=10, tariff_price=0.44)
     plan = json.loads(api.written)
     ranges = plan["ranges"]
     prices = {p["type"]: p["price"] for p in plan["prices"]}
-    assert len(ranges) == 4, "Slot split even if no full range specified"
-    assert ranges[0]["end_time"] == "11:00", (
-        f"Wrong start time for slot 1: {ranges[0]} but expected 11:00"
+    assert len(ranges) == 3, "Slot split even if no full range specified"
+    assert ranges[0]["end_time"] == "09:00", (
+        f"Wrong start time for slot 1: {ranges[0]} but expected 09:00"
     )
-    assert prices[1] == "0.44", f"Type 1 price not changed: {prices} but expected 0.44"
-    # Test correct interval is selected with given end time (third with type 3) and change type 3 price changed but not interval times
+    assert prices[3] == "0.44", f"Type 3 price not changed: {prices} but expected 0.44"
+    # Test correct interval is selected with given end time (2nd with type 3) and change type 3 price changed but not interval times
     await set_pps_use_time(api, SN, end_hour=18, tariff_price=0.03)
     plan = json.loads(api.written)
     ranges = plan["ranges"]
     prices = {p["type"]: p["price"] for p in plan["prices"]}
-    assert len(ranges) == 4, "Slot split even if no full range specified"
-    assert ranges[2]["end_time"] == "19:00", (
-        f"Wrong end time for slot 3: {ranges[2]} but expected 19:00"
+    assert len(ranges) == 3, "Slot split even if no full range specified"
+    assert ranges[1]["end_time"] == "19:00", (
+        f"Wrong end time for slot 2: {ranges[1]} but expected 19:00"
     )
     assert prices[3] == "0.03", f"Type 3 price not changed: {prices} but expected 0.03"
     # Test actual interval is selected and its type is changed (this may change slot number by tariff mergers)

@@ -3286,6 +3286,19 @@ async def set_pps_use_time(  # noqa: C901
         or SolixDefaults.CURRENCY_DEF
     )
     def_tariff_price = tariff_price or SolixDefaults.TARIFF_PRICE_DEF
+    def_ranges = [
+        {
+            "start_time": "00:00",
+            "end_time": "24:00",
+            "type": SolixTariffTypes.MID_PEAK.value,  # Neither charge nor discharge,
+        }
+    ]
+    def_prices = [
+        {
+            "price": SolixDefaults.TARIFF_PRICE_DEF,
+            "type": SolixTariffTypes.MID_PEAK.value,
+        }
+    ]
     # obtain actual device schedule from internal dict or fetch via api
     if not isinstance(test_schedule, dict):
         test_schedule = None
@@ -3324,8 +3337,8 @@ async def set_pps_use_time(  # noqa: C901
     else:
         # define minimum plan to be modified
         plan = {
-            "ranges": [],
-            "prices": [],
+            "ranges": def_ranges,
+            "prices": def_prices,
             "unit": def_currency,
             # given, existing or default backup soc, ensure backup soc is min_soc + 5 < backup <= max_soc
             "reserve_power": min(
@@ -3354,10 +3367,12 @@ async def set_pps_use_time(  # noqa: C901
             start_hour = 0
             end_hour = 24
             tariff_price = def_tariff_price
-            tariff_type = SolixTariffTypes.MID_PEAK.value # Neither charge nor discharge
+            tariff_type = (
+                SolixTariffTypes.MID_PEAK.value
+            )  # Neither charge nor discharge
     # set parameters for the lookup
     # Consider time zone shifts
-    tz_offset = 0
+    tz_offset = dev.get("energy_offset_tz") or 0
     now = datetime.now().astimezone() + timedelta(seconds=tz_offset)
     find_hour = (
         start_hour
@@ -3370,7 +3385,7 @@ async def set_pps_use_time(  # noqa: C901
     # traverse plan and update as required
     slots = []
     prices = []
-    #if delete_scope != "plan":
+    # if delete_scope != "plan":
     split_slot: dict = {}
     find_tariff = set()
     delay_hour = None
@@ -3385,13 +3400,7 @@ async def set_pps_use_time(  # noqa: C901
         and delete_scope not in ["tariff", "slot"]
     )
     # update ranges, use default range if none exist yet for changes
-    for slot in plan.get("ranges") or [
-        {
-            "start_time": "00:00",
-            "end_time": "24:00",
-            "type": SolixTariffTypes.MID_PEAK.value # Neither charge nor discharge,
-        }
-    ]:
+    for slot in plan.get("ranges") or def_ranges:
         start = str(slot.get("start_time", "")).split(":")[0]
         start = int(start) if str(start).isdigit() else None
         end = str(slot.get("end_time", "")).split(":")[0]
@@ -3412,9 +3421,7 @@ async def set_pps_use_time(  # noqa: C901
                 slots.append(slot)
                 continue
             if end > delay_hour:
-                slot["start_time"] = (
-                    f"{(0 if len(slots) == 0 else delay_hour):02d}:00"
-                )
+                slot["start_time"] = f"{(0 if len(slots) == 0 else delay_hour):02d}:00"
                 delay_hour = None
             else:
                 # skip slot if overwritten
@@ -3501,9 +3508,7 @@ async def set_pps_use_time(  # noqa: C901
             )
             return False
     # update prices, use default if none exist yet
-    for price in plan.get("prices") or [
-        {"price": SolixDefaults.TARIFF_PRICE_DEF, "type": SolixTariffTypes.MID_PEAK.value}
-    ]:
+    for price in plan.get("prices") or def_prices:
         tariff = price.get("type")
         if clear_unused_tariff and (
             (delete_scope == "tariff" and tariff == day_tariff_type)
@@ -3539,9 +3544,9 @@ async def set_pps_use_time(  # noqa: C901
         }
         for tariff in find_tariff
     )
-    # add modified slot(s) and prices into plan
-    plan["ranges"] = slots
-    plan["prices"] = prices
+    # add modified or default slot(s) and prices into plan
+    plan["ranges"] = slots or def_ranges
+    plan["prices"] = prices or def_prices
     self._logger.debug(
         "Api %s PPS use time plan to be applied: %s", self.apisession.nickname, plan
     )

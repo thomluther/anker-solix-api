@@ -1038,7 +1038,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             if (plan := device.get(key)) is not None:
                                 # get actual presets from current slot
                                 # Consider time zone shifts
-                                tz_offset = 0
+                                tz_offset = device.get("energy_offset_tz") or 0
                                 now = datetime.now().astimezone() + timedelta(
                                     seconds=tz_offset
                                 )
