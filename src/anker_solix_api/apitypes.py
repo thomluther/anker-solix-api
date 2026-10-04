@@ -1182,6 +1182,7 @@ class ApiCategories:
     solarbank_pps_energy: str = "solarbank_pps_energy"
     smartmeter_energy: str = "smartmeter_energy"
     smartplug_energy: str = "smartplug_energy"
+    pps_energy: str = "pps_energy"
     charger_energy: str = "charger_energy"
     charger_usb_settings: str = "charger_usb_settings"
     powerpanel_energy: str = "powerpanel_energy"

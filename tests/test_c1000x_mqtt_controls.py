@@ -65,9 +65,8 @@ async def test_c1000x_mqtt_controls() -> None:  # noqa: C901
                 if mqtt_session.is_connected():
                     CONSOLE.info("✓ MQTT session connected, subscribing device...")
                     topic = f"{mqtt_session.get_topic_prefix(deviceDict=mqttdevice.device)}#"
-                    resp = mqtt_session.subscribe(topic)
-                    if resp and resp.is_failure:
-                        CONSOLE.info(f"✗ Failed subscription for topic: {topic}")
+                    if mqtterror := mqtt_session.subscribe(topic):
+                        CONSOLE.info(f"✗ Failed subscription for topic: {topic} ({mqtterror!s})")
                     CONSOLE.info("Forcing immediate device data update...")
                     if await mqttdevice.realtime_trigger(timeout=60):
                         CONSOLE.info("✓ Update trigger published successfully")

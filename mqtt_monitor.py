@@ -331,6 +331,7 @@ class AnkerSolixMqttMonitor:
                             deviceDict=dev, publish=True
                         ):
                             topics.add(f"{cmd_prefix}#")
+                            await asyncio.sleep(.1)
                         # Create MQTT device instance
                     cmd_prefix = None
                     prefix = None

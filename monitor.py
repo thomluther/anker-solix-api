@@ -756,6 +756,19 @@ class AnkerSolixApiMonitor:
                     f"{'Local Time':<{col1}}: {m1 and (c or cm)}{m1:<{col2}}{co} "
                     f"{'UTC Time':<{col3}}: {m2 and (c or cm)}{m2}{co}"
                 )
+            if m2 := dev.get("energy_offset_check"):
+                shift = dev.get("energy_offset_tz")
+                shift = (
+                    " --:--"
+                    if shift is None
+                    else f"{(shift // 3600):0=+3.0f}:{(shift % 3600 // 60) if shift else 0:0=z2.0f}"
+                )
+                offset = dev.get("energy_offset_seconds")
+                energy_time = dev.get("energy_time")
+                CONSOLE.info(
+                    f"{'Energy [' + shift + ']':<{col1}}: {'----.--.-- --:--:--' if energy_time is None else energy_time:<{col2}} "
+                    f"{'Last Check':<{col3}}: {m2 or '----.--.-- --:--:--'}"
+                )
             if integrated := dev.get("intgr_device") or {}:
                 CONSOLE.info(
                     f"{'Integrator':<{col1}}: {str(integrated.get('integrator')).capitalize():<{col2}} "
@@ -2580,7 +2593,9 @@ class AnkerSolixApiMonitor:
                     common.print_pps_schedule(
                         {"custom_mode_schedule": schedule}, c or cm
                     )
-                if schedule := dev.get("pps_use_time") or ((c or cm) and mqtt.get("tou_mode_schedule")):
+                if schedule := dev.get("pps_use_time") or (
+                    (c or cm) and mqtt.get("tou_mode_schedule")
+                ):
                     CONSOLE.info(f"{'-' * 80}")
                     common.print_pps_schedule({"tou_mode_schedule": schedule}, c or cm)
                 if schedule := (c or cm) and mqtt.get("ac_output_schedule"):
@@ -2596,6 +2611,42 @@ class AnkerSolixApiMonitor:
                 CONSOLE.warning(
                     f"Further details for device type {str(devtype).capitalize()} are not supported"
                 )
+            # print optional device energy details
+            if self.energy_stats and (energy := dev.get("energy_details")):
+                today: dict = energy.get("today") or {}
+                yesterday: dict = energy.get("last_period") or {}
+                unit = "kWh"
+                CONSOLE.info("-" * 80)
+                CONSOLE.info(
+                    f"{'Today':<{col1}}: {today.get('date', '----------'):<{col2}} "
+                    f"{'Yesterday':<{col3}}: {yesterday.get('date', '----------')!s}"
+                )
+                # "import_energy","export_energy","ac_consumed","dc_consumed","ac_charged","dc_charged","pv_yield"
+                if value := today.get("pv_yield"):
+                    CONSOLE.info(
+                        f"{'Solar Yield':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} "
+                        f"{'Solar Yield':<{col3}}: {yesterday.get('pv_yield') or '-.--':>6} {unit}"
+                    )
+                if value := today.get("ac_consumed"):
+                    CONSOLE.info(
+                        f"{'Consumed AC/DC':<{col1}}: {value or '-.--':>6} / {today.get('dc_consumed') or '-.--':>5} {unit:<{col2 - 15}} "
+                        f"{'Consumed AC/DC':<{col3}}: {yesterday.get('ac_consumed') or '-.--':>6} / {yesterday.get('dc_consumed') or '-.--':>5} {unit}"
+                    )
+                if value := today.get("ac_charged"):
+                    CONSOLE.info(
+                        f"{'Charged AC/DC':<{col1}}: {value or '-.--':>6} / {today.get('dc_charged') or '-.--':>5} {unit:<{col2 - 15}} "
+                        f"{'Charged AC/DC':<{col3}}: {yesterday.get('ac_charged') or '-.--':>6} / {yesterday.get('dc_charged') or '-.--':>5} {unit}"
+                    )
+                if value := today.get("import_energy"):
+                    CONSOLE.info(
+                        f"{'Import Energy':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} "
+                        f"{'Import Energy':<{col3}}: {yesterday.get('import_energy') or '-.--':>6} {unit}"
+                    )
+                if value := today.get("export_energy"):
+                    CONSOLE.info(
+                        f"{'Export Energy':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} "
+                        f"{'Export Energy':<{col3}}: {yesterday.get('export_energy') or '-.--':>6} {unit}"
+                    )
         # print optional user vehicles
         if self.showVehicles and (vehicles := self.api.account.get("vehicles") or {}):
             CONSOLE.info("=" * 80)
@@ -2627,7 +2678,7 @@ class AnkerSolixApiMonitor:
                 keys.discard(vehicleid)
                 if keys:
                     CONSOLE.info("-" * 80)
-        # print optional energy details
+        # print optional site energy details
         if self.energy_stats and not self.device_filter:
             for site_id, site in [
                 (s, d)
@@ -3393,11 +3444,11 @@ class AnkerSolixApiMonitor:
                                     for dev in devs:
                                         # subscribe device
                                         topic = f"{mqttsession.get_topic_prefix(deviceDict=dev)}#"
-                                        resp = mqttsession.subscribe(topic)
-                                        if resp and resp.is_failure:
+                                        if mqtterror := mqttsession.subscribe(topic):
                                             CONSOLE.info(
-                                                f"{Color.RED}Failed subscription for topic: {topic}{Color.OFF}"
+                                                f"{Color.RED}Failed subscription for topic: {topic} ({mqtterror!s}){Color.OFF}"
                                             )
+                                        await asyncio.sleep(0.1)
                                     # set the value print as callback for mqtt value refreshes
                                     self.api.mqtt_update_callback(
                                         func=self.print_device_mqtt
@@ -3763,13 +3814,13 @@ class AnkerSolixApiMonitor:
                                                     )
                                                     for dev in devs:
                                                         topic = f"{mqttsession.get_topic_prefix(deviceDict=dev)}#"
-                                                        resp = mqttsession.subscribe(
+                                                        if mqtterror := mqttsession.subscribe(
                                                             topic
-                                                        )
-                                                        if resp and resp.is_failure:
+                                                        ):
                                                             CONSOLE.info(
-                                                                f"{Color.RED}Failed subscription for topic: {topic}{Color.OFF}"
+                                                                f"{Color.RED}Failed subscription for topic: {topic} ({mqtterror!s}){Color.OFF}"
                                                             )
+                                                        await asyncio.sleep(0.1)
                                                     if devs:
                                                         # set the value print as callback for mqtt value refreshes
                                                         self.api.mqtt_update_callback(

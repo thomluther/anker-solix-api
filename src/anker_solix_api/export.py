@@ -2225,15 +2225,15 @@ class AnkerSolixApiExport:
                         sn = dev.get("device_sn", "")
                         pn = dev.get("device_pn", "") or dev.get("product_code", "")
                         topic = f"{self.api_power.mqttsession.get_topic_prefix(deviceDict=dev)}#"
-                        resp = self.api_power.mqttsession.subscribe(topic)
-                        if resp and resp.is_failure:
+                        if mqtterror := self.api_power.mqttsession.subscribe(topic):
                             self._logger.warning(
-                                "Failed subscription for topic: %s",
+                                "Failed subscription for topic: %s (%s)",
                                 topic.replace(sn, self._randomize(sn, "device_sn")),
+                                mqtterror,
                             )
                         else:
                             self._logger.info(
-                                "Subscribed to MQTT topic: %s",
+                                "Subscribing to MQTT topic: %s",
                                 topic.replace(sn, self._randomize(sn, "device_sn")),
                             )
                             # mark devices that need status requests
@@ -2247,6 +2247,7 @@ class AnkerSolixApiExport:
                                 ]
                             ]:
                                 request_devices.add(sn)
+                        await asyncio.sleep(.1)
                     # wait at least first minute for messages without trigger
                     await asyncio.sleep(70)
                     # Ensure MQTT client is still connected

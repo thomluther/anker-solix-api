@@ -412,7 +412,9 @@ def print_pps_schedule(schedule: dict, color: str = "") -> None:
                     f"{'Sl':<{t2}} {'Start':<{t5}} {'End':<{t6}} {'Price':<{t6}} {'Unit':<{t5}}{'Tariff'}  <== {name}"
                 )
             row = ""
-            prices = {p.get("type", 0): p.get("price", 0) for p in plan.get("prices")}
+            prices = {
+                p.get("type", 0): p.get("price", 0) for p in plan.get("prices", [])
+            }
             unit = plan.get("unit", "")
             for idx, slot in enumerate(ranges):
                 tariff = slot.get("type", 0)

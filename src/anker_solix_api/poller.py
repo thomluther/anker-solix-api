@@ -13,6 +13,7 @@ from .apitypes import (
     ApiCategories,
     SolarbankStatus,
     SolarbankUsageMode,
+    SolixDefaults,
     SolixDeviceType,
     SolixParmType,
     SolixPriceProvider,
@@ -852,18 +853,26 @@ async def poll_sites(  # noqa: C901
             fromFile=fromFile, exclude=exclude
         )
 
-    # as time progressed, update actual pps_use_time presets from a cached PPS device if available
-    for pps in [
-        dev
+    # updates to standalone devices
+    for sn, device in {
+        sn: dev
         for sn, dev in api.devices.items()
-        if dev.get("pps_use_time") is not None and {dev.get("type")} - exclude
-    ]:
-        api._update_dev(
-            {
-                "device_sn": pps.get("device_sn"),
-                "pps_use_time": pps.get("pps_use_time"),
-            }
-        )
+        if not dev.get("site_id") and {dev.get("type")} - exclude
+    }.items():
+        # Update energy offset for supported devices
+        if device.get("device_pn") in SolixDefaults.DEVICE_ENERGY:
+            # Add energy offset to device cache
+            device.update(
+                await api.get_device_energy_offset(deviceSn=sn, fromFile=fromFile)
+            )
+        # as time progressed, update actual pps_use_time presets from a cached PPS device if available
+        if device.get("pps_use_time") is not None:
+            api._update_dev(
+                {
+                    "device_sn": sn,
+                    "pps_use_time": device.get("pps_use_time"),
+                }
+            )
 
     # update account dictionary with Api metrics
     api._update_account(
@@ -1317,6 +1326,15 @@ async def poll_device_details(  # noqa: C901
                 {ApiCategories.site_price} - exclude
             ):
                 await api.get_currency_list(fromFile=fromFile)
+            # fetch energy offset initially
+            if (
+                device.get("device_pn") in SolixDefaults.DEVICE_ENERGY
+                and device.get("energy_offset_tz") is None
+            ):
+                # Add energy offset to device cache
+                device.update(
+                    await api.get_device_energy_offset(deviceSn=sn, fromFile=fromFile)
+                )
 
         elif dev_type in ({SolixDeviceType.CHARGER.value} - exclude):
             # Fetch mini charger datails for supported models
@@ -1787,6 +1805,46 @@ async def poll_device_energy(  # noqa: C901
                     site_id,
                 )
                 await api.refresh_pv_forecast(siteId=site_id, fromFile=fromFile)
+
+    # Daily device energy for standalone devices supporting the query
+    for sn, device in {
+        sn: dev
+        for sn, dev in api.devices.items()
+        if not dev.get("site_id")
+        and not ({dev.get("type"), f"{dev.get('type')}_energy"} & exclude)
+        and dev.get("device_pn") in SolixDefaults.DEVICE_ENERGY
+    }.items():
+        api._logger.debug(
+            "Getting api %s energy details for device %s", api.apisession.nickname, sn
+        )
+        # obtain previous energy details to check if yesterday must be queried as well
+        energy = device.get("energy_details") or {}
+        # delay actual time to allow the cloud server to finish update of previous day, since previous day will be queried only once
+        # Cloud server energy stat updates may be delayed by 5 minutes, depending when they receive device energy messages
+        # min Offset to last energy data, reduce query time by 5 minutes to ensure last record is made
+        energy_offset = (device.get("energy_offset_seconds") or 0) - 300
+        time: datetime = datetime.now().astimezone() + timedelta(seconds=energy_offset)
+        today = time.strftime("%Y-%m-%d")
+        yesterday = (time - timedelta(days=1)).strftime("%Y-%m-%d")
+        # Fetch energy from today or both days
+        data: dict = {}
+        both = bool(yesterday != (energy.get("last_period") or {}).get("date"))
+        data.update(
+            await api.device_energy_daily(
+                deviceSn=sn,
+                startDay=datetime.fromisoformat(
+                    yesterday if both else today
+                ).astimezone(),
+                numDays=2 if both else 1,
+                fromFile=fromFile,
+            )
+        )
+        # Note: File dates are corrected already by the daily query if today is in the query range
+        energy["today"] = data.get(today) or {}
+        if data.get(yesterday):
+            energy["last_period"] = data.get(yesterday) or {}
+        # save energy stats with sites dictionary
+        device["energy_details"] = energy
 
     # update account dictionary with number of requests
     api._update_account(

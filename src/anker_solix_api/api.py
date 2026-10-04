@@ -71,10 +71,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         set_charger_port_remark,
     )
     from .energy import (  # pylint: disable=import-outside-toplevel
+        device_energy_analysis,
+        device_energy_daily,
         device_pv_energy_daily,
         energy_analysis,
         energy_daily,
         get_device_charge_order_stats,
+        get_device_energy_offset,
         get_device_pv_statistics,
         get_energy_offset,
         home_load_chart,
