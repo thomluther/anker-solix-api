@@ -1245,6 +1245,12 @@ class SolixDeviceCapacity:
     A1762: int = 1056  # SOLIX Portable Power Station 1000
     A1763: int = 1024  # SOLIX C1000 Gen 2 Portable Power Station
     A1765: int = 1024  # SOLIX C1000X Gen 2 Portable Power Station
+    A17A0: int = 299  # SOLIX EverFrost Powered Cooler 30, Only BT
+    A17A1: int = 299  # SOLIX EverFrost Powered Cooler 40, Only BT
+    A17A2: int = 299  # SOLIX EverFrost Powered Cooler 50, Only BT
+    A17A3: int = 288  # SOLIX EverFrost 2 Powered Cooler 23L
+    A17A4: int = 288  # SOLIX EverFrost 2 Powered Cooler 40L
+    A17A5: int = 288  # SOLIX EverFrost 2 Powered Cooler 58L
     AS100: int = 1024  # SOLIX C1000 Gen 2 LE Portable Power Station
     AS220: int = 2010  # SOLIX S2000 Portable Power Station
     AS510: int = 5000  # SOLIX S5000 Portable Power Station
@@ -1421,9 +1427,9 @@ class SolixDeviceCategory:
     A5450: str = SolixDeviceType.HES.value  # SOLIX X1 Zigbee Dongle
     AE113: str = SolixDeviceType.HES.value  # SOLIX XE 6/8kW
     # Power Cooler
-    A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30
-    A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40
-    A17A2: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 50
+    A17A0: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 30, NO Wifi
+    A17A1: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 40, NO Wifi
+    A17A2: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Power Cooler 50, NO Wifi
     A17A3: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 23L
     A17A4: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 40L
     A17A5: str = SolixDeviceType.POWERCOOLER.value  # SOLIX Everfrost 2 58L

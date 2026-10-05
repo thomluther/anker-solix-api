@@ -1651,9 +1651,17 @@ class AnkerSolixBaseApi:
                     {"products": await self.get_products(fromFile=fromFile)}
                 )
             # Bind devices also list shared devices, device admin cannot longer be assumed per default and must be determined
-            if sn := self._update_dev(device.copy()):
+            # Mark device as passive MQTT device if wifi not in bound protocols
+            if sn := self._update_dev(
+                device.copy()
+                | (
+                    {}
+                    if "wifi" in (device.get("relate_type") or [])
+                    else {"is_passive": True}
+                )
+            ):
                 active_devices.add(sn)
-        # avoid removal of passive devices from active sites, since they are not listed in bind_devices
+        # avoid removal of passive devices from active sites, since they may not be listed in bind_devices
         for sn, device in self.devices.items():
             if device.get("is_passive") and (device.get("site_id") or "") in self.sites:
                 active_devices.add(sn)
@@ -2128,7 +2136,7 @@ class AnkerSolixBaseApi:
                 "post", API_ENDPOINTS["get_currency_list"]
             )
         # cache the currency list in the account
-        if (data := resp.get("data") or {}):
+        if data := resp.get("data") or {}:
             self._update_account(
                 {
                     "currency_list": data.get("currency_list") or [],
@@ -2320,7 +2328,7 @@ class AnkerSolixBaseApi:
             )
             and provider.area
             # #619: Limit detail queries to Nordpool only to avoid request errors
-            and str(provider.company).lower() == 'nordpool'
+            and str(provider.company).lower() == "nordpool"
         ):
             return {}
         # validate date

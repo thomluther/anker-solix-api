@@ -1488,9 +1488,10 @@ class AnkerSolixApiExport:
                 )
                 siteId = device.get("site_id", "")
                 admin = device.get("is_admin")
+                dev_type = device.get("type")
 
                 # run only for appropriate devices and site owner
-                if charging_endpoints and (dev_type := device.get("type")) in [
+                if charging_endpoints and dev_type  in [
                     api.SolixDeviceType.POWERPANEL.value,
                     api.SolixDeviceType.HOME_BACKUP.value,
                     api.SolixDeviceType.COMBINER_BOX.value,

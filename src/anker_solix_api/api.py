@@ -280,6 +280,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         elif key == "feature_switch":
                             # keep existing features, just update with new features provided
                             device[key] = (device.get(key) or {}) | (value or {})
+                        elif key == "relate_type":
+                            if "wifi" not in (value or []):
+                                device["is_passive"] = True
+                            device[key] = value
                         else:
                             device[key] = value
                     elif (
