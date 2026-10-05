@@ -599,7 +599,7 @@ async def energy_daily(  # noqa: C901
                         rangeType="week",
                         startDay=day,
                         endDay=day,
-                        devType="ev_charge",
+                        devType="ev_charger",
                     )
                     # get first item from breakdown list for single day queries
                     item = next(iter(resp.get("power") or []), {})
@@ -619,13 +619,13 @@ async def energy_daily(  # noqa: C901
                 table.update({daystr: entry})
                 if showProgress:
                     self._logger.info(
-                        "Received api %s pps energy for %s",
+                        "Received api %s ev_charger energy for %s",
                         self.apisession.nickname,
                         daystr,
                     )
         if showProgress:
             self._logger.info(
-                "Received api %s pps energy for period",
+                "Received api %s ev_charger energy for period",
                 self.apisession.nickname,
             )
 

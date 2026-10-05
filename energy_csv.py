@@ -95,6 +95,7 @@ async def main() -> bool:
 
             for site_id, site in myapi.sites.items():
                 site_name = (site.get("site_info") or {}).get("site_name") or ""
+                site_type = site.get("site_type", "")
                 powerpanel = bool(
                     myapi.powerpanelApi and site_id in myapi.powerpanelApi.sites
                 )
@@ -218,29 +219,29 @@ async def main() -> bool:
                 else:
                     data = await myapi.energy_daily(
                         siteId=site_id,
-                        deviceSn=next(
-                            iter(
-                                (site.get("solarbank_info") or {}).get("solarbank_list")
-                                or []
-                            ),
-                            {},
-                        ).get(
-                            "device_sn"
-                        ),  # mandatory parameter but can be empty since not distinguished for site energy stats
+                        deviceSn="",  # mandatory parameter but can be empty (= total for all same devices in system)
                         startDay=startday,
                         numDays=numdays,
                         dayTotals=daytotals,
-                        # include all possible energy stats per site
+                        # include all possible energy stats per site, Solarbank_pps only if site type, otherwise Solar not queried
                         devTypes={
                             SolixDeviceType.INVERTER.value,
                             SolixDeviceType.SOLARBANK.value,
                             SolixDeviceType.SMARTMETER.value,
                             SolixDeviceType.SMARTPLUG.value,
-                        },
+                            SolixDeviceType.EV_CHARGER.value,
+                        }
+                        | (
+                            {SolixDeviceType.SOLARBANK_PPS.value}
+                            if site_type == SolixDeviceType.SOLARBANK_PPS.value
+                            else set()
+                        ),
                         showProgress=True,
                         fromFile=use_file,
                     )
                 CONSOLE.debug(json.dumps(data, indent=2))
+                # remove statistics to match csv headers
+                data.pop("statistics", None)
                 # Write csv file
                 if len(data) > 0:
                     with Path.open(
