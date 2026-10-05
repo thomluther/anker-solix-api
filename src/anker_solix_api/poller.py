@@ -220,12 +220,11 @@ async def poll_sites(  # noqa: C901
                     oldstamp = (mysite.get("solarbank_info") or {}).get(
                         "updated_time"
                     ) or ""
-                    timestamp = datetime.now().astimezone().replace(year=1970)
+                    timestamp = datetime.now().replace(year=1970)
                     fmt = "%Y-%m-%d %H:%M:%S"
                     with contextlib.suppress(ValueError):
-                        timestamp = datetime.strptime(
-                            sb_info.get("updated_time"), fmt
-                        ).astimezone()
+                        # .astimezone() may cause Windows OS error for 0 timestamps
+                        timestamp = datetime.strptime(sb_info.get("updated_time"), fmt)
                     if timestamp.year == 1970:
                         # replace the field in the new scene referenced sb info
                         sb_info["updated_time"] = (
@@ -234,6 +233,7 @@ async def poll_sites(  # noqa: C901
                             else oldstamp
                         )
                     else:
+                        timestamp = timestamp.astimezone()
                         # valid timestamp received from solarbank, calculate min offset to energy data in cloud
                         offset: timedelta = timedelta(
                             seconds=mysite.get("energy_offset_seconds") or 0

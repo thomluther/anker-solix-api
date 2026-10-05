@@ -161,10 +161,12 @@ def convert_isotimestamp(
     """Convert the given iso time or epoche timestamp into the opposite. ms will be ignored."""
     if isinstance(val, str):
         with contextlib.suppress(ValueError):
-            return int(datetime.fromisoformat(val).astimezone().timestamp())
+            # .astimezone() may cause Windows OS error for 0 timestamps
+            return int(datetime.fromisoformat(val).timestamp())
     if isinstance(val, int | float):
         with contextlib.suppress(ValueError):
-            return datetime.fromtimestamp(val).astimezone().strftime(output_fmt)
+            # .astimezone() may cause Windows OS error for 0 timestamps
+            return datetime.fromtimestamp(val).strftime(output_fmt)
     return None
 
 
