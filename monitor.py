@@ -2621,11 +2621,10 @@ class AnkerSolixApiMonitor:
                     f"{'Today':<{col1}}: {today.get('date', '----------'):<{col2}} "
                     f"{'Yesterday':<{col3}}: {yesterday.get('date', '----------')!s}"
                 )
-                # "import_energy","export_energy","ac_consumed","dc_consumed","ac_charged","dc_charged","pv_yield"
-                if value := today.get("pv_yield"):
+                if value := today.get("solar_production"):
                     CONSOLE.info(
                         f"{'Solar Yield':<{col1}}: {value or '-.--':>6} {unit:<{col2 - 7}} "
-                        f"{'Solar Yield':<{col3}}: {yesterday.get('pv_yield') or '-.--':>6} {unit}"
+                        f"{'Solar Yield':<{col3}}: {yesterday.get('solar_production') or '-.--':>6} {unit}"
                     )
                 if value := today.get("ac_consumed"):
                     CONSOLE.info(

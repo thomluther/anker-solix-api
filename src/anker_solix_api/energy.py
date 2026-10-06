@@ -1041,7 +1041,7 @@ async def device_energy_daily(
                         "dc_charged": convertToKwh(
                             val=item.get("dc_charging") or None, unit=unit
                         ),
-                        "pv_yield": convertToKwh(
+                        "solar_production": convertToKwh(
                             val=item.get("pv_input") or None, unit=unit
                         ),
                     }
