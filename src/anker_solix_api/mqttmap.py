@@ -178,20 +178,30 @@ _PPS_VERSIONS_0830 = {
 _A1722_0405 = {
     # C300 AC param info
     TOPIC: "param_info",
-    "a4": {NAME: "remaining_time_hours", FACTOR: 0.1, SIGNED: False},
+    "a4": {
+        NAME: "remaining_time_hours",
+        FACTOR: 0.1,
+        SIGNED: False,
+    },  # 65535 (0xFFFF) when not discharging, e.g. full battery in AC pass-through
+    # "a5": {NAME: "ac_input_power?"},  # Duplicate of ad, also 0 W in AC pass-through
+    # "a6": {NAME: "ac_output_power?"},  # Duplicate of ae
     "a7": {NAME: "usbc_1_power"},  # USB-C port 1 output power
     "a8": {NAME: "usbc_2_power"},  # USB-C port 2 output power
     "a9": {NAME: "usbc_3_power"},  # USB-C port 3 output power
     "aa": {NAME: "usba_1_power"},  # USB-A port 1 output power
     "ac": {NAME: "dc_input_power_total"},  # DC input power (solar/car charging)
-    "ad": {NAME: "ac_input_power_total"},  # Total AC Input in W (int)
+    "ad": {
+        NAME: "ac_input_power_total"
+    },  # Total AC Input in W (int), only while charging; reports 0 in AC pass-through with full battery
     "ae": {NAME: "ac_output_power_total"},  # AC Output in W (int)
     "b7": {
         NAME: "ac_output_power_switch"
     },  # AC output switch: Disabled (0) or Enabled (1)
-    "b8": {NAME: "dc_charging_status"},  # None (0), Charging (1)
+    "b8": {
+        NAME: "dc_charging_status"
+    },  # None (0), Charging (1), 2 observed while AC charging without DC input
     "b9": {NAME: "temperature", SIGNED: True},  # In Celsius
-    "ba": {NAME: "battery_status"},  # Inactive (0), Discharging (1), Charging (2) ???
+    "ba": {NAME: "battery_status"},  # Inactive (0), Discharging (1), Charging (2)
     "bb": {NAME: "battery_soc"},  # Battery SOC
     "bc": {NAME: "battery_soh"},  # Battery Health
     "c1": {
