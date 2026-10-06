@@ -194,6 +194,7 @@ _A1722_0405 = {
         NAME: "ac_input_power_total"
     },  # Total AC Input in W (int), only while charging; reports 0 in AC pass-through with full battery
     "ae": {NAME: "ac_output_power_total"},  # AC Output in W (int)
+    "b0": {NAME: "ac_input_plug_status"},  # 0: Disconnected, 1: connected
     "b7": {
         NAME: "ac_output_power_switch"
     },  # AC output switch: Disabled (0) or Enabled (1)
