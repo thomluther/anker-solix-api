@@ -449,6 +449,10 @@ def convert_circuit_setup(
 
 def convert_pps_custom_schedule(
     value: bytes | bytearray | dict,
+    min_groups: int = 0,
+    max_groups: int = 2,
+    min_slots: int = 0,
+    max_slots: int = 5,
 ) -> bytearray | dict | None:
     """Convert between PPS custom schedule dictionary and binary field as used in MQTT messages.
 
@@ -462,6 +466,10 @@ def convert_pps_custom_schedule(
 
     Args:
         value: dictionary or binary with schedule structure
+        min_groups: minimum groups to consider
+        max_groups: maximum groups to consider
+        min_slots: minimum slots to consider
+        max_slots: maximum slots to consider
 
     Returns:
         Dictionary with schedule if input is bytes/bytearray.
@@ -513,7 +521,12 @@ def convert_pps_custom_schedule(
             for group in groups:
                 hexvalue.extend(convert_weekdays(group.get("weekdays", [])))
                 slots = group.get("ranges", [])
-                hexvalue.extend(len(slots).to_bytes(byteorder="little"))
+                # limit count to max converted slots
+                hexvalue.extend(min(len(slots), max_slots).to_bytes(byteorder="little"))
+                # adopt slot list according to limits
+                if len(slots) < min_slots:
+                    slots.extend({} for _ in range(min_slots - len(slots)))
+                slots= slots[:max_slots]
                 for slot in slots:
                     hexvalue.extend(
                         int(slot.get("load_mode", 0)).to_bytes(byteorder="little")

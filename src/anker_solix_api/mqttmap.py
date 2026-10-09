@@ -189,17 +189,17 @@ _A1722_0405 = {
         FACTOR: 0.1,
         SIGNED: False,
     },  # 65535 (0xFFFF) when not discharging, e.g. full battery in AC pass-through
-    # "a5": {NAME: "ac_input_power?"},  # Duplicate of ad, also 0 W in AC pass-through
-    # "a6": {NAME: "ac_output_power?"},  # Duplicate of ae
+    # "a5": {NAME: "input_power_total?"},  # Duplicate of ad without DC input, also 0 W in AC pass-through
+    "a6": {NAME: "ac_output_power"},  # Same as ae but without LED power
     "a7": {NAME: "usbc_1_power"},  # USB-C port 1 output power
     "a8": {NAME: "usbc_2_power"},  # USB-C port 2 output power
     "a9": {NAME: "usbc_3_power"},  # USB-C port 3 output power
     "aa": {NAME: "usba_1_power"},  # USB-A port 1 output power
     "ac": {NAME: "dc_input_power_total"},  # DC input power (solar/car charging)
     "ad": {
-        NAME: "ac_input_power_total"
-    },  # Total AC Input in W (int), only while charging; reports 0 in AC pass-through with full battery
-    "ae": {NAME: "ac_output_power_total"},  # AC Output in W (int)
+        NAME: "ac_input_power"
+    },  # AC Input in W (int), only while charging; reports 0 in AC pass-through with full battery
+    "ae": {NAME: "output_power_total"},  # AC Output in W (int), including the LED power. DC power inclusion to be validated
     "b0": {NAME: "ac_input_plug_status"},  # 0: Disconnected, 1: connected
     "b1": {NAME: "sw_version", "values": 1},  # Main firmware version
     "b7": {NAME: "ac_output_power_status?"},  # Mirrors cb
@@ -208,7 +208,11 @@ _A1722_0405 = {
     "ba": {NAME: "battery_status"},  # Inactive (0), Discharging (1), Charging (2)
     "bb": {NAME: "battery_soc"},  # Battery SOC
     "bc": {NAME: "battery_soh"},  # Battery Health
-    "c1": {NAME: "dc_output_power_status?"},  # Mirrors cc
+    "bd": {NAME: "usbc_1_status"},  # Inactive (0), Discharging (1)
+    "be": {NAME: "usbc_2_status"},  # Inactive (0), Discharging (1)
+    "bf": {NAME: "usbc_3_status"},  # Inactive (0), Discharging (1), Charging (2)?
+    "c0": {NAME: "usba_1_status"},  # Inactive (0), Discharging (1)
+    "c1": {NAME: "dc_output_power_status?"},  # Mirrors cc?
     "c5": {NAME: "device_sn"},  # Device serial number
     "c6": {NAME: "ac_input_limit"},  # Recharge limit
     "c7": {
@@ -4609,7 +4613,13 @@ SOLIXMQTTMAP: Final[dict] = {
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
-        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "004c": CMD_DISPLAY_MODE  # Display brightness: Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_DISPLAY_MODE["a2"],
+                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+            }
+        },
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
@@ -4649,7 +4659,13 @@ SOLIXMQTTMAP: Final[dict] = {
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # 20, 30, 60, 300, 1800 seconds
         "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
-        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "004c": CMD_DISPLAY_MODE  # Display brightness: Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_DISPLAY_MODE["a2"],
+                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+            }
+        },
         "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), Blinking (4)
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
@@ -4673,7 +4689,13 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
-        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "004c": CMD_DISPLAY_MODE  # Display brightness: Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_DISPLAY_MODE["a2"],
+                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+            }
+        },
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
@@ -4694,7 +4716,13 @@ SOLIXMQTTMAP: Final[dict] = {
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # 20, 30, 60, 300, 1800 seconds
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
-        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "004c": CMD_DISPLAY_MODE  # Display brightness: Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_DISPLAY_MODE["a2"],
+                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+            }
+        },
         "004f": CMD_LIGHT_MODE  # LED mode: Off (0), Low (1), Medium (2), High (3)
         | {
             "a2": {
@@ -4721,7 +4749,13 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
-        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "004c": CMD_DISPLAY_MODE  # Display brightness: Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_DISPLAY_MODE["a2"],
+                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+            }
+        },
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
@@ -4741,7 +4775,13 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
-        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "004c": CMD_DISPLAY_MODE  # Display brightness: Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_DISPLAY_MODE["a2"],
+                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+            }
+        },
         "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
         "004f": CMD_LIGHT_MODE  # LED mode: Off (0), Low (1), Medium (2), High (3)
         | {
@@ -4769,7 +4809,13 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         "0045": CMD_DEVICE_TIMEOUT_MIN,  # Device timeout: 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
         "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
-        "004c": CMD_DISPLAY_MODE,  # Display brightness: Low (1), Medium (2), High (3)
+        "004c": CMD_DISPLAY_MODE  # Display brightness: Low (1), Medium (2), High (3)
+        | {
+            "a2": {
+                **CMD_DISPLAY_MODE["a2"],
+                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+            }
+        },
         "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
