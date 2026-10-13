@@ -6,6 +6,16 @@ from enum import Enum
 import hashlib
 from typing import Any
 
+WEEKDAYS = {
+    "mon": 0,
+    "tue": 1,
+    "wed": 2,
+    "thu": 3,
+    "fri": 4,
+    "sat": 5,
+    "sun": 6,
+}
+
 
 class RequestCounter:
     """Counter for datetime entries in last minute and last hour."""
@@ -459,7 +469,7 @@ def convert_pps_custom_schedule(
     Automatically detects input value type and converts accordingly. The dictionary structure:
     groups:u8  1: e.g. weekdays, 2: e.g. weekend
     per group: weekdays:u8 (bit0=Mon..bit6=Sun), slots:u8 + 5 slots max
-    per slot: load_mode:u8 (1=Charge, 2=Discharge), start_minutes:u16 LE, end_minutes:u16 LE
+    per slot: load_type:u8 (1=Charge, 2=Discharge), start_minutes:u16 LE, end_minutes:u16 LE
     01:  1f:  02:  01: 00:00: 68:01:  02: 68:01: d0:02
     02:  1f:  02:  01: 00:00: 68:01:  02: 68:01: d0:02  :60:  01:  02: 00:00: 3c:00
     grp  wk   slt  dis    00    360   chrg  360    720   wk   slt  chg    00     60
@@ -502,7 +512,7 @@ def convert_pps_custom_schedule(
                             value[pos + 3 : pos + 5], byteorder="little"
                         )
                         slot = {
-                            "load_mode": int.from_bytes(
+                            "load_type": int.from_bytes(
                                 value[pos : pos + 1], byteorder="little"
                             ),
                             "start_time": f"{start // 60:02d}:{start % 60:02d}",
@@ -513,36 +523,37 @@ def convert_pps_custom_schedule(
                 schedule["groups"].append(group)
             return schedule
     if isinstance(value, dict):
-        # convert elements to binary structure
+        # convert elements to binary structure considering given limits
         with contextlib.suppress(ValueError, TypeError):
             hexvalue = bytearray()
-            groups = value.get("groups", [])
+            # adopt groups according to limits
+            groups = value.get("groups", [])[:max_groups]
+            if len(groups) < min_groups <= max_groups:
+                groups.extend({} for _ in range(min_groups - len(groups)))
             hexvalue.extend(len(groups).to_bytes(byteorder="little"))
             for group in groups:
                 hexvalue.extend(convert_weekdays(group.get("weekdays", [])))
-                slots = group.get("ranges", [])
-                # limit count to max converted slots
-                hexvalue.extend(min(len(slots), max_slots).to_bytes(byteorder="little"))
                 # adopt slot list according to limits
-                if len(slots) < min_slots:
+                slots = group.get("ranges", [])[:max_slots]
+                if len(slots) < min_slots <= max_slots:
                     slots.extend({} for _ in range(min_slots - len(slots)))
-                slots= slots[:max_slots]
+                hexvalue.extend(len(slots).to_bytes(byteorder="little"))
                 for slot in slots:
                     hexvalue.extend(
-                        int(slot.get("load_mode", 0)).to_bytes(byteorder="little")
+                        int(slot.get("load_type", 0)).to_bytes(byteorder="little")
                     )
                     start = slot.get("start_time", "").split(":")
                     end = slot.get("end_time", "").split(":")
                     hexvalue.extend(
                         int(
-                            int((start[:1] or [0])[0]) * 60
-                            + int((start[1:2] or [])[0] or 0)
+                            int((start[:1] or [0])[0] or 0) * 60
+                            + int((start[1:2] or [0])[0] or 0)
                         ).to_bytes(length=2, byteorder="little")
                     )
                     hexvalue.extend(
                         int(
-                            int((end[:1] or [])[0] or 0) * 60
-                            + int((end[1:2] or [0])[0])
+                            int((end[:1] or [0])[0] or 0) * 60
+                            + int((end[1:2] or [0])[0] or 0)
                         ).to_bytes(length=2, byteorder="little")
                     )
             return hexvalue
@@ -600,22 +611,20 @@ def convert_pps_tou_schedule(
         # convert elements to binary structure
         with contextlib.suppress(ValueError, TypeError):
             hexvalue = bytearray()
-            slots = value.get("ranges", [])
-            # limit count to max converted slots
-            hexvalue.extend(min(len(slots), max_slots).to_bytes(byteorder="little"))
             # adopt slot list according to limits
+            slots = value.get("ranges", [])[:max_slots]
             if len(slots) < min_slots:
                 slots.extend({} for _ in range(min_slots - len(slots)))
-            slots = slots[:max_slots]
+            hexvalue.extend(len(slots).to_bytes(byteorder="little"))
             for slot in slots:
                 hexvalue.extend(int(slot.get("type", 0)).to_bytes(byteorder="little"))
                 start = slot.get("start_time", "").split(":")
                 end = slot.get("end_time", "").split(":")
                 hexvalue.extend(
-                    int((start[:1] or [])[0] or 0).to_bytes(byteorder="little")
+                    int((start[:1] or [0])[0] or 0).to_bytes(byteorder="little")
                 )
                 hexvalue.extend(
-                    int((end[:1] or [])[0] or 0).to_bytes(byteorder="little")
+                    int((end[:1] or [0])[0] or 0).to_bytes(byteorder="little")
                 )
             return hexvalue
     return None
@@ -674,13 +683,11 @@ def convert_pps_output_schedule(
         # convert elements to binary structure
         with contextlib.suppress(ValueError, TypeError):
             hexvalue = bytearray()
-            slots = value.get("slots", [])
-            # limit count to max converted slots
-            hexvalue.extend(min(len(slots), max_slots).to_bytes(byteorder="little"))
             # adopt slot list according to limits
+            slots = value.get("slots", [])[:max_slots]
             if len(slots) < min_slots:
                 slots.extend({} for _ in range(min_slots - len(slots)))
-            slots = slots[:max_slots]
+            hexvalue.extend(len(slots).to_bytes(byteorder="little"))
             for slot in slots:
                 hexvalue.extend(int(slot.get("active", 0)).to_bytes(byteorder="little"))
                 hexvalue.extend(convert_weekdays(slot.get("weekdays", [])))
@@ -691,4 +698,30 @@ def convert_pps_output_schedule(
                     ).to_bytes(length=2, byteorder="little")
                 )
             return hexvalue
+    return None
+
+
+def next_occurrence(
+    slot: dict, now: datetime = datetime.now().astimezone()
+) -> datetime | None:
+    """Return next occurance from a slot containing weekdays and time, based on provided now datetime."""
+
+    if not isinstance(slot, dict):
+        return None
+    occurrences = []
+    hours, minutes, seconds = map(int, [*(slot.get("time") or "00:00").split(":"), 0, 0, 0][:3])
+    # assume every weekday if not specified or found
+    for weekday in slot.get("weekdays") or ["all"]:
+        occurrence = now.replace(
+            hour=hours,
+            minute=minutes,
+            second=seconds,
+            microsecond=0,
+        ) + timedelta(days=(WEEKDAYS.get(weekday, now.weekday()) - now.weekday()) % 7)
+        # Occurrence has already passed
+        if occurrence < now:
+            occurrence += timedelta(days=7)
+        occurrences.append(occurrence)
+    if occurrences:
+        return min(occurrences)
     return None

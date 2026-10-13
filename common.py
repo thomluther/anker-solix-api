@@ -22,7 +22,12 @@ from anker_solix_api.apitypes import (
     SolixSwitchMode,
     SolixTariffTypes,
 )
-from anker_solix_api.helpers import convert_isotimestamp, get_enum_name, round_by_factor
+from anker_solix_api.helpers import (
+    convert_isotimestamp,
+    convert_pps_custom_schedule,
+    get_enum_name,
+    round_by_factor,
+)
 from anker_solix_api.mqtt_device import SolixMqttDevice
 from anker_solix_api.mqttcmdmap import (
     LENGTH,
@@ -384,10 +389,10 @@ def print_pps_schedule(schedule: dict, color: str = "") -> None:
                 weekdays = list(map(str.title, group.get("weekdays", [])))
                 if ranges := group.get("ranges", []):
                     CONSOLE.info(
-                        f"{'ID':>{t2}} {'Start':<{t5}} {'End':<{t6}} {'Type':<{t9 + t9}} {'Weekdays':<{t6}}             <== {name}"
+                        f"{'ID':>{t2}} {'Start':<{t5}} {'End':<{t6}} {'Load Type':<{t9 + t9}} {'Weekdays':<{t6}}             <== {name}"
                     )
                 for slot in ranges:
-                    mode = str(slot.get("load_mode", ""))
+                    mode = str(slot.get("load_type", ""))
                     CONSOLE.info(
                         f"{color}{index!s:>{t2}} {slot.get('start_time', '')!s:<{t5}} {slot.get('end_time', '')!s:<{t6}} "
                         f"{str(get_enum_name(SolixPpsLoadMode, mode, '')).replace('_', ' ').title() + ' (' + (mode or '-') + ')':<{t9 + t9}} "
@@ -578,6 +583,7 @@ def query_mqtt_command(  # noqa: C901
         for parm, desc in mdev.get_cmd_parms(cmd=cmd, defaults=True).items():
             value_info = None
             step = 1
+            state = None
             state_name = str(desc.get(STATE_NAME, ""))
             if v := desc.get(VALUE_OPTIONS):
                 value_info = f"{Color.YELLOW}{v}"
@@ -592,9 +598,6 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
                     ", ", "|"
                 )
-            elif converter and desc.get(TYPE) == DeviceHexDataTypes.bin.value:
-                # special case for complex prompts and value structures
-                value_info = ""
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
                 if (v := desc.get(VALUE_STEP)) is not None:
@@ -602,6 +605,9 @@ def query_mqtt_command(  # noqa: C901
                     value_info += f", step {v}"
             elif desc.get("is_text"):
                 value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
+            elif converter:
+                # special case for complex prompts and value structures
+                value_info = ""
             # query default parameters only if value has validation descriptors
             if value_info is not None:
                 prompt = not value_info
@@ -617,10 +623,15 @@ def query_mqtt_command(  # noqa: C901
                 while True:
                     sel = None
                     if prompt:
-                        sel = _query_mqtt_command_parameter(
-                            mdev=mdev, parm=parm, info=value_info
-                        )
-                    if sel is None:
+                        if (
+                            sel := _query_mqtt_command_parameter(
+                                mdev=mdev,
+                                parm=parm,
+                                state=mdev.get_status(fromFile=toFile).get(state_name),
+                            )
+                        ) is None:
+                            sel = ""
+                    else:
                         sel = input(
                             f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
                         )
@@ -671,13 +682,6 @@ def query_mqtt_command(  # noqa: C901
                 value_info = f"{Color.YELLOW}({['all', *converter(None, b'\xff', None)]})".replace(
                     ", ", "|"
                 )
-            elif (
-                converter
-                and not desc.get(VALUE_FOLLOWS)
-                and desc.get(TYPE) == DeviceHexDataTypes.bin.value
-            ):
-                # special case for complex prompts and value structures
-                value_info = ""
             elif (v := desc.get(VALUE_MIN)) is not None:
                 value_info = f"{Color.YELLOW}({v}-{desc.get(VALUE_MAX) or v})"
                 if (v := desc.get(VALUE_STEP)) is not None:
@@ -685,6 +689,9 @@ def query_mqtt_command(  # noqa: C901
                     value_info += f", step {v}"
             elif desc.get("is_text"):
                 value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
+            elif converter and not desc.get(VALUE_FOLLOWS):
+                # special case for complex prompts and value structures
+                value_info = ""
             # query default parameters only if value has validation descriptors
             if value_info is not None:
                 prompt = not value_info
@@ -716,10 +723,15 @@ def query_mqtt_command(  # noqa: C901
                 while True:
                     sel = None
                     if prompt:
-                        sel = _query_mqtt_command_parameter(
-                            mdev=mdev, parm=parm, state=state, info=value_info
-                        )
-                    if sel is None:
+                        if (
+                            sel := _query_mqtt_command_parameter(
+                                mdev=mdev,
+                                parm=parm,
+                                state=mdev.get_status(fromFile=toFile).get(state_name),
+                            )
+                        ) is None:
+                            sel = ""
+                    else:
                         sel = input(
                             f"Provide {Color.YELLOW}value{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
                         )
@@ -757,7 +769,7 @@ def query_mqtt_command(  # noqa: C901
 
 
 def _query_mqtt_command_parameter(
-    mdev: SolixMqttDevice, parm: str, state: Any | None = None, info: str | None = None
+    mdev: SolixMqttDevice, parm: str, state: Any | None = None
 ) -> str | None:
     """Query special command parameters with complex structures, return None if parameter unknown."""
     prompt = {}
@@ -770,11 +782,15 @@ def _query_mqtt_command_parameter(
                 if e.name != "unknown"
             }
         }
+    elif parm in ["set_custom_mode_schedule", "set_ac_output_schedule"]:
+        prompt["schedule"] = {VALUE_DEFAULT: state}
     # Fast quit if parm not supported for prompt
     if not prompt:
         return None
     for p, desc in prompt.items():
         # update prompt info from definition
+        value_info = ""
+        value_default = desc.get(VALUE_DEFAULT)
         if v := desc.get(VALUE_OPTIONS):
             value_info = f"{Color.YELLOW}{v}"
         elif p.endswith("_time"):
@@ -786,16 +802,16 @@ def _query_mqtt_command_parameter(
                 value_info += f", step {v}"
         elif desc.get("is_text"):
             value_info = f"{Color.YELLOW}(<Text:{abs(desc.get(LENGTH, 0))}>)"
+        elif value_default is not None:
+            value_info = f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use last state ({Color.GREEN}{value_default!s}{Color.OFF})"
         sel = None
-        if state is not None:
-            value_info += f"{Color.OFF}, [{Color.GREEN}ENTER{Color.OFF}] to use last state ({Color.GREEN}{state}{Color.OFF})"
         while sel is None:
             sel = input(
                 f"Provide {Color.YELLOW}{p}{Color.OFF} for parameter {Color.CYAN}{parm} {value_info}{Color.OFF} or [{Color.RED}C{Color.OFF}] to Cancel: "
             )
             if sel.upper() in ["C", "CANCEL"]:
                 return sel
-            if not sel:
+            if not sel and value_default is None:
                 return sel
             if VALUE_MIN in desc:
                 sel = (
@@ -810,11 +826,17 @@ def _query_mqtt_command_parameter(
                     if sel.isdigit() and sel in list(map(str, v.values()))
                     else v.get(sel)
                 )
-        desc["value"] = sel
+        desc["value"] = sel or value_default
     if parm == "set_circuit_priority":
         if d := mdev.update_circuit_priority(
             circuit=prompt["circuit"].get("value"),
             priority=prompt["priority"].get("value"),
         ):
             return json.dumps(d)
+    elif parm in ["set_custom_mode_schedule", "set_ac_output_schedule"]:
+        with contextlib.suppress(json.decoder.JSONDecodeError):
+            if not isinstance(d := prompt["schedule"].get("value"), dict):
+                d = json.loads(d.replace("'", '"'))
+            if convert_pps_custom_schedule(d) is not None:
+                return json.dumps(d)
     return None

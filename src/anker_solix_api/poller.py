@@ -873,6 +873,12 @@ async def poll_sites(  # noqa: C901
                     "pps_use_time": device.get("pps_use_time"),
                 }
             )
+        # as time progressed, update actual mqtt schedule presets from a cached PPS device if available
+        if any(
+            device.get("mqtt_data", {}).get(key) is not None
+            for key in ["custom_mode_schedule", "ac_output_schedule"]
+        ):
+            api.notify_device(deviceSn=sn)
 
     # update account dictionary with Api metrics
     api._update_account(

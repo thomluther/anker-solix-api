@@ -531,7 +531,7 @@ class AnkerSolixBaseApi:
         This will consolidate various device related mqtt key values under a common set of device keys.
         """
         updated = False
-        dyn_desc = False
+        notify = False  # flag whether mqtt device should be notified
         if self.mqttsession:
             if values and (device := self.devices.get(deviceSn or "")):
                 # update specific device from values
@@ -894,6 +894,14 @@ class AnkerSolixBaseApi:
                             )
                             or str(key).startswith("disaster_protection_")
                         ) and value is not None:
+                            # check whether device should be notified on schedule changes to extract actual presets
+                            if key in [
+                                "usage_mode",
+                                "tou_mode_schedule",
+                                "custom_mode_schedule",
+                                "ac_output_schedule",
+                            ] and str(value) != str(device_mqtt.get(key)):
+                                notify = True
                             device_mqtt[key] = value
                             # determine EV charger model 3 phase capability
                             if key == "charging_duration_seconds":
@@ -1372,17 +1380,10 @@ class AnkerSolixBaseApi:
                             device_mqtt.get(key)
                         ) != str(item.get("last_value", "")):
                             # flag to trigger update if dynamic description value changed
-                            dyn_desc = True
+                            notify = True
                             break
                     # callback registered MQTT device if required
-                    if (
-                        oldsize == 0
-                        or dyn_desc
-                        or any(
-                            key in check_values
-                            for key in ["tou_mode_schedule", "custom_mode_schedule"]
-                        )
-                    ):
+                    if oldsize == 0 or notify:
                         self.notify_device(deviceSn=sn)
             # update MQTT statistic in account cache, convert datetime to json compatible format
             stats = self.mqttsession.mqtt_stats.asdict()

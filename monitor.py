@@ -56,6 +56,7 @@ from anker_solix_api.apitypes import (
     SolixPpsOutputMode,
     SolixPpsOutputModeV2,
     SolixPpsPortStatus,
+    SolixPpsPresetLoadType,
     SolixPpsUsageMode,
     SolixPpsWorkStatus,
     SolixPriceProvider,
@@ -65,6 +66,7 @@ from anker_solix_api.apitypes import (
     SolixSmartTouchMode,
     SolixSwitchMode,
     SolixSwitchModeV2,
+    SolixTariffTypes,
     SolixVehicle,
     SolixWorkingStatus,
 )
@@ -2030,6 +2032,15 @@ class AnkerSolixApiMonitor:
                         f"{'Usage Mode':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixPpsUsageMode, m1, '----').replace('_', ' ').title() + ' (' + (m1 or '-') + ')':<{col2}}{co} "
                         f"{'Storm Guard':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, '---').upper()} ({str(m2) or '-'}) {m4 or ''!s}{co}"
                     )
+                m1 = (cm and str(mqtt.get("active_tariff", ""))) or str(
+                    dev.get("preset_tariff", "")
+                )
+                m2 = cm and mqtt.get("preset_load_type", "")
+                if m1 or str(m2):
+                    CONSOLE.info(
+                        f"{'TOU Tariff':<{col1}}: {m1 and (c or cm)}{get_enum_name(SolixTariffTypes, int(m1) if m1.isdigit() else None, '----').replace('_', ' ').title() + ' (' + (m1 or '-') + ')':<{col2}}{co} "
+                        f"{'Cust. Load Type':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixPpsPresetLoadType, m2, '----').replace('_', ' ').title()} ({str(m2) or '-'}){co}"
+                    )
                 m1 = cm and str(mqtt.get("working_status", ""))
                 if m1:
                     CONSOLE.info(
@@ -2285,12 +2296,12 @@ class AnkerSolixApiMonitor:
                         f"{'AC Input Plug':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixConnectionStatus, m2, 'unknown' if m2 else '----').title()} ({m2 or '-'}){co}"
                     )
                 m1 = cm and mqtt.get("ac_input_power", "")
-                m3 = cm and mqtt.get("ac_input_power_switch", "")
+                m3 = cm and str(mqtt.get("ac_input_status", ""))
                 m2 = cm and mqtt.get("ac_input_limit", "")
-                if m1 or m2 or str(m3):
+                if m1 or m2 or m3:
                     CONSOLE.info(
                         f"{'AC Input Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{co} / "
-                        f"({str(m3) and (c or cm)}{get_enum_name(SolixSwitchMode, m3, str(m3) or '---').upper():>3}{co}{')':<{col2 - 12}}"
+                        f"{m3 and (c or cm)}{get_enum_name(SolixChargerPortStatus, m3, 'unknown' if m3 else '----').capitalize() + ' (' + (m3 or '-') + ')':<{col2 - 9}}{co} "
                         f"{'AC Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("ac_output_power", "")
@@ -2587,6 +2598,15 @@ class AnkerSolixApiMonitor:
                     CONSOLE.info(
                         f"{'Backup Start':<{col1}}: {m1 and (c or cm)}{m1 or '----.--.-- --:--'!s:<{col2}}{co} "
                         f"{'Backup End':<{col3}}: {m2 and (c or cm)}{m2 or '----.--.-- --:--'!s}{co}"
+                    )
+                m1 = cm and mqtt.get("ac_output_next_toggle_time")
+                m2 = cm and mqtt.get("ac_output_next_toggle_switch")
+                m4 = cm and mqtt.get("ac_output_next_toggle_active")
+                if m1:
+                    CONSOLE.info(
+                        f"{'AC Out Toggle':<{col1}}: {m1 and (c or cm)}{m1 or '----.--.-- --:--'!s:<{col2}}{co} "
+                        f"{'AC Out Toggle':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3} / "
+                        f"{'Active' if m4 is True else 'Inactive' if m4 is False else '------'}{co}"
                     )
                 if schedule := (c or cm) and mqtt.get("custom_mode_schedule"):
                     CONSOLE.info(f"{'-' * 80}")
@@ -3813,8 +3833,11 @@ class AnkerSolixApiMonitor:
                                                     )
                                                     for dev in devs:
                                                         topic = f"{mqttsession.get_topic_prefix(deviceDict=dev)}#"
-                                                        if mqtterror := mqttsession.subscribe(
-                                                            topic
+                                                        if (
+                                                            mqtterror
+                                                            := mqttsession.subscribe(
+                                                                topic
+                                                            )
                                                         ):
                                                             CONSOLE.info(
                                                                 f"{Color.RED}Failed subscription for topic: {topic} ({mqtterror!s}){Color.OFF}"

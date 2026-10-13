@@ -191,10 +191,10 @@ _A1722_0405 = {
     },  # 65535 (0xFFFF) when not discharging, e.g. full battery in AC pass-through
     # "a5": {NAME: "input_power_total?"},  # Duplicate of ad without DC input, also 0 W in AC pass-through
     "a6": {NAME: "ac_output_power"},  # Same as ae but without LED power
-    "a7": {NAME: "usbc_1_power"},  # USB-C port 1 output power
-    "a8": {NAME: "usbc_2_power"},  # USB-C port 2 output power
-    "a9": {NAME: "usbc_3_power"},  # USB-C port 3 output power
-    "aa": {NAME: "usba_1_power"},  # USB-A port 1 output power
+    "a7": {NAME: "usbc_1_power"},  # USB-C port 1 power
+    "a8": {NAME: "usbc_2_power"},  # USB-C port 2 power, supports charging
+    "a9": {NAME: "usbc_3_power"},  # USB-C port 3 power
+    "aa": {NAME: "usba_1_power"},  # USB-A port 1 power
     "ac": {NAME: "dc_input_power_total"},  # DC input power (solar/car charging)
     "ad": {
         NAME: "ac_input_power"
@@ -209,10 +209,10 @@ _A1722_0405 = {
     "bb": {NAME: "battery_soc"},  # Battery SOC
     "bc": {NAME: "battery_soh"},  # Battery Health
     "bd": {NAME: "usbc_1_status"},  # Inactive (0), Discharging (1)
-    "be": {NAME: "usbc_2_status"},  # Inactive (0), Discharging (1)
-    "bf": {NAME: "usbc_3_status"},  # Inactive (0), Discharging (1), Charging (2)?
+    "be": {NAME: "usbc_2_status"},  # Inactive (0), Discharging (1), Charging (2)
+    "bf": {NAME: "usbc_3_status"},  # Inactive (0), Discharging (1)
     "c0": {NAME: "usba_1_status"},  # Inactive (0), Discharging (1)
-    "c1": {NAME: "dc_output_power_status?"},  # Mirrors cc?
+    "c1": {NAME: "dc_12v_1_status"},  # DC 12V status: Inactive (0), Discharging (1)
     "c5": {NAME: "device_sn"},  # Device serial number
     "c6": {NAME: "ac_input_limit"},  # Recharge limit
     "c7": {
@@ -668,7 +668,7 @@ _A1763_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "02": {
-                NAME: "ac_input_power_total",  # Input power total charge
+                NAME: "ac_input_power_total",  # AC Input power total, mirrors a7.04
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "04": {
@@ -698,11 +698,11 @@ _A1763_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "03": {
-                NAME: "ac_input_power_switch",  # Off (0), On (1)
+                NAME: "ac_input_plug_status",  # 0: Disconnected, 1: connected
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
-                NAME: "ac_input_power",  # Duplicate of a6
+                NAME: "ac_input_power",  # Mirrors a6.02
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -981,7 +981,7 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "02": {
-                NAME: "ac_input_power",  # Input power total charge
+                NAME: "ac_input_power_total",  # AC Input power total, mirrors a7.04
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "04": {
@@ -1011,11 +1011,11 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "03": {
-                NAME: "ac_input_power_switch",  # Off (0), On (1)
+                NAME: "ac_input_plug_status",  # 0: Disconnected, 1: connected
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
-                NAME: "pv_input_power?",  # Supposed PV input, but mirrors a6.02
+                NAME: "ac_input_power",  # AC input, mirrors a6.02
                 TYPE: DeviceHexDataTypes.sile.value,
             },
         }
@@ -3747,7 +3747,7 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "02": {
-                NAME: "ac_input_power",  # Input power total charge
+                NAME: "ac_input_power_total",  # AC Input power total, mirrors a7.04
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "04": {
@@ -3765,7 +3765,7 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "10": {
-                NAME: "ac_input_plug_status",  # 0: Disconnected, 1: connected
+                NAME: "ac_input_status",  # AC input status (0/1), mirrors a7.03 plug status
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "11": {
@@ -3785,11 +3785,11 @@ _AS220_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "03": {
-                NAME: "ac_input_power_switch",  # AC input / charging active (0/1) - live-confirmed: 0->1 when charging
+                NAME: "ac_input_plug_status",  # 0: Disconnected, 1: connected
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "04": {
-                NAME: "pv_input_power?",  # Supposed PV input (dup of a6 ac_input_power) - live-confirmed = input W
+                NAME: "ac_input_power",  # AC input, mirrors a6.02
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "07": {
@@ -3898,7 +3898,7 @@ _AS220_0421 = {
         # Custom-mode charge/discharge schedule (live-confirmed vs app). Flexible structure!!!
         # groups:u8  1: weekend same, 2: weekday + weekend
         # per group: weekdays:u8 (bit0=Mon..bit6=Sun), slots:u8 + 5 slots max
-        # per slot: load_mode:u8 (1=Charge, 2=Discharge), start_minutes:u16 LE, end_minutes:u16 LE
+        # per slot: load_type:u8 (1=Charge, 2=Discharge), start_minutes:u16 LE, end_minutes:u16 LE
         # a2  0e 04    01: 1f: 02: 01: 00:00:68:01: 02: 68:01:d0:02
         # a2  15 04    02: 1f: 02: 01: 00:00:68:01: 02: 68:01:d0:02  :60: 01: 02: 00:00: 3c:00
         #        bin   grp wk  slt dis    00   360  ch    360   720   wk  slt chg    00     60

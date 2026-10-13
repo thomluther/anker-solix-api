@@ -836,7 +836,11 @@ class DeviceHexDataField:
             )
         # use json and binary as is or convert as described
         elif isinstance(value, dict | list | bytearray | bytes):
-            if (converter := desc.get(STATE_CONVERTER)) and callable(converter):
+            if (
+                isinstance(value, dict | list)
+                and (converter := desc.get(STATE_CONVERTER))
+                and callable(converter)
+            ):
                 fieldvalue = converter(None, value, None)
             else:
                 fieldvalue = value

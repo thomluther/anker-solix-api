@@ -1851,6 +1851,14 @@ class SolixPpsWorkStatus(StrEnum):
     shutdown = "4"
     unknown = "unknown"
 
+class SolixPpsPresetLoadType(IntEnum):
+    """Int Enumeration for Anker Solix PPS custom plan load modes."""
+
+    unknown = -1
+    none = 0
+    ac_charge = 1
+    discharge = 2
+
 
 class SolixBackupStatus(StrEnum):
     """Str Enumeration for Anker Solix backup status."""
