@@ -5757,6 +5757,20 @@ SOLIXMQTTMAP: Final[dict] = {
     # Solarbank PPS F3000
     "A1782": {
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
+        "0100": CMD_STATUS_REQUEST
+        | {  # Device status request (one time status messages 0900)
+            "a2": {
+                TYPE: DeviceHexDataTypes.bin.value,
+                LENGTH: 1,
+                BYTES: {
+                    "00": {
+                        NAME: "push_status_request",  # Push (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_DEFAULT: 1,
+                    },
+                },
+            }
+        },
         "0101": {
             # AC command group
             COMMAND_LIST: [

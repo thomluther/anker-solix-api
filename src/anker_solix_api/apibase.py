@@ -757,6 +757,18 @@ class AnkerSolixBaseApi:
                                 device_mqtt[f"device_{idx}_pv_power"] = (
                                     f"{pv_power:.0f}"
                                 )
+                            # calculate device PV total if not included in particular MQTT message
+                            elif (
+                                key == "pv_2_power"
+                                and "photovoltaic_power" not in check_values
+                            ):
+                                # accumulate all PV channels
+                                pv_power = 0
+                                for i in range(1, 5):
+                                    pv_power += float(
+                                        check_values.get(f"pv_{i}_power") or 0
+                                    )
+                                device_mqtt["photovoltaic_power"] = f"{pv_power:.0f}"
                         elif (
                             key
                             in [
