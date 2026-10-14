@@ -46,6 +46,7 @@ MODELS = {
     "A1785",  # SOLIX C2000X Gen 2
     "A1790",  # SOLIX F3800 Power Panel PPS
     "A1790P",  # SOLIX F3800 Plus Power Panel PPS
+    "AS100",  # C1000X Gen 2 LE
     "AS220",  # SOLIX S2000
 }
 
@@ -79,7 +80,7 @@ FEATURES = {
     SolixMqttCommands.pps_usage_mode: MODELS,
     SolixMqttCommands.silent_schedule: MODELS,
     SolixMqttCommands.pps_custom_schedule: MODELS,
-    # SolixMqttCommands.pps_tou_schedule: MODELS,  # Not required since managed by cloud Api
+    #SolixMqttCommands.pps_tou_schedule: MODELS,  # IMPORTANT: TOU overruled by cloud Api, command structure not fully described
     SolixMqttCommands.pps_output_schedule: MODELS,
     SolixMqttCommands.backup_soc: MODELS,
     SolixMqttCommands.backup_charge_storm_guard: MODELS,

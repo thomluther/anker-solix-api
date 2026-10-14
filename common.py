@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """A collection of helper functions for pyscripts."""
 
+from ast import literal_eval
 import contextlib
 import datetime
 import getpass
@@ -25,6 +26,8 @@ from anker_solix_api.apitypes import (
 from anker_solix_api.helpers import (
     convert_isotimestamp,
     convert_pps_custom_schedule,
+    convert_pps_output_schedule,
+    convert_pps_tou_schedule,
     get_enum_name,
     round_by_factor,
 )
@@ -33,7 +36,6 @@ from anker_solix_api.mqttcmdmap import (
     LENGTH,
     STATE_CONVERTER,
     STATE_NAME,
-    TYPE,
     VALUE_DEFAULT,
     VALUE_FOLLOWS,
     VALUE_MAX,
@@ -42,7 +44,6 @@ from anker_solix_api.mqttcmdmap import (
     VALUE_STATE,
     VALUE_STEP,
 )
-from anker_solix_api.mqtttypes import DeviceHexDataTypes
 
 # platform dependent imports for key press handling
 if sys.platform.startswith("win"):
@@ -768,7 +769,7 @@ def query_mqtt_command(  # noqa: C901
         return (cmd, parameters)
 
 
-def _query_mqtt_command_parameter(
+def _query_mqtt_command_parameter(  # noqa: C901
     mdev: SolixMqttDevice, parm: str, state: Any | None = None
 ) -> str | None:
     """Query special command parameters with complex structures, return None if parameter unknown."""
@@ -782,8 +783,12 @@ def _query_mqtt_command_parameter(
                 if e.name != "unknown"
             }
         }
-    elif parm in ["set_custom_mode_schedule", "set_ac_output_schedule"]:
-        prompt["schedule"] = {VALUE_DEFAULT: state}
+    elif parm in [
+        "set_custom_mode_schedule",
+        "set_ac_output_schedule",
+        "set_tou_mode_schedule",
+    ]:
+        prompt["schedule"] = {VALUE_DEFAULT: state, "dict": True}
     # Fast quit if parm not supported for prompt
     if not prompt:
         return None
@@ -826,6 +831,13 @@ def _query_mqtt_command_parameter(
                     if sel.isdigit() and sel in list(map(str, v.values()))
                     else v.get(sel)
                 )
+            elif desc.get("dict"):
+                # try string conversion to dict
+                try:
+                    sel = literal_eval(sel)
+                except ValueError as e:
+                    CONSOLE.error(f"{Color.RED}Invalid dict format:{Color.OFF} {e!s}")
+                    sel = None
         desc["value"] = sel or value_default
     if parm == "set_circuit_priority":
         if d := mdev.update_circuit_priority(
@@ -833,10 +845,32 @@ def _query_mqtt_command_parameter(
             priority=prompt["priority"].get("value"),
         ):
             return json.dumps(d)
-    elif parm in ["set_custom_mode_schedule", "set_ac_output_schedule"]:
-        with contextlib.suppress(json.decoder.JSONDecodeError):
+    elif parm in [
+        "set_custom_mode_schedule",
+        "set_ac_output_schedule",
+        "set_tou_mode_schedule",
+    ]:
+        try:
             if not isinstance(d := prompt["schedule"].get("value"), dict):
-                d = json.loads(d.replace("'", '"'))
-            if convert_pps_custom_schedule(d) is not None:
+                d = literal_eval(d)
+            if (
+                parm == "set_custom_mode_schedule"
+                and convert_pps_custom_schedule(d) is not None
+            ):
                 return json.dumps(d)
+            if (
+                parm == "set_ac_output_schedule"
+                and convert_pps_output_schedule(d) is not None
+            ):
+                return json.dumps(d)
+            if (
+                parm == "set_tou_mode_schedule"
+                and convert_pps_tou_schedule(d) is not None
+            ):
+                return json.dumps(d)
+            CONSOLE.error(
+                f"{Color.RED}Invalid dict structure for parameter {Color.CYAN}{parm}{Color.OFF}"
+            )
+        except ValueError as e:
+            CONSOLE.error(f"{Color.RED}Invalid dict format:{Color.OFF} {e!s}")
     return None

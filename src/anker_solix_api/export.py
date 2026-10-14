@@ -48,7 +48,7 @@ from .mqttmap import SOLIXMQTTMAP
 from .mqtttypes import DeviceHexData
 
 _LOGGER: logging.Logger = logging.getLogger(__name__)
-VERSION: str = "3.9.0.0"
+VERSION: str = "3.9.1.0"
 
 
 class AnkerSolixApiExport:
@@ -1596,6 +1596,7 @@ class AnkerSolixApiExport:
                 if not siteId and dev_type in [
                     api.SolixDeviceType.POWERPANEL.value,
                     api.SolixDeviceType.PPS.value,
+                    api.SolixDeviceType.SOLARBANK_PPS.value,
                     api.SolixDeviceType.HOME_BACKUP.value,
                     api.SolixDeviceType.COMBINER_BOX.value,
                     api.SolixDeviceType.GENERATOR.value,

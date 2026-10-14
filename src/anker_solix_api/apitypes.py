@@ -172,7 +172,7 @@ API_ENDPOINTS: Final[dict] = {
     # Power endpoints */v1/device/*
     "get_tamper_records": "power_service/v1/device/get_tamper_records",  # needs owner, not sure what it does, {"device_sn": deviceSn, "page_num": 1, "page_size": 10}
     # Power endpoints */v2/device/*
-    "get_device_energy": "power_service/v2/device/energy_analysis", # works on newer PPS {"device_sn": deviceSn,"type": "week","start_time": "2026-09-21","end_time": "2026-09-27"}
+    "get_device_energy": "power_service/v2/device/energy_analysis",  # works on newer PPS {"device_sn": deviceSn,"type": "week","start_time": "2026-09-21","end_time": "2026-09-27"}
     # Power endpoints */v1/dynamic_price/*
     "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
     "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
@@ -1700,10 +1700,10 @@ class SolixDefaults:
     DEVICE_ENERGY: ClassVar[set[str]] = {
         "A1763",  # C1000 Gen 2
         "A1765",  # C1000X Gen 2
-        "AS100", # C1000X Gen 2 LE
-        "A1783", # C2000 Gen 2
-        "A1785", # C2000X Gen 2
-        "AS220", # S2000
+        "AS100",  # C1000X Gen 2 LE
+        "A1783",  # C2000 Gen 2
+        "A1785",  # C2000X Gen 2
+        "AS220",  # S2000
     }
 
 
@@ -1850,6 +1850,7 @@ class SolixPpsWorkStatus(StrEnum):
     sleep = "3"
     shutdown = "4"
     unknown = "unknown"
+
 
 class SolixPpsPresetLoadType(IntEnum):
     """Int Enumeration for Anker Solix PPS custom plan load modes."""
