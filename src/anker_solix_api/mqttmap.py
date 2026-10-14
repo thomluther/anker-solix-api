@@ -199,7 +199,9 @@ _A1722_0405 = {
     "ad": {
         NAME: "ac_input_power"
     },  # AC Input in W (int), only while charging; reports 0 in AC pass-through with full battery
-    "ae": {NAME: "output_power_total"},  # AC Output in W (int), including the LED power. DC power inclusion to be validated
+    "ae": {
+        NAME: "output_power_total"
+    },  # AC Output in W (int), including the LED power. DC power inclusion to be validated
     "b0": {NAME: "ac_input_plug_status"},  # 0: Disconnected, 1: connected
     "b1": {NAME: "sw_version", "values": 1},  # Main firmware version
     "b7": {NAME: "ac_output_power_status?"},  # Mirrors cb
@@ -1463,8 +1465,12 @@ _A1782_0421 = (
                     SIGNED: True,
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
+                "01": {
+                    NAME: "battery_status",  # 0=standby, 1=discharge, 2=Charge
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
                 "02": {
-                    NAME: "battery_soc",
+                    NAME: "main_battery_soc",  # Main unit SOC %
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
             }
@@ -1476,8 +1482,20 @@ _A1782_0421 = (
                     TYPE: DeviceHexDataTypes.sile.value,
                 },
                 "02": {
-                    NAME: "ac_input_power",  # Input power total charge
+                    NAME: "ac_input_power",  # Input power total
                     TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "04": {
+                    NAME: "bat_charge_power",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "06": {
+                    NAME: "unknown_a6.06?",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "08": {
+                    NAME: "battery_soc",  # Total SOC of main + Exp batteries
+                    TYPE: DeviceHexDataTypes.ui.value,
                 },
             },
         },
@@ -1604,6 +1622,56 @@ _A1782_0421 = (
         for idx in range(1, 4)
     }
     | {
+        "d8": {
+            # Home system / scene telemetry (50-byte binary payload)
+            # 26/28/32/46: home_load_power (sile), 38: charging_status? (0/2),
+            # 41: charge_protect_threshold (sile), 43: discharge_protect_threshold (sile)
+            BYTES: {
+                "00": {
+                    NAME: "usage_mode",  # 2:?, 4:backup_charge, 5:TOU
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "01": {
+                    NAME: "backup_discharge_soc ",  # changed with min_soc % (for tou and backup usage?)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "02": {
+                    NAME: "backup_charge_soc",  # changed with max_soc % (for tou and backup usage?)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "06": {
+                    NAME: "battery_power_signed",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "08": {
+                    NAME: "bat_discharge_power",  # or ac_output_power ?
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                # 10: pv_exist?
+                # 11: main_ct_number?
+                # 13: branch_ct_number?
+                "16": {
+                    NAME: "grid_power_signed",  # negative = Export
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "18": {
+                    NAME: "max_load",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "20": {
+                    NAME: "ac_input_limit",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "22": {
+                    NAME: "home_load_preset",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "26": {
+                    NAME: "ac_output_power",  # or bat_discharge_power ?
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+            }
+        },
         "d9": {
             BYTES: {
                 "03": {
@@ -2706,6 +2774,75 @@ _AE103_040a = (
         "fe": {NAME: "msg_timestamp"},
     }
 )
+
+_A17E1_0405 = {
+    TOPIC: "param_info",
+    "a2": {NAME: "device_sn"},
+    "a3": {NAME: "battery_soc"},
+    "a4": {
+        NAME: "charging_status"
+    },  # charging_status: 0=inactive, 1=discharging, 2=charging
+    "a5": {NAME: "temperature", SIGNED: True},
+    "a6": {NAME: "battery_soc?"},
+    "a7": {NAME: "sw_version", "values": 4},
+    "a8": {NAME: "sw_controller", "values": 4},
+    "a9": {NAME: "sw_expansion", "values": 4},  # Expansion firmware version
+    "ab": {NAME: "photovoltaic_power"},
+    "ac": {NAME: "battery_power_signed"},
+    "ad": {NAME: "ac_output_power"},  # inverter AC output
+    "ae": {NAME: "ac_output_power_inverted?"},  # inverter PV/Battery input?
+    "b0": {NAME: "bypass_energy?"},
+    "b1": {NAME: "charged_energy?"},
+    "b2": {NAME: "consumed_energy?"},
+    "b3": {NAME: "discharged_energy?"},
+    "b4": {NAME: "pv_yield?"},
+    "b8": {
+        NAME: "usage_mode?"
+    },  # 2=self-consume, 4=manual-backup, 5=time-of-use, 8=backup/emergency
+    "bf": {NAME: "unknown_timestamp_0405_bf?"},
+    "c0": {NAME: "unknown_timestamp_0405_c0?"},
+    "c3": {
+        NAME: "use_time_band?"
+    },  # use_time_band: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
+    "c4": {NAME: "grid_power_signed"},  # positive=import, negative=export
+    "c5": {NAME: "home_demand"},
+    "c6": {NAME: "pv_1_power"},
+    "c7": {NAME: "pv_2_power"},
+    "af": {NAME: "generator_to_home_power?"},  # generator AC input power to home
+    "ba": {
+        BYTES: {
+            "02": [
+                {
+                    NAME: "storm_guard_switch",  # 0=off, 1=on
+                    MASK: 0x01,
+                }
+            ]
+        }
+    },
+    "c2": {
+        NAME: "ac_output_power?"
+    },  # total AC output power to home from all sources in W (solar, battery, generator, grid)
+    "cb": {NAME: "expansion_packs"},  # number of expansion batteries
+    "d5": {NAME: "generator_to_battery_power?"},  # generator AC charging battery W
+    "dc": {NAME: "grid_status"},  # 0=grid-connected, 2=off-grid/backup
+    "fe": {NAME: "msg_timestamp"},
+}
+
+_A17E1_0408 = {
+    TOPIC: "param_info",
+    "a2": {NAME: "device_sn"},
+    "a3": {NAME: "unknown_timestamp_0408_a3?"},
+    "a4": {NAME: "unknown_timestamp_0408_a4?"},
+    "a7": {NAME: "battery_soc?"},
+    "a8": {NAME: "expansion_packs?"},  # number of expansion batteries
+    "a9": {NAME: "usage_mode?"},
+    "ac": {NAME: "bypass_energy?"},  # same as 0405 b0
+    "b2": {NAME: "unknown_energy_0408_b2?"},
+    "b7": {NAME: "charged_energy?"},  # same as 0405 b1
+    "b8": {NAME: "consumed_energy?"},  # same as 0405 b2
+    "be": {NAME: "pv_yield?"},  # same as 0405 b4
+    "cc": {NAME: "temperature", SIGNED: True},
+}
 
 _A17E1_040a = (
     {
@@ -6242,79 +6379,10 @@ SOLIXMQTTMAP: Final[dict] = {
     # Anker SOLIX E10
     "A17E1": {
         "0057": CMD_REALTIME_TRIGGER,
-        "0405": {
-            # Interval: ~3-5 seconds, but only with realtime trigger
-            TOPIC: "param_info",
-            "a2": {NAME: "device_sn"},
-            "a3": {NAME: "battery_soc"},
-            "a4": {
-                NAME: "charging_status"
-            },  # charging_status: 0=inactive, 1=discharging, 2=charging
-            "a5": {NAME: "temperature", SIGNED: True},
-            "a6": {NAME: "battery_soc?"},
-            "a7": {NAME: "sw_version", "values": 4},
-            "a8": {NAME: "sw_controller", "values": 4},
-            "a9": {NAME: "sw_expansion", "values": 4},  # Expansion firmware version
-            "ab": {NAME: "photovoltaic_power"},
-            "ac": {NAME: "battery_power_signed"},
-            "ad": {NAME: "ac_output_power"},  # inverter AC output
-            "ae": {NAME: "ac_output_power_inverted?"},  # inverter PV/Battery input?
-            "b0": {NAME: "bypass_energy?"},
-            "b1": {NAME: "charged_energy?"},
-            "b2": {NAME: "consumed_energy?"},
-            "b3": {NAME: "discharged_energy?"},
-            "b4": {NAME: "pv_yield?"},
-            "b8": {
-                NAME: "usage_mode?"
-            },  # 2=self-consume, 4=manual-backup, 5=time-of-use, 8=backup/emergency
-            "bf": {NAME: "unknown_timestamp_0405_bf?"},
-            "c0": {NAME: "unknown_timestamp_0405_c0?"},
-            "c3": {
-                NAME: "use_time_band?"
-            },  # use_time_band: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
-            "c4": {NAME: "grid_power_signed"},  # positive=import, negative=export
-            "c5": {NAME: "home_demand"},
-            "c6": {NAME: "pv_1_power"},
-            "c7": {NAME: "pv_2_power"},
-            "af": {
-                NAME: "generator_to_home_power?"
-            },  # generator AC input power to home
-            "ba": {
-                BYTES: {
-                    "02": [
-                        {
-                            NAME: "storm_guard_switch",  # 0=off, 1=on
-                            MASK: 0x01,
-                        }
-                    ]
-                }
-            },
-            "c2": {
-                NAME: "ac_output_power?"
-            },  # total AC output power to home from all sources in W (solar, battery, generator, grid)
-            "cb": {NAME: "expansion_packs"},  # number of expansion batteries
-            "d5": {
-                NAME: "generator_to_battery_power?"
-            },  # generator AC charging battery W
-            "dc": {NAME: "grid_status"},  # 0=grid-connected, 2=off-grid/backup
-            "fe": {NAME: "msg_timestamp"},
-        },
-        "0408": {
-            # Interval: ??? seconds
-            TOPIC: "param_info",
-            "a2": {NAME: "device_sn"},
-            "a3": {NAME: "unknown_timestamp_0408_a3?"},
-            "a4": {NAME: "unknown_timestamp_0408_a4?"},
-            "a7": {NAME: "battery_soc?"},
-            "a8": {NAME: "expansion_packs?"},  # number of expansion batteries
-            "a9": {NAME: "usage_mode?"},
-            "ac": {NAME: "bypass_energy?"},  # same as 0405 b0
-            "b2": {NAME: "unknown_energy_0408_b2?"},
-            "b7": {NAME: "charged_energy?"},  # same as 0405 b1
-            "b8": {NAME: "consumed_energy?"},  # same as 0405 b2
-            "be": {NAME: "pv_yield?"},  # same as 0405 b4
-            "cc": {NAME: "temperature", SIGNED: True},
-        },
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": _A17E1_0405,
+        # Interval: ??? seconds
+        "0408": _A17E1_0408,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "040a": _A17E1_040a,
     },
