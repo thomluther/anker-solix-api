@@ -21,6 +21,7 @@ from .mqttcmdmap import (
     CMD_AC_OUTPUT_SWITCH,
     CMD_AC_OUTPUT_TIMEOUT_SEC,
     CMD_AC_PORT_SWITCH,
+    CMD_AC_SOCKET_ALWAYS_ON_SWITCH,
     CMD_BACKUP_CHARGE_PLAN,
     CMD_BACKUP_PLAN_TIMESTAMPS_V2,
     CMD_BACKUP_STORM_GUARD_SWITCH_V2,
@@ -63,6 +64,7 @@ from .mqttcmdmap import (
     CMD_EV_LOAD_BALANCING,
     CMD_EV_MAX_CHARGE_CURRENT,
     CMD_EV_SOLAR_CHARGING,
+    CMD_HB_POWER_LIMITS,
     CMD_LIGHT_MODE,
     CMD_MAIN_BREAKER_LIMIT,
     CMD_MODBUS_SWITCH,
@@ -2712,6 +2714,7 @@ _A17E1_0405 = {
     "ac": {NAME: "battery_power_signed"},
     "ad": {NAME: "ac_output_power"},  # inverter AC output
     "ae": {NAME: "ac_output_power_inverted?"},  # inverter PV/Battery input?
+    "af": {NAME: "generator_to_home_power?"},  # generator AC input power to home
     "b0": {NAME: "bypass_energy?"},
     "b1": {NAME: "charged_energy?"},
     "b2": {NAME: "consumed_energy?"},
@@ -2720,8 +2723,36 @@ _A17E1_0405 = {
     "b8": {
         NAME: "usage_mode?"
     },  # 2=self-consume, 4=manual-backup, 5=time-of-use, 8=backup/emergency
+    "b9": {
+        NAME: "main_breaker_limit?"
+    },  # Static, maybe installation setting, ts the 200AMP?
+    "ba": {
+        BYTES: {
+            "00": [
+                {
+                    NAME: "temp_unit_fahrenheit",  # Celsius (0) or Fahrenheit (1)
+                    MASK: 0x01,
+                }
+            ],
+            "01": [
+                {
+                    NAME: "ac_socket_always_on_switch",  # 0=off, 1=on
+                    MASK: 0x02,
+                }
+            ],
+            "02": [
+                {
+                    NAME: "storm_guard_switch",  # 0=off, 1=on
+                    MASK: 0x01,
+                }
+            ],
+        }
+    },
     "bf": {NAME: "unknown_timestamp_0405_bf?"},
     "c0": {NAME: "unknown_timestamp_0405_c0?"},
+    "c2": {
+        NAME: "ac_output_power?"
+    },  # total AC output power to home from all sources in W (solar, battery, generator, grid)
     "c3": {
         NAME: "use_time_band?"
     },  # use_time_band: 1=peak, 2=mid-peak, 3=off-peak, 4=super-off-peak
@@ -2729,23 +2760,12 @@ _A17E1_0405 = {
     "c5": {NAME: "home_demand"},
     "c6": {NAME: "pv_1_power"},
     "c7": {NAME: "pv_2_power"},
-    "af": {NAME: "generator_to_home_power?"},  # generator AC input power to home
-    "ba": {
-        BYTES: {
-            "02": [
-                {
-                    NAME: "storm_guard_switch",  # 0=off, 1=on
-                    MASK: 0x01,
-                }
-            ]
-        }
-    },
-    "c2": {
-        NAME: "ac_output_power?"
-    },  # total AC output power to home from all sources in W (solar, battery, generator, grid)
     "cb": {NAME: "expansion_packs"},  # number of expansion batteries
     "d5": {NAME: "generator_to_battery_power?"},  # generator AC charging battery W
     "dc": {NAME: "grid_status"},  # 0=grid-connected, 2=off-grid/backup
+    "dd": {NAME: "120v_power_limit"},
+    "de": {NAME: "240v_power_limit"},
+    "df": {NAME: "home_load_preset"},
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -6299,7 +6319,17 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # Anker SOLIX E10
     "A17E1": {
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,
+        "0073": {
+            # AC socket command group
+            COMMAND_LIST: [
+                # a2 is in response of 0873, AC socket switch?
+                SolixMqttCommands.ac_socket_always_on_switch,  # field a3
+            ],
+            SolixMqttCommands.ac_socket_always_on_switch: CMD_AC_SOCKET_ALWAYS_ON_SWITCH,  # Off (0), On (0)
+        },
+        "0091": CMD_HB_POWER_LIMITS,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0405": _A17E1_0405,
         # Interval: ??? seconds

@@ -209,6 +209,8 @@ class SolixMqttCommands:
     backup_charge_plan: str = "backup_charge_plan"
     backup_charge_storm_guard: str = "backup_charge_storm_guard"
     backup_charge_timestamps: str = "backup_charge_timestamps"
+    hb_power_limits: str = "hb_power_limits"
+    ac_socket_always_on_switch: str = "ac_socket_always_on_switch"
     tbd_switch: str = "tbd_switch"
 
     def asdict(self) -> dict:
@@ -853,6 +855,17 @@ CMD_SB_AC_SOCKET_SWITCH = CMD_COMMON | {
         NAME: "set_ac_socket_switch",  # Off (0), On (1)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "ac_socket_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+}
+
+CMD_AC_SOCKET_ALWAYS_ON_SWITCH = CMD_COMMON | {
+    # Command: AC socket always on
+    COMMAND_NAME: SolixMqttCommands.ac_socket_always_on_switch,
+    "a3": {
+        NAME: "set_ac_socket_always_on_switch",  # Off (0), On (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "ac_socket_always_on_switch",
         VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }
@@ -2592,6 +2605,41 @@ CMD_PPS_SILENT_SCHEDULE_V2 = (
                     VALUE_MAX: 1440,
                 },
             },
+        },
+    }
+)
+
+CMD_HB_POWER_LIMITS = (
+    CMD_COMMON
+    | {
+        # Command: Home backup power limits
+        COMMAND_NAME: SolixMqttCommands.hb_power_limits,
+        "a2": {
+            NAME: "set_120v_power_limit",  # 400-1800 W, step 1 W
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "120v_power_limit",
+            VALUE_MIN: 400,
+            VALUE_MAX: 1800,
+            VALUE_STEP: 1,
+            VALUE_STATE: "120v_power_limit",
+        },
+        "a3": {
+            NAME: "set_240v_power_limit",  # 2000-7600 W, step 1 W
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "240v_power_limit",
+            VALUE_MIN: 2000,
+            VALUE_MAX: 7600,
+            VALUE_STEP: 1,
+            VALUE_STATE: "240v_power_limit",
+        },
+        "a4": {
+            NAME: "set_home_load_preset",  # 400-7600 W, step 1 W
+            TYPE: DeviceHexDataTypes.sile.value,
+            STATE_NAME: "home_load_preset",
+            VALUE_MIN: 400,
+            VALUE_MAX: 7600,
+            VALUE_STEP: 1,
+            VALUE_STATE: "home_load_preset",
         },
     }
 )

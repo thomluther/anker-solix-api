@@ -2390,6 +2390,7 @@ class AnkerSolixApiExport:
             msgtype = "other"
             randsn = self._randomize(device_sn, "device_sn")
             datastr = None
+            checksum = None
             if payload := message.get("payload"):
                 payload = json.loads(payload)
             if isinstance(data, bytes):
@@ -2402,12 +2403,21 @@ class AnkerSolixApiExport:
                 if self.randomized:
                     datastr = bytes(data).hex()
                     for snhex, randsnhex in self._hexserials.items():
-                        datastr = datastr.replace(snhex, randsnhex)
+                        if snhex in datastr:
+                            # flag replacement and checksum calculation
+                            checksum = 0
+                            datastr = datastr.replace(snhex, randsnhex)
             if isinstance(payload, dict):
                 if datastr:
                     # replace based64 encoded string in data field of message payload
                     if "data" in payload:
-                        payload["data"] = b64encode(bytes.fromhex(datastr)).decode()
+                        hexbytes = bytes.fromhex(datastr)
+                        if checksum == 0:
+                            # recalculate last checksum byte if SN was randomized
+                            for b in hexbytes[:-1]:
+                                checksum ^= b
+                            hexbytes = hexbytes[:-1] + checksum.to_bytes()
+                        payload["data"] = b64encode(hexbytes).decode()
                     elif "trans" in payload:
                         payload["trans"] = b64encode(bytes.fromhex(datastr)).decode()
                 # replace other sensitive values in payload
