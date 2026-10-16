@@ -152,13 +152,16 @@ def country() -> str:
     return countrycode
 
 
-def print_field_values(fieldmap: dict, print_topics: bool = False) -> None:
+def print_field_values(
+    fieldmap: dict, print_topics: bool = False, print_values: bool = True
+) -> str:
     """Print the field values as table with color highlighting."""
     col1 = 25
     col2 = 35
     col3 = 25
     fields = []
     topics = None
+    output = ""
     for key, value in fieldmap.items():
         if key != "topics":
             # convert timestamps to readable data and time for printout
@@ -192,9 +195,9 @@ def print_field_values(fieldmap: dict, print_topics: bool = False) -> None:
                 if (fields[1][0]).endswith("_settings")
                 else ""
             )
-            CONSOLE.info(
+            output += (
                 f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2 - max(0, len(fields[0][0]) - col1)}}{Color.OFF} "
-                f"{c2}{fields[1][0]:<{col3}}: {fields[1][1]!s}{Color.OFF}"
+                f"{c2}{fields[1][0]:<{col3}}: {fields[1][1]!s}{Color.OFF}\n"
             )
             fields.clear()
     if fields:
@@ -208,9 +211,13 @@ def print_field_values(fieldmap: dict, print_topics: bool = False) -> None:
             if (fields[0][0]).endswith("_settings")
             else ""
         )
-        CONSOLE.info(f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}{Color.OFF}")
+        output += f"{c1}{fields[0][0]:<{col1}}: {fields[0][1]!s:<{col2}}{Color.OFF}\n"
     if topics and print_topics:
-        CONSOLE.info(f"{'Received Topics':<{col1}}: {topics!s}")
+        output += f"{'Received Topics':<{col1}}: {topics!s}\n"
+    output = output.rstrip("\n")
+    if print_values:
+        CONSOLE.info(output)
+    return output
 
 
 def print_schedule(schedule: dict) -> None:

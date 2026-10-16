@@ -331,7 +331,7 @@ class AnkerSolixMqttMonitor:
                             deviceDict=dev, publish=True
                         ):
                             topics.add(f"{cmd_prefix}#")
-                            await asyncio.sleep(.1)
+                            await asyncio.sleep(0.1)
                         # Create MQTT device instance
                     cmd_prefix = None
                     prefix = None
@@ -776,6 +776,11 @@ class AnkerSolixMqttMonitor:
             # structure hex data
             hd = DeviceHexData(model=model or "", hexbytes=data)
             CONSOLE.info(hd.decode())
+            # print extracted mapped values
+            CONSOLE.info(
+                f"Extracted values from {Color.CYAN}{hd.model}{Color.OFF} / {Color.GREEN}{hd.msg_header.msgtype.hex()}{Color.OFF}:\n"
+                f"{common.print_field_values(hd.values(), print_values=False)}\n{100 * '-'}",
+            )
         elif isinstance(data, dict):
             # structure json data
             hd = DeviceJsonData(model=model or "", data=data)

@@ -1400,36 +1400,20 @@ class AnkerSolixApiMonitor:
                         f"{'Voltage L1-L3':<{col1}}: {m1 and (c or cm)}{m1 or '---.--':>7} {'V':<{col2 - 8}}{co} "
                         f"{'Voltage L3-L3':<{col3}}: {m2 and (c or cm)}{m2 or '---.--':>7} V{co}"
                     )
-                m1 = cm and mqtt.get("system_output_power_signed_l1", "")
-                if (
-                    m2 := cm and mqtt.get("system_output_current_l1", "")
-                ) and "." in m2:
-                    m2 = f"{float(m2):>6.3f}"
-                if m1 or m2:
+                for i in range(1, 4):
+                    m1 = cm and mqtt.get(f"system_output_power_signed_l{i}", "")
+                    m2 = cm and mqtt.get(f"system_output_energy_l{i}", "")
+                    if m1 or m2:
+                        CONSOLE.info(
+                            f"{'Sys Out Pwr L' + str(i):<{col1}}: {m1 and (c or cm)}{m1 or '-----':>5} {unit:<{col2 - 6}}{co} "
+                            f"{'Sys Out Engy L' + str(i):<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>9} kWh{co}"
+                        )
+                m1 = cm and mqtt.get("home_consumption", "")
+                if m1:
                     CONSOLE.info(
-                        f"{'Sys Out Pwr L1':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>5} {unit:<{col2 - 6}}{co} "
-                        f"{'Sys Current L1':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>7} A{co}"
+                        f"{'House Usage':<{col1}}: {m1 and (c or cm)}{m1 or '--.---':>9} {'kWh':<{col2 - 10}}{co} "
                     )
-                m1 = cm and mqtt.get("system_output_power_signed_l2", "")
-                if (
-                    m2 := cm and mqtt.get("system_output_current_l2", "")
-                ) and "." in m2:
-                    m2 = f"{float(m2):>6.3f}"
-                if m1 or m2:
-                    CONSOLE.info(
-                        f"{'Sys Out Pwr L2':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>5} {unit:<{col2 - 6}}{co} "
-                        f"{'Sys Current L2':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>7} A{co}"
-                    )
-                m1 = cm and mqtt.get("system_output_power_signed_l3", "")
-                if (
-                    m2 := cm and mqtt.get("system_output_current_l3", "")
-                ) and "." in m2:
-                    m2 = f"{float(m2):>6.3f}"
-                if m1 or m2:
-                    CONSOLE.info(
-                        f"{'Sys Out Pwr L3':<{col1}}: {m1 and (c or cm)}{m1 or '-----':>5} {unit:<{col2 - 6}}{co} "
-                        f"{'Sys Current L3':<{col3}}: {m2 and (c or cm)}{m2 or '--.---':>7} A{co}"
-                    )
+
             elif devtype == SolixDeviceType.SMARTPLUG.value:
                 CONSOLE.info(
                     f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} "
@@ -2347,21 +2331,21 @@ class AnkerSolixApiMonitor:
                         f"{'AC Out Remain':<{col3}}: {m2 and (c or cm)}{str(m2) or '--:--:--':>8}{co}"
                     )
                 m1 = str(dev.get("phase", ""))
-                m2 = str(dev.get("branch_ct_number", ""))
-                m3 = str(dev.get("main_ct_number", ""))
+                m2 = (cm and str(mqtt.get("branch_ct_number", ""))) or str(dev.get("branch_ct_number", ""))
+                m3 = (cm and str(mqtt.get("main_ct_number", ""))) or str(dev.get("main_ct_number", ""))
                 m4 = str(dev.get("main_branch_check_status", ""))
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Phase installed':<{col1}}: L({m1 or '-'}) / Main CT({m3 or '-'}{')':<{col2 - 16}}{co} "
-                        f"{'Branch / Status':<{col3}}: Br CT({m2 or '-'}) / Check({m4 or '-'}){co}"
+                        f"{'Phase installed':<{col1}}: L({m1 and c}{m1 or '-'}{co}) / Main CT({m3 and c}{m3 or '-'}{co}{')':<{col2 - 16}}{co} "
+                        f"{'Branch / Status':<{col3}}: Br CT({m2 and c}{m2 or '-'}{co}) / Check({m4 or '-'}){co}"
                     )
-                m1 = str(dev.get("charge_protect_threshold", ""))
+                m1 = (cm and str(mqtt.get("charge_protect_threshold", ""))) or str(dev.get("charge_protect_threshold", ""))
                 m2 = str(dev.get("protection_status", ""))
-                m3 = str(dev.get("discharge_protect_threshold", ""))
+                m3 = (cm and str(mqtt.get("discharge_protect_threshold", ""))) or str(dev.get("discharge_protect_threshold", ""))
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Prot. Threshold':<{col1}}: Chg({m1 or '---':>3}) / Dischg({m3 or '---':>3}{')':<{col2 - 21}}{co} "
-                        f"{'Protect Status':<{col3}}: {m2 or '-'}{co}"
+                        f"{'Prot. Threshold':<{col1}}: Chg({m1 and c}{m1 or '---':>3}{co}) / Dischg({m3 and c}{m3 or '---':>3}{co}{')':<{col2 - 21}} "
+                        f"{'Protect Status':<{col3}}: {m2 or '-'}"
                     )
                 for idx in [
                     "usb",

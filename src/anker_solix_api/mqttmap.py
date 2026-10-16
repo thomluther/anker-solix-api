@@ -1651,8 +1651,14 @@ _A1782_0421 = (
                 },
                 # 10: pv_exist? (ui)
                 # 11: pv_exist_v2? (ui)
-                # 12: main_ct_number? (ui)
-                # 13: branch_ct_number? (ui)
+                "12": {
+                    NAME: "main_ct_number",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "13": {
+                    NAME: "branch_ct_number",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
                 # 14: main_ct_power? (sile)
                 "16": {
                     NAME: "grid_power_signed",  # negative = Export (or branch_ct_power)
@@ -1672,6 +1678,14 @@ _A1782_0421 = (
                 },
                 "26": {
                     NAME: "ac_output_power",  # or bat_discharge_power ?
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "41": {
+                    NAME: "charge_protect_threshold",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                },
+                "43": {
+                    NAME: "discharge_protect_threshold",
                     TYPE: DeviceHexDataTypes.sile.value,
                 },
             }
@@ -5603,8 +5617,13 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: Irregular, triggered on app actions
         "0402": {
             "a2": {
-                NAME: "device_sn",
-                TYPE: DeviceHexDataTypes.str.value,
+                BYTES: {
+                    "00": {
+                        NAME: "device_sn",
+                        TYPE: DeviceHexDataTypes.str.value,
+                        LENGTH: 17,
+                    },
+                }
             },
             "fe": {NAME: "msg_timestamp"},
         },
@@ -5629,13 +5648,11 @@ SOLIXMQTTMAP: Final[dict] = {
                         TYPE: DeviceHexDataTypes.sile.value,
                     },
                     "02": {
-                        NAME: "remaining_time_hours?",  # hours with factor 0.1
+                        NAME: "unknown_a2.02?",
                         TYPE: DeviceHexDataTypes.sile.value,
-                        FACTOR: 0.1,
-                        SIGNED: False,
                     },
                     "04": {
-                        NAME: "main_battery_soc?",  # SOC of main battery only?
+                        NAME: "battery_soc",  # overall SOC?
                         TYPE: DeviceHexDataTypes.ui.value,
                     },
                 }
@@ -5643,11 +5660,11 @@ SOLIXMQTTMAP: Final[dict] = {
             "a3": {
                 BYTES: {
                     "00": {
-                        NAME: "output_power_total?",  # Output power total (AC + DC)?
+                        NAME: "output_power_total",  # Output power total (AC + DC)?
                         TYPE: DeviceHexDataTypes.sile.value,
                     },
                     "02": {
-                        NAME: "ac_input_power?",  # Input power total charge?
+                        NAME: "ac_input_power",  # Input power
                         TYPE: DeviceHexDataTypes.sile.value,
                     },
                 }
@@ -6431,7 +6448,9 @@ SOLIXMQTTMAP: Final[dict] = {
             "bb": {NAME: "system_output_power_signed_l2", FACTOR: -1},
             "bc": {NAME: "system_output_energy_l1"},
             "bd": {NAME: "system_output_energy_l2"},
-            "be": {NAME: "consumed_energy"},  # grid_import_energy + system_output_energy
+            "be": {
+                NAME: "home_consumption"
+            },  # grid_import_energy + system_output_energy
             "fe": {NAME: "msg_timestamp"},
         },
     },
