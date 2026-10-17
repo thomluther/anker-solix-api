@@ -286,8 +286,13 @@ async def get_device_parm(
         sn
         for sn, sb in self.devices.items()
         if sb.get("site_id") == siteId
-        and sb.get("type") == SolixDeviceType.SOLARBANK.value
-        and (sb.get("generation") or 0) >= 2
+        and (
+            (
+                sb.get("type") == SolixDeviceType.SOLARBANK.value
+                and (sb.get("generation") or 0) >= 2
+            )
+            or sb.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+        )
     }
     if paramType in [
         SolixParmType.SOLARBANK_SCHEDULE.value,
@@ -2089,7 +2094,7 @@ async def set_sb2_home_load(  # noqa: C901
                 "ranges": new_ranges,
             }
         ]
-    if rate_plan_name:
+    if rate_plan_name and rate_plan_name != SolarbankRatePlan.backup:
         schedule.update({rate_plan_name: new_rate_plan})
     # Update existing usage mode, reset to an available automatic or manual mode if required rate plan deleted
     # TODO(SB3): Once time_slot rate plan is available in schedule, verify against existing plan instead of dynamic provider setup
@@ -2128,6 +2133,11 @@ async def set_sb2_home_load(  # noqa: C901
     # The mode_type must always be contained
     # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan
     new_schedule = {"mode_type": mode_type}
+    if isinstance(schedule.get("schedule_mode"), dict):
+        schedule["schedule_mode"] = {"last_select_mode": mode_type}
+        new_schedule["schedule_mode"] = {"last_select_mode": mode_type}
+        if "reserved_soc" in schedule:
+            new_schedule["reserved_soc"] = schedule.get("reserved_soc")
     if rate_plan_name in {SolarbankRatePlan.manual, SolarbankRatePlan.smartplugs}:
         new_schedule.update(
             {

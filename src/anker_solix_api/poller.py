@@ -690,6 +690,10 @@ async def poll_sites(  # noqa: C901
                             isAdmin=admin,
                         ):
                             api._site_devices.add(sn)
+                            if api.powerpanelApi:
+                                api.devices[sn] = api.devices[sn] | (
+                                    api.powerpanelApi.devices.get(sn) or {}
+                                )
                     sb_pps_info["total_charging_power"] = (
                         f"{sb_total_charge_calc:.0f}"  # original may reflect only battery charge but no discharge
                     )
@@ -1109,17 +1113,17 @@ async def poll_device_details(  # noqa: C901
                 vehicleId=vehicle.get("vehicle_id"), fromFile=fromFile
             )
 
-    # initialize power panel Api for standalone PPS that support storm guard auto disaster
-    if not api.powerpanelApi and (
-        pps := {
-            k: v
-            for k, v in api.devices.items()
-            if not v.get("site_id") and v.get("type") == SolixDeviceType.PPS.value
-        }
-    ):
-        api.powerpanelApi = AnkerSolixPowerpanelApi(apisession=api.apisession)
-        api.powerpanelApi.account = api.account
-        api.powerpanelApi.devices = pps
+    # initialize power panel Api for standalone PPS and SOLARBANK_PPS that support storm guard auto disaster
+    if pps := {
+        k: v
+        for k, v in api.devices.items()
+        if (not v.get("site_id") and v.get("type") == SolixDeviceType.PPS.value)
+        or v.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+    }:
+        if not api.powerpanelApi:
+            api.powerpanelApi = AnkerSolixPowerpanelApi(apisession=api.apisession)
+            api.powerpanelApi.account = api.account
+        api.powerpanelApi.devices.update(pps)
 
     # Get Power Panel device specific updates and merge them
     if api.powerpanelApi:
@@ -1212,9 +1216,15 @@ async def poll_device_details(  # noqa: C901
                     api._update_dev({"device_sn": sn} | dict(wifi_list[wifi_index - 1]))
 
             # Fetch device type specific details, if device type not excluded
-            if dev_type in ({SolixDeviceType.SOLARBANK.value} - exclude):
+            if dev_type in (
+                {SolixDeviceType.SOLARBANK.value, SolixDeviceType.SOLARBANK_PPS.value}
+                - exclude
+            ):
                 # queries for solarbank 1 only
-                if (device.get("generation") or 0) < 2:
+                if (
+                    (device.get("generation") or 0) < 2
+                    and dev_type != SolixDeviceType.SOLARBANK_PPS.value
+                ):
                     # Fetch available OTA update for solarbanks, does not work for solarbank 2 with device SN
                     # DISABLED: Not reliable for Solarbank 1 either, SN can also be "", so not clear what the response actually reports
                     # api._logger.debug("Getting api %s OTA update info for device", api.apisession.nickname)
