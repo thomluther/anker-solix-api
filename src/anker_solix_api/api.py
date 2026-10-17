@@ -674,6 +674,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # assume generation and ac type for tracking schedule data in combiner box
                             generation = 3
                             ac_type = True
+                        elif device.get("type") == SolixDeviceType.SOLARBANK_PPS.value:
+                            generation = 2
+                            ac_type = True
                         else:
                             generation = int(device.get("generation", 0))
                             ac_type = bool(device.get("grid_to_battery_power") or False)
@@ -721,13 +724,20 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 )
                                 device.update(
                                     {
-                                        "preset_manual_backup_start": 0,
-                                        "preset_manual_backup_end": 0,
-                                        "preset_backup_option": False,
                                         "preset_tariff": SolixTariffTypes.UNKNOWN.value,
                                         "preset_tariff_price": SolixDefaults.TARIFF_PRICE_DEF,
                                         "preset_tariff_currency": curr_def,
                                     }
+                                    | (
+                                        {
+                                            "preset_manual_backup_start": 0,
+                                            "preset_manual_backup_end": 0,
+                                            "preset_backup_option": False,
+                                        }
+                                        if device.get("type")
+                                        != SolixDeviceType.SOLARBANK_PPS.value
+                                        else {}
+                                    )
                                 )
                         else:
                             # Solarbank 1 schedule
@@ -1482,6 +1492,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     and device.get("generation") >= 2
                 )
                 or (device.get("type") == SolixDeviceType.COMBINER_BOX.value)
+                or (device.get("type") == SolixDeviceType.SOLARBANK_PPS.value)
             )
         ):
             site = self.sites.get(device.get("site_id") or "") or {}
@@ -1496,8 +1507,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     dev
                     for dev in self.devices.values()
                     if dev.get("site_id") == siteId
-                    and dev.get("type") == SolixDeviceType.SOLARBANK.value
-                    and dev.get("generation") >= 2
+                    and (
+                        (
+                            dev.get("type") == SolixDeviceType.SOLARBANK.value
+                            and dev.get("generation") >= 2
+                        )
+                        or dev.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+                    )
                 ][:1]
                 or [{}]
             )[0]
@@ -1505,8 +1521,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # use physical station device for option evaluation
             if dev := self.devices.get(device.get("station_sn", "")):
                 device = dev
-            # manual mode is always possible
-            options.add(SolarbankUsageMode.manual.name)
+            # manual mode is always possible except for SOLARBANK_PPS
+            if device.get("type") != SolixDeviceType.SOLARBANK_PPS.value:
+                options.add(SolarbankUsageMode.manual.name)
             # For combiner box, verify the consolidated capabilities
             ac_devs = []
             smart_devs = []
@@ -1527,7 +1544,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if (site.get("smart_plug_info") or {}).get("smartplug_list"):
                 options.add(SolarbankUsageMode.smartplugs.name)
             # Add options introduced with SB2 AC for AC charging
-            if "grid_to_battery_power" in device or ac_devs:
+            if (
+                "grid_to_battery_power" in device
+                or ac_devs
+                or device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+            ):
                 options.add(SolarbankUsageMode.backup.name)
                 # Add use time if plan is defined
                 if smartmeter and (

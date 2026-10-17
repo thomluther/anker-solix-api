@@ -657,11 +657,14 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                 await self.get_device_disaster_status(
                     identifier=site_id, fromFile=fromFile
                 )
-        # cycle through all stand alone devices which support auto disaster
+        # cycle through all stand alone or SOLARBANK_PPS devices which support auto disaster
         for device_sn, device in self.devices.items():
             if (
                 {device.get("type")} - exclude
-                and not device.get("site_id")
+                and (
+                    not device.get("site_id")
+                    or device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+                )
                 and device.get("disaster_support", {}).get("support_auto_disaster")
             ):
                 await self.get_device_disaster_status(
@@ -849,9 +852,18 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                     self.apisession.nickname,
                 )
                 await self.get_wifi_info(deviceSn=sn, fromFile=fromFile)
-            elif not device.get("site_id"):
-                # fetch info for standalone devices, those are owned or shared devices
-                if device.get("type") in ({SolixDeviceType.PPS.value} - exclude):
+            elif (
+                not device.get("site_id")
+                or (
+                    device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+                    and device.get("is_admin", False)
+                )
+            ):
+                # fetch info for standalone PPS or site-managed SOLARBANK_PPS devices
+                if device.get("type") in (
+                    {SolixDeviceType.PPS.value, SolixDeviceType.SOLARBANK_PPS.value}
+                    - exclude
+                ):
                     # Get auto disaster support once for device
                     if "disaster_support" not in device:
                         support = await self.get_disaster_support(
