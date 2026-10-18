@@ -721,7 +721,7 @@ class AnkerSolixApiMonitor:
                             f"{'Has EV Charger':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2 - 4}} "
                             f"{'EMS Disable':<{col3}}: {'YES' if feat2 else '---' if feat2 is None else ' NO':>3}"
                         )
-                    if ai_runtime := (site.get("site_details") or {}).get(
+                    if ai_runtime := details.get(
                         "ai_ems_runtime"
                     ):
                         runtime = (
@@ -737,6 +737,50 @@ class AnkerSolixApiMonitor:
                             f"{'AI Collection':<{col1}}: {('-' if runtime.days < 0 else '') + str(abs(runtime)):<{col2}} "
                             f"{'Collect Status':<{col3}}: {str(ai_runtime.get('status_desc')).capitalize()} ({status})"
                         )
+                    if disaster := details.get("disaster_support"):
+                        countries = ",".join(
+                            [
+                                country.get("code")
+                                for country in disaster.get("support_country_code", [])
+                            ]
+                        )
+                        CONSOLE.info(
+                            f"{'Disaster Supp.':<{col1}}: {'Storm Guard' if disaster.get('support_auto_disaster') else 'None' if disaster else '------':<{col2}} "
+                            f"{'Countries':<{col3}}: {countries or '--'}"
+                        )
+                        settings = details.get("device_disaster", {})
+                        status = details.get("device_disaster_status", {})
+                        if disaster.get("support_auto_disaster"):
+                            m2 = str(status.get("auto_disaster_status", ""))
+                            CONSOLE.info(
+                                f"{'Storm Guard':<{col1}}: {'Enabled' if (v := settings.get('auto_disaster_switch')) else 'Disabled' if v is not None else '-----':<{col2}} "
+                                f"{'SG Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
+                            )
+                            m2 = str(status.get("manual_disaster_status", ""))
+                        if site.get("site_type") in [SolixDeviceType.HES.value, SolixDeviceType.POWERPANEL.value]:
+                            CONSOLE.info(
+                                f"{'Manual Backup':<{col1}}: {'Enabled' if settings.get('manual_disaster_switch') else 'Disabled':<{col2}} "
+                                f"{'Manual Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
+                            )
+                        if disaster := status.get("current_disaster_detail"):
+                            m1 = str(disaster.get("disaster_type", ""))
+                            if str(
+                                m2 := (cm and mqtt.get("backup_charge_time", ""))
+                                or disaster.get("charging_time", "")
+                            ).isdigit():
+                                m2 = str(timedelta(minutes=int(m2)))
+                            CONSOLE.info(
+                                f"{'In Progress':<{col1}}: {get_enum_name(SolixBackupStatus, m1, 'unknown' if m1 else '-----').replace('_', ' ').title() + ' (' + m1 + ')':<{col2}} "
+                                f"{'Charge Time':<{col3}}: {m2 and (c or cm)}{m2 or '--:--'}{co}"
+                            )
+                            if str(m1 := disaster.get("start_time", "")):
+                                m1 = convert_isotimestamp(m1) or m1
+                            if str(m2 := disaster.get("end_time", "")):
+                                m2 = convert_isotimestamp(m2) or m2
+                            CONSOLE.info(
+                                f"{'Backup Start':<{col1}}: {m1 or '----.--.-- --:--'!s:<{col2}} "
+                                f"{'Backup End':<{col3}}: {m2 or '----.--.-- --:--'!s}"
+                            )
                     CONSOLE.info("-" * 80)
             else:
                 CONSOLE.info("-" * 80)
@@ -911,7 +955,7 @@ class AnkerSolixApiMonitor:
                 if m1 := cm and mqtt.get("battery_soc_total", ""):
                     CONSOLE.info(
                         f"{'Battery SoC Tot':<{col1}}: {m1 and (c or cm)}{m1 or '---':>4} {'%':<{col2 - 5}}{co} "
-                        f"{'Max Load Legal':<{col3}}: {site.get('site_details', {}).get('legal_power_limit') or '----':>4} {unit}{co}"
+                        f"{'Max Load Legal':<{col3}}: {details.get('legal_power_limit') or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("home_demand_total", "")
                 m2 = cm and (
@@ -1496,48 +1540,6 @@ class AnkerSolixApiMonitor:
                         f"{'':<{col2 - 12}}{co} "
                         f"{'Role Status':<{col3}}: {str(hes.get('role_status_desc', '-------')).capitalize()} ({hes.get('master_slave_status', '-')!s})"
                     )
-                if disaster := details.get("disaster_support"):
-                    countries = ",".join(
-                        [
-                            country.get("code")
-                            for country in disaster.get("support_country_code", [])
-                        ]
-                    )
-                    CONSOLE.info(
-                        f"{'Disaster Supp.':<{col1}}: {'Storm Guard' if disaster.get('support_auto_disaster') else 'None' if disaster else '------':<{col2}} "
-                        f"{'Countries':<{col3}}: {countries or '--'}"
-                    )
-                    settings = details.get("device_disaster", {})
-                    status = details.get("device_disaster_status", {})
-                    m2 = str(status.get("auto_disaster_status", ""))
-                    CONSOLE.info(
-                        f"{'Storm Guard':<{col1}}: {'Enabled' if (v := settings.get('auto_disaster_switch')) else 'Disabled' if v is not None else '-----':<{col2}} "
-                        f"{'SG Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
-                    )
-                    m2 = str(status.get("manual_disaster_status", ""))
-                    CONSOLE.info(
-                        f"{'Manual Backup':<{col1}}: {'Enabled' if settings.get('manual_disaster_switch') else 'Disabled':<{col2}} "
-                        f"{'Manual Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
-                    )
-                    if disaster := status.get("current_disaster_detail"):
-                        m1 = str(disaster.get("disaster_type", ""))
-                        if str(
-                            m2 := (cm and mqtt.get("backup_charge_time", ""))
-                            or disaster.get("charging_time", "")
-                        ).isdigit():
-                            m2 = str(timedelta(minutes=int(m2)))
-                        CONSOLE.info(
-                            f"{'In Progress':<{col1}}: {get_enum_name(SolixBackupStatus, m1, 'unknown' if m1 else '-----').replace('_', ' ').title() + ' (' + m1 + ')':<{col2}} "
-                            f"{'Charge Time':<{col3}}: {m2 and (c or cm)}{m2 or '--:--'}{co}"
-                        )
-                        if str(m1 := disaster.get("start_time", "")):
-                            m1 = convert_isotimestamp(m1) or m1
-                        if str(m2 := disaster.get("end_time", "")):
-                            m2 = convert_isotimestamp(m2) or m2
-                        CONSOLE.info(
-                            f"{'Backup Start':<{col1}}: {m1 or '----.--.-- --:--'!s:<{col2}} "
-                            f"{'Backup End':<{col3}}: {m2 or '----.--.-- --:--'!s}"
-                        )
                 if "status_desc" in dev:
                     CONSOLE.info(
                         f"{'Cloud Status':<{col1}}: {str(dev.get('status_desc', '-------')).capitalize():<{col2}} "

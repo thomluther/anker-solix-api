@@ -1179,7 +1179,7 @@ CMD_PLUG_DELAYED_TOGGLE = (
         # Command: Smartplug delayed toggle
         COMMAND_NAME: SolixMqttCommands.plug_delayed_toggle,
         "a2": {
-            NAME: "set_toggle_timer_mode",  # Off (0), Start (1), Pausews (2), Running (3)
+            NAME: "set_toggle_timer_mode",  # Off (0), Start (1), Pause (2), Running (3)
             TYPE: DeviceHexDataTypes.ui.value,
             STATE_NAME: "toggle_timer_mode",
             VALUE_OPTIONS: {"off": 0, "start": 1, "paused": 2, "running": 3},

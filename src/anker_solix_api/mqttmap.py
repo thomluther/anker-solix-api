@@ -6503,6 +6503,7 @@ SOLIXMQTTMAP: Final[dict] = {
             TOPIC: "param_info",
             "a2": {NAME: "device_sn"},
             "a4": {NAME: "ac_output_power_switch"},  # Off (0), On (1)
+            "a5": {NAME: "error_code"},
             "a6": {NAME: "sw_version", "values": 4},
             "a7": {NAME: "sw_controller", "values": 4},
             "a8": {NAME: "voltage", "factor": 0.1},

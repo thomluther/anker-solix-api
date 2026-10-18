@@ -847,11 +847,10 @@ async def poll_sites(  # noqa: C901
     ]:
         await api.get_device_pv_status(devices=inverters, fromFile=fromFile)
 
-    # update disaster status if supported
-    if api.powerpanelApi:
-        await api.powerpanelApi.update_disaster_status(
-            fromFile=fromFile, exclude=exclude
-        )
+    # update disaster status for all sites and stand alone devices if supported
+    await api.update_disaster_status(
+        devices=True, fromFile=fromFile, exclude=exclude
+    )
 
     # updates to standalone devices
     for sn, device in {
@@ -1044,6 +1043,23 @@ async def poll_site_details(
                             )
                         },
                     )
+            # fetch disaster status
+            # Get disaster support once for site
+            if "disaster_support" not in site.get("site_details", {}):
+                await api.get_disaster_support(
+                    identifier=site_id, fromFile=fromFile
+                )
+            # Fetch disaster settings if supported
+            if site.get("site_details").get("disaster_support"):
+                await api.get_device_disaster(
+                    identifier=site_id, fromFile=fromFile
+                )
+                # fetch first status if not done yet by update sites
+                if not site.get("site_details").get("device_disaster_status"):
+                    await api.update_disaster_status(
+                        fromFile=fromFile, exclude=exclude
+                    )
+
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})
     return api.sites
@@ -1319,14 +1335,33 @@ async def poll_device_details(  # noqa: C901
             await api.get_device_charge_order_stats(deviceSn=sn, fromFile=fromFile)
 
         elif dev_type in ({SolixDeviceType.PPS.value} - exclude):
-            # Fetch PPS TOU plan (pps_use_time) attribute
-            # Only owned (admin) devices can query device attributes, shared devices have no permission (Anker Could Bug?)
-            if device.get("is_admin"):
-                await api.get_device_attributes(
-                    deviceSn=sn,
-                    attributes=["pps_use_time", "ip_region", "currency"],
-                    fromFile=fromFile,
-                )
+            # fetch info for standalone devices, those are owned or shared devices
+            if not site_id:
+                # Get auto disaster support once for device
+                if "disaster_support" not in device:
+                    support = await api.get_disaster_support(
+                        identifier=sn, id_type=1, fromFile=fromFile
+                    )
+                    # Fetch initial disaster status if supported
+                    if support.get("support_auto_disaster"):
+                        await api.get_device_disaster_status(
+                            identifier=sn, id_type=1, fromFile=fromFile
+                        )
+                else:
+                    support = device.get("disaster_support", {})
+                # Fetch disaster settings if supported
+                if support.get("support_auto_disaster"):
+                    await api.get_device_disaster(
+                        identifier=sn, id_type=1, fromFile=fromFile
+                    )
+                # Fetch PPS TOU plan (pps_use_time) attribute
+                # Only owned (admin) devices can query device attributes, shared devices have no permission (Anker Could Bug?)
+                if device.get("is_admin"):
+                    await api.get_device_attributes(
+                        deviceSn=sn,
+                        attributes=["pps_use_time", "ip_region", "currency"],
+                        fromFile=fromFile,
+                    )
             # fetch account currency list once for TOU price unit options
             if "currency_list" not in api.account and (
                 {ApiCategories.site_price} - exclude

@@ -1027,6 +1027,18 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 device["set_system_output_power"] = sys_power
                                 if not devData.get("parallel_home_load") and dev_power:
                                     device["set_output_power"] = dev_power
+
+                    # PPS specific keys
+                    elif (
+                        key
+                        in [
+                            "disaster_support",
+                            "device_disaster_status",
+                            "device_disaster",
+                        ]
+                        and value
+                    ):
+                        device[key] = value
                     elif key == "pps_use_time":
                         # PPS TOU plan managed via cloud, convert attribute if supported
                         if device.get("type") == SolixDeviceType.PPS.value:

@@ -1042,9 +1042,13 @@ class AnkerSolixApiExport:
                         "attributes": [
                             "rssi",
                             "pv_power_limit",
+                            "pv_power_limit_option",
                             "legal_power_limit",
                             "power_limit_option",
                             "power_limit_option_real",
+                            "region_microinverter_limit",
+                            "region_power_limit",
+                            "user_power_limit",
                             "switch_0w",
                             "enable_0w",
                             "ip_region",
