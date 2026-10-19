@@ -809,6 +809,8 @@ class AnkerSolixApiExport:
                     "33",
                     "34",
                     "35",
+                    "36",
+                    "37",
                 ]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
@@ -1044,6 +1046,7 @@ class AnkerSolixApiExport:
                             "pv_power_limit",
                             "pv_power_limit_option",
                             "legal_power_limit",
+                            "legal_limit",
                             "power_limit_option",
                             "power_limit_option_real",
                             "region_microinverter_limit",
@@ -1337,14 +1340,49 @@ class AnkerSolixApiExport:
 
             has_charging = False
             # loop through all found sites
-            if charging_endpoints:
-                for siteId, site in self.api_power.sites.items():
-                    admin = site.get("site_admin")
-                    self._logger.info(
-                        "\nExporting Charging specific data for site %s...",
-                        self._randomize(siteId, "site_id"),
-                    )
+            for siteId, site in self.api_power.sites.items():
+                admin = site.get("site_admin")
+                self._logger.info(
+                    "\nExporting Charging specific data for site %s...",
+                    self._randomize(siteId, "site_id"),
+                )
+                # Always get site disaster information, should work on any cloud server
+                self._logger.info("Exporting site device disaster data...")
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
+                    filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={
+                        "identifier_id": siteId,
+                        "type": 2,
+                    },
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
+                    filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={
+                        "identifier_id": siteId,
+                        "type": 2,
+                    },
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
+                await self.query(
+                    endpoint=API_CHARGING_ENDPOINTS[
+                        "get_site_device_disaster_status"
+                    ],
+                    filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(siteId, 'site_id')}.json",
+                    payload={
+                        "identifier_id": siteId,
+                        "type": 2,
+                    },
+                    replace=[(siteId, "<siteId>")],
+                    admin=admin,
+                )
 
+                # query charging type sites if endpoints supported on server
+                if charging_endpoints:
                     self._logger.info("Exporting Charging system running info...")
                     await self.query(
                         endpoint=API_CHARGING_ENDPOINTS["get_system_running_info"],
@@ -1433,40 +1471,6 @@ class AnkerSolixApiExport:
                             },
                             replace=[(siteId, "<siteId>")],
                         )
-                    # Get site disaster information
-                    self._logger.info("Exporting Charging site device disaster data...")
-                    await self.query(
-                        endpoint=API_CHARGING_ENDPOINTS["get_disaster_support_func"],
-                        filename=f"{API_FILEPREFIXES['charging_get_disaster_support_func']}_{self._randomize(siteId, 'site_id')}.json",
-                        payload={
-                            "identifier_id": siteId,
-                            "type": 2,
-                        },  # Has only been validated with 2 for power panel sites
-                        replace=[(siteId, "<siteId>")],
-                        admin=admin,
-                    )
-                    await self.query(
-                        endpoint=API_CHARGING_ENDPOINTS["get_site_device_disaster"],
-                        filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster']}_{self._randomize(siteId, 'site_id')}.json",
-                        payload={
-                            "identifier_id": siteId,
-                            "type": 2,
-                        },  # Has only been validated with 2 for power panel sites
-                        replace=[(siteId, "<siteId>")],
-                        admin=admin,
-                    )
-                    await self.query(
-                        endpoint=API_CHARGING_ENDPOINTS[
-                            "get_site_device_disaster_status"
-                        ],
-                        filename=f"{API_FILEPREFIXES['charging_get_site_device_disaster_status']}_{self._randomize(siteId, 'site_id')}.json",
-                        payload={
-                            "identifier_id": siteId,
-                            "type": 2,
-                        },  # Has only been validated with 2 for power panel sites
-                        replace=[(siteId, "<siteId>")],
-                        admin=admin,
-                    )
 
             # Ensure stand alone devices may be queried as well, endpoints also work on EU server
             has_charging |= bool(

@@ -265,6 +265,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "power_limit_option",
                         "power_limit_option_real",
                         "all_power_limit_option",
+                        "legal_limit",
+                        "unlock_default_power_type",
                         "station_sn",
                         "total_stats",
                         "energy_details",
@@ -674,6 +676,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # assume generation and ac type for tracking schedule data in combiner box
                             generation = 3
                             ac_type = True
+                        elif device.get("type") == SolixDeviceType.SOLARBANK_PPS.value:
+                            # assume generation and ac type for tracking schedule data in F3000 Solarbank PPS systems
+                            generation = 2
+                            ac_type = True
                         else:
                             generation = int(device.get("generation", 0))
                             ac_type = bool(device.get("grid_to_battery_power") or False)
@@ -721,13 +727,20 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 )
                                 device.update(
                                     {
-                                        "preset_manual_backup_start": 0,
-                                        "preset_manual_backup_end": 0,
-                                        "preset_backup_option": False,
                                         "preset_tariff": SolixTariffTypes.UNKNOWN.value,
                                         "preset_tariff_price": SolixDefaults.TARIFF_PRICE_DEF,
                                         "preset_tariff_currency": curr_def,
                                     }
+                                    | (
+                                        {
+                                            "preset_manual_backup_start": 0,
+                                            "preset_manual_backup_end": 0,
+                                            "preset_backup_option": False,
+                                        }
+                                        if device.get("type")
+                                        != SolixDeviceType.SOLARBANK_PPS.value
+                                        else {}
+                                    )
                                 )
                         else:
                             # Solarbank 1 schedule
@@ -1493,7 +1506,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     device.get("type") == SolixDeviceType.SOLARBANK.value
                     and device.get("generation") >= 2
                 )
-                or (device.get("type") == SolixDeviceType.COMBINER_BOX.value)
+                or (
+                    device.get("type")
+                    in [
+                        SolixDeviceType.COMBINER_BOX.value,
+                        SolixDeviceType.SOLARBANK_PPS.value,
+                    ]
+                )
             )
         ):
             site = self.sites.get(device.get("site_id") or "") or {}
@@ -1508,8 +1527,13 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     dev
                     for dev in self.devices.values()
                     if dev.get("site_id") == siteId
-                    and dev.get("type") == SolixDeviceType.SOLARBANK.value
-                    and dev.get("generation") >= 2
+                    and (
+                        (
+                            dev.get("type") == SolixDeviceType.SOLARBANK.value
+                            and dev.get("generation") >= 2
+                        )
+                        or dev.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+                    )
                 ][:1]
                 or [{}]
             )[0]
@@ -1517,8 +1541,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # use physical station device for option evaluation
             if dev := self.devices.get(device.get("station_sn", "")):
                 device = dev
-            # manual mode is always possible
-            options.add(SolarbankUsageMode.manual.name)
+            # manual mode is always possible except for SOLARBANK_PPS
+            if device.get("type") != SolixDeviceType.SOLARBANK_PPS.value:
+                options.add(SolarbankUsageMode.manual.name)
             # For combiner box, verify the consolidated capabilities
             ac_devs = []
             smart_devs = []
@@ -1539,7 +1564,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if (site.get("smart_plug_info") or {}).get("smartplug_list"):
                 options.add(SolarbankUsageMode.smartplugs.name)
             # Add options introduced with SB2 AC for AC charging
-            if "grid_to_battery_power" in device or ac_devs:
+            if (
+                "grid_to_battery_power" in device
+                or ac_devs
+                or device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+            ):
                 options.add(SolarbankUsageMode.backup.name)
                 # Add use time if plan is defined
                 if smartmeter and (
@@ -1550,7 +1579,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # Add options introduced with SB3
             if ((device.get("generation") or 0) >= 3 or smart_devs) and smartmeter:
                 options.add(SolarbankUsageMode.smart.name)
-                # Add time slot if plan is in features
+                # Add time slot if plan is in features for dynamic prices
                 if (site.get("feature_switch") or {}).get("enable_timeslot"):
                     options.add(SolarbankUsageMode.time_slot.name)
         return options
@@ -2154,7 +2183,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             self._update_site(
                 siteId,
                 {
-                    "legal_power_limit": data.get("legal_power_limit") or 0,
+                    "legal_power_limit": data.get("legal_power_limit") or 0,  # Actual limit setting
+                    "legal_limit": data.get("legal_limit") or 0,  # Legal limit, 0 if unlimited
                     "parallel_type": data.get("parallel_type") or "",
                     "power_limit_option": data.get("power_limit_option"),
                 },
@@ -2205,6 +2235,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     or str(data.get("ac_input_power_unit") or "").replace("W", ""),
                     "set_load_power": site.get("retain_load", ""),
                 }
+                | (
+                    {
+                        "unlock_default_power_type": data.get(
+                            "unlock_default_power_type"
+                        )
+                    }
+                    if "unlock_default_power_type" in data else {}
+                )
                 | station,
                 siteId=siteId,
                 isAdmin=True,
@@ -2230,12 +2268,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "power_limit"
                         )
                         or (data.get("legal_power_limit") if copy_limits else 0),
+                        "legal_limit": data.get("legal_limit") if copy_limits else None,
                         "power_limit_option": device.get("power_limit_option")
                         or (data.get("power_limit_option") if copy_limits else None),
                         "power_limit_option_real": device.get("power_limit_option_real")
                         or None,
                         "ac_input_limit": device.get("ac_input_limit") or 0,
                     }
+                    | (
+                        {
+                            "unlock_default_power_type": data.get(
+                                "unlock_default_power_type"
+                            )
+                        }
+                        if "unlock_default_power_type" in data and copy_limits
+                        else {}
+                    )
                     | ({} if station_sn is None else {"station_sn": station_sn}),
                 )
         if schedule:
@@ -2248,6 +2296,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         deviceSn: str,
         ac_input: float | str | None = None,
         ac_output: float | str | None = None,
+        ac_output_type: int
+        | None = None,  # type 0 = output options, 1 = granular output setting
         pv_input: float | str | None = None,
         grid_export: bool | int | None = None,
         toFile: bool = False,
@@ -2265,6 +2315,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if str(ac_output).replace("-", "", 1).replace(".", "", 1).isdigit()
             else None
         )
+        ac_output_type = ac_output_type if isinstance(ac_output_type, int) else None
         pv_input = (
             round(float(pv_input))
             if str(pv_input).replace("-", "", 1).replace(".", "", 1).isdigit()
@@ -2308,17 +2359,25 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             dev = self.devices.get(deviceSn, {})
             # Ensure query type 19 is supported by system
             # Systems with Station support can be controlled through Api alone, otherwise an MQTT command is required additionally to toggle the device
-            # Note: A cloud change mid April 2026 reports station support for SB2 although max load cannot be controlled via station parm
+            # Note: A cloud change mid April 2026 may reports station support for SB2 although max load cannot be controlled via station parm
             if (
                 dev.get("type") == SolixDeviceType.COMBINER_BOX.value
                 or dev.get("station_sn")
                 or dev.get("generation", 0) >= 3
             ):
+                # adopt ac_output_type if granular setting is supported
+                if ac_output_type is None and "unlock_default_power_type" in dev:
+                    ac_output_type = 1
                 if not isinstance(
                     await self.set_device_parm(
                         siteId=siteId,
                         paramType=SolixParmType.SOLARBANK_POWER_LIMIT.value,
-                        paramData={
+                        paramData=(
+                            {"display_type": ac_output_type}
+                            if ac_output_type is not None
+                            else {}
+                        )
+                        | {
                             "power_limit": {"limit": ac_output, "limit_real": ac_output}
                         },
                         deviceSn=deviceSn,
