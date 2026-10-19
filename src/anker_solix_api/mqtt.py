@@ -593,7 +593,7 @@ class AnkerSolixMqttSession:
                         certfile=self._temp_cert_files[1],
                         keyfile=self._temp_cert_files[2],
                         cert_reqs=ssl.CERT_REQUIRED,
-                        tls_version=ssl.PROTOCOL_TLS,
+                        tls_version=ssl.PROTOCOL_TLS_CLIENT,
                         ciphers=None,
                     ),
                 )
