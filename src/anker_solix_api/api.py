@@ -265,6 +265,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         "power_limit_option",
                         "power_limit_option_real",
                         "all_power_limit_option",
+                        "legal_limit",
+                        "unlock_default_power_type",
                         "station_sn",
                         "total_stats",
                         "energy_details",
@@ -2181,7 +2183,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             self._update_site(
                 siteId,
                 {
-                    "legal_power_limit": data.get("legal_power_limit") or 0,
+                    "legal_power_limit": data.get("legal_power_limit") or 0,  # Actual limit setting
+                    "legal_limit": data.get("legal_limit") or 0,  # Legal limit, 0 if unlimited
                     "parallel_type": data.get("parallel_type") or "",
                     "power_limit_option": data.get("power_limit_option"),
                 },
@@ -2232,6 +2235,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     or str(data.get("ac_input_power_unit") or "").replace("W", ""),
                     "set_load_power": site.get("retain_load", ""),
                 }
+                | (
+                    {
+                        "unlock_default_power_type": data.get(
+                            "unlock_default_power_type"
+                        )
+                    }
+                    if "unlock_default_power_type" in data else {}
+                )
                 | station,
                 siteId=siteId,
                 isAdmin=True,
@@ -2257,12 +2268,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             "power_limit"
                         )
                         or (data.get("legal_power_limit") if copy_limits else 0),
+                        "legal_limit": data.get("legal_limit") if copy_limits else None,
                         "power_limit_option": device.get("power_limit_option")
                         or (data.get("power_limit_option") if copy_limits else None),
                         "power_limit_option_real": device.get("power_limit_option_real")
                         or None,
                         "ac_input_limit": device.get("ac_input_limit") or 0,
                     }
+                    | (
+                        {
+                            "unlock_default_power_type": data.get(
+                                "unlock_default_power_type"
+                            )
+                        }
+                        if "unlock_default_power_type" in data and copy_limits
+                        else {}
+                    )
                     | ({} if station_sn is None else {"station_sn": station_sn}),
                 )
         if schedule:
@@ -2275,6 +2296,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
         deviceSn: str,
         ac_input: float | str | None = None,
         ac_output: float | str | None = None,
+        ac_output_type: int
+        | None = None,  # type 0 = output options, 1 = granular output setting
         pv_input: float | str | None = None,
         grid_export: bool | int | None = None,
         toFile: bool = False,
@@ -2292,6 +2315,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if str(ac_output).replace("-", "", 1).replace(".", "", 1).isdigit()
             else None
         )
+        ac_output_type = ac_output_type if isinstance(ac_output_type, int) else None
         pv_input = (
             round(float(pv_input))
             if str(pv_input).replace("-", "", 1).replace(".", "", 1).isdigit()
@@ -2335,17 +2359,25 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             dev = self.devices.get(deviceSn, {})
             # Ensure query type 19 is supported by system
             # Systems with Station support can be controlled through Api alone, otherwise an MQTT command is required additionally to toggle the device
-            # Note: A cloud change mid April 2026 reports station support for SB2 although max load cannot be controlled via station parm
+            # Note: A cloud change mid April 2026 may reports station support for SB2 although max load cannot be controlled via station parm
             if (
                 dev.get("type") == SolixDeviceType.COMBINER_BOX.value
                 or dev.get("station_sn")
                 or dev.get("generation", 0) >= 3
             ):
+                # adopt ac_output_type if granular setting is supported
+                if ac_output_type is None and "unlock_default_power_type" in dev:
+                    ac_output_type = 1
                 if not isinstance(
                     await self.set_device_parm(
                         siteId=siteId,
                         paramType=SolixParmType.SOLARBANK_POWER_LIMIT.value,
-                        paramData={
+                        paramData=(
+                            {"display_type": ac_output_type}
+                            if ac_output_type is not None
+                            else {}
+                        )
+                        | {
                             "power_limit": {"limit": ac_output, "limit_real": ac_output}
                         },
                         deviceSn=deviceSn,

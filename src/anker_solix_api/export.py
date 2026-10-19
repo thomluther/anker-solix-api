@@ -809,6 +809,8 @@ class AnkerSolixApiExport:
                     "33",
                     "34",
                     "35",
+                    "36",
+                    "37",
                 ]:
                     self._logger.info(
                         "Exporting device parameter type %s settings...", parmtype
@@ -1044,6 +1046,7 @@ class AnkerSolixApiExport:
                             "pv_power_limit",
                             "pv_power_limit_option",
                             "legal_power_limit",
+                            "legal_limit",
                             "power_limit_option",
                             "power_limit_option_real",
                             "region_microinverter_limit",
