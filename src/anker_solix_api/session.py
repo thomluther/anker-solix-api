@@ -632,10 +632,10 @@ class AnkerSolixClientSession:
                 else:
                     self._logger.debug("Response Data: %s", data)
 
-                # valid client response at this point, mark login to avoid repeated authentication
-                self._loggedIn = True
                 # check the Api response status code in the data
                 errors.raise_error(data)
+                # valid Api response at this point, mark login to avoid repeated authentication
+                self._loggedIn = True
 
                 # reset retry flag for normal request retry attempts
                 self._retry_attempt = False
