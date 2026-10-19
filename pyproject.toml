@@ -3,13 +3,17 @@ name = "anker-solix-api"
 version = "3.9.0"
 description = "Python library for Anker Solix Power devices (Solarbank, Inverter, PPS etc.)"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 requires-python = ">=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
 dynamic = [ "dependencies" ]
+
+[build-system]
+requires = ["poetry-core>=2.1"]
+build-backend = "poetry.core.masonry.api"
 
 [project.urls]
 "Homepage" = "https://github.com/thomluther/anker-solix-api"
