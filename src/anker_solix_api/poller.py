@@ -848,9 +848,7 @@ async def poll_sites(  # noqa: C901
         await api.get_device_pv_status(devices=inverters, fromFile=fromFile)
 
     # update disaster status for all sites and stand alone devices if supported
-    await api.update_disaster_status(
-        devices=True, fromFile=fromFile, exclude=exclude
-    )
+    await api.update_disaster_status(devices=True, fromFile=fromFile, exclude=exclude)
 
     # updates to standalone devices
     for sn, device in {
@@ -1046,19 +1044,13 @@ async def poll_site_details(
             # fetch disaster status
             # Get disaster support once for site
             if "disaster_support" not in site.get("site_details", {}):
-                await api.get_disaster_support(
-                    identifier=site_id, fromFile=fromFile
-                )
+                await api.get_disaster_support(identifier=site_id, fromFile=fromFile)
             # Fetch disaster settings if supported
             if site.get("site_details").get("disaster_support"):
-                await api.get_device_disaster(
-                    identifier=site_id, fromFile=fromFile
-                )
+                await api.get_device_disaster(identifier=site_id, fromFile=fromFile)
                 # fetch first status if not done yet by update sites
                 if not site.get("site_details").get("device_disaster_status"):
-                    await api.update_disaster_status(
-                        fromFile=fromFile, exclude=exclude
-                    )
+                    await api.update_disaster_status(fromFile=fromFile, exclude=exclude)
 
     # update account dictionary with number of requests
     api._update_account({"use_files": fromFile})
@@ -1124,18 +1116,6 @@ async def poll_device_details(  # noqa: C901
             await api.get_vehicle_details(
                 vehicleId=vehicle.get("vehicle_id"), fromFile=fromFile
             )
-
-    # initialize power panel Api for standalone PPS that support storm guard auto disaster
-    if not api.powerpanelApi and (
-        pps := {
-            k: v
-            for k, v in api.devices.items()
-            if not v.get("site_id") and v.get("type") == SolixDeviceType.PPS.value
-        }
-    ):
-        api.powerpanelApi = AnkerSolixPowerpanelApi(apisession=api.apisession)
-        api.powerpanelApi.account = api.account
-        api.powerpanelApi.devices = pps
 
     # Get Power Panel device specific updates and merge them
     if api.powerpanelApi:
@@ -1328,6 +1308,27 @@ async def poll_device_details(  # noqa: C901
                     await api.get_power_cutoff(
                         siteId=site_id, deviceSn=sn, fromFile=fromFile
                     )
+            elif dev_type in ({SolixDeviceType.SOLARBANK_PPS.value} - exclude):
+                # Fetch Solarbank PPS device parameters once per site
+                if (
+                    f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}"
+                    not in queried_sites_parm
+                ):
+                    # add queried site ID and parm to skip same queries for other parallel devices in site
+                    queried_sites_parm.add(
+                        f"{site_id}_{SolixParmType.SOLARBANK_2_SCHEDULE.value}"
+                    )
+                    # Fetch schedule once and add to each device in site
+                    api._logger.debug(
+                        "Getting api %s schedule details for device",
+                        api.apisession.nickname,
+                    )
+                    await api.get_device_parm(
+                        siteId=site_id,
+                        paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+                        deviceSn=sn,
+                        fromFile=fromFile,
+                    )
 
         # Fetch device type specific details, if device type not excluded
         if dev_type in ({SolixDeviceType.EV_CHARGER.value} - exclude):
@@ -1447,14 +1448,6 @@ async def poll_device_details(  # noqa: C901
             # Fetch other charger datails for supported models
             else:
                 pass
-
-        # # Merge additional powerpanel data
-        # if api.powerpanelApi:
-        #     device.update(api.powerpanelApi.devices.get(sn) or {})
-
-        # # Merge additional hes data
-        # if api.hesApi:
-        #     device.update(api.hesApi.devices.get(sn) or {})
 
         # update entry in devices and notify registered callbacks
         api.devices.update({sn: device})

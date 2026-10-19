@@ -131,20 +131,31 @@ class AnkerSolixMqttSession:
         """Define callback when a PUBLISH message is received from the server."""
         # update mqtt stats
         self.mqtt_stats.add_bytes(count=len(msg.payload))
-        # default MQTT payload decode is UTF-8
-        message = json.loads(msg.payload.decode())
-        # Extract timestamp field from expected dictionary in message
-        timestamp = (
-            datetime.fromtimestamp(
-                (message.get("head") or {}).get("timestamp")
-                if isinstance(message, dict)
-                else 0
+        try:
+            # default MQTT payload decode is UTF-8
+            message = json.loads(msg.payload.decode())
+            # Extract timestamp field from expected dictionary in message
+            timestamp = (
+                datetime.fromtimestamp(
+                    (message.get("head") or {}).get("timestamp")
+                    if isinstance(message, dict)
+                    else 0
+                )
+                .astimezone()
+                .strftime("%Y-%m-%d %H:%M:%S")
             )
-            .astimezone()
-            .strftime("%Y-%m-%d %H:%M:%S")
-        )
-        # extract message payload
-        payload = json.loads(message.get("payload") or "[]")
+            # extract message payload
+            payload = json.loads(message.get("payload") or "[]")
+        except (ValueError, TypeError, AttributeError) as err:
+            # an exception raised here would stop the paho network loop
+            self._logger.debug(
+                "Api %s MQTT session client dropped malformed message on topic %s: %s (%s)",
+                self.apisession.nickname,
+                msg.topic,
+                msg.payload,
+                err,
+            )
+            return
         # Third party models not included in payload
         if not (model := payload.get("pn") if isinstance(payload, dict) else None):
             # extract model from received topic
