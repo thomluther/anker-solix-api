@@ -213,7 +213,7 @@ class SolixMqttCommands:
     charger_theme_custom: str = "charger_theme_custom"
     compatibility_switch: str = "compatibility_switch"
     device_identification_switch: str = "device_identification_switch"
-    port_widgets_switch: str = "port_widgets_switch"
+    custom_clock_time_switch: str = "custom_clock_time_switch"
     ac_light_mode_select: str = "ac_light_mode_select"
     ac_frequency_select: str = "ac_frequency_select"
     ac_input_disable_switch: str = "ac_input_disable_switch"
@@ -2052,13 +2052,14 @@ CMD_CHARGER_DEVICE_IDENTIFICATION_SWITCH = CMD_COMMON | {
     },
 }
 
-CMD_CHARGER_PORT_WIDGETS_SWITCH = CMD_COMMON | {
-    # Command: Show (1) or hide (0) the per-port icons and values on display page 5
-    COMMAND_NAME: SolixMqttCommands.port_widgets_switch,
+CMD_CHARGER_CUSTOM_CLOCK_TIME_SWITCH = CMD_COMMON | {
+    # Command: Custom Clock "Time Display", show (1) or hide (0) the time on the custom
+    # screensaver; acts only while a custom uploaded theme (index 5) is shown
+    COMMAND_NAME: SolixMqttCommands.custom_clock_time_switch,
     "a2": {
-        NAME: "set_port_widgets_switch",  # Off (0), On (1)
+        NAME: "set_custom_clock_time_switch",  # Off (0), On (1)
         TYPE: DeviceHexDataTypes.ui.value,
-        STATE_NAME: "port_widgets_switch",
+        STATE_NAME: "custom_clock_time_switch",
         VALUE_OPTIONS: {"off": 0, "on": 1},
     },
 }

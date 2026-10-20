@@ -33,10 +33,10 @@ from .mqttcmdmap import (
     CMD_CHARGER_CLOCK_HOLIDAY,
     CMD_CHARGER_CLOCK_MODE,
     CMD_CHARGER_COMPATIBILITY_SWITCH,
+    CMD_CHARGER_CUSTOM_CLOCK_TIME_SWITCH,
     CMD_CHARGER_CUSTOM_USAGE_MODE,
     CMD_CHARGER_DEVICE_IDENTIFICATION_SWITCH,
     CMD_CHARGER_KNOB_MODE,
-    CMD_CHARGER_PORT_WIDGETS_SWITCH,
     CMD_CHARGER_THEME,
     CMD_CHARGER_USAGE_MODE,
     CMD_CIRCUIT_PRIORITY,
@@ -7380,7 +7380,7 @@ SOLIXMQTTMAP: Final[dict] = {
         # a5/a6 7-byte datetimes, a7 url
         "0213": CMD_CHARGER_CLOCK_DISPLAY,  # Set charger clock display schedule
         "0214": CMD_CHARGER_COMPATIBILITY_SWITCH,  # Maximum Compatibility: 0 off, 1 on
-        "0222": CMD_CHARGER_PORT_WIDGETS_SWITCH,  # Display page 5 port widgets: 0 hide, 1 show
+        "0222": CMD_CHARGER_CUSTOM_CLOCK_TIME_SWITCH,  # Custom Clock Time Display
         "0223": CMD_CHARGER_DEVICE_IDENTIFICATION_SWITCH,  # Device identification: 0 off, 1 on
         "0300": {
             "a4": {NAME: "utc_offset", SIGNED: True},  # same as 0312 a3
@@ -7461,8 +7461,9 @@ SOLIXMQTTMAP: Final[dict] = {
                 NAME: "theme_url",
                 TYPE: DeviceHexDataTypes.str.value,
             },
-            # Display page 5 shows (1) or hides (0) the per-port icons and values; set by 0222
-            "a6": {NAME: "port_widgets_switch"},
+            # Custom Clock "Time Display": time shown (1) or hidden (0) on the custom
+            # screensaver, effective only on a custom uploaded theme; set by 0222
+            "a6": {NAME: "custom_clock_time_switch"},
             "fe": {NAME: "msg_timestamp"},
         },
     },
