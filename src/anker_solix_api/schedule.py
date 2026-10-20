@@ -2104,8 +2104,8 @@ async def set_sb2_home_load(  # noqa: C901
     mode_type = (
         getattr(
             SolarbankUsageMode,
-            ({usage_mode_options} & {SolarbankUsageMode.smartmeter.name})
-            or ({usage_mode_options} & {SolarbankUsageMode.smartplug.name})
+            (usage_mode_options & {SolarbankUsageMode.smartmeter.name})
+            or (usage_mode_options & {SolarbankUsageMode.smartplug.name})
             or SolarbankUsageMode.manual.name,
         )
         if (
@@ -2120,7 +2120,6 @@ async def set_sb2_home_load(  # noqa: C901
     )
     schedule["mode_type"] = mode_type
     # Update schedule_mode if available
-    # TODO(SOLARBANK_PPS): What is the purpose of last_select_mode when mode is changed or not? Can it be a temporary mode?
     if isinstance(schedule.get("schedule_mode"), dict):
         schedule["schedule_mode"] = {"last_select_mode": mode_type}
     self._logger.debug(
@@ -3117,13 +3116,13 @@ async def set_sb2_use_time(  # noqa: C901
     # Apply Solarbank PPS specific fields
     dev = self.devices.get(deviceSn, {})
     mqtt = dev.get("mqtt_data") or {}
-    if "reserve_power" in schedule:
-        # given, existing or default backup soc, ensure backup soc is min_soc <= backup <= max_soc
-        schedule["reserve_power"] = min(
-            int(mqtt.get("max_soc") or dev.get("charge_upper_limit") or 80),
+    if "reserved_soc" in schedule:
+        # given, existing or default backup soc, ensure backup soc is 5 <= backup <= max_soc
+        schedule["reserved_soc"] = min(
+            int(mqtt.get("max_soc") or dev.get("charge_upper_limit") or 100),
             max(
-                int(mqtt.get("power_cutoff") or dev.get("discharge_lower_limit") or 20),
-                int(backup_soc or schedule.get("reserve_power") or 0),
+                int(mqtt.get("power_cutoff") or dev.get("discharge_lower_limit") or 5),
+                int(backup_soc or schedule.get("reserved_soc") or 0),
             ),
         )
 
@@ -3140,6 +3139,8 @@ async def set_sb2_use_time(  # noqa: C901
             or ({usage_mode_options} & {SolarbankUsageMode.smartplug.name})
             or SolarbankUsageMode.manual.name,
         )
+        if isinstance(schedule.get("schedule_mode"), dict):
+            schedule["schedule_mode"] = {"last_select_mode": schedule["mode_type"]}
     self._logger.debug(
         "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
     )

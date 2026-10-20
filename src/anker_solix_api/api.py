@@ -672,6 +672,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     elif key == "schedule" and isinstance(value, dict):
                         device[key] = dict(value)
                         # set default presets for no active schedule slot
+                        pps_type = False
                         if device.get("type") == SolixDeviceType.COMBINER_BOX.value:
                             # assume generation and ac type for tracking schedule data in combiner box
                             generation = 3
@@ -680,6 +681,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # assume generation and ac type for tracking schedule data in F3000 Solarbank PPS systems
                             generation = 2
                             ac_type = True
+                            pps_type = True
                         else:
                             generation = int(device.get("generation", 0))
                             ac_type = bool(device.get("grid_to_battery_power") or False)
@@ -737,8 +739,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                             "preset_manual_backup_end": 0,
                                             "preset_backup_option": False,
                                         }
-                                        if device.get("type")
-                                        != SolixDeviceType.SOLARBANK_PPS.value
+                                        if pps_type
                                         else {}
                                     )
                                 )
@@ -801,7 +802,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                     [
                                         day.get("ranges") or []
                                         for day in (value.get(rate_plan_name) or [{}])
-                                        if weekday in (day.get("week") or [])
+                                        if isinstance(day, dict)
+                                        and weekday in (day.get("week") or [])
                                     ]
                                 ),
                                 [],
@@ -839,8 +841,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                                 or SolixDefaults.PRESET_TYPE
                                             )
                                         break
-                            if ac_type and (
-                                backup := value.get(SolarbankRatePlan.backup) or {}
+                            if (
+                                ac_type
+                                and not pps_type
+                                and (
+                                    backup := value.get(SolarbankRatePlan.backup) or {}
+                                )
                             ):
                                 # check whether now in active backup interval to update usage mode info because active backup mode is not reflected in schedule object
                                 start = (backup.get("ranges") or [{}])[0].get(
@@ -1564,18 +1570,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if (site.get("smart_plug_info") or {}).get("smartplug_list"):
                 options.add(SolarbankUsageMode.smartplugs.name)
             # Add options introduced with SB2 AC for AC charging
-            if (
-                "grid_to_battery_power" in device
-                or ac_devs
-                or device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
-            ):
+            if "grid_to_battery_power" in device or ac_devs:
                 options.add(SolarbankUsageMode.backup.name)
-                # Add use time if plan is defined
-                if smartmeter and (
+            # Add use time if plan is defined
+            if (
+                (
+                    "grid_to_battery_power" in device
+                    or ac_devs
+                    or device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+                )
+                and smartmeter
+                and (
                     ignoreAdmin
                     or (device.get("schedule") or {}).get(SolarbankRatePlan.use_time)
-                ):
-                    options.add(SolarbankUsageMode.use_time.name)
+                )
+            ):
+                options.add(SolarbankUsageMode.use_time.name)
             # Add options introduced with SB3
             if ((device.get("generation") or 0) >= 3 or smart_devs) and smartmeter:
                 options.add(SolarbankUsageMode.smart.name)
@@ -1596,7 +1606,12 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             options.add(SolixPriceTypes.FIXED.value)
             # add options if required plan defined in schedule
             if sn := next(
-                iter((site.get("solarbank_info") or {}).get("solarbank_list") or []), {}
+                iter(
+                    (site.get("solarbank_info") or {}).get("solarbank_list")
+                    or (site.get("solarbank_pps_info") or {}).get("pps_list")
+                    or []
+                ),
+                {},
             ).get("device_sn"):
                 schedule = (self.devices.get(sn) or {}).get("schedule") or {}
             else:
@@ -2183,8 +2198,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             self._update_site(
                 siteId,
                 {
-                    "legal_power_limit": data.get("legal_power_limit") or 0,  # Actual limit setting
-                    "legal_limit": data.get("legal_limit") or 0,  # Legal limit, 0 if unlimited
+                    "legal_power_limit": data.get("legal_power_limit")
+                    or 0,  # Actual limit setting
+                    "legal_limit": data.get("legal_limit")
+                    or 0,  # Legal limit, 0 if unlimited
                     "parallel_type": data.get("parallel_type") or "",
                     "power_limit_option": data.get("power_limit_option"),
                 },
@@ -2236,12 +2253,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     "set_load_power": site.get("retain_load", ""),
                 }
                 | (
-                    {
-                        "unlock_default_power_type": data.get(
-                            "unlock_default_power_type"
-                        )
-                    }
-                    if "unlock_default_power_type" in data else {}
+                    {"unlock_default_power_type": data.get("unlock_default_power_type")}
+                    if "unlock_default_power_type" in data
+                    else {}
                 )
                 | station,
                 siteId=siteId,
