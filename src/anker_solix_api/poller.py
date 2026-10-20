@@ -1380,7 +1380,7 @@ async def poll_device_details(  # noqa: C901
 
         elif dev_type in ({SolixDeviceType.CHARGER.value} - exclude):
             # Fetch mini charger datails for supported models
-            if (pn := device.get("device_pn")) == "A2345":
+            if (pn := device.get("device_pn")) in ["A2345", "A91B2"]:
                 # Fetch custom screensavers for device and flatten it for merge with stock screensavers
                 await api.get_charger_manual_screensavers(
                     deviceSn=sn, fromFile=fromFile

@@ -532,7 +532,8 @@ class AnkerSolixClientSession:
             #     'x-key-ident': the key pair id, 32 hex chars, constant per session
             #     'x-request-once': a fresh random nonce, 32 hex chars, per request
             #     'x-request-ts': [request timestamp] # Unix Timestamp in s as string
-            #     'x-signature': HMAC-SHA256(presetKey_hex, ts+once+encrypted_body)
+            #     'x-signature': HMAC-SHA256(shared_secret[:16].hex(), ts+once+encrypted_body)
+            #         (the presetKey signs only the openapi/oauth/key/exchange handshake)
             # The body goes on the wire as text/plain base64 ciphertext, and the
             # response returns an encrypted "data" field alongside a "signature".
             timestamp = generateTimestamp()
