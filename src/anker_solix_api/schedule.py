@@ -3118,11 +3118,11 @@ async def set_sb2_use_time(  # noqa: C901
     dev = self.devices.get(deviceSn, {})
     mqtt = dev.get("mqtt_data") or {}
     if "reserved_soc" in schedule:
-        # given, existing or default backup soc, ensure backup soc is 5 <= backup <= max_soc
+        # given, existing or default backup soc, ensure backup soc is min_soc <= backup <= max_soc
         schedule["reserved_soc"] = min(
-            int(mqtt.get("max_soc") or dev.get("charge_upper_limit") or 100),
+            int(mqtt.get("max_soc") or dev.get("charge_upper_limit") or 80),
             max(
-                int(mqtt.get("power_cutoff") or dev.get("discharge_lower_limit") or 5),
+                int(mqtt.get("power_cutoff") or dev.get("discharge_lower_limit") or 20),
                 int(backup_soc or schedule.get("reserved_soc") or 0),
             ),
         )
