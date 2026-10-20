@@ -1207,7 +1207,7 @@ class AnkerSolixApiExport:
                     # query screensavers once for all supported models
                     if screensavers is None:
                         screensavers = True
-                        for model in ["A2345"]:
+                        for model in ["A2345", "A91B2"]:
                             self._logger.info(
                                 "Exporting screensavers for model '%s'...", model
                             )
