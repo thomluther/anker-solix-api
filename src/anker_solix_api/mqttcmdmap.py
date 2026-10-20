@@ -142,6 +142,12 @@ class SolixMqttCommands:
     usbc_3_end_time: str = "usbc_3_end_time"
     usbc_4_end_time: str = "usbc_4_end_time"
     usba_end_time: str = "usba_end_time"
+    ac_1_port_timer: str = "ac_1_port_timer"
+    ac_2_port_timer: str = "ac_2_port_timer"
+    ac_1_start_time: str = "ac_1_start_time"
+    ac_2_start_time: str = "ac_2_start_time"
+    ac_1_end_time: str = "ac_1_end_time"
+    ac_2_end_time: str = "ac_2_end_time"
     soc_limits: str = "soc_limits"
     backup_soc: str = "backup_soc"
     pps_usage_mode: str = "pps_usage_mode"
@@ -205,6 +211,15 @@ class SolixMqttCommands:
     clock_holiday_switch: str = "clock_holiday_switch"
     charger_theme: str = "charger_theme"
     charger_theme_custom: str = "charger_theme_custom"
+    compatibility_switch: str = "compatibility_switch"
+    device_identification_switch: str = "device_identification_switch"
+    port_widgets_switch: str = "port_widgets_switch"
+    ac_light_mode_select: str = "ac_light_mode_select"
+    ac_input_disable_switch: str = "ac_input_disable_switch"
+    outage_alert_switch: str = "outage_alert_switch"
+    display_language_select: str = "display_language_select"
+    day_brightness_select: str = "day_brightness_select"
+    night_brightness_select: str = "night_brightness_select"
     circuit_priority: str = "circuit_priority"
     backup_charge_plan: str = "backup_charge_plan"
     backup_charge_storm_guard: str = "backup_charge_storm_guard"
@@ -1915,12 +1930,20 @@ CMD_CHARGER_THEME = CMD_COMMON | {
                     VALUE_STATE: "holiday_switch",
                 },
                 {
+                    # Theme index: Theme 1-3 (0-2) built in, network catalog theme (3)
+                    # with id and url, custom upload (5)
                     NAME: "set_theme_type",
-                    VALUE_OPTIONS: {"stock": 1, "custom": 2},
-                    MASK: 0x06,  # Stock is bit 1, custom is bit 2
+                    VALUE_OPTIONS: {
+                        "theme_1": 0,
+                        "theme_2": 1,
+                        "theme_3": 2,
+                        "network": 3,
+                        "custom": 5,
+                    },
+                    MASK: 0x3F,
                     MASK_STATE: "clock_settings",
-                    STATE_NAME: "theme_type",
-                    VALUE_DEFAULT: 1,
+                    STATE_NAME: "theme_index",
+                    VALUE_DEFAULT: 3,
                 },
             ]
         },
@@ -1944,7 +1967,7 @@ CMD_CHARGER_THEME = CMD_COMMON | {
         VALUE_MAX: 0xFFFFFFFF,
     },
     "a5": {
-        NAME: "set_unknown_a5",  # only FFFFFFFF seen
+        NAME: "set_unknown_a5",  # theme text color, FFFFFFFF for the theme default
         TYPE: DeviceHexDataTypes.var.value,
         SIGNED: False,
         VALUE_MIN: 0,
@@ -2003,6 +2026,50 @@ CMD_DISPLAY_TIMEOUT_MODE = CMD_COMMON | {
             "300": 3,
             "1800": 4,
         },
+    },
+}
+
+CMD_CHARGER_COMPATIBILITY_SWITCH = CMD_COMMON | {
+    # Command: Maximum Compatibility switch, disables device identification while on
+    COMMAND_NAME: SolixMqttCommands.compatibility_switch,
+    "a2": {
+        NAME: "set_compatibility_switch",  # Off (0), On (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "compatibility_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+}
+
+CMD_CHARGER_DEVICE_IDENTIFICATION_SWITCH = CMD_COMMON | {
+    # Command: Charging device identification switch (on-screen device name)
+    COMMAND_NAME: SolixMqttCommands.device_identification_switch,
+    "a2": {
+        NAME: "set_device_identification_switch",  # Off (0), On (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "device_identification_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+}
+
+CMD_CHARGER_PORT_WIDGETS_SWITCH = CMD_COMMON | {
+    # Command: Show (1) or hide (0) the per-port icons and values on display page 5
+    COMMAND_NAME: SolixMqttCommands.port_widgets_switch,
+    "a2": {
+        NAME: "set_port_widgets_switch",  # Off (0), On (1)
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "port_widgets_switch",
+        VALUE_OPTIONS: {"off": 0, "on": 1},
+    },
+}
+
+CMD_AC_LIGHT_MODE = CMD_COMMON | {
+    # Command: AC outlet LED mode: Normal (0), Sleep (1)
+    COMMAND_NAME: SolixMqttCommands.ac_light_mode_select,
+    "a2": {
+        NAME: "set_ac_light_mode",
+        TYPE: DeviceHexDataTypes.ui.value,
+        STATE_NAME: "ac_light_mode",
+        VALUE_OPTIONS: {"normal": 0, "sleep": 1},
     },
 }
 
@@ -2190,6 +2257,94 @@ CMD_PORT_END = {
     }
     for idx, port in enumerate(["usbc_1", "usbc_2", "usbc_3", "usbc_4", "usba"])
 }
+
+# Prime Charging Station port ids: the AC outlets come first, USB-A has no relay
+STATION_PORT_IDS = {
+    "ac_1": 0,
+    "ac_2": 1,
+    "usbc_1": 2,
+    "usbc_2": 3,
+    "usbc_3": 4,
+    "usbc_4": 5,
+}
+
+CMD_STATION_PORT_SWITCH = {
+    port: CMD_USB_PORT_SWITCH["usbc_1"]
+    | {
+        "a2": {
+            **CMD_USB_PORT_SWITCH["usbc_1"]["a2"],
+            VALUE_OPTIONS: STATION_PORT_IDS,
+            VALUE_DEFAULT: idx,
+        },
+        "a3": {
+            **CMD_USB_PORT_SWITCH["usbc_1"]["a3"],
+            STATE_NAME: f"{port}_switch",
+        },
+    }
+    for port, idx in STATION_PORT_IDS.items()
+    if port.startswith("usbc")  # the AC outlets use CMD_AC_PORT_SWITCH
+}
+
+CMD_STATION_PORT_TIMER = {
+    port: CMD_PORT_TIMER["usbc_1"]
+    | {
+        "a2": {
+            **CMD_PORT_TIMER["usbc_1"]["a2"],
+            VALUE_OPTIONS: STATION_PORT_IDS,
+            VALUE_DEFAULT: idx,
+        },
+        "a3": {
+            **CMD_PORT_TIMER["usbc_1"]["a3"],
+            BYTES: {
+                key: {
+                    **sub,
+                    STATE_NAME: f"{port}_timer_{part}",
+                    VALUE_STATE: f"{port}_timer_{part}",
+                }
+                for (key, sub), part in zip(
+                    CMD_PORT_TIMER["usbc_1"]["a3"][BYTES].items(),
+                    ["switch", "seconds"],
+                    strict=True,
+                )
+            },
+        },
+    }
+    for port, idx in STATION_PORT_IDS.items()
+}
+
+CMD_STATION_PORT_START, CMD_STATION_PORT_END = (
+    {
+        port: CMD_PORT_SCHEDULE
+        | {
+            "a2": {
+                **CMD_PORT_SCHEDULE["a2"],
+                VALUE_OPTIONS: STATION_PORT_IDS,
+                VALUE_DEFAULT: idx,
+            },
+            "a3": {
+                **CMD_PORT_SCHEDULE["a3"],
+                VALUE_DEFAULT: CMD_PORT_SCHEDULE["a3"][VALUE_OPTIONS][kind],
+            },
+            "a4": {
+                **CMD_PORT_SCHEDULE["a4"],
+                BYTES: {
+                    key: {
+                        **sub,
+                        STATE_NAME: f"{port}_{kind}_{part}",
+                        VALUE_STATE: f"{port}_{kind}_{part}",
+                    }
+                    for (key, sub), part in zip(
+                        CMD_PORT_SCHEDULE["a4"][BYTES].items(),
+                        ["switch", "hour", "minute", "weekdays"],
+                        strict=True,
+                    )
+                },
+            },
+        }
+        for port, idx in STATION_PORT_IDS.items()
+    }
+    for kind in ["start", "end"]
+)
 
 CMD_PORT_PRIORITY = CMD_COMMON | {
     # Command: Set charger port priority 4 Bit mask

@@ -15,6 +15,7 @@ from .mqttcmdmap import (
     CMD_AC_CHARGE_LIMIT,
     CMD_AC_DC_MODE,
     CMD_AC_FAST_CHARGE_SWITCH,
+    CMD_AC_LIGHT_MODE,
     CMD_AC_OUTPUT_MODE,
     CMD_AC_OUTPUT_MODE_INV,
     CMD_AC_OUTPUT_MODE_V2,
@@ -31,8 +32,11 @@ from .mqttcmdmap import (
     CMD_CHARGER_CLOCK_DISPLAY,
     CMD_CHARGER_CLOCK_HOLIDAY,
     CMD_CHARGER_CLOCK_MODE,
+    CMD_CHARGER_COMPATIBILITY_SWITCH,
     CMD_CHARGER_CUSTOM_USAGE_MODE,
+    CMD_CHARGER_DEVICE_IDENTIFICATION_SWITCH,
     CMD_CHARGER_KNOB_MODE,
+    CMD_CHARGER_PORT_WIDGETS_SWITCH,
     CMD_CHARGER_THEME,
     CMD_CHARGER_USAGE_MODE,
     CMD_CIRCUIT_PRIORITY,
@@ -101,6 +105,10 @@ from .mqttcmdmap import (
     CMD_SB_USAGE_MODE,
     CMD_SMART_TOUCH_MODE,
     CMD_SOC_LIMITS_V2,
+    CMD_STATION_PORT_END,
+    CMD_STATION_PORT_START,
+    CMD_STATION_PORT_SWITCH,
+    CMD_STATION_PORT_TIMER,
     CMD_STATUS_REQUEST,
     CMD_SWIPE_DOWN_MODE,
     CMD_SWIPE_UP_MODE,
@@ -1238,7 +1246,9 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.str.value,
             },
             "40": {
-                NAME: "device_1_mode",  # reverse charge (1), charge (2), standby (3)
+                # Car alternator charger: none attached (0), output to the car (1), charge
+                # from the alternator (2), standby (3)
+                NAME: "device_1_mode",
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "41": {
@@ -5767,6 +5777,66 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.pps_tou_schedule: CMD_TOU_PLAN_V2,
             SolixMqttCommands.backup_soc: CMD_PPS_BACKUP_SOC_V2,
         },
+        "0091": {
+            # Clock screen command group, read back in 0421 da; only sent fields change
+            COMMAND_LIST: [
+                SolixMqttCommands.charger_theme,  # field a2
+                SolixMqttCommands.clock_mode_select,  # field a7
+                SolixMqttCommands.day_brightness_select,  # field ac
+                SolixMqttCommands.night_brightness_select,  # field ad
+            ],
+            SolixMqttCommands.charger_theme: CMD_COMMON_V2
+            | {
+                "a2": {
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    BYTES: {
+                        "00": [
+                            {
+                                NAME: "set_screen_saver_switch",
+                                VALUE_OPTIONS: {"off": 0, "on": 1},
+                                MASK: 0x80,
+                                STATE_NAME: "screen_saver_switch",
+                                VALUE_STATE: "screen_saver_switch",
+                            },
+                            {
+                                NAME: "set_lcd_theme",  # Clock Theme 1-3 (0-2)
+                                VALUE_OPTIONS: {
+                                    "theme_1": 0,
+                                    "theme_2": 1,
+                                    "theme_3": 2,
+                                },
+                                MASK: 0x7F,
+                                STATE_NAME: "lcd_theme",
+                                VALUE_STATE: "lcd_theme",
+                            },
+                        ]
+                    },
+                },
+            },
+            SolixMqttCommands.clock_mode_select: CMD_COMMON_V2
+            | {"a7": {**CMD_CHARGER_CLOCK_MODE["a2"], STATE_NAME: "lcd_time_format"}},
+            SolixMqttCommands.day_brightness_select: CMD_COMMON_V2
+            | {
+                "ac": {
+                    NAME: "set_day_brightness_level",  # 5% (0), 20% (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "day_brightness_level",
+                    VALUE_OPTIONS: {"5": 0, "20": 1},
+                },
+            },
+            SolixMqttCommands.night_brightness_select: CMD_COMMON_V2
+            | {
+                "ad": {
+                    NAME: "set_night_brightness_level",  # 5% (0), 20% (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "night_brightness_level",
+                    VALUE_OPTIONS: {"5": 0, "20": 1},
+                },
+            },
+        },
+        # Clock screen read request for message 0892
+        "0092": CMD_COMMON_V2 | {COMMAND_NAME: SolixMqttCommands.theme_request},
+        "0100": CMD_STATUS_REQUEST,  # Device status request for message 0900
         "0101": {
             # AC command group
             COMMAND_LIST: [
@@ -5775,6 +5845,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.ac_charge_limit,  # field a4
                 SolixMqttCommands.ac_output_mode_select,  # field a6
                 SolixMqttCommands.ac_fast_charge_switch,  # field a7
+                SolixMqttCommands.ac_input_disable_switch,  # field ab
             ],
             SolixMqttCommands.ac_output_switch: CMD_COMMON_V2
             | {"a2": CMD_AC_OUTPUT_SWITCH["a2"]},
@@ -5795,15 +5866,31 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.ac_output_mode_select: CMD_AC_OUTPUT_MODE_V2,
             SolixMqttCommands.ac_fast_charge_switch: CMD_COMMON_V2
             | {"a7": CMD_AC_FAST_CHARGE_SWITCH["a2"]},
+            SolixMqttCommands.ac_input_disable_switch: CMD_COMMON_V2
+            | {
+                "ab": {
+                    # app: acInputDisableSwitch ("Battery-Only Power"), on also turns off
+                    # Ultrafast Charge
+                    NAME: "set_ac_input_disable_switch",  # Off (0), On (1)
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    STATE_NAME: "ac_input_disable_state",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
         },
         "0102": {
             # DC command group
             COMMAND_LIST: [
                 SolixMqttCommands.dc_output_switch,  # field a2
+                SolixMqttCommands.dc_output_timeout_seconds,  # field a3
                 SolixMqttCommands.dc_12v_output_mode_select,  # field a4
             ],
             SolixMqttCommands.dc_output_switch: CMD_COMMON_V2
             | {"a2": CMD_DC_OUTPUT_SWITCH["a2"]},
+            SolixMqttCommands.dc_output_timeout_seconds: CMD_COMMON_V2
+            | {  # Car socket timeout seconds, custom range: 0-86400, step 300
+                "a3": CMD_DC_OUTPUT_TIMEOUT_SEC["a2"],
+            },
             SolixMqttCommands.dc_12v_output_mode_select: CMD_DC_12V_OUTPUT_MODE_V2,
         },
         "0103": {
@@ -5815,7 +5902,9 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.temp_unit_switch,  # field a5
                 SolixMqttCommands.device_timeout_minutes,  # field a6
                 SolixMqttCommands.port_memory_switch,  # field a8
+                SolixMqttCommands.display_language_select,  # field a9
                 SolixMqttCommands.soc_limits,  # field aa, ab
+                SolixMqttCommands.outage_alert_switch,  # field b0
             ],
             SolixMqttCommands.display_switch: CMD_COMMON_V2
             | {"a2": CMD_DISPLAY_SWITCH["a2"]},
@@ -5840,10 +5929,35 @@ SOLIXMQTTMAP: Final[dict] = {
             },
             SolixMqttCommands.port_memory_switch: CMD_COMMON_V2
             | {"a8": CMD_PORT_MEMORY_SWITCH["a2"]},
+            SolixMqttCommands.display_language_select: CMD_COMMON_V2
+            | {
+                "a9": {
+                    # English (0), Chinese (1), French (2), German (3), Japanese (4)
+                    NAME: "set_display_language",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "display_language",
+                    VALUE_OPTIONS: {
+                        "english": 0,
+                        "chinese": 1,
+                        "french": 2,
+                        "german": 3,
+                        "japanese": 4,
+                    },
+                },
+            },
             SolixMqttCommands.soc_limits: CMD_SOC_LIMITS_V2,
             # Contains fields aa ab for the limits
             # aa = max_soc: 80, 85, 90, 95, 100 %
             # ab = min_soc: 1, 5, 10, 15, 20 %
+            SolixMqttCommands.outage_alert_switch: CMD_COMMON_V2
+            | {
+                "b0": {
+                    NAME: "set_outage_alert_switch",  # app: outageAlertSwitch. Off (0), On (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "outage_alert_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
         },
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1783_0421,
@@ -7143,7 +7257,7 @@ SOLIXMQTTMAP: Final[dict] = {
         "0205": {  # Set Theme and clock display
             COMMAND_LIST: [
                 SolixMqttCommands.charger_theme,  # fields a2-a6
-                SolixMqttCommands.charger_theme_custom,  # fields a2-a5, a7 with custom url
+                SolixMqttCommands.charger_theme_custom,  # fields a2-a5, a7 with custom upload url
             ],
             SolixMqttCommands.charger_theme: CMD_CHARGER_THEME,
             SolixMqttCommands.charger_theme_custom: {
@@ -7170,7 +7284,7 @@ SOLIXMQTTMAP: Final[dict] = {
                         "00": [
                             {
                                 **item,
-                                VALUE_DEFAULT: 2,
+                                VALUE_DEFAULT: 5,
                             }
                             if item.get(NAME) == "set_theme_type"
                             else item
@@ -7244,7 +7358,7 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.usbc_4_port_timer: CMD_PORT_TIMER.get("usbc_4"),
             SolixMqttCommands.usba_port_timer: CMD_PORT_TIMER.get("usba"),
         },
-        # "020a" # unknown client command, fields a2 (country_id), a3 (account_id)
+        # "020a" # client command, fields a2 (country code, as 0312 a2), a3 (owner account id)
         # Special realtime trigger for this device, with 10 seconds timeout fix, sending a 0303 message per second
         "020b": {
             k: v for k, v in CMD_REALTIME_TRIGGER.items() if k not in ["a2", "a3"]
@@ -7253,10 +7367,12 @@ SOLIXMQTTMAP: Final[dict] = {
         "020e": CMD_CHARGER_KNOB_MODE,  # Set charger knob mode: 0 forward, 1 backward
         "020f": CMD_CHARGER_CLOCK_HOLIDAY,  # Set weekend mode for clock display
         "0210": CMD_CHARGER_CLOCK_MODE,  # Set charger clock mode: 0: 12h, 1: 24h
-        # "0212" # unknown cloud command, fields a2-a8
+        # "0212" # cloud command, holiday theme schedule: a2 theme id (0 clears), a3/a4 u32,
+        # a5/a6 7-byte datetimes, a7 url
         "0213": CMD_CHARGER_CLOCK_DISPLAY,  # Set charger clock display schedule
-        # "0214": CMD_TBD_SWITCH,  # unknown client command, fields a2
-        # "0223": CMD_TBD_SWITCH,  # unknown client command, fields a2
+        "0214": CMD_CHARGER_COMPATIBILITY_SWITCH,  # Maximum Compatibility: 0 off, 1 on
+        "0222": CMD_CHARGER_PORT_WIDGETS_SWITCH,  # Display page 5 port widgets: 0 hide, 1 show
+        "0223": CMD_CHARGER_DEVICE_IDENTIFICATION_SWITCH,  # Device identification: 0 off, 1 on
         "0300": {
             "a4": {NAME: "utc_offset", SIGNED: True},  # s8 hours, as 0312 a3
             "fe": {NAME: "msg_timestamp"},
@@ -7342,12 +7458,77 @@ SOLIXMQTTMAP: Final[dict] = {
     # Prime Charging Station 240W 8-in-1
     "A91B2": {
         "0200": CMD_STATUS_REQUEST,  # Device status request for message 0a00
+        "0203": CMD_DISPLAY_TIMEOUT_MODE,  # 0 (Never), 1 (30 sec), 2 (60 sec), 3 (5 min), 4 (30 min)
+        "0204": CMD_COMMON
+        | {
+            COMMAND_NAME: SolixMqttCommands.display_brightness,
+            "a2": {
+                NAME: "set_display_brightness",  # Low (0), Medium (1), High (2)
+                TYPE: DeviceHexDataTypes.ui.value,
+                STATE_NAME: "display_brightness",
+                VALUE_OPTIONS: {"low": 0, "medium": 1, "high": 2},
+            },
+        },
+        "0205": CMD_COMMON
+        | {
+            # Clock display switch and built-in theme, set independently of each other
+            COMMAND_NAME: SolixMqttCommands.charger_theme,
+            "a2": {
+                TYPE: DeviceHexDataTypes.ui.value,
+                BYTES: {
+                    "00": [
+                        {
+                            NAME: "set_clock_switch",
+                            VALUE_OPTIONS: {"off": 0, "on": 1},
+                            MASK: 0x80,
+                            STATE_NAME: "clock_switch",
+                            VALUE_STATE: "clock_switch",
+                        },
+                        {
+                            NAME: "set_theme_index",  # Theme 1-3 (0-2)
+                            VALUE_OPTIONS: {"theme_1": 0, "theme_2": 1, "theme_3": 2},
+                            MASK: 0x7F,
+                            STATE_NAME: "theme_index",
+                            VALUE_STATE: "theme_index",
+                        },
+                    ]
+                },
+            },
+        },
+        "0206": CMD_COMMON
+        | {
+            COMMAND_NAME: SolixMqttCommands.charger_usage_mode,
+            "a2": {
+                TYPE: DeviceHexDataTypes.sile.value,
+                LENGTH: 2,
+                BYTES: {
+                    "00": {
+                        NAME: "set_charging_mode",  # Smart Dynamic (0), High-Power (1)
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_OPTIONS: {"smart_dynamic": 0, "high_power": 1},
+                        STATE_NAME: "charging_mode",
+                        VALUE_STATE: "charging_mode",
+                    },
+                    "01": {
+                        # High-Power preset Mode 1-3 (0-2), ignored in Smart Dynamic
+                        NAME: "set_charging_submode",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                        VALUE_OPTIONS: {"mode_1": 0, "mode_2": 1, "mode_3": 2},
+                        STATE_NAME: "charging_submode",
+                        VALUE_STATE: "charging_submode",
+                    },
+                },
+            },
+        },
         "0207": {
-            # AC outlet switch command. Same message type as A2345 USB port switch.
-            # port_select: 0=ac_1, 1=ac_2
+            # Output switch per port: 0=ac_1, 1=ac_2, 2-5=usbc_1-4 (USB-A has no relay)
             COMMAND_LIST: [
                 SolixMqttCommands.ac_1_port_switch,
                 SolixMqttCommands.ac_2_port_switch,
+                SolixMqttCommands.usbc_1_port_switch,
+                SolixMqttCommands.usbc_2_port_switch,
+                SolixMqttCommands.usbc_3_port_switch,
+                SolixMqttCommands.usbc_4_port_switch,
             ],
             SolixMqttCommands.ac_1_port_switch: CMD_AC_PORT_SWITCH
             | {
@@ -7371,11 +7552,63 @@ SOLIXMQTTMAP: Final[dict] = {
                     STATE_NAME: "ac_2_switch",
                 },
             },
+            SolixMqttCommands.usbc_1_port_switch: CMD_STATION_PORT_SWITCH.get("usbc_1"),
+            SolixMqttCommands.usbc_2_port_switch: CMD_STATION_PORT_SWITCH.get("usbc_2"),
+            SolixMqttCommands.usbc_3_port_switch: CMD_STATION_PORT_SWITCH.get("usbc_3"),
+            SolixMqttCommands.usbc_4_port_switch: CMD_STATION_PORT_SWITCH.get("usbc_4"),
+        },
+        "0208": {
+            # Port schedule per port and time type, same port ids as 0207
+            COMMAND_LIST: [
+                SolixMqttCommands.ac_1_start_time,
+                SolixMqttCommands.ac_2_start_time,
+                SolixMqttCommands.usbc_1_start_time,
+                SolixMqttCommands.usbc_2_start_time,
+                SolixMqttCommands.usbc_3_start_time,
+                SolixMqttCommands.usbc_4_start_time,
+                SolixMqttCommands.ac_1_end_time,
+                SolixMqttCommands.ac_2_end_time,
+                SolixMqttCommands.usbc_1_end_time,
+                SolixMqttCommands.usbc_2_end_time,
+                SolixMqttCommands.usbc_3_end_time,
+                SolixMqttCommands.usbc_4_end_time,
+            ],
+            SolixMqttCommands.ac_1_start_time: CMD_STATION_PORT_START.get("ac_1"),
+            SolixMqttCommands.ac_2_start_time: CMD_STATION_PORT_START.get("ac_2"),
+            SolixMqttCommands.usbc_1_start_time: CMD_STATION_PORT_START.get("usbc_1"),
+            SolixMqttCommands.usbc_2_start_time: CMD_STATION_PORT_START.get("usbc_2"),
+            SolixMqttCommands.usbc_3_start_time: CMD_STATION_PORT_START.get("usbc_3"),
+            SolixMqttCommands.usbc_4_start_time: CMD_STATION_PORT_START.get("usbc_4"),
+            SolixMqttCommands.ac_1_end_time: CMD_STATION_PORT_END.get("ac_1"),
+            SolixMqttCommands.ac_2_end_time: CMD_STATION_PORT_END.get("ac_2"),
+            SolixMqttCommands.usbc_1_end_time: CMD_STATION_PORT_END.get("usbc_1"),
+            SolixMqttCommands.usbc_2_end_time: CMD_STATION_PORT_END.get("usbc_2"),
+            SolixMqttCommands.usbc_3_end_time: CMD_STATION_PORT_END.get("usbc_3"),
+            SolixMqttCommands.usbc_4_end_time: CMD_STATION_PORT_END.get("usbc_4"),
+        },
+        "0209": {
+            # Port countdown timer per port, same port ids as 0207
+            COMMAND_LIST: [
+                SolixMqttCommands.ac_1_port_timer,
+                SolixMqttCommands.ac_2_port_timer,
+                SolixMqttCommands.usbc_1_port_timer,
+                SolixMqttCommands.usbc_2_port_timer,
+                SolixMqttCommands.usbc_3_port_timer,
+                SolixMqttCommands.usbc_4_port_timer,
+            ],
+            SolixMqttCommands.ac_1_port_timer: CMD_STATION_PORT_TIMER.get("ac_1"),
+            SolixMqttCommands.ac_2_port_timer: CMD_STATION_PORT_TIMER.get("ac_2"),
+            SolixMqttCommands.usbc_1_port_timer: CMD_STATION_PORT_TIMER.get("usbc_1"),
+            SolixMqttCommands.usbc_2_port_timer: CMD_STATION_PORT_TIMER.get("usbc_2"),
+            SolixMqttCommands.usbc_3_port_timer: CMD_STATION_PORT_TIMER.get("usbc_3"),
+            SolixMqttCommands.usbc_4_port_timer: CMD_STATION_PORT_TIMER.get("usbc_4"),
         },
         # Special realtime trigger (no a2/a3 timeout params, same as A2345)
         "020b": {
             k: v for k, v in CMD_REALTIME_TRIGGER.items() if k not in ["a2", "a3"]
         },
+        "0210": CMD_CHARGER_CLOCK_MODE,  # Set clock mode: 0: 12h, 1: 24h
+        "0214": CMD_AC_LIGHT_MODE,  # Set AC outlet LED mode: 0 normal, 1 sleep
         # Port switch state notification (eventual broadcast by device after 0207 command)
         "0302": {
             "a2": {NAME: "set_port_switch_select"},
@@ -7384,6 +7617,29 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~1 second with realtime trigger. USB port consumption data.
         "0303": _A91B2_0303,
+        # Interval: Upon change of a port timer's switch, same port ids as 0207. The two
+        # u32 values are in the reverse order of the A2345 0307
+        "0307": {
+            "a2": {NAME: "set_port_timer_select"},
+            "a3": {
+                BYTES: {
+                    "00": {
+                        NAME: "set_port_timer_switch",
+                        TYPE: DeviceHexDataTypes.ui.value,
+                    },  # "off": 0, "on": 1
+                    "01": {
+                        # 0 on a USB-C port once switched off, the set seconds on an AC
+                        # outlet
+                        NAME: "port_timer_remaining_seconds",
+                        TYPE: DeviceHexDataTypes.var.value,
+                    },
+                    "05": {
+                        NAME: "port_timer_seconds",
+                        TYPE: DeviceHexDataTypes.var.value,
+                    },
+                },
+            },
+        },
         # Full device status including AC outlet switch states, sent on status request.
         "0a00": _A91B2_0a00,
     },
