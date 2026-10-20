@@ -2102,11 +2102,12 @@ async def set_sb2_home_load(  # noqa: C901
     # Update existing usage mode, reset to an available automatic or manual mode if required rate plan deleted
     # TODO(SB3): Once time_slot rate plan is available in schedule, verify against existing plan instead of dynamic provider setup
     mode_type = (
-        getattr(
-            SolarbankUsageMode,
-            (usage_mode_options & {SolarbankUsageMode.smartmeter.name})
-            or (usage_mode_options & {SolarbankUsageMode.smartplug.name})
-            or SolarbankUsageMode.manual.name,
+        (
+            SolarbankUsageMode.smartmeter.value
+            if SolarbankUsageMode.smartmeter.name in usage_mode_options
+            else SolarbankUsageMode.smartplugs.value
+            if SolarbankUsageMode.smartplugs.name in usage_mode_options
+            else SolarbankUsageMode.manual.value
         )
         if (
             usage_mode == SolarbankUsageMode.use_time.value
@@ -3133,11 +3134,12 @@ async def set_sb2_use_time(  # noqa: C901
     ):
         # Allow automatic modes only when smart meter or smart plugs available in site
         usage_mode_options = self.solarbank_usage_mode_options(deviceSn=deviceSn)
-        schedule["mode_type"] = getattr(
-            SolarbankUsageMode,
-            ({usage_mode_options} & {SolarbankUsageMode.smartmeter.name})
-            or ({usage_mode_options} & {SolarbankUsageMode.smartplug.name})
-            or SolarbankUsageMode.manual.name,
+        schedule["mode_type"] = (
+            SolarbankUsageMode.smartmeter.value
+            if SolarbankUsageMode.smartmeter.name in usage_mode_options
+            else SolarbankUsageMode.smartplugs.value
+            if SolarbankUsageMode.smartplugs.name in usage_mode_options
+            else SolarbankUsageMode.manual.value
         )
         if isinstance(schedule.get("schedule_mode"), dict):
             schedule["schedule_mode"] = {"last_select_mode": schedule["mode_type"]}
