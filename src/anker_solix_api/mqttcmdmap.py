@@ -215,6 +215,7 @@ class SolixMqttCommands:
     device_identification_switch: str = "device_identification_switch"
     port_widgets_switch: str = "port_widgets_switch"
     ac_light_mode_select: str = "ac_light_mode_select"
+    ac_frequency_select: str = "ac_frequency_select"
     ac_input_disable_switch: str = "ac_input_disable_switch"
     outage_alert_switch: str = "outage_alert_switch"
     display_language_select: str = "display_language_select"

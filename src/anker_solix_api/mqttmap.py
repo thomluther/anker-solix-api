@@ -5784,6 +5784,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.clock_mode_select,  # field a7
                 SolixMqttCommands.day_brightness_select,  # field ac
                 SolixMqttCommands.night_brightness_select,  # field ad
+                SolixMqttCommands.clock_display_schedule,  # fields a8-ab, ae, af
             ],
             SolixMqttCommands.charger_theme: CMD_COMMON_V2
             | {
@@ -5833,6 +5834,47 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_OPTIONS: {"5": 0, "20": 1},
                 },
             },
+            # Display Plan windows in minutes from midnight: start < end runs the same
+            # day, end < start wraps past midnight, start = end never runs. Must not
+            # carry a3/a4, whose change while online drops the other fields.
+            SolixMqttCommands.clock_display_schedule: CMD_COMMON_V2
+            | {
+                field: {
+                    NAME: f"set_{name}",
+                    TYPE: DeviceHexDataTypes.sile.value,
+                    VALUE_MIN: 0,
+                    VALUE_MAX: 1439,
+                    STATE_NAME: name,
+                    VALUE_STATE: name,
+                }
+                for field, name in [
+                    ("a8", "day_start_minutes"),
+                    ("a9", "day_end_minutes"),
+                    ("ae", "night_start_minutes"),
+                    ("af", "night_end_minutes"),
+                ]
+            }
+            | {
+                "aa": {
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    LENGTH: 1,
+                    BYTES: {
+                        "00": {
+                            **CMD_CHARGER_CLOCK_DISPLAY["a2"][BYTES]["04"],
+                            NAME: "set_lcd_repeat_cycle",
+                            STATE_NAME: "lcd_repeat_cycle",
+                            VALUE_STATE: "lcd_repeat_cycle",
+                        },
+                    },
+                },
+                "ab": {
+                    NAME: "set_day_night_split_switch",  # Off (0), On (1)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "day_night_split_switch",
+                    VALUE_STATE: "day_night_split_switch",
+                    VALUE_OPTIONS: {"off": 0, "on": 1},
+                },
+            },
         },
         # Clock screen read request for message 0892
         "0092": CMD_COMMON_V2 | {COMMAND_NAME: SolixMqttCommands.theme_request},
@@ -5844,6 +5886,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.ac_output_timeout_seconds,  # field a3
                 SolixMqttCommands.ac_charge_limit,  # field a4
                 SolixMqttCommands.ac_output_mode_select,  # field a6
+                SolixMqttCommands.ac_frequency_select,  # field a5
                 SolixMqttCommands.ac_fast_charge_switch,  # field a7
                 SolixMqttCommands.ac_input_disable_switch,  # field ab
             ],
@@ -5866,6 +5909,16 @@ SOLIXMQTTMAP: Final[dict] = {
             SolixMqttCommands.ac_output_mode_select: CMD_AC_OUTPUT_MODE_V2,
             SolixMqttCommands.ac_fast_charge_switch: CMD_COMMON_V2
             | {"a7": CMD_AC_FAST_CHARGE_SWITCH["a2"]},
+            SolixMqttCommands.ac_frequency_select: CMD_COMMON_V2
+            | {
+                "a5": {
+                    # Literal Hz; the inverter runs 50 Hz only for 50, else 60 Hz
+                    NAME: "set_ac_frequency",
+                    TYPE: DeviceHexDataTypes.ui.value,
+                    STATE_NAME: "ac_frequency",
+                    VALUE_OPTIONS: {"50": 50, "60": 60},
+                },
+            },
             SolixMqttCommands.ac_input_disable_switch: CMD_COMMON_V2
             | {
                 "ab": {
