@@ -1634,7 +1634,7 @@ _A1782_0421 = (
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "01": {
-                    NAME: "backup_discharge_soc",  # changed with min_soc % (for tou and backup usage?)
+                    NAME: "backup_soc",  # backup reserve % (discharge floor for tou)
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "02": {

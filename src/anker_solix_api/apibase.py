@@ -2241,6 +2241,8 @@ class AnkerSolixBaseApi:
         }}
         Enhanced base data with sell price in 2026
         {"site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","price": 0.4,"sell_price": 0,"site_co2": 0,"site_price_unit": "\u20ac"}
+
+        NOTE: When price_type is "use_time", price, sell_price and decimals used for fixed price in the payload are ignored
         """
         siteId = str(siteId) or ""
         decimals = int(decimals) if isinstance(decimals, int | float) else None
