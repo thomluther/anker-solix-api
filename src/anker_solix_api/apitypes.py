@@ -747,6 +747,7 @@ A1903  150W Charging Base                       Charger
 A2345  250W Prime Charger                       Charger
 A25X7  Prime Wireless Charger                   Charger
 A2687  160W Prime Charger                       Charger
+A91B2  240W Charging Station                    Charger
 A5101  X1-P6K-US/S                              Residential Storage System
 A5102  X1-H(3.68~6)K-S                          Residential Storage System
 A5103  X1-H (5~12)K-T                           Residential Storage System
@@ -758,7 +759,6 @@ A5220  X1 Battery Module                        Residential Storage System
 A5341  Backup Controller                        Residential Storage System
 A5450  Zigbee Dongle                            Residential Storage System
 AE113  XE 6/8kW                                 Residential Storage System
-A91B2  240W Charging Station                    Charger
 AE100  SOLIX Power Dock                         Plug-in Home Battery
 AE1R0  Anker SOLIX P1 Meter                     Accessory
 AE1X0  Smart Meter Gen 2                        Accessory
@@ -1849,6 +1849,7 @@ class SolixPpsWorkStatus(StrEnum):
     charging = "2"
     sleep = "3"
     shutdown = "4"
+    ota_upgrade = "5"
     unknown = "unknown"
 
 

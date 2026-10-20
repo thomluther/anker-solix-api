@@ -1943,7 +1943,7 @@ CMD_CHARGER_THEME = CMD_COMMON | {
                     },
                     MASK: 0x3F,
                     MASK_STATE: "clock_settings",
-                    STATE_NAME: "theme_index",
+                    STATE_NAME: "theme_type",
                     VALUE_DEFAULT: 3,
                 },
             ]

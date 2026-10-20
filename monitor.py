@@ -721,9 +721,7 @@ class AnkerSolixApiMonitor:
                             f"{'Has EV Charger':<{col1}}: {'YES' if feat1 else '---' if feat1 is None else ' NO':>3} {'':<{col2 - 4}} "
                             f"{'EMS Disable':<{col3}}: {'YES' if feat2 else '---' if feat2 is None else ' NO':>3}"
                         )
-                    if ai_runtime := details.get(
-                        "ai_ems_runtime"
-                    ):
+                    if ai_runtime := details.get("ai_ems_runtime"):
                         runtime = (
                             timedelta(seconds=int(sec) * (-1))
                             if str(sec := ai_runtime.get("left_time"))
@@ -757,7 +755,10 @@ class AnkerSolixApiMonitor:
                                 f"{'SG Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
                             )
                             m2 = str(status.get("manual_disaster_status", ""))
-                        if site.get("site_type") in [SolixDeviceType.HES.value, SolixDeviceType.POWERPANEL.value]:
+                        if site.get("site_type") in [
+                            SolixDeviceType.HES.value,
+                            SolixDeviceType.POWERPANEL.value,
+                        ]:
                             CONSOLE.info(
                                 f"{'Manual Backup':<{col1}}: {'Enabled' if settings.get('manual_disaster_switch') else 'Disabled':<{col2}} "
                                 f"{'Manual Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
@@ -1979,11 +1980,15 @@ class AnkerSolixApiMonitor:
                         f"{m3 and (c or cm)}{get_enum_name(SolixPpsDisplayMode, m3, 'unknown' if m3 else '----').capitalize() + ' (' + m3 + ')':<{col2 - 6}}{co} "
                         f"{'Display Timeout':<{col3}}: {m2 and (c or cm)}{(m2 or '----'):>4} Sec.{co}"
                     )
-                m1 = cm and mqtt.get("display_brightness", "")
+                m1 = cm and str(mqtt.get("display_brightness", ""))
+                m3 = cm and str(mqtt.get("display_brightness_level", ""))
                 m2 = cm and str(mqtt.get("display_timeout_mode", ""))
+                if not m1 and m3:
+                    # convert level into percentage, capped by 5% min and 100% max
+                    m1 = min(100, max(5, int(m3) * 20))
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Display Bright.':<{col1}}: {m1 and (c or cm)}{m1 or '---':>3} {'%':<{col2 - 4}}{co} "
+                        f"{'Display Bright.':<{col1}}: {m1 and (c or cm)}{m1 or '---':>3} {'%' + ('' if not m3 else ' (' + m3 + ')'):<{col2 - 4}}{co} "
                         f"{'Display Timeout':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixDisplayTimeoutMode, m2, '----').replace('_', ''):>4} Sec.  (Mode: {m2 or '-'}){co}"
                     )
                 if disaster := dev.get("disaster_support"):
@@ -2333,17 +2338,25 @@ class AnkerSolixApiMonitor:
                         f"{'AC Out Remain':<{col3}}: {m2 and (c or cm)}{str(m2) or '--:--:--':>8}{co}"
                     )
                 m1 = str(dev.get("phase", ""))
-                m2 = (cm and str(mqtt.get("branch_ct_number", ""))) or str(dev.get("branch_ct_number", ""))
-                m3 = (cm and str(mqtt.get("main_ct_number", ""))) or str(dev.get("main_ct_number", ""))
+                m2 = (cm and str(mqtt.get("branch_ct_number", ""))) or str(
+                    dev.get("branch_ct_number", "")
+                )
+                m3 = (cm and str(mqtt.get("main_ct_number", ""))) or str(
+                    dev.get("main_ct_number", "")
+                )
                 m4 = str(dev.get("main_branch_check_status", ""))
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Phase installed':<{col1}}: L({m1 and c}{m1 or '-'}{co}) / Main CT({m3 and c}{m3 or '-'}{co}{')':<{col2 - 16}}{co} "
                         f"{'Branch / Status':<{col3}}: Br CT({m2 and c}{m2 or '-'}{co}) / Check({m4 or '-'}){co}"
                     )
-                m1 = (cm and str(mqtt.get("charge_protect_threshold", ""))) or str(dev.get("charge_protect_threshold", ""))
+                m1 = (cm and str(mqtt.get("charge_protect_threshold", ""))) or str(
+                    dev.get("charge_protect_threshold", "")
+                )
                 m2 = str(dev.get("protection_status", ""))
-                m3 = (cm and str(mqtt.get("discharge_protect_threshold", ""))) or str(dev.get("discharge_protect_threshold", ""))
+                m3 = (cm and str(mqtt.get("discharge_protect_threshold", ""))) or str(
+                    dev.get("discharge_protect_threshold", "")
+                )
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Prot. Threshold':<{col1}}: Chg({m1 and c}{m1 or '---':>3}{co}) / Dischg({m3 and c}{m3 or '---':>3}{co}{')':<{col2 - 21}} "
@@ -2359,6 +2372,8 @@ class AnkerSolixApiMonitor:
                     "usba_2",
                     "dc_12v_1",
                     "dc_12v_2",
+                    "ac_1",
+                    "ac_2",
                 ]:
                     if m1 := cm and str(mqtt.get(f"{idx}_power", "")):
                         m1 = f"{float(m1):>5.2f}"
@@ -2382,7 +2397,15 @@ class AnkerSolixApiMonitor:
                             f"{idxstr + ' Power':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit}{m3:<{col2 - 7}}{co} "
                             f"{idxstr + ' V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m5, str(m5) or '---').upper()}){co}"
                         )
-                for idx in ["usbc_1", "usbc_2", "usbc_3", "usbc_4", "usba"]:
+                for idx in [
+                    "usbc_1",
+                    "usbc_2",
+                    "usbc_3",
+                    "usbc_4",
+                    "usba",
+                    "ac_1",
+                    "ac_2",
+                ]:
                     m1 = cm and mqtt.get(f"{idx}_timer_seconds", "")
                     m3 = cm and mqtt.get(f"{idx}_timer_switch", "")
                     m6 = cm and mqtt.get(f"{idx}_priority", "")
@@ -2456,8 +2479,10 @@ class AnkerSolixApiMonitor:
                     if (m4 := cm and mqtt.get("ac_2_current", "")) and "." in m4:
                         m4 = f"{float(m4):>5.3f}"
                     CONSOLE.info(
-                        f"{'AC 1 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V / {m3 and (c or cm)}{(m3 or '-.---') + ' A (' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 10}}{co} "
-                        f"{'AC 2 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V / {m4 and (c or cm)}{m4 or '-.---':>5} A ({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
+                        f"{'AC 1 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V{co} / {m3 and (c or cm)}{m3 or '-.---':>5} A{co} "
+                        f"{m5 and (c or cm)}{'(' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 18}}{co} "
+                        f"{'AC 2 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V{co} / {m4 and (c or cm)}{m4 or '-.---':>5} A{co} "
+                        f"{m6 and (c or cm)}({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
                     )
                 m1 = cm and mqtt.get("device_switch", "")
                 m3 = cm and str(mqtt.get("temperature", ""))
