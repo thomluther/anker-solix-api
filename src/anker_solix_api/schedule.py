@@ -2102,11 +2102,12 @@ async def set_sb2_home_load(  # noqa: C901
     # Update existing usage mode, reset to an available automatic or manual mode if required rate plan deleted
     # TODO(SB3): Once time_slot rate plan is available in schedule, verify against existing plan instead of dynamic provider setup
     mode_type = (
-        getattr(
-            SolarbankUsageMode,
-            (usage_mode_options & {SolarbankUsageMode.smartmeter.name})
-            or (usage_mode_options & {SolarbankUsageMode.smartplug.name})
-            or SolarbankUsageMode.manual.name,
+        (
+            SolarbankUsageMode.smartmeter.value
+            if SolarbankUsageMode.smartmeter.name in usage_mode_options
+            else SolarbankUsageMode.smartplugs.value
+            if SolarbankUsageMode.smartplugs.name in usage_mode_options
+            else SolarbankUsageMode.manual.value
         )
         if (
             usage_mode == SolarbankUsageMode.use_time.value
@@ -3117,11 +3118,11 @@ async def set_sb2_use_time(  # noqa: C901
     dev = self.devices.get(deviceSn, {})
     mqtt = dev.get("mqtt_data") or {}
     if "reserved_soc" in schedule:
-        # given, existing or default backup soc, ensure backup soc is 5 <= backup <= max_soc
+        # given, existing or default backup soc, ensure backup soc is min_soc <= backup <= max_soc
         schedule["reserved_soc"] = min(
-            int(mqtt.get("max_soc") or dev.get("charge_upper_limit") or 100),
+            int(mqtt.get("max_soc") or dev.get("charge_upper_limit") or 80),
             max(
-                int(mqtt.get("power_cutoff") or dev.get("discharge_lower_limit") or 5),
+                int(mqtt.get("power_cutoff") or dev.get("discharge_lower_limit") or 20),
                 int(backup_soc or schedule.get("reserved_soc") or 0),
             ),
         )
@@ -3133,11 +3134,12 @@ async def set_sb2_use_time(  # noqa: C901
     ):
         # Allow automatic modes only when smart meter or smart plugs available in site
         usage_mode_options = self.solarbank_usage_mode_options(deviceSn=deviceSn)
-        schedule["mode_type"] = getattr(
-            SolarbankUsageMode,
-            ({usage_mode_options} & {SolarbankUsageMode.smartmeter.name})
-            or ({usage_mode_options} & {SolarbankUsageMode.smartplug.name})
-            or SolarbankUsageMode.manual.name,
+        schedule["mode_type"] = (
+            SolarbankUsageMode.smartmeter.value
+            if SolarbankUsageMode.smartmeter.name in usage_mode_options
+            else SolarbankUsageMode.smartplugs.value
+            if SolarbankUsageMode.smartplugs.name in usage_mode_options
+            else SolarbankUsageMode.manual.value
         )
         if isinstance(schedule.get("schedule_mode"), dict):
             schedule["schedule_mode"] = {"last_select_mode": schedule["mode_type"]}
