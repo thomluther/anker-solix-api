@@ -249,7 +249,7 @@ def convert_timestamp(
             if msec.replace(".", "", 1).isdigit():
                 return float(msec) / 1000
         else:
-            return float(int.from_bytes(value, byteorder="little", signed=True))
+            return float(int.from_bytes(value, byteorder="little", signed=False))
     return None
 
 

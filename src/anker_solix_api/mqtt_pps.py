@@ -86,6 +86,16 @@ FEATURES = {
     SolixMqttCommands.backup_charge_storm_guard: MODELS,
     SolixMqttCommands.backup_charge_plan: MODELS,
     SolixMqttCommands.backup_charge_timestamps: MODELS,
+    SolixMqttCommands.display_theme: MODELS,
+    SolixMqttCommands.clock_mode_select: MODELS,
+    SolixMqttCommands.display_brightness_select: MODELS,
+    SolixMqttCommands.display_night_brightness_select: MODELS,
+    SolixMqttCommands.clock_display_schedule: MODELS,
+    SolixMqttCommands.theme_request: MODELS,
+    SolixMqttCommands.battery_only_switch: MODELS,
+    SolixMqttCommands.display_language_select: MODELS,
+    SolixMqttCommands.outage_alert_switch: MODELS,
+    # SolixMqttCommands.ac_frequency_select: MODELS, # NOTE: May have dependencies and should not be used
 }
 
 

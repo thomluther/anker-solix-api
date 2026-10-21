@@ -2212,7 +2212,7 @@ class SolixPlugTimerMode(StrEnum):
 
 
 class SolixPortId(StrEnum):
-    """Str Enumeration for Solix Port Identifiers."""
+    """Str Enumeration for default Solix Port Identifiers."""
 
     usbc_1 = "0"
     usbc_2 = "1"
@@ -2221,6 +2221,17 @@ class SolixPortId(StrEnum):
     usba = "4"
     unknown = "unknown"
 
+class SolixStationPortId(StrEnum):
+    """Str Enumeration for Special Solix Port Identifiers of defined models."""
+
+    ac_1 = "0"
+    ac_2 = "1"
+    usbc_1 = "2"
+    usbc_2 = "3"
+    usbc_3 = "4"
+    usbc_4 = "5"
+    unknown = "unknown"
+    A91B2 = "A91B2"
 
 class SolixPortPriority(StrEnum):
     """Str Enumeration for Solix Port Priorities."""
