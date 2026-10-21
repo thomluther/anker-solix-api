@@ -213,8 +213,8 @@ class SolixMqttCommands:
     clock_display_schedule: str = "clock_display_schedule"
     clock_holiday_switch: str = "clock_holiday_switch"
     clock_time_switch: str = "clock_time_switch"
-    charger_theme: str = "charger_theme"
-    charger_theme_custom: str = "charger_theme_custom"
+    display_theme: str = "display_theme"
+    display_theme_custom: str = "display_theme_custom"
     compatibility_switch: str = "compatibility_switch"
     device_id_switch: str = "device_id_switch"
     ac_light_mode_select: str = "ac_light_mode_select"
@@ -1942,8 +1942,8 @@ CMD_CHARGER_CLOCK_DISPLAY = (
     }
 )
 
-CMD_CHARGER_THEME = CMD_COMMON | {
-    # Command: Set charger theme and display options
+CMD_DISPLAY_THEME = CMD_COMMON | {
+    # Command: Set display theme and display options
     "a2": {
         TYPE: DeviceHexDataTypes.ui.value,
         BYTES: {

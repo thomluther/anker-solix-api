@@ -39,7 +39,6 @@ from .mqttcmdmap import (
     CMD_CHARGER_CUSTOM_USAGE_MODE,
     CMD_CHARGER_DEVICE_ID_SWITCH,
     CMD_CHARGER_KNOB_MODE,
-    CMD_CHARGER_THEME,
     CMD_CHARGER_USAGE_MODE,
     CMD_CIRCUIT_PRIORITY,
     CMD_COMMON,
@@ -57,6 +56,7 @@ from .mqttcmdmap import (
     CMD_DISPLAY_LANGUAGE_V2,
     CMD_DISPLAY_MODE,
     CMD_DISPLAY_SWITCH,
+    CMD_DISPLAY_THEME,
     CMD_DISPLAY_TIMEOUT_MODE,
     CMD_DISPLAY_TIMEOUT_SEC,
     CMD_ENERGY_SAVING_SWITCH,
@@ -5749,18 +5749,18 @@ SOLIXMQTTMAP: Final[dict] = {
         "0091": {
             # Clock screen command group, read back in 0421 da; only sent fields change
             COMMAND_LIST: [
-                SolixMqttCommands.charger_theme,  # field a2
+                SolixMqttCommands.display_theme,  # field a2
                 SolixMqttCommands.clock_mode_select,  # field a7
                 SolixMqttCommands.display_brightness_select,  # field ac
                 SolixMqttCommands.display_night_brightness_select,  # field ad
                 SolixMqttCommands.clock_display_schedule,  # fields a8-ab, ae, af
             ],
-            SolixMqttCommands.charger_theme: CMD_COMMON_V2
+            SolixMqttCommands.display_theme: CMD_COMMON_V2
             | {
-                "a2": CMD_CHARGER_THEME["a2"]
+                "a2": CMD_DISPLAY_THEME["a2"]
                 | {
                     BYTES: {
-                        **CMD_CHARGER_THEME["a2"][BYTES],
+                        **CMD_DISPLAY_THEME["a2"][BYTES],
                         "00": [
                             {
                                 **item,
@@ -5773,7 +5773,7 @@ SOLIXMQTTMAP: Final[dict] = {
                             }
                             if item.get(NAME) == "set_theme_type"
                             else item
-                            for item in CMD_CHARGER_THEME["a2"][BYTES]["00"]
+                            for item in CMD_DISPLAY_THEME["a2"][BYTES]["00"]
                             if item.get(NAME) != "set_holiday_switch"
                         ],
                     },
@@ -5996,18 +5996,18 @@ SOLIXMQTTMAP: Final[dict] = {
         "0091": {
             # Clock screen command group, read back in 0421 da; only sent fields change
             COMMAND_LIST: [
-                SolixMqttCommands.charger_theme,  # field a2
+                SolixMqttCommands.display_theme,  # field a2
                 SolixMqttCommands.clock_mode_select,  # field a7
                 SolixMqttCommands.display_brightness_select,  # field ac
                 SolixMqttCommands.display_night_brightness_select,  # field ad
                 SolixMqttCommands.clock_display_schedule,  # fields a8-ab, ae, af
             ],
-            SolixMqttCommands.charger_theme: CMD_COMMON_V2
+            SolixMqttCommands.display_theme: CMD_COMMON_V2
             | {
-                "a2": CMD_CHARGER_THEME["a2"]
+                "a2": CMD_DISPLAY_THEME["a2"]
                 | {
                     BYTES: {
-                        **CMD_CHARGER_THEME["a2"][BYTES],
+                        **CMD_DISPLAY_THEME["a2"][BYTES],
                         "00": [
                             {
                                 **item,
@@ -6020,7 +6020,7 @@ SOLIXMQTTMAP: Final[dict] = {
                             }
                             if item.get(NAME) == "set_theme_type"
                             else item
-                            for item in CMD_CHARGER_THEME["a2"][BYTES]["00"]
+                            for item in CMD_DISPLAY_THEME["a2"][BYTES]["00"]
                             if item.get(NAME) != "set_holiday_switch"
                         ],
                     },
@@ -7317,12 +7317,12 @@ SOLIXMQTTMAP: Final[dict] = {
         "0204": CMD_DISPLAY_BRIGHTNESS,  # Display brightness 20-100 %, step 5 %
         "0205": {  # Set Theme and clock display
             COMMAND_LIST: [
-                SolixMqttCommands.charger_theme,  # fields a2-a6
-                SolixMqttCommands.charger_theme_custom,  # fields a2-a5, a7 with custom url
+                SolixMqttCommands.display_theme,  # fields a2-a6
+                SolixMqttCommands.display_theme_custom,  # fields a2-a5, a7 with custom url
             ],
-            SolixMqttCommands.charger_theme: CMD_CHARGER_THEME,
-            SolixMqttCommands.charger_theme_custom: {
-                k: v for k, v in CMD_CHARGER_THEME.items() if k not in ["a2", "a6"]
+            SolixMqttCommands.display_theme: CMD_DISPLAY_THEME,
+            SolixMqttCommands.display_theme_custom: {
+                k: v for k, v in CMD_DISPLAY_THEME.items() if k not in ["a2", "a6"]
             }
             | {
                 "a7": {
@@ -7341,7 +7341,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 "a2": {
                     TYPE: DeviceHexDataTypes.ui.value,
                     BYTES: {
-                        **CMD_CHARGER_THEME["a2"][BYTES],
+                        **CMD_DISPLAY_THEME["a2"][BYTES],
                         "00": [
                             {
                                 **item,
@@ -7349,7 +7349,7 @@ SOLIXMQTTMAP: Final[dict] = {
                             }
                             if item.get(NAME) == "set_theme_type"
                             else item
-                            for item in CMD_CHARGER_THEME["a2"][BYTES]["00"]
+                            for item in CMD_DISPLAY_THEME["a2"][BYTES]["00"]
                         ],
                     },
                 }
@@ -7531,8 +7531,8 @@ SOLIXMQTTMAP: Final[dict] = {
         "0205": CMD_COMMON
         | {
             # Clock display switch and built-in theme, set independently of each other
-            COMMAND_NAME: SolixMqttCommands.charger_theme,
-            "a2": CMD_CHARGER_THEME["a2"]
+            COMMAND_NAME: SolixMqttCommands.display_theme,
+            "a2": CMD_DISPLAY_THEME["a2"]
             | {
                 BYTES: {
                     "00": [
@@ -7547,7 +7547,7 @@ SOLIXMQTTMAP: Final[dict] = {
                         }
                         if item.get(NAME) == "set_theme_type"
                         else item
-                        for item in CMD_CHARGER_THEME["a2"][BYTES]["00"]
+                        for item in CMD_DISPLAY_THEME["a2"][BYTES]["00"]
                         if item.get(NAME) != "set_holiday_switch"
                     ],
                 },

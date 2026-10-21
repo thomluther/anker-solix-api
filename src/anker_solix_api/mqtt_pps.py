@@ -86,7 +86,7 @@ FEATURES = {
     SolixMqttCommands.backup_charge_storm_guard: MODELS,
     SolixMqttCommands.backup_charge_plan: MODELS,
     SolixMqttCommands.backup_charge_timestamps: MODELS,
-    SolixMqttCommands.charger_theme: MODELS,
+    SolixMqttCommands.display_theme: MODELS,
     SolixMqttCommands.clock_mode_select: MODELS,
     SolixMqttCommands.display_brightness_select: MODELS,
     SolixMqttCommands.display_night_brightness_select: MODELS,

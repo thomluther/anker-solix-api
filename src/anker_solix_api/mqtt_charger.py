@@ -90,8 +90,8 @@ FEATURES = {
     SolixMqttCommands.charger_custom_usage_mode: MODELS,
     SolixMqttCommands.charger_mode_select: MODELS,
     SolixMqttCommands.theme_request: MODELS,
-    SolixMqttCommands.charger_theme: MODELS,
-    SolixMqttCommands.charger_theme_custom: MODELS,
+    SolixMqttCommands.display_theme: MODELS,
+    SolixMqttCommands.display_theme_custom: MODELS,
     SolixMqttCommands.port_priority: MODELS,
     SolixMqttCommands.display_timeout_mode_select: MODELS,
     SolixMqttCommands.clock_mode_select: MODELS,
@@ -447,9 +447,9 @@ class SolixMqttDeviceCharger(SolixMqttDevice):
                 json.dumps(theme, indent=2 if len(json.dumps(theme)) < 200 else None),
             )
             cmd1 = (
-                SolixMqttCommands.charger_theme_custom
+                SolixMqttCommands.display_theme_custom
                 if category.lower() == "custom"
-                else SolixMqttCommands.charger_theme
+                else SolixMqttCommands.display_theme
             )
             # Build parameter map
             parm_map = {
