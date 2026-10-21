@@ -2031,13 +2031,14 @@ CMD_DISPLAY_TIMEOUT_MODE = CMD_COMMON | {
 }
 
 CMD_CHARGER_COMPATIBILITY_SWITCH = CMD_COMMON | {
-    # Command: Maximum Compatibility switch, disables device identification while on
+    # Command: Maximum Compatibility switch, inverted: 0 is on. While on, devices
+    # attached afterwards are not identified
     COMMAND_NAME: SolixMqttCommands.compatibility_switch,
     "a2": {
-        NAME: "set_compatibility_switch",  # Off (0), On (1)
+        NAME: "set_compatibility_switch",  # On (0), Off (1)
         TYPE: DeviceHexDataTypes.ui.value,
         STATE_NAME: "compatibility_switch",
-        VALUE_OPTIONS: {"off": 0, "on": 1},
+        VALUE_OPTIONS: {"on": 0, "off": 1},
     },
 }
 

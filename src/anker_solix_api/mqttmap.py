@@ -3744,7 +3744,8 @@ _A2345_0a00 = (
                 for idx, port in enumerate(["c1", "c2", "c3", "c4"])
             }
         },
-        "bb": {NAME: "compatibility_switch"},  # app: compatibilitySwitchValue
+        # app: compatibilitySwitchValue; Maximum Compatibility, inverted: 0 on, 1 off
+        "bb": {NAME: "compatibility_switch"},
         "bd": {  # Per USB-C port, the device USB-PD Discover Identity VID and product ID: {fffa, fffb} with no device, {0, 0} while unresolved. Same as 0303 a8.
             BYTES: {
                 f"{4 * idx + word:02d}": {
@@ -7379,7 +7380,7 @@ SOLIXMQTTMAP: Final[dict] = {
         # "0212" # cloud command, holiday theme schedule: a2 theme id (0 clears), a3/a4 u32,
         # a5/a6 7-byte datetimes, a7 url
         "0213": CMD_CHARGER_CLOCK_DISPLAY,  # Set charger clock display schedule
-        "0214": CMD_CHARGER_COMPATIBILITY_SWITCH,  # Maximum Compatibility: 0 off, 1 on
+        "0214": CMD_CHARGER_COMPATIBILITY_SWITCH,  # Maximum Compatibility: 0 on, 1 off
         "0222": CMD_CHARGER_CUSTOM_CLOCK_TIME_SWITCH,  # Custom Clock Time Display
         "0223": CMD_CHARGER_DEVICE_IDENTIFICATION_SWITCH,  # Device identification: 0 off, 1 on
         "0300": {
