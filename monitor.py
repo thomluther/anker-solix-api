@@ -2058,10 +2058,11 @@ class AnkerSolixApiMonitor:
                         f"{'Holiday Switch':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3}{co}"
                     )
                 m1 = cm and str(mqtt.get("theme_id", ""))
+                m3 = cm and str(mqtt.get("theme_type", ""))
                 m2 = dev.get("display_theme", {}).get("theme_name", "")
                 if m1 or m2:
                     CONSOLE.info(
-                        f"{'Clock Theme ID':<{col1}}: {m1 and (c or cm)}{m1 or '----------':<{col2}}{co} "
+                        f"{'Clock Theme ID':<{col1}}: {m1 and (c or cm)}{(m1 or '----------') + (' (Type: ' + m3 + ')' if m3 else ''):<{col2}}{co} "
                         f"{'Theme Name':<{col3}}: {m2 and c}{m2 or '----------'}{co}"
                     )
                 m1 = cm and str(mqtt.get("clock_display_start_hour", ""))
@@ -2262,10 +2263,12 @@ class AnkerSolixApiMonitor:
                 m1 = cm and mqtt.get("dc_input_power", "")
                 m3 = cm and mqtt.get("dc_input_power_total", "")
                 m2 = cm and str(mqtt.get("dc_charging_status", ""))
-                if m1 or m2 or m3:
+                m4 = cm and str(mqtt.get("dc_input_plug_status", ""))
+                if m1 or m2 or m3 or m4:
                     CONSOLE.info(
                         f"{'DC In Pwr/Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit}{co} / {m3 and (c or cm)}{m3 or '----':>4} {unit:<{col2 - 14}}{co} "
-                        f"{'DC Chrg Status':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixPpsDcChargingStatus, m2, 'unknown' if m2 else '----').capitalize() + ' (' + (m2 or '-') + ')'}{co}"
+                        f"{'DC Charge/Plug':<{col3}}: {m2 and (c or cm)}{get_enum_name(SolixPpsDcChargingStatus, m2, 'unknown' if m2 else '----').capitalize() + ' (' + (m2 or '-') + ')'}{co} "
+                        f"/ {m4 and (c or cm)}{get_enum_name(SolixConnectionStatus, m4, 'unknown' if m4 else '----').title()} ({m4 or '-'}){co}"
                     )
                 m1 = cm and mqtt.get("dc_output_power_total", "")
                 if m2 := cm and str(mqtt.get("dc_output_timeout_seconds", "")):
@@ -2274,9 +2277,9 @@ class AnkerSolixApiMonitor:
                     m2 = str(timedelta(minutes=int(m2)))
                 if m1 or m2:
                     if "." in str(m1):
-                        m1 = f"{float(m1):.2f}"
+                        m1 = f"{float(m1):5.2f}"
                     CONSOLE.info(
-                        f"{'DC Out Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>4} {unit:<{col2 - 5}}{co} "
+                        f"{'DC Out Pwr Tot':<{col1}}: {m1 and (c or cm)}{m1 or '----':>5} {unit:<{col2 - 6}}{co} "
                         f"{'DC Out Timeout':<{col3}}: {m2 and (c or cm)}{m2 or '--:--'}{co}"
                     )
                 m1 = cm and mqtt.get("input_power_total", "")
@@ -2296,7 +2299,7 @@ class AnkerSolixApiMonitor:
                         f"{'AC Charge Limit':<{col3}}: {m2 and (c or cm)}{m2 or '----':>4} {unit}{co}"
                     )
                 m1 = cm and mqtt.get("ac_output_power", "")
-                m3 = cm and mqtt.get("ac_frequency", "")
+                m3 = cm and str(mqtt.get("ac_frequency", ""))
                 m2 = cm and mqtt.get("output_power_total", "")
                 if m4 := cm and str(mqtt.get("ac_output_timeout_seconds", "")):
                     m4 = str(timedelta(seconds=int(m4)))
@@ -2409,7 +2412,11 @@ class AnkerSolixApiMonitor:
                     m1 = cm and mqtt.get(f"{idx}_timer_seconds", "")
                     m3 = cm and mqtt.get(f"{idx}_timer_switch", "")
                     m6 = cm and mqtt.get(f"{idx}_priority", "")
-                    idxstr = idx.replace("usb", "usb-").replace("_", "").upper()
+                    idxstr = (
+                        idx.replace("usb", "usb-" if idx != "usb" else idx)
+                        .replace("_", "" if idx.startswith("usb") else " ")
+                        .upper()
+                    )
                     if str(m1) or str(m3) or str(m6):
                         m2 = cm and mqtt.get(f"{idx}_timer_remaining_seconds", "")
                         m4 = cm and mqtt.get(f"{idx}_timer_remaining_timestamp", "")
@@ -2480,9 +2487,9 @@ class AnkerSolixApiMonitor:
                         m4 = f"{float(m4):>5.3f}"
                     CONSOLE.info(
                         f"{'AC 1 V/A/Sw':<{col1}}: {m1 and (c or cm)}{m1 or '--.--':>5} V{co} / {m3 and (c or cm)}{m3 or '-.---':>5} A{co} "
-                        f"{m5 and (c or cm)}{'(' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 18}}{co} "
+                        f"{str(m5) and (c or cm)}{'(' + get_enum_name(SolixSwitchMode, m5, str(m5) or '--').upper() + ')':<{col2 - 18}}{co} "
                         f"{'AC 2 V/A/Sw':<{col3}}: {m2 and (c or cm)}{m2 or '--.--':>5} V{co} / {m4 and (c or cm)}{m4 or '-.---':>5} A{co} "
-                        f"{m6 and (c or cm)}({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
+                        f"{str(m6) and (c or cm)}({get_enum_name(SolixSwitchMode, m6, str(m6) or '--').upper()}){co}"
                     )
                 m1 = cm and mqtt.get("device_switch", "")
                 m3 = cm and str(mqtt.get("temperature", ""))

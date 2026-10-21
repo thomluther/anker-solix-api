@@ -24,6 +24,7 @@ from .apitypes import (
     SolixPortId,
     SolixPriceProvider,
     SolixPriceTypes,
+    SolixStationPortId,
 )
 from .errors import AnkerSolixError
 from .helpers import get_enum_name, get_solix_product_code
@@ -824,7 +825,11 @@ class AnkerSolixBaseApi:
                                     "dc_12v_1",
                                     "dc_12v_2",
                                 ]:
-                                    power += float(check_values.get(f"{i}_power") or 0)
+                                    power += (
+                                        float(check_values.get(f"{i}_power") or 0)
+                                        if check_values.get(f"{i}_status") != 2
+                                        else 0
+                                    )
                                 device_mqtt["dc_output_power_total"] = (
                                     f"{float(power):.3f}"
                                 )
@@ -1011,7 +1016,10 @@ class AnkerSolixBaseApi:
                                     is not None
                                     and (
                                         port_name := get_enum_name(
-                                            SolixPortId, str(value)
+                                            SolixStationPortId
+                                            if model in SolixStationPortId
+                                            else SolixPortId,
+                                            str(value),
                                         )
                                     )
                                     and (switch_name := f"{port_name}_switch")
@@ -1026,7 +1034,10 @@ class AnkerSolixBaseApi:
                                     and (
                                         (
                                             port_name := get_enum_name(
-                                                SolixPortId, str(value)
+                                                SolixStationPortId
+                                                if model in SolixStationPortId
+                                                else SolixPortId,
+                                                str(value),
                                             )
                                         )
                                         and (switch_name := f"{port_name}_timer_switch")
@@ -2709,7 +2720,9 @@ class AnkerSolixBaseApi:
             # Ignore Api errors from endpoint if they fail
             try:
                 resp = await self.apisession.request(
-                    "post", API_CHARGING_ENDPOINTS["get_disaster_support_func"], json=data
+                    "post",
+                    API_CHARGING_ENDPOINTS["get_disaster_support_func"],
+                    json=data,
                 )
             except AnkerSolixError:
                 resp = {}
