@@ -1974,7 +1974,7 @@ CMD_DISPLAY_THEME = CMD_COMMON | {
                         "stock": 3,
                         "custom": 5,
                     },
-                    MASK: 0x0F,
+                    MASK: 0x07,
                     MASK_STATE: "clock_settings",
                     STATE_NAME: "theme_type",
                     VALUE_DEFAULT: 3, # stock web theme type

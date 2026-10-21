@@ -203,7 +203,9 @@ _A1722_0405 = {
         FACTOR: 0.1,
         SIGNED: False,
     },  # 65535 (0xFFFF) when not discharging, e.g. full battery in AC pass-through
-    "a5": {NAME: "ac_input_power"},  # Duplicate of ad without DC input, also 0 W in AC pass-through
+    "a5": {
+        NAME: "ac_input_power"
+    },  # Duplicate of ad without DC input, also 0 W in AC pass-through
     "a6": {NAME: "ac_output_power"},  # Same as ae but without LED power
     "a7": {NAME: "usbc_1_power"},  # USB-C port 1 power
     "a8": {NAME: "usbc_2_power"},  # USB-C port 2 power, supports charging
@@ -1319,8 +1321,8 @@ _A1783_0421 = {
             "00": [
                 {NAME: "clock_settings", MASK: 0xFF},
                 {NAME: "clock_switch", MASK: 0x80},
-                {NAME: "holiday_switch", MASK: 0x40},
-                {NAME: "theme_type", MASK: 0x0F},
+                #{NAME: "holiday_switch", MASK: 0x40}, # Not supported by FW (yet?)
+                {NAME: "theme_type", MASK: 0x07},
             ],
             "01": {
                 NAME: "theme_download_state",
@@ -3650,7 +3652,7 @@ _A2345_0a00 = (
                     {NAME: "clock_settings", MASK: 0xFF},
                     {NAME: "clock_switch", MASK: 0x80},
                     {NAME: "holiday_switch", MASK: 0x40},
-                    {NAME: "theme_type", MASK: 0x0F},
+                    {NAME: "theme_type", MASK: 0x07},
                 ],
                 "01": {
                     NAME: "theme_id",
@@ -3932,7 +3934,7 @@ _A91B2_0a00 = (
                 "00": [
                     {NAME: "clock_settings", MASK: 0xFF},
                     {NAME: "clock_switch", MASK: 0x80},
-                    {NAME: "theme_type", MASK: 0x0F},
+                    {NAME: "theme_type", MASK: 0x07},
                 ],
             },
         },
@@ -3954,8 +3956,8 @@ _A91B2_0a00 = (
         "ae": {
             BYTES: {
                 # Charging-mode via 0206: [0] smart_dynamic 0 / high_power 1 (high-power preset 0-2)
-                "00": {NAME: "charging_mode", TYPE: DeviceHexDataTypes.ui.value},
-                "01": {NAME: "charging_submode", TYPE: DeviceHexDataTypes.ui.value},
+                # Charging-mode: Smart Dynamic (0100), High-Power (1=0001, 2=0101, 3=0201)
+                "00": {NAME: "usage_mode", TYPE: DeviceHexDataTypes.sile.value},
             },
         },
         "af": {
@@ -7486,7 +7488,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 BYTES: {
                     "00": [
                         {NAME: "clock_settings", MASK: 0xFF},
-                        {NAME: "theme_type", MASK: 0x0F},
+                        {NAME: "theme_type", MASK: 0x07},
                     ],
                 },
             },
@@ -7567,19 +7569,16 @@ SOLIXMQTTMAP: Final[dict] = {
                 LENGTH: 2,
                 BYTES: {
                     "00": {
-                        NAME: "set_charging_mode",  # Smart Dynamic (0), High-Power (1)
-                        TYPE: DeviceHexDataTypes.ui.value,
-                        VALUE_OPTIONS: {"smart_dynamic": 0, "high_power": 1},
-                        STATE_NAME: "charging_mode",
-                        VALUE_STATE: "charging_mode",
-                    },
-                    "01": {
-                        # High-Power preset Mode 1-3 (0-2), ignored in Smart Dynamic
-                        NAME: "set_charging_submode",
-                        TYPE: DeviceHexDataTypes.ui.value,
-                        VALUE_OPTIONS: {"mode_1": 0, "mode_2": 1, "mode_3": 2},
-                        STATE_NAME: "charging_submode",
-                        VALUE_STATE: "charging_submode",
+                        NAME: "set_usage_mode",  # Smart Dynamic (0100), High-Power (1=0001, 2=0101, 3=0201)
+                        TYPE: DeviceHexDataTypes.sile.value,
+                        VALUE_OPTIONS: {
+                            "smart_dynamic": 0x0100,
+                            "high_power_1": 0x0001,
+                            "high_power_2": 0x0101,
+                            "high_power_3": 0x0201,
+                        },
+                        STATE_NAME: "usage_mode",
+                        VALUE_STATE: "usage_mode",
                     },
                 },
             },
