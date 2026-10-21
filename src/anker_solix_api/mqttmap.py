@@ -203,7 +203,7 @@ _A1722_0405 = {
         FACTOR: 0.1,
         SIGNED: False,
     },  # 65535 (0xFFFF) when not discharging, e.g. full battery in AC pass-through
-    # "a5": {NAME: "input_power_total?"},  # Duplicate of ad without DC input, also 0 W in AC pass-through
+    "a5": {NAME: "ac_input_power"},  # Duplicate of ad without DC input, also 0 W in AC pass-through
     "a6": {NAME: "ac_output_power"},  # Same as ae but without LED power
     "a7": {NAME: "usbc_1_power"},  # USB-C port 1 power
     "a8": {NAME: "usbc_2_power"},  # USB-C port 2 power, supports charging
@@ -211,11 +211,11 @@ _A1722_0405 = {
     "aa": {NAME: "usba_1_power"},  # USB-A port 1 power
     "ac": {NAME: "dc_input_power_total"},  # DC input power (solar/car charging)
     "ad": {
-        NAME: "ac_input_power"
-    },  # AC Input in W (int), only while charging; reports 0 in AC pass-through with full battery
+        NAME: "input_power_total"
+    },  # Total Input in W (int), only while charging; reports 0 in AC pass-through with full battery
     "ae": {
         NAME: "output_power_total"
-    },  # AC Output in W (int), including the LED power. DC power inclusion to be validated
+    },  # Output in W (int), including the LED power. DC power inclusion to be validated
     "b0": {NAME: "ac_input_plug_status"},  # 0: Disconnected, 1: connected
     "b1": {NAME: "sw_version", "values": 1},  # Main firmware version
     "b7": {NAME: "ac_output_power_status?"},  # Mirrors cb
@@ -855,7 +855,10 @@ _A1763_0421 = {
             },
         }
     },
-    "fd": {NAME: "storm_guard_timestamp", SIGNED: False},
+    "fd": {  # app transactionId: 13-digit ms-epoch ASCII of last request, persistent across messages
+        NAME: "transaction_id",
+        TYPE: DeviceHexDataTypes.str.value,
+    },
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -4523,7 +4526,10 @@ _AS220_0421 = {
             },
         }
     },
-    "fd": {NAME: "storm_guard_timestamp"},
+    "fd": {  # app transactionId: 13-digit ms-epoch ASCII of last request, persistent across messages
+        NAME: "transaction_id",
+        TYPE: DeviceHexDataTypes.str.value,
+    },
     "fe": {NAME: "msg_timestamp"},
 }
 
@@ -7521,11 +7527,11 @@ SOLIXMQTTMAP: Final[dict] = {
     "A91B2": {
         "0200": CMD_STATUS_REQUEST,  # Device status request for message 0a00
         "0203": CMD_DISPLAY_TIMEOUT_MODE,  # 0 (Never), 1 (30 sec), 2 (60 sec), 3 (5 min), 4 (30 min)
-        "0204": CMD_DISPLAY_MODE  # Display brightness: Low (1), Medium (2), High (3)
+        "0204": CMD_DISPLAY_MODE  # Display brightness: Low (0), Medium (1), High (2)
         | {
             "a2": {
                 **CMD_DISPLAY_MODE["a2"],
-                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+                VALUE_OPTIONS: {"low": 0, "medium": 1, "high": 2},
             }
         },
         "0205": CMD_COMMON

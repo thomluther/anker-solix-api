@@ -518,7 +518,10 @@ class DeviceHexDataField:
                         value = [
                             round_by_factor(
                                 int.from_bytes(
-                                    bytes([b]), signed=fieldmap.get(SIGNED) is True
+                                    bytes([b]),
+                                    signed=False
+                                    if "timestamp" in name
+                                    else (fieldmap.get(SIGNED) is True),
                                 )
                                 * factor,
                                 factor,
