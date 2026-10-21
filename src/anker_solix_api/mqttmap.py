@@ -7523,11 +7523,11 @@ SOLIXMQTTMAP: Final[dict] = {
     "A91B2": {
         "0200": CMD_STATUS_REQUEST,  # Device status request for message 0a00
         "0203": CMD_DISPLAY_TIMEOUT_MODE,  # 0 (Never), 1 (30 sec), 2 (60 sec), 3 (5 min), 4 (30 min)
-        "0204": CMD_DISPLAY_MODE  # Display brightness: Low (1), Medium (2), High (3)
+        "0204": CMD_DISPLAY_MODE  # Display brightness: Low (0), Medium (1), High (2)
         | {
             "a2": {
                 **CMD_DISPLAY_MODE["a2"],
-                VALUE_OPTIONS: {"low": 1, "medium": 2, "high": 3},
+                VALUE_OPTIONS: {"low": 0, "medium": 1, "high": 2},
             }
         },
         "0205": CMD_COMMON
