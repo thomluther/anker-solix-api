@@ -1652,6 +1652,61 @@ class AnkerSolixBaseApi:
             )
         return resp.get("data") or {}
 
+    async def get_v2_scene_info(self, siteId: str, fromFile: bool = False) -> dict:
+        """Get V2 scene info. It reflects mostly data visible in the Anker App home page for the site. It works for Home Backup systems and also for shared accounts.
+
+        Example data for provided site_id:
+        {"solarbank_info": {"solarbank_list": [],"total_charge_power": "","power_unit": "","charging_status": "","total_bat_soc": "","total_photovoltaic_power": "",
+            "total_output_power": "","total_input_power": "","total_discharge_power": "","is_display_data": false,"to_home_load": "","solar_power_1": "","solar_power_2": "",
+            "solar_name_1": "","solar_name_2": "","third_party_pv_connected": false,"third_party_pv_power": "","grid_to_battery_power": "","pei_heating_power": "",
+            "backup_info": {"start_time": 0,  "end_time": 0,  "full_time": 0},
+            "third_party_diesel_power": "","total_operating_power": "","feeder_0w": 0,"grid_port_input": "","grid_port_output": ""},
+        "grid_info": {"grid_list": [],"photovoltaic_to_grid_power": "0","grid_to_home_power": "8150","has_history_data": false,
+            "meter_phase": 0,"meter_l1_power": 0,"meter_l2_power": 0,"is_show_grid": false},
+        "diesel_info": {"diesel_list": [],"total_diesel_power": "0","third_party_diesel_power": "0","third_party_diesel_plugged": true,"third_party_diesel_mode": 0,
+            "third_party_diesel_connect_type": 0,"third_party_diesel_type": 0,"third_party_diesel_connected": true,"total_diesel_remain_time": 0,"ac_diesel_power": "","dc_diesel_power": ""},
+        "home_load_power": "1240","ems_mode": 5,"ems_mode_power": 0,"custom_charging_type": 0,"is_downgrade": false,"error_code": 0,
+        "function_switch": {"ct_available": true,"diesel_ac_output": false,"diesel_connected": false,"exceed_power": false,"grid_available": false,"grid_online": true,
+            "heating": false,"is_downgrade": false,"is_greater_30v": true,"low_light_detection": false,"off_grid": false,"physical_grid": true,"soc_calibration": false,
+            "sub_package_version_mismatch": false,"system_forced_charge": false,"temperature_unit": true,"third_party_diesel_connected": true,"third_party_pv_connected": false},
+        "site_id": "efaca6b5-f4a0-e82e-3b2e-6b9cf90ded8c","power_site_type": 15,"init_status": 1,"self_test_status": 3,"use_time_type": 3,"energy_flow_bits": 8192,
+        "branch_info": {"ats_load_power": "","other_load_power": "","branch_list": [],"branch_conf_soc": "0"},
+        "off_grid_info": {"off_grid_start_time": 0,"off_grid_available_time": 0,"outage_date": 0,"outage_duration": 0,"back_up_duration_1": 0,"back_up_duration_2": 0},
+        "charging_pile_info": {"charging_pile_list": null},
+        "smart_plug_info": {"smart_plug_list": [],"total_power": ""},
+        "other_load_power": "","heat_pump_connected": false,"user_ems_mode": 0,
+        "aiems_profit": {"unit": "","aiems_profit_total": "","percentage": "","show_percentage": false,"aiems_self_use_diff": ""},
+        "style_id": 0,"switch_0w": 0,
+        "home_backup_system_info": {"solarbank_list": [
+            {"device_pn": "A17E1","device_sn": "6A44D4B7135050595","device_name": "496F9769FBB03B8","device_img": "","bat_soc": "90","bind_site_status": "","bat_charge_power": "7560",
+                "bat_discharge_power": "0","power_unit": "W","charging_status": "","status": "1","wireless_type": "1","photovoltaic_power": "650","output_power": "0",
+                "create_time": 1773268480,"sub_package_num": 0,"solar_power_1": "","solar_power_2": "","solar_name_1": "","solar_name_2": "","pei_heating_power": "","function_switch": null,
+                "pv_list": [{"pv_power": 0,"pv_name": "PV1"},{"pv_power": 0,"pv_name": "PV2"}],
+                "load_port_power": "","load_port_name": "","load_port_switch": 0,"load_port_auto": 0,"load_port_mode": 0,"load_port_status": 0,"bat_temperature": 0,
+                "bms_list": null,"self_test_status": 0,"phase": 0,"max_battery_pack_num": 5,"install_method": 0,"enwg_status": 0,"rssi": 0,
+                "ac_output_power": "","dc_load_power": "","ac_output_status": 0,"used_sub_package_num": 0}],
+            "total_charge_power": "7560","power_unit": "W","charging_status": "","total_bat_soc": "90","total_photovoltaic_power": "650","total_output_power": "0",
+            "total_input_power": "","total_discharge_power": "0","is_display_data": false,"to_home_load": "0","solar_power_1": "0","solar_power_2": "0","solar_name_1": "","solar_name_2": "",
+            "third_party_pv_connected": false,"third_party_pv_power": "0","grid_to_battery_power": "0","pei_heating_power": "0",
+            "backup_info": {"start_time": 0,"end_time": 0,"full_time": 0},
+            "third_party_diesel_power": "","total_operating_power": "7560","feeder_0w": 0,"grid_port_input": "","grid_port_output": ""},
+        "is_site_created_by_installer": false,"is_show_pv": false,"price_level": 0,"pps_info": null,"meter_power": 0,
+        "hardware_info": {"hardware_list": []},
+        "reason_code": 0,"ct2_self_test_status": 0,"self_test_fault_bits": 0,"grid_ov_auto_reduce_capability": 0}
+        """
+        siteId = str(siteId) or ""
+        data = {"site_id": siteId}
+        if fromFile:
+            resp = await self.apisession.loadFromFile(
+                Path(self.testDir())
+                / f"{API_FILEPREFIXES['v2_scene_info']}_{siteId}.json"
+            )
+        else:
+            resp = await self.apisession.request(
+                "post", API_ENDPOINTS["v2_scene_info"], json=data
+            )
+        return resp.get("data") or {}
+
     async def get_bind_devices(self, fromFile: bool = False) -> dict:
         """Get the bind device information, which will list all devices the account has admin rights for. It also contains firmware level of devices.
 

@@ -114,6 +114,7 @@ API_ENDPOINTS: Final[dict] = {
     "site_detail_by_sn": "power_service/v1/site/get_site_detail_by_sn",  # needs owner, {"device_sn": deviceSn}, site_info from site list response
     "site_rules": "power_service/v1/site/get_site_rules",  # Information for supported power site types and their min and max qty per device model types
     "scene_info": "power_service/v1/site/get_scen_info",  # Scene info for provided site id (contains most information as the App home screen, with some but not all device details)
+    "v2_scene_info": "power_service/v2/site/platform_get_site_scene",  # Scene info for Home Backup systems
     "user_devices": "power_service/v1/site/list_user_devices",  # List Device details of owned devices, not all device details information included
     "charging_devices": "power_service/v1/site/get_charging_device",  # List of Portable Power Station devices?
     "get_device_parm": "power_service/v1/site/get_site_device_param",  # Get settings of a device for the provided site id and param type (e.g. Schedules), types [1 2 3 4 5 6 7 12 13 16 18 19 20 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37]
@@ -361,7 +362,7 @@ API_HES_SVC_ENDPOINTS: Final[dict] = {
     'power_service/v1/app/set_oil_consumption_reminder_plan'
     'power_service/v1/app/set_maintain_parts_ignore_reminders'
 
-related to power V2: 15 + 1 used => 16 total
+related to power V2: 14 + 2 used => 16 total
     'power_service/v2/app/get_custom_branch_icon' # get list of branch icons and url
     'power_service/v2/app/get_hardware_relation'# shows empty list, {"sn_list": [deviceSn]}
     'power_service/v2/platform_get_pn_region_code'# {"product_code": "AE103"})) SB4 => {"product_code": "AE103","region_codes": [{"country_code": "DE","states": [{"state_code": "DE","grid_code": 3,"grid_code_name": "VDE-AR-N 4105"}]},...]}
@@ -376,7 +377,6 @@ related to power V2: 15 + 1 used => 16 total
     'power_service/v2/platform_set_user_region_param'
     'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC
     'power_service/v2/site/platform_get_site_savings' # may need special site? {"site_id": siteId, "type": "week", "data_type": 1, "start_time": "2026-08-01, "end_time": "2026-08-04"}))
-    'power_service/v2/site/platform_get_site_scene'  # may need special site?
 
 related to micro inverter without system: 1 + 6 used => 7 total
     'charging_pv_svc/getMiStatus',
@@ -568,6 +568,7 @@ API_FILEPREFIXES: Final[dict] = {
     "get_shelly_status": "shelly_status",
     "get_site_csv_export": "site_csv_export",  # works for member, but system must support csv export, {"site_id": siteId, "start_time": "2026-03-14", "end_time": "2026-03-15"}, filename and URL for CSV download
     "scene_info": "scene",
+    "v2_scene_info": "v2_scene",
     "site_detail": "site_detail",
     "site_detail_by_sn": "site_detail_sn",
     "wifi_list": "wifi_list",
@@ -2221,6 +2222,7 @@ class SolixPortId(StrEnum):
     usba = "4"
     unknown = "unknown"
 
+
 class SolixStationPortId(StrEnum):
     """Str Enumeration for Special Solix Port Identifiers of defined models."""
 
@@ -2232,6 +2234,7 @@ class SolixStationPortId(StrEnum):
     usbc_4 = "5"
     unknown = "unknown"
     A91B2 = "A91B2"
+
 
 class SolixPortPriority(StrEnum):
     """Str Enumeration for Solix Port Priorities."""
