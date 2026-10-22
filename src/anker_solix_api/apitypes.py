@@ -1004,6 +1004,37 @@ PRODUCT_CODES: Final[dict] = {
 }
 
 
+# Define product embedded display themes, the embedded url is hard coded and varies per model
+EMBEDDED_THEMES: Final[dict] = {
+    "A2345": {
+        "theme_1": {
+            "category_name": "Embedded",
+            "title": "Theme 1",
+            "file_hash": "0x00000000",
+            "image_url": "assets/img/shared/icl_a2345_theme1.png",
+            "id": None,
+            "theme_name": "Embedded - Theme 1",
+        },
+        "theme_2": {
+            "category_name": "Embedded",
+            "title": "Theme 2",
+            "file_hash": "0x00000000",
+            "image_url": "assets/img/a2345/icl_a2345_theme2.png",
+            "id": None,
+            "theme_name": "Embedded - Theme 2",
+        },
+        "theme_3": {
+            "category_name": "Embedded",
+            "title": "Theme 3",
+            "file_hash": "0x00000000",
+            "image_url": "assets/img/a2345/icl_a2345_theme3.png",
+            "id": None,
+            "theme_name": "Embedded - Theme 3",
+        },
+    }
+}
+
+
 class SolixDeviceType(Enum):
     """Enumeration for Anker Solix device types."""
 

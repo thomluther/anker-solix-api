@@ -7507,7 +7507,7 @@ SOLIXMQTTMAP: Final[dict] = {
                         {NAME: "clock_settings", MASK: 0xFF},
                         {NAME: "clock_switch", MASK: 0x80},
                         {NAME: "holiday_switch", MASK: 0x40},
-                        {NAME: "theme_type", MASK: 0x0F},
+                        {NAME: "theme_type", MASK: 0x07},
                     ],
                 },
             },

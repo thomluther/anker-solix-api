@@ -35,6 +35,9 @@ BYTES: Final[str] = (
 LENGTH: Final[str] = (
     "length"  # Define the length of a field in a bytes field breakdown. Only need to be used if length not determined by field type or first byte value
 )
+# NOTE: For str fields, defined LENGTH of >= 0 means the length is not in the field itself. The given length or value length will be used
+# For str encodings, if no length is defined or fixed length < 0, the str length will be added as first byte of field value
+# timestamp fields are exceptions and generally do not include the length byte, so LENGTH of 0 can be skipped
 MASK: Final[str] = (
     "mask"  # Define a bit mask value to be used for decoding the data value. Required if a single byte may reflect multiple data fields/settings
 )
@@ -2014,6 +2017,7 @@ CMD_DISPLAY_THEME = CMD_COMMON | {
             "00": {
                 NAME: "set_theme_url",
                 TYPE: DeviceHexDataTypes.str.value,
+                LENGTH: 0, # variable length, not included in field
                 STATE_NAME: "theme_url",
                 VALUE_STATE: "theme_url",
             }

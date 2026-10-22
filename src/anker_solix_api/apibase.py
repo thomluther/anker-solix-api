@@ -878,6 +878,7 @@ class AnkerSolixBaseApi:
                                 "car_battery_voltage_type",
                                 "xt60i_cable",
                                 "theme_id",
+                                "theme_type",
                                 "custom_profile_number",
                                 "circuit_setup",
                                 "charging_time",

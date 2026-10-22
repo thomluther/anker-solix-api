@@ -401,9 +401,10 @@ class DeviceHexDataField:
         values = values or {}
         if not hexdata:
             return values
-        # allow direct type overwrites, recursive calls with modified type won't modify type again
+        # allow direct type overwrites, recursive calls with modified bin/strb types won't modify type again
         if (
-            fieldtype != DeviceHexDataTypes.strb.value
+            fieldtype
+            not in [DeviceHexDataTypes.bin.value, DeviceHexDataTypes.strb.value]
             and isinstance(fieldmap, dict)
             and (typ := fieldmap.get(TYPE))
         ):
@@ -415,7 +416,7 @@ class DeviceHexDataField:
                     DeviceHexDataTypes.ui.value,
                     DeviceHexDataTypes.sile.value,
                     DeviceHexDataTypes.var.value,
-                    DeviceHexDataTypes.bin.value,
+                    # DeviceHexDataTypes.bin.value,
                 ]
                 else fieldtype
             )
@@ -436,11 +437,12 @@ class DeviceHexDataField:
             case DeviceHexDataTypes.ui.value:
                 if fieldmap.get(BYTES, {}):
                     # extract found bytes description like DeviceHexDataTypes.bin
+                    # Bytes may be described as list for bits or dict for byte 00
                     values.update(
                         self.extract_value(
                             hexdata=hexdata,
                             fieldtype=DeviceHexDataTypes.bin.value,
-                            fieldmap=fieldmap.get(BYTES, {}),
+                            fieldmap=fieldmap,
                         )
                     )
                 elif name := fieldmap.get(NAME):
@@ -667,9 +669,13 @@ class DeviceHexDataField:
                         DeviceHexDataTypes.var.value,
                     ]:
                         length = bytemap.get(LENGTH, 4)
+                    elif ftype == DeviceHexDataTypes.str.value and bytemap.get(LENGTH) == 0:
+                        # Str may have various length definitions or none for encoding and decoding
+                        # Length = 0 defined means variable length but not contained in first byte
+                        length = max(0, len(self.f_value) - pos)
                     else:
                         length = bytemap.get(LENGTH, 0)
-                    if length == 0:
+                    if length <= 0:
                         # if type binary, length may vary and be unknown
                         if ftype == DeviceHexDataTypes.bin.value:
                             length = max(0, len(self.f_value) - pos)
@@ -865,8 +871,8 @@ class DeviceHexDataField:
                     hexvalue = hexvalue[:length] + bytearray(
                         max(0, length - len(hexvalue)) * bytes.fromhex("00")
                     )
-                # add length byte if length specified <= 0
-                if (length := int(desc.get(LENGTH, 1) or 0 - len(hexvalue))) < 0:
+                # add length byte if length specified < 0 or not defined
+                if (length := int((desc.get(LENGTH, -1) or len(hexvalue)) - len(hexvalue))) < 0:
                     hexvalue = bytearray(abs(length).to_bytes()) + hexvalue
             case DeviceHexDataTypes.ui.value:
                 # 1 byte fix, unsigned int (Base type)
