@@ -49,7 +49,7 @@ class DeviceHexDataHeader:
     XX XX    | 2 Bytes message length (including prefix), little endian format
     XX XX XX | 3 Bytes pattern that seem identical across all messages (supposed `03 00/01 0f` for send/receive)
     XX XX    | 2 Bytes pattern for type of message, e.g. `04 05` on telemetry packets and `04 09` for others, depends on device model, to be figured out
-             | High nibble byte 7: 0x40 = encrypted, 0x80 = fragmented, 0xc0 is both 
+             | High nibble byte 7: 0x40 = encrypted, 0x80 = fragmented, 0xc0 is both
              | Low nibble byte 7: 0x08 XOR of request, so 0a00 is the response to 0200, or 0a05 response for 0205,
     XX       | 1 optional response status Byte (00 = success, 01 = failed, 04 = payload wrong)
     e.g. ff09 3b00 03010f 0407 xx ..data..
@@ -129,7 +129,17 @@ class DeviceHexDataHeader:
             s += f" 2 Byte total message length ({Color.YELLOW}{self.msglength!s}{Color.OFF}) in Bytes (Little Endian format)"
             s += f"\n{self.pattern.hex(' '):<8}: 3 Byte fixed message pattern (supposed `03 00/01 0f` for send/receive)"
             s += f"\n{Color.GREEN}{self.msgtype.hex(' ')!s:<8}{Color.OFF}: 2 Byte message type pattern (varies per device model and message type)"
-            s += f"\n{self.status.hex(' '):<8}: 1 Byte response status (00 = success, 01 = failed, 04 = payload wrong) ({int.from_bytes(self.status):>3})"
+            scol = (
+                Color.GREEN
+                if self.status == b"\x00"
+                else Color.RED
+                if self.status in [b"\x01", b"\x04"]
+                else Color.YELLOW
+                if self.status
+                else ""
+            )
+            s += f"\n{scol}{self.status.hex(' '):<8}{Color.OFF}: 1 Byte response status ({scol if self.status == b'\x00' else ''}00=success{Color.OFF}, "
+            s += f"{scol if self.status == b'\x01' else ''}01=failed{Color.OFF}, {scol if self.status == b'\x04' else ''}04=payload wrong{Color.OFF})"
         else:
             s = ""
         return s
@@ -671,7 +681,10 @@ class DeviceHexDataField:
                         DeviceHexDataTypes.var.value,
                     ]:
                         length = bytemap.get(LENGTH, 4)
-                    elif ftype == DeviceHexDataTypes.str.value and bytemap.get(LENGTH) == 0:
+                    elif (
+                        ftype == DeviceHexDataTypes.str.value
+                        and bytemap.get(LENGTH) == 0
+                    ):
                         # Str may have various length definitions or none for encoding and decoding
                         # Length = 0 defined means variable length but not contained in first byte
                         length = max(0, len(self.f_value) - pos)
@@ -874,7 +887,11 @@ class DeviceHexDataField:
                         max(0, length - len(hexvalue)) * bytes.fromhex("00")
                     )
                 # add length byte if length specified < 0 or not defined
-                if (length := int((desc.get(LENGTH, -1) or len(hexvalue)) - len(hexvalue))) < 0:
+                if (
+                    length := int(
+                        (desc.get(LENGTH, -1) or len(hexvalue)) - len(hexvalue)
+                    )
+                ) < 0:
                     hexvalue = bytearray(abs(length).to_bytes()) + hexvalue
             case DeviceHexDataTypes.ui.value:
                 # 1 byte fix, unsigned int (Base type)
@@ -958,7 +975,7 @@ class DeviceHexData:
     XX XX    | 2 Bytes message length (including prefix), little endian format
     XX XX XX | 3 Bytes pattern that seem identical across all messages (supposed `03 00/01 0f` for send/receive)
     XX XX    | 2 Bytes pattern for type of message, e.g. `04 05` on telemetry packets and `04 09` for others, depends on device model, to be figured out
-             | High nibble byte 7: 0x40 = encrypted, 0x80 = fragmented, 0xc0 is both 
+             | High nibble byte 7: 0x40 = encrypted, 0x80 = fragmented, 0xc0 is both
              | Low nibble byte 7: 0x08 XOR of request, so 0a00 is the response to 0200, or 0a05 response for 0205,
     XX       | 1 optional response status Byte (00 = success, 01 = failed, 04 = payload wrong)
     Starting from Byte 10 or 11 there is message data with 1 or more fields, where each field can be of variable length.
