@@ -46,10 +46,12 @@ class DeviceHexDataHeader:
 
     Message header structure (9-10 Bytes):
     FF 09    | 2 Bytes fixed message prefix for Anker Solix message
-    XX XX    | 2 Bytes message length (including prefix), little endian format. Note: Length contains the XOR checksum byte at the end
+    XX XX    | 2 Bytes message length (including prefix), little endian format
     XX XX XX | 3 Bytes pattern that seem identical across all messages (supposed `03 00/01 0f` for send/receive)
-    XX XX    | 2 Bytes pattern for type of message, e.g. `04 05` on telemetry packets and `04 08` for others, depends on device model, to be figured out
-    XX       | 1 optional Byte, seems increment for certain messages, fix for others or not used
+    XX XX    | 2 Bytes pattern for type of message, e.g. `04 05` on telemetry packets and `04 09` for others, depends on device model, to be figured out
+             | High nibble byte 7: 0x40 = encrypted, 0x80 = fragmented, 0xc0 is both 
+             | Low nibble byte 7: 0x08 XOR of request, so 0a00 is the response to 0200, or 0a05 response for 0205,
+    XX       | 1 optional response status Byte (00 = success, 01 = failed, 04 = payload wrong)
     e.g. ff09 3b00 03010f 0407 xx ..data..
     """
 
@@ -57,7 +59,7 @@ class DeviceHexDataHeader:
     msglength: int = 0
     pattern: bytearray = b""
     msgtype: bytearray = b""
-    increment: bytearray = b""
+    status: bytearray = b""
     hexbytes: InitVar[bytearray | bytes | str | None] = None
     cmd_msg: InitVar[bytearray | bytes | str | None] = None
 
@@ -81,15 +83,15 @@ class DeviceHexDataHeader:
             if len(hexbytes) >= 10 and hexbytes[9:10] not in bytearray.fromhex(
                 "a0a1a2a3a4a5a6a7a8a9"
             ):
-                self.increment = hexbytes[9:10]
+                self.status = hexbytes[9:10]
             else:
-                self.increment = b""
+                self.status = b""
         elif isinstance(cmd_msg, bytearray):
             # Initialize for publish command with given message pattern
             self.prefix = bytearray(bytes.fromhex("ff09"))
             self.pattern = bytearray(bytes.fromhex("03000f"))
             self.msgtype = cmd_msg[0:2]
-            self.increment = cmd_msg[2:3]
+            self.status = cmd_msg[2:3]
             self.msglength = len(self) + 2
 
     def __len__(self) -> int:
@@ -98,13 +100,13 @@ class DeviceHexDataHeader:
             len(self.prefix)
             + len(self.pattern)
             + len(self.msgtype)
-            + len(self.increment)
+            + len(self.status)
             + 2 * (self.msglength > 0)
         )
 
     def __str__(self) -> str:
         """Print the class fields."""
-        return f"prefix:{self.prefix.hex()}, msglength:{self.msglength!s}, pattern:{self.pattern.hex()}, msgtype:{self.msgtype.hex()}, increment:{self.increment.hex()}"
+        return f"prefix:{self.prefix.hex()}, msglength:{self.msglength!s}, pattern:{self.pattern.hex()}, msgtype:{self.msgtype.hex()}, status:{self.status.hex()}"
 
     def hex(self, sep: str = "") -> str:
         """Get the header as hex string."""
@@ -113,7 +115,7 @@ class DeviceHexDataHeader:
             + self.msglength.to_bytes(2, byteorder="little")
             + self.pattern
             + self.msgtype
-            + self.increment
+            + self.status
         )
         if sep:
             return f"{b.hex(sep=sep)}"
@@ -127,7 +129,7 @@ class DeviceHexDataHeader:
             s += f" 2 Byte total message length ({Color.YELLOW}{self.msglength!s}{Color.OFF}) in Bytes (Little Endian format)"
             s += f"\n{self.pattern.hex(' '):<8}: 3 Byte fixed message pattern (supposed `03 00/01 0f` for send/receive)"
             s += f"\n{Color.GREEN}{self.msgtype.hex(' ')!s:<8}{Color.OFF}: 2 Byte message type pattern (varies per device model and message type)"
-            s += f"\n{self.increment.hex(' '):<8}: 1 Byte optional message increment ({int.from_bytes(self.increment):>3})"
+            s += f"\n{self.status.hex(' '):<8}: 1 Byte response status (00 = success, 01 = failed, 04 = payload wrong) ({int.from_bytes(self.status):>3})"
         else:
             s = ""
         return s
@@ -142,9 +144,9 @@ class DeviceHexDataField:
     """Dataclass to structure Solix device hex data field as received from MQTT or BT transmissions.
 
     Common data field structure:
-    XX     | 1 Byte data field name (A1, A2, A3 ...), naming can be different per device model and message type
-    XX     | 1-2 Bytes data length (bytes following until end of field), 2 bytes LE only for json field types
-    XX ... | 1-xx Bytes data, where first Byte in data typically indicates the value type of the data (if data length is > 2)
+    XX       | 1 Byte data field name (A1, A2, A3 ...), naming can be different per device model and message type
+    XX       | 1 Byte data length (bytes following until end of field)
+    XX ...   | 1-xx Bytes data, where first Byte in data typically indicates the value type of the data (if data length is > 2)
     """
 
     f_name: bytearray = field(default_factory=bytearray)
@@ -952,16 +954,18 @@ class DeviceHexData:
 
     Messages structure:
     Header structure (9-10 Bytes):
-        FF 09    | 2 Bytes fixed message prefix for Anker Solix message
-        XX XX    | 2 Bytes message length (including prefix), little endian format
-        XX XX XX | 3 Bytes pattern that seem identical across all messages (supposed `03 00/01 0f` for send/receive)
-        XX XX    | 2 Bytes pattern for type of message, e.g. `84 05` on telemetry packets and `04 09` for others, depends on device model, to be figured out
-        XX       | 1 optional Byte, seems increment for certain messages, fix for others or not used
-    Starting from 10 or 11th Byte there is message data with 1 or more fields, where each field can be of variable length.
-        Common data field structure:
-        XX     | 1 Byte data field name (A1, A2, A3 ...), naming can be different per device model and message type
-        XX     | 1 Byte data length (bytes following until end of field)
-        XX ... | 1-xx Bytes data, where first Byte in data typically indicates the value type of the data (if data length is > 2)
+    FF 09    | 2 Bytes fixed message prefix for Anker Solix message
+    XX XX    | 2 Bytes message length (including prefix), little endian format
+    XX XX XX | 3 Bytes pattern that seem identical across all messages (supposed `03 00/01 0f` for send/receive)
+    XX XX    | 2 Bytes pattern for type of message, e.g. `04 05` on telemetry packets and `04 09` for others, depends on device model, to be figured out
+             | High nibble byte 7: 0x40 = encrypted, 0x80 = fragmented, 0xc0 is both 
+             | Low nibble byte 7: 0x08 XOR of request, so 0a00 is the response to 0200, or 0a05 response for 0205,
+    XX       | 1 optional response status Byte (00 = success, 01 = failed, 04 = payload wrong)
+    Starting from Byte 10 or 11 there is message data with 1 or more fields, where each field can be of variable length.
+    Common data field structure:
+    XX       | 1 Byte data field name (A1, A2, A3 ...), naming can be different per device model and message type
+    XX       | 1 Byte data length (bytes following until end of field)
+    XX ...   | 1-xx Bytes data, where first Byte in data typically indicates the value type of the data (if data length is > 2)
     e.g. ff09 3b00 03010f 0407 | a1 01 32 | a2 11 00 415a5636....
     Last byte is XOR checksum across the full message. Checksum byte is included in header message length
     """
