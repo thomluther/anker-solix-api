@@ -93,6 +93,7 @@ FEATURES = {
     SolixMqttCommands.display_theme: MODELS,
     SolixMqttCommands.display_theme_custom: MODELS,
     SolixMqttCommands.port_priority: MODELS,
+    SolixMqttCommands.display_mode_select: MODELS,
     SolixMqttCommands.display_timeout_mode_select: MODELS,
     SolixMqttCommands.clock_mode_select: MODELS,
     SolixMqttCommands.clock_display_schedule: MODELS,

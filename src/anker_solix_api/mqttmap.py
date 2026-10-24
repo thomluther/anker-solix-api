@@ -912,7 +912,7 @@ _A1783_0421 = {
                 TYPE: DeviceHexDataTypes.sile.value,
             },
             "06": {
-                NAME: "upgrade_progress",  # app: upgradeProgress, 0-100 during OTA
+                NAME: "ota_progress",  # app: upgradeProgress, 0-100 during OTA
                 TYPE: DeviceHexDataTypes.ui.value,
             },
             "07": {
@@ -7566,21 +7566,14 @@ SOLIXMQTTMAP: Final[dict] = {
             COMMAND_NAME: SolixMqttCommands.charger_usage_mode,
             "a2": {
                 TYPE: DeviceHexDataTypes.sile.value,
-                LENGTH: 2,
-                BYTES: {
-                    "00": {
-                        NAME: "set_usage_mode",  # Smart Dynamic (0100), High-Power (1=0001, 2=0101, 3=0201)
-                        TYPE: DeviceHexDataTypes.sile.value,
-                        VALUE_OPTIONS: {
-                            "smart_dynamic": 0x0100,
-                            "high_power_1": 0x0001,
-                            "high_power_2": 0x0101,
-                            "high_power_3": 0x0201,
-                        },
-                        STATE_NAME: "usage_mode",
-                        VALUE_STATE: "usage_mode",
-                    },
+                NAME: "set_usage_mode",  # Smart Dynamic (0100), High-Power (1=0001, 2=0101, 3=0201)
+                VALUE_OPTIONS: {
+                    "smart_dynamic": 0x0100,
+                    "high_power_1": 0x0001,
+                    "high_power_2": 0x0101,
+                    "high_power_3": 0x0201,
                 },
+                STATE_NAME: "usage_mode",
             },
         },
         "0207": {

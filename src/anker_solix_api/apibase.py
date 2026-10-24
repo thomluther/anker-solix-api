@@ -16,6 +16,7 @@ from .apitypes import (
     API_ENDPOINTS,
     API_FILEPREFIXES,
     API_HES_SVC_ENDPOINTS,
+    EMBEDDED_THEMES,
     SolixDefaults,
     SolixDeviceCapacity,
     SolixDeviceCategory,
@@ -906,6 +907,7 @@ class AnkerSolixBaseApi:
                                         "_protocols",
                                         "_settings",
                                         "_data",
+                                        "_progress",
                                         # "?",  # Add for decoder testing in monitor
                                     )
                                 )
@@ -961,6 +963,9 @@ class AnkerSolixBaseApi:
                                     device_mqtt[f"{idx}_priority"] = 1 + int(
                                         bool(1 & (value >> bit))
                                     )
+                            elif key == "ota_progress":
+                                # cap any progress numbers 0-100%
+                                device_mqtt["ota_progress"] = min(100, max(0, value))
                             value_updated = bool(
                                 key not in ["topics", "expansion_packs"]
                                 and "timestamp" not in key
@@ -1381,17 +1386,35 @@ class AnkerSolixBaseApi:
                                     self.notify_device(deviceSn=pps_sn)
                                 # update device Api cache for capacity calculations
                                 self.powerpanelApi._update_dev(pps_update)  # noqa: SLF001
-                    # trigger device cache update for display theme
-                    if "theme_id" in check_values and str(
-                        check_values.get("theme_id")
-                    ) != device.get("display_theme", {}).get("id"):
-                        # update only if cached value different
-                        self._update_dev(
-                            {
-                                "device_sn": sn,
-                                "theme_id": check_values.get("theme_id"),
-                            }
-                        )
+                    # trigger creation of embedded themes structure once
+                    if "theme_type" in check_values and "embedded_themes" not in device:
+                        device["embedded_themes"] = EMBEDDED_THEMES.get(
+                            model
+                        ) or EMBEDDED_THEMES.get("default")
+                    # trigger device cache update for display theme id change
+                    if "theme_id" in check_values:
+                        theme_type = int(check_values.get("theme_type", -1))
+                        # update web theme only if cached value different
+                        if theme_type > 2 and str(
+                            check_values.get("theme_id")
+                        ) != device.get("display_theme", {}).get("id"):
+                            self._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "theme_id": check_values.get("theme_id"),
+                                }
+                            )
+                        # update embedded theme only if cached value different
+                        # TODO: Update check to make cache update also upon embedded type changes on supported
+                        elif 0 <= theme_type <= 2 and theme_type != device.get(
+                            "display_theme", {}
+                        ).get("type", theme_type):
+                            self._update_dev(
+                                {
+                                    "device_sn": sn,
+                                    "theme_type": theme_type,
+                                }
+                            )
                     # update marker should also indicate increase in extracted keys
                     updated = updated or (oldsize != len(device_mqtt))
                     # notify registered devices if new mqtt data cache was generated or dynamic description state changed

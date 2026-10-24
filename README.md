@@ -12,7 +12,7 @@
 ![python badge](https://img.shields.io/badge/Made%20with-Python-orange)
 [![GitHub repo Good Issues for newbies](https://img.shields.io/github/issues/thomluther/anker-solix-api/good%20first%20issue?style=flat&logo=github&logoColor=green&label=Good%20First%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) [![GitHub Help Wanted issues](https://img.shields.io/github/issues/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub Help Wanted PRs](https://img.shields.io/github/issues-pr/thomluther/anker-solix-api/help%20wanted?style=flat&logo=github&logoColor=b545d1&label=%22Help%20Wanted%22%20PRs)](https://github.com/thomluther/anker-solix-api/pulls?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) [![GitHub repo Issues](https://img.shields.io/github/issues/thomluther/anker-solix-api?style=flat&logo=github&logoColor=red&label=Issues)](https://github.com/thomluther/anker-solix-api/issues?q=is%3Aopen)
 
-This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter, Portable Power Stations etc). Currently it is not planned to release the library as a package on PyPI, however you can [install the package locally](#install-as-local-package) to use it in your own code.
+This is an experimental Python library for Anker Solix Power devices (Solarbank, Inverter, Smart Meter, Portable Power Stations etc). Currently it is not planned to release the library as a package on PyPI, however you can [install the package locally](#installation) to use it in your own code.
 
 > [!WARNING]
 > 🚨 This is by no means an official Anker Api. It can break at any time, or Api requests can be removed/added/changed and break some of the endpoint methods used in this Api.🚨
@@ -34,12 +34,12 @@ This is an experimental Python library for Anker Solix Power devices (Solarbank,
    * [test_api.py](#test_apipy)
    * [export_system.py](#export_systempy)
    * [monitor.py](#monitorpy)
-     - [Live Monitor key menu](#live-monitor-key-menu)
-     - [File usage Monitor key menu](#file-usage-monitor-key-menu)
-     - [Command line options for monitor tool](#command-line-options-for-monitor-tool)
+     * [Live Monitor key menu](#live-monitor-key-menu)
+     * [File usage Monitor key menu](#file-usage-monitor-key-menu)
+     * [Command line options for monitor tool](#command-line-options-for-monitor-tool)
    * [mqtt_monitor.py](#mqtt_monitorpy)
-     - [MQTT Monitor key menu](#mqtt-monitor-key-menu)
-     - [Command line options for mqtt_monitor tool](#command-line-options-for-mqtt_monitor-tool)
+     * [MQTT Monitor key menu](#mqtt-monitor-key-menu)
+     * [Command line options for mqtt_monitor tool](#command-line-options-for-mqtt_monitor-tool)
    * [energy_csv.py](#energy_csvpy)
 1. **[Contributing](#contributing)**
 1. **[Acknowledgements / Credits / Additional resources](#acknowledgements--credits--additional-resources)**
@@ -49,18 +49,20 @@ This is an experimental Python library for Anker Solix Power devices (Solarbank,
 
 The library is currently supported on
 
-- Python 3.12
-- Python 3.13
-- Python 3.14
+* Python 3.12
+* Python 3.13
+* Python 3.14
 
 If you install the Python runtime on MacOS (especially 3.14), make sure to complete also the root CA certificate installation as described in [Python on MacOS installation steps](https://docs.python.org/3.14/using/mac.html#installation-steps).
 
 Without proper Python root CA's installed, you may see errors like this on Api authentication since the Api requires secure HTTP:
+
 ```shell
 Cannot connect to host ankerpower-api.anker.com:443 ssl:True
 [SSLCertVerificationError: (1, '[SSL: CERTIFICATE_VERIFY_FAILED]
 certificate verify failed: unable to get local issuer certificate')]
 ```
+
 More details on this behavior can be found in issue [#336](https://github.com/thomluther/anker-solix-api/issues/336)
 
 # Required libraries
@@ -77,10 +79,13 @@ Follow the steps below to install the required python libraries as well as the a
 
 **Step 1:** Install `poetry` following the [official documentation](https://python-poetry.org/docs/#installation) or via your favorite package manager,
 for example:
+
 ```shell
 sudo pip install poetry
 ```
+
 or
+
 ```shell
 sudo pacman -S python-poetry
 ```
@@ -109,27 +114,32 @@ Follow the steps below to install the required python libraries manually and ins
 1. To install the dependencies manually consult your favorite package manager, for example:
 
     Using a virtual environment (recommended)
+
     ```shell
     python3 -m venv venv && . venv/bin/activate && pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
     ```
+
     or using system-wide packages
+
     ```shell
     sudo pip install cryptography aiohttp aiofiles paho-mqtt python-dotenv
     ```
+
     or
+
     ```shell
     sudo pacman -S python-cryptography python-aiohttp python-aiofiles python-paho-mqtt python-python-dotenv
     ```
 
 1. Install local anker_solix_api package statically in the environment
 
-    ```
+    ```shell
     pip install .
     ```
 
     If you want a changeable package install, to allow source file modifications become effective immediately, you should use an editable install:
 
-    ```
+    ```shell
     pip install --editable .
     ```
 
@@ -140,11 +150,8 @@ Follow the steps below to install the required python libraries manually and ins
     python [...].py
     ```
 
-
-
 > [!IMPORTANT]
 > The manual method can not check your python version so please make sure that yours is [supported](#python-versions).
-
 
 # Anker Account Information
 
@@ -224,20 +231,20 @@ if __name__ == "__main__":
 The AnkerSolixApi class starts an AnkerSolixApiSession to handle the Api connection for the provided Anker user account.
 The AnkerSolixApi class provides also methods which utilize the `power_service` endpoints and it provides 4 main methods to query data and cache them into internal dictionaries (the Api cache):
 
-- `AnkerSolixApi.update_sites()` to query overview data for all accessible sites and store data in dictionaries `AnkerSolixApi.sites`, `AnkerSolixApi.devices` and `AnkerSolixApi.account` for quick access.
+* `AnkerSolixApi.update_sites()` to query overview data for all accessible sites and store data in dictionaries `AnkerSolixApi.sites`, `AnkerSolixApi.devices` and `AnkerSolixApi.account` for quick access.
 
   This method could be run in regular intervals (60 sec or more) to fetch new data of the systems. Note that the main system device updates the data in the cloud max. once every minute or even every 5 minutes. Therefore, less than 60 second intervals do not provide much benefit.
 
-- `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query or for stand alone devices and store data in dictionary `AnkerSolixApi.devices`.
+* `AnkerSolixApi.update_device_details()` to query further settings for the device serials as found in the sites query or for stand alone devices and store data in dictionary `AnkerSolixApi.devices`.
 
   This method should be run less frequently since this will mostly fetch various device configuration settings and needs multiple queries.
   It currently is developed for Solarbank and Inverter devices only. Further device types such as Power Panels or Home Energy Systems (X1) have a corresponding method in their Api class, which will be used and merged accordingly. This method should be used first, before any of the 2 following methods is used, since it may create virtual sites for stand alone devices that track also energy statistics in the cloud, but are not reported by the update_sites() method.
 
-- `AnkerSolixApi.update_site_details()` to query further settings for the defined site (power system) and store data in dictionary `AnkerSolixApi.sites` for quick access.
+* `AnkerSolixApi.update_site_details()` to query further settings for the defined site (power system) and store data in dictionary `AnkerSolixApi.sites` for quick access.
 
   This method should be run less frequently since this will mostly fetch various site configuration settings and needs multiple queries.
 
-- `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices from each site and store data in dictionary `AnkerSolixApi.sites` for quick access.
+* `AnkerSolixApi.update_device_energy()` to query further energy statistics for the devices from each site and store data in dictionary `AnkerSolixApi.sites` for quick access.
 
   This method should be run less frequently since this will fetch 4-6 queries per site depending on found device types. With version 2.0.0, solarbank, inverter and smart meter devices are supported. However it was noticed, that the energy statistics endpoint (probably each endpoint) is limited to 25-30 queries per minute. As of Feb 2025, the endpoint limit for energy statistics was further reduced to 10-12 requests per minute.
 
@@ -285,7 +292,6 @@ Device type | Description
 `home_backup` | Anker Solix Home Backup devices:<br>- A17E1: Solix E10 (US market) **(Basic MQTT monitoring)**<br>- AX170: Power Dock for Solix E10 (US market) **(Basic MQTT monitoring)**
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the Anker Solix V1 EV Charger.
 
-
 > [!IMPORTANT]
 > While some api responses may show standalone devices that you can manage with your Anker account, the cloud api does **NOT** contain or receive power values or much other details from standalone devices which are not defined to a Power System. The realtime data that you see in the mobile app under device details are either provided through the local Bluetooth interface or through an MQTT cloud server, where all your devices report their actual values. MQTT data may be published at regular, less frequent intervals, or may be triggered for real time data publish as prompted by the mobile App. Therefore, there are no Api endpoints that provide usage data or settings of such stand alone devices. If your device is tracking energy statistics, it it likely using the power Api that seems to be the unique Anker service to record energy data over time.
 
@@ -294,10 +300,11 @@ Device type | Description
 
 This is a rather new implementation in the library. It provides data classes to structure the byte data as received in MQTT messages. The modules also contain a data mapping for the byte fields as known so far. This mapping descriptions in `mqttmap.py` and `mqttcmdmap.py` must be enhanced for each device model, constellation and message type that is provided, to allow MQTT data decoding, extraction and usage.
 Devices publish 3 different type of messages typically:
-- Message 0405 and optional other 04xx messages while triggered for real time data (typically in 3-5 second intervals)
-  - These messages may also be published once upon a status request command if supported by the device
-- Message 08xx at regular intervals of 60-500 seconds (typically as long as device is awake)
-- Other messages like 07xx at irregular intervals, probably upon changes like message for Wifi signal strength
+
+* Message 0405 and optional other 04xx messages while triggered for real time data (typically in 3-5 second intervals)
+  * These messages may also be published once upon a status request command if supported by the device
+* Message 08xx at regular intervals of 60-500 seconds (typically as long as device is awake)
+* Other messages like 07xx at irregular intervals, probably upon changes like message for Wifi signal strength
 
 Once you decode and describe messages, you need to document their interval as well. All message types with meaningful data fields should be described, messages that do not contain relevant data should be skipped in the description. If only the triggered/requested message types for a device are described, no data can be extracted by the MQTT client if the real time trigger is not active. Therefore, standard/regular message types should be described as well if available and their interval should be known.
 
@@ -343,6 +350,7 @@ poetry run python ./test_api.py
 
 Example exec module that can be used to explore and test AnkerSolixApi methods or direct endpoint requests with parameters. You can modify this module as required. Optionally you can create your own test file called `client.py` starting with the usage example above. The `client.py` file is not indexed and added to gitignore, so your local changes are not tracked for git updates/commits.
 This allows you to code your credentials in the local file if you do not want to utilize the environment variables:
+
 ```python
 _CREDENTIALS = {
     "USER": os.getenv("ANKERUSER"),
@@ -350,14 +358,16 @@ _CREDENTIALS = {
     "COUNTRY": os.getenv("ANKERCOUNTRY"),
 }
 ```
+
 Those environment variables can optionally be defined in a local `.env` file in your repo root folder which is excluded from repo updates as well.
+
 ```console
 ANKERUSER="username"
 ANKERPASSWORD="password"
 ANKERCOUNTRY="2_char_country_id"
 ```
-Those variables will only be loaded at runtime when importing the common module.
 
+Those variables will only be loaded at runtime when importing the common module.
 
 ## export_system.py
 
@@ -380,21 +390,24 @@ Command line arguments allow making the tool more suitable for automation and no
 You can run with no arguments and being prompted for options, or supplying an option parameter to skip its prompt.
 --non-interactive will avoid any prompts and use defaults for options not specified.
 Keep in mind that credential prompts are only avoided if they are defined as environment variables:
-  - ANKERUSER=<username>
-  - ANKERPASSWORD=<password>
-  - ANKERCOUNTRY=<country_id>
+
+```shell
+ANKERUSER=<username>
+ANKERPASSWORD=<password>
+ANKERCOUNTRY=<country_id>
+```
 
 Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
 #### Main usage options
-- `--services {all,power,charging,hes,mqtt,discover}` / `-s`: Which services to use for export
-- `--endpoint-limit N` / `-l`: Api endpoint request limit
-- `--randomize` / `--no-randomize`: Randomize IDs/SNs
-- `--mqtt-data` / `--no-mqtt-data`: Export also MQTT device messages
-- `--folder FOLDER` / `-f`: Export subfolder
-- `--zip` / `--no-zip`: Zip the output folder
-- `--non-interactive` / `-n`: Avoid prompts and use defaults for missing options
 
+* `--services {all,power,charging,hes,mqtt,discover}` / `-s`: Which services to use for export
+* `--endpoint-limit N` / `-l`: Api endpoint request limit
+* `--randomize` / `--no-randomize`: Randomize IDs/SNs
+* `--mqtt-data` / `--no-mqtt-data`: Export also MQTT device messages
+* `--folder FOLDER` / `-f`: Export subfolder
+* `--zip` / `--no-zip`: Zip the output folder
+* `--non-interactive` / `-n`: Avoid prompts and use defaults for missing options
 
 #### Command line argument usage examples
 
@@ -411,6 +424,7 @@ python monitor.py -live -mqtt --mqtt-display --site-id ABC123
 # Debug mode with HTTP logging
 python monitor.py -live -mqtt --debug-http
 ```
+
 </details>
 
 
@@ -430,9 +444,10 @@ When using monitoring from local json file folder, the values will not change ty
 > MQTT data in File mode can only be extracted if the export files contain MQTT messages (optional), the MQTT session is enabled in the monitor tool and an MQTT data description is defined in the `mqttmap.py` for the device PN.
 
 The monitor uses following value highlighting with enabled MQTT session to distinguish their data source:
-- Yellow: Device MQTT values with any new extracted data for the device
-- Cyan: Last known device MQTT values if no device data was updated
-- No color: Api data
+
+* Yellow: Device MQTT values with any new extracted data for the device
+* Cyan: Last known device MQTT values if no device data was updated
+* No color: Api data
 
 Beside value highlighting, systems, devices, vehicles etc have their own highlighting to recognize corresponding sections quickly in the Api display.
 
@@ -448,7 +463,7 @@ You can also issue MQTT device controls with the monitor, if the MQTT session is
 <details>
 <summary><b>Expand to see monitor tool usage overview</b><br><br></summary>
 
-### Live Monitor key menu:
+### Live Monitor key menu
 
 ```console
 ----------------------------------------------------------------------------------------------------
@@ -468,7 +483,7 @@ Toggle MQTT [S]ession OFF (default) or ON
 ----------------------------------------------------------------------------------------------------
 ```
 
-### File usage Monitor key menu:
+### File usage Monitor key menu
 
 ```console
 ----------------------------------------------------------------------------------------------------
@@ -497,31 +512,36 @@ Select [O]ther folder for monitoring
 
 Command line arguments allow making the monitor tool more suitable for automation and non-interactive usage.
 Keep in mind that credential prompts are only avoided if they are defined as environment variables:
-  - ANKERUSER=<username>
-  - ANKERPASSWORD=<password>
-  - ANKERCOUNTRY=<country_id>
+
+```shell
+  ANKERUSER=<username>
+  ANKERPASSWORD=<password>
+  ANKERCOUNTRY=<country_id>
+```
 
 Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
 #### Main usage options
-- `--help` / `-h`: Get usage information
-- `--live-cloud` / `-live`: Skip interactive mode, use live cloud data directly
-- `--site-id`: Monitor specific site ID only instead of all sites and devices for account
-- `--device-id`, `-dev`: Filter output for specific device ID only
-- `--enable-mqtt` / `-mqtt`: Enable MQTT session after startup for real-time device data
-- `--realtime-trigger` / `-rt`: Enable real-time MQTT trigger after startup (requires --enable-mqtt)
-- `--mqtt-display`: Initially show pure MQTT data display instead of mixed API + MQTT display (requires --enable-mqtt)
+
+* `--help` / `-h`: Get usage information
+* `--live-cloud` / `-live`: Skip interactive mode, use live cloud data directly
+* `--site-id`: Monitor specific site ID only instead of all sites and devices for account
+* `--device-id`, `-dev`: Filter output for specific device ID only
+* `--enable-mqtt` / `-mqtt`: Enable MQTT session after startup for real-time device data
+* `--realtime-trigger` / `-rt`: Enable real-time MQTT trigger after startup (requires --enable-mqtt)
+* `--mqtt-display`: Initially show pure MQTT data display instead of mixed API + MQTT display (requires --enable-mqtt)
 
 #### Configuration Options
-- `--interval` / `-i`: Modify default refresh interval (5-600 seconds, default: 30)
-- `--endpoint-limit`: Modify default API endpoint limit for request throttling (default: 10)
-- `--energy-stats` / `-energy`: Include daily site energy statistics, only shown with API display
-- `--no-vehicles` / `-no-ev`: Disable electric vehicle display for API display
+
+* `--interval` / `-i`: Modify default refresh interval (5-600 seconds, default: 30)
+* `--endpoint-limit`: Modify default API endpoint limit for request throttling (default: 10)
+* `--energy-stats` / `-energy`: Include daily site energy statistics, only shown with API display
+* `--no-vehicles` / `-no-ev`: Disable electric vehicle display for API display
 
 #### Debug & Logging
-- `--api-calls`: Show API call statistics and details
-- `--debug-http`: Control HTTP request/response debug logging (separated from API stats)
 
+* `--api-calls`: Show API call statistics and details
+* `--debug-http`: Control HTTP request/response debug logging (separated from API stats)
 
 #### Command line argument usage examples
 
@@ -538,12 +558,12 @@ python monitor.py -live -mqtt --mqtt-display --site-id ABC123
 # Debug mode with HTTP logging
 python monitor.py -live -mqtt --debug-http
 ```
+
 </details>
 
 > [!TIP]
 > If the system owning account is used, more details for the owning sites and devices can be queried and displayed. You can also compare the monitor data
 with mobile App data.
-
 
 ## mqtt_monitor.py
 
@@ -561,15 +581,15 @@ The tool also utilizes the built in real time data trigger, which can trigger fr
 You can also issue described and supported MQTT device controls with the mqtt_monitor. You need to select the control and confirm customizable control parameters and then the composed MQTT command will be published. The monitor should show the decoded published command if subscribed to the command topics. To verify the MQTT control was correctly executed, you should verify the device settings in the mobile App in parallel. Some device controls require to re-enter the device details panel to get updates visualized in the mobile App. If the device control does not work, the command message description is most likely wrong or incomplete. You need to dump MQTT command message examples while doing the same control changes via the App and compare them with the composed commands from the message descriptions of your device PN.
 
 > [!NOTE]
-> - Device firmware changes may introduce additional fields in the control, that are not described yet.
-> - Certain device controls may trigger more than one MQTT command through the App or Cloud. Multiple commands per control are not implemented (yet) in the MQTT control framework of this library. Subsequent commands for controls will have to be described and understood entirely before such multi command controls can be supported.
-> - Some MQTT device controls are just a partial control if the control is also manageable via the cloud Api. If only the device command is published, the cloud Api may not be aware of the control change. One example is the Solarbank min SOC setting (SOC Reserve), which must be triggered through the cloud Api instead of the MQTT control for full functionality. Other examples are settings through the station in a solarbank system, especially if the station control needs to modify multiple devices in the system (Multisystems with or without power dock)
-
+>
+> * Device firmware changes may introduce additional fields in the control, that are not described yet.
+> * Certain device controls may trigger more than one MQTT command through the App or Cloud. Multiple commands per control are not implemented (yet) in the MQTT control framework of this library. Subsequent commands for controls will have to be described and understood entirely before such multi command controls can be supported.
+> * Some MQTT device controls are just a partial control if the control is also manageable via the cloud Api. If only the device command is published, the cloud Api may not be aware of the control change. One example is the Solarbank min SOC setting (SOC Reserve), which must be triggered through the cloud Api instead of the MQTT control for full functionality. Other examples are settings through the station in a solarbank system, especially if the station control needs to modify multiple devices in the system (Multisystems with or without power dock)
 
 <details>
 <summary><b>Expand to see monitor tool usage overview</b><br><br></summary>
 
-### MQTT Monitor key menu:
+### MQTT Monitor key menu
 
 ```console
 ----------------------------------------------------------------------------------------------------
@@ -596,23 +616,28 @@ messages and differences in the status messages before and after the command.
 To analyze the dump files, you can modify and use the `grep_mqtt_cmd.py`utility.
 
 Keep in mind that credential prompts are only avoided if they are defined as environment variables:
-  - ANKERUSER=<username>
-  - ANKERPASSWORD=<password>
-  - ANKERCOUNTRY=<country_id>
+
+```shell
+  ANKERUSER=<username>
+  ANKERPASSWORD=<password>
+  ANKERCOUNTRY=<country_id>
+```
 
 Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
 #### Main usage options
-- `--help` / `-h`: Get usage information
-- `--device-sn`, `-dev` DEVICE_SN: Define device SN to be monitored (required to use monitor without prompting)
-- `--filedump` / `-fd`: Enable console dump into file
-- `--dump-prefix` / `-dp` DUMP_PREFIX: Define dump filename prefix
-- `--runtime` / `-r` MINUTES: Optional runtime in minutes [1-60] (default: Until cancelled)
+
+* `--help` / `-h`: Get usage information
+* `--device-sn`, `-dev` DEVICE_SN: Define device SN to be monitored (required to use monitor without prompting)
+* `--filedump` / `-fd`: Enable console dump into file
+* `--dump-prefix` / `-dp` DUMP_PREFIX: Define dump filename prefix
+* `--runtime` / `-r` MINUTES: Optional runtime in minutes [1-60] (default: Until cancelled)
 
 #### Configuration Options
-- `--realtime-trigger` / `-rt`: Enable MQTT real-time data trigger at startup
-- `--status-request` / `-sr`: Issue immediate MQTT status request after startup
-- `--value-display` / `-vd`: Initially show MQTT value display instead of MQTT messages display
+
+* `--realtime-trigger` / `-rt`: Enable MQTT real-time data trigger at startup
+* `--status-request` / `-sr`: Issue immediate MQTT status request after startup
+* `--value-display` / `-vd`: Initially show MQTT value display instead of MQTT messages display
 
 #### Command line argument usage examples
 
@@ -623,6 +648,7 @@ python mqtt_monitor.py -dev 1234567890123456 -rt 10 -fd
 # start MQTT monitoring with dump into file using customer prefex and initial status request
 python mqtt_monitor.py -dev 1234567890123456 -fd -dp cmd.device_timeout -sr
 ```
+
 </details>
 
 > [!TIP]
@@ -630,7 +656,6 @@ python mqtt_monitor.py -dev 1234567890123456 -fd -dp cmd.device_timeout -sr
 
 > [!NOTE]
 > The mobile app will always trigger realtime data from your device with a default timeout of 5 minutes. So you don't have to enable real time trigger in the monitor as well in case you use the app in parallel, e.g. to dump control messages for the changes you apply through the app.
-
 
 ## energy_csv.py
 
@@ -648,9 +673,11 @@ data is also selected for export, 2-4 additional Api queries per day are require
 
 > [!IMPORTANT]
 > The api enforces a query limit per minute, per endpoint & IP address. The energy statistics endpoint is limited to 10-12 queries per minute. The Api library will apply a default throttling of 10 requests per minute once the first error is received for the endpoint that indicates exceeding the limit:
+
 ```
 429: Too many requests
 ```
+
 Therefore, large range queries of multiple weeks with daily totals may therefore have an unpredictable runtime of several minutes.
 
 > [!TIP]
@@ -679,10 +706,10 @@ Pull requests are the best way to propose changes to the codebase.
 
 # Acknowledgements / Credits / Additional resources
 
-- [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
-- [solix2mqtt](https://github.com/tomquist/solix2mqtt)
-- [Anker Solix BLE library - Local Bluetooth interface only (Unofficial)](https://github.com/flip-dots/SolixBLE)
-- [Anker Solix Api exploration](https://github.com/moag1000/anker-solix-api-exploration)
+* [python-eufy-security](https://github.com/FuzzyMistborn/python-eufy-security)
+* [solix2mqtt](https://github.com/tomquist/solix2mqtt)
+* [Anker Solix BLE library - Local Bluetooth interface only (Unofficial)](https://github.com/flip-dots/SolixBLE)
+* [Anker Solix Api exploration](https://github.com/moag1000/anker-solix-api-exploration)
 
 
 # Showing Your Appreciation
