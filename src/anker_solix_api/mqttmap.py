@@ -3556,10 +3556,10 @@ _A2345_0a00 = (
                     # Either NTC above 125 C, held until both are below 95 C
                     {NAME: "over_temperature", MASK: 0x01},
                     *[
-                        {NAME: f"usbc_{port}_fault?", MASK: 0x01 << port}
+                        {NAME: f"usbc_{port}_fault", MASK: 0x01 << port}
                         for port in range(1, 5)
                     ],
-                    {NAME: "usba_fault?", MASK: 0x20},  # either USB-A port
+                    {NAME: "usba_fault", MASK: 0x20},  # either USB-A port
                 ],
             },
         },

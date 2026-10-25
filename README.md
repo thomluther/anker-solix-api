@@ -287,7 +287,7 @@ Device type | Description
 `solarbank_pps` | Anker Solix Portable Power Stations coupled with Smart Meter (Api and MQTT monitoring):<br>- A1782: F3000 Portable Power Station **(MQTT monitoring)**
 `powerpanel` | Anker Solix Power Panels configured in the system **(basic Api & MQTT monitoring)**:<br>- A17B1: SOLIX Home Power Panel for SOLIX F3800 power stations (Non EU market)
 `hes` | Anker Solix Home Energy Systems and their sub devices as configured in the system **(basic Api & MQTT monitoring)**:<br>- A5101: SOLIX X1 P6K US<br>- A5102 SOLIX X1 Energy module 1P H(3.68-6)K<br>- A5103: SOLIX X1 Energy module 3P H(5-12)K<br>- A5220: SOLIX X1 Battery module
-`charger` | Anker Solix charging stations :<br>- A2345: 250W Prime Charger **(Api & MQTT monitoring & control)**<br>- A91B2: 240W Charging Station **(MQTT monitoring & partial control)**<br>- AS200: Alternator Charger **(MQTT monitoring & control)**
+`charger` | Anker Solix charging stations :<br>- A2345: 250W Prime Charger **(Api & MQTT monitoring & control)**<br>- A91B2: 240W Charging Station **(MQTT monitoring & control)**<br>- AS200: Alternator Charger **(MQTT monitoring & control)**
 `ev_charger` | Anker Solix EV charger devices:<br>- A5191: V1 Smart EV Charger **(MQTT monitoring & control)**
 `home_backup` | Anker Solix Home Backup devices:<br>- A17E1: Solix E10 (US market) **(Basic MQTT monitoring)**<br>- AX170: Power Dock for Solix E10 (US market) **(Basic MQTT monitoring)**
 `vehicle` | Electric vehicles as created/defined under the Anker Solix user account. Those vehicles are virtual devices that will be required to manage charging with the Anker Solix V1 EV Charger.
@@ -391,10 +391,10 @@ You can run with no arguments and being prompted for options, or supplying an op
 --non-interactive will avoid any prompts and use defaults for options not specified.
 Keep in mind that credential prompts are only avoided if they are defined as environment variables:
 
-```shell
-ANKERUSER=<username>
-ANKERPASSWORD=<password>
-ANKERCOUNTRY=<country_id>
+```console
+ANKERUSER="username"
+ANKERPASSWORD="password"
+ANKERCOUNTRY="2_char_country_id"
 ```
 
 Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
@@ -513,10 +513,10 @@ Select [O]ther folder for monitoring
 Command line arguments allow making the monitor tool more suitable for automation and non-interactive usage.
 Keep in mind that credential prompts are only avoided if they are defined as environment variables:
 
-```shell
-  ANKERUSER=<username>
-  ANKERPASSWORD=<password>
-  ANKERCOUNTRY=<country_id>
+```console
+ANKERUSER="username"
+ANKERPASSWORD="password"
+ANKERCOUNTRY="2_char_country_id"
 ```
 
 Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
@@ -617,10 +617,10 @@ To analyze the dump files, you can modify and use the `grep_mqtt_cmd.py`utility.
 
 Keep in mind that credential prompts are only avoided if they are defined as environment variables:
 
-```shell
-  ANKERUSER=<username>
-  ANKERPASSWORD=<password>
-  ANKERCOUNTRY=<country_id>
+```console
+ANKERUSER="username"
+ANKERPASSWORD="password"
+ANKERCOUNTRY="2_char_country_id"
 ```
 
 Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).

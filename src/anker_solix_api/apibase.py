@@ -868,6 +868,7 @@ class AnkerSolixBaseApi:
                                 # keys with value being saved unchanged
                                 "topics",
                                 "error_code",
+                                "over_temperature",
                                 "dc_12v_auto_on",  # missing MQTT control command
                                 "grid_export_disabled",
                                 "temp_unit_fahrenheit",
@@ -885,6 +886,9 @@ class AnkerSolixBaseApi:
                                 "charging_time",
                                 "mtu_size",
                                 "active_plan",
+                                "ota_allowed",
+                                "ota_block_reason",
+                                "ota_busy",
                             ]
                             or (
                                 str(key).endswith(
@@ -908,6 +912,8 @@ class AnkerSolixBaseApi:
                                         "_settings",
                                         "_data",
                                         "_progress",
+                                        "_fault",
+                                        "_undervoltage",
                                         # "?",  # Add for decoder testing in monitor
                                     )
                                 )

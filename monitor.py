@@ -872,6 +872,27 @@ class AnkerSolixApiMonitor:
                         f"{'MQTT Device':<{col1}}: {cm}{('Connected' if mdev.is_connected() else 'Disconnected'):<{col2}}{co} "
                         f"{'Subscription':<{col3}}: {cm}{('Active' if mdev.is_subscribed() else 'Inactive')}{co}"
                     )
+                    if problems := (
+                        {
+                            key: v
+                            for key in [
+                                "over_temperature",
+                                "usba_undervoltage",
+                                "usba_fault",
+                            ]
+                            if (v := mqtt.get(key)) is not None
+                        }
+                        | {
+                            f"usbc_{port}_fault": v
+                            for port in range(1, 5)
+                            if (v := mqtt.get(f"usbc_{port}_fault")) is not None
+                        }
+                    ):
+                        m1 = (c or cm) and [k for k, v in problems.items() if v]
+                        CONSOLE.info(
+                            f"{'Device Status':<{col1}}: {str(m1) and (c or cm)}{'Problem' if m1 else 'OK':<{col2}}{co} "
+                            f"{'Problems':<{col3}}: {str(m1) and (c or cm)}{str(m1).strip('[]').replace('_', ' ') or 'None'}{co}"
+                        )
 
             if devtype == SolixDeviceType.COMBINER_BOX.value:
                 CONSOLE.info(
