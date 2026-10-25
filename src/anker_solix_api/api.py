@@ -1570,7 +1570,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             if (site.get("smart_plug_info") or {}).get("smartplug_list"):
                 options.add(SolarbankUsageMode.smartplugs.name)
             # Add options introduced with SB2 AC for AC charging
-            if "grid_to_battery_power" in device or ac_devs:
+            # TODO(SB_PPS): Allow backup mode once required implementation for SB_PPS is known
+            if device.get("type") != SolixDeviceType.SOLARBANK_PPS.value and (
+                "grid_to_battery_power" in device or ac_devs
+            ):
                 options.add(SolarbankUsageMode.backup.name)
             # Add use time if plan is defined
             if (
