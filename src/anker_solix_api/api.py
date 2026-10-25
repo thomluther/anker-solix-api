@@ -2373,14 +2373,14 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             dev = self.devices.get(deviceSn, {})
             # Ensure query type 19 is supported by system
             # Systems with Station support can be controlled through Api alone, otherwise an MQTT command is required additionally to toggle the device
-            # Note: A cloud change mid April 2026 may reports station support for SB2 although max load cannot be controlled via station parm
+            # NOTE: A cloud change mid April 2026 may report station support for SB2 although max load cannot be controlled via station parm
             if (
                 dev.get("type") == SolixDeviceType.COMBINER_BOX.value
                 or dev.get("station_sn")
                 or dev.get("generation", 0) >= 3
             ):
-                # adopt ac_output_type if granular setting is supported
-                if ac_output_type is None and "unlock_default_power_type" in dev:
+                # adopt ac_output_type if not provided, granular setting is supported for all Gen 3 or Combiner Box devices
+                if ac_output_type is None:
                     ac_output_type = 1
                 if not isinstance(
                     await self.set_device_parm(
