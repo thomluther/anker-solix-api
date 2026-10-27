@@ -6465,6 +6465,35 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: Only as response to status request, same content as 0421
         "0900": _AS220_0421,
     },
+    # PPS F1500
+    "A1772": {
+        "0042": CMD_AC_OUTPUT_TIMEOUT_SEC,  # AC output timeout: 0-86400 seconds, step 300
+        "0043": CMD_DC_OUTPUT_TIMEOUT_SEC,  # DC output timeout: 0-86400 seconds, step 300
+        "0044": CMD_AC_CHARGE_LIMIT  # in W; min: 200, max: 1000, step: 100
+        | {
+            "a2": {
+                **CMD_AC_CHARGE_LIMIT["a2"],
+                VALUE_MIN: 200,
+                VALUE_MAX: 1000,
+                VALUE_STEP: 100,
+            }
+        },
+        "0045": CMD_DEVICE_TIMEOUT_MIN,  # Options in minutes: 0 (Never), 30, 60, 120, 240, 360, 720, 1440
+        "0046": CMD_DISPLAY_TIMEOUT_SEC,  # Options in seconds: 20, 30, 60, 300, 1800 seconds
+        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
+        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
+        "004c": CMD_DISPLAY_MODE,  # Display brightness: Off (0), Low (1), Medium (2), High (3)
+        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), SOS blinking (4)
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
+        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0405": _A1772_0405,
+        # Interval: irregular, triggered by wifi signal change and charge limit change
+        "0407": _PPS_0407,
+        # Interval: irregular
+        "0408": _A1772_0408,
+    },
     # PPS F2000
     "A1780": {
         "0044": CMD_AC_CHARGE_LIMIT  # in W; min: 100, max: 1440, step: 100
@@ -6558,30 +6587,6 @@ SOLIXMQTTMAP: Final[dict] = {
         "0408": _A1780_0408,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
-    },
-    # PPS F1500
-    "A1772": {
-        "0044": CMD_AC_CHARGE_LIMIT  # in W; min: 200, max: 1000, step: 100
-        | {
-            "a2": {
-                **CMD_AC_CHARGE_LIMIT["a2"],
-                VALUE_MIN: 200,
-                VALUE_MAX: 1000,
-                VALUE_STEP: 100,
-            }
-        },
-        # 004a not captured on F1500, adopted from F2000/F2600 since all other F1500 commands match
-        "004a": CMD_AC_OUTPUT_SWITCH,  # AC output switch: Disabled (0) or Enabled (1)
-        "004b": CMD_DC_OUTPUT_SWITCH,  # DC output switch: Disabled (0) or Enabled (1)
-        "004f": CMD_LIGHT_MODE,  # LED mode: Off (0), Low (1), Medium (2), High (3), SOS blinking (4)
-        "0052": CMD_DISPLAY_SWITCH,  # Display switch: Disabled (0) or Enabled (1)
-        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0405 etc
-        # Interval: ~3-5 seconds, but only with realtime trigger
-        "0405": _A1772_0405,
-        # Interval: irregular, triggered by wifi signal change and charge limit change
-        "0407": _PPS_0407,
-        # Interval: irregular
-        "0408": _A1772_0408,
     },
     # PPS F3800
     "A1790": {

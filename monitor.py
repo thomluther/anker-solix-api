@@ -826,73 +826,72 @@ class AnkerSolixApiMonitor:
                     f"{'Accessory':<{col1}}: {fitting.get('device_name', ''):<{col2}} "
                     f"{'Serialnumber':<{col3}}: {fsn}"
                 )
-            if not dev.get("is_passive") or mqtt:
-                wt = dev.get("wireless_type") or ""
-                net = (
-                    ((dev.get("relate_type") or [])[int(wt) : int(wt) + 1] or [""])[0]
-                    if str(wt).isdigit()
-                    else ""
-                )
+            wt = dev.get("wireless_type") or ""
+            net = (
+                ((dev.get("relate_type") or [])[int(wt) : int(wt) + 1] or [""])[0]
+                if str(wt).isdigit()
+                else ""
+            )
+            CONSOLE.info(
+                f"{'Wireless Type':<{col1}}: {(dev.get('wireless_type') or '') + (' (' + (net.capitalize() or 'Unknown') + ')') if wt else '':<{col2}} "
+                f"{'Bluetooth MAC':<{col3}}: {dev.get('bt_ble_mac') or ''}"
+            )
+            CONSOLE.info(
+                f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name', ''):<{col2}} "
+                f"{'Wifi MAC':<{col3}}: {dev.get('wifi_mac') or ''}"
+            )
+            online = dev.get("wifi_online")
+            m2 = c and mqtt.get("wifi_signal", "")
+            CONSOLE.info(
+                f"{'Wifi State':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} "
+                f"{'Signal':<{col3}}: {m2 and c}{m2 or dev.get('wifi_signal') or '---':>4} %{co} ({dev.get('rssi') or '---'} dBm)"
+            )
+            if support := dev.get("is_support_wired"):
+                online = dev.get("wired_connected")
                 CONSOLE.info(
-                    f"{'Wireless Type':<{col1}}: {(dev.get('wireless_type') or '') + (' (' + (net.capitalize() or 'Unknown') + ')') if wt else '':<{col2}} "
-                    f"{'Bluetooth MAC':<{col3}}: {dev.get('bt_ble_mac') or ''}"
+                    f"{'Wired state':<{col1}}: {('Unknown' if online is None else 'Connected' if online else 'Disconnected'):<{col2}} "
+                    f"{'Support Wired':<{col3}}: {('Unknown' if support is None else 'YES' if support else 'NO')}"
                 )
+            upgrade = dev.get("auto_upgrade")
+            ota = dev.get("is_ota_update")
+            m1 = c and mqtt.get("sw_version", "")
+            CONSOLE.info(
+                f"{'SW Version':<{col1}}: {m1 and c}{(m1 or (dev.get('sw_version', 'Unknown')) + ' (' + ('Unknown' if ota is None else 'Updt' if ota else 'Ok') + ')'):<{col2}}{co} "
+                f"{'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'} (OTA {dev.get('ota_version') or 'Unknown'})"
+            )
+            for item in dev.get("ota_children") or []:
+                ota = item.get("need_update")
+                forced = item.get("force_upgrade")
                 CONSOLE.info(
-                    f"{'Wifi SSID':<{col1}}: {dev.get('wifi_name', ''):<{col2}} "
-                    f"{'Wifi MAC':<{col3}}: {dev.get('wifi_mac') or ''}"
+                    f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Updt' if ota else 'Ok') + ')':<{col2}} "
+                    f"{' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
                 )
-                online = dev.get("wifi_online")
-                m2 = c and mqtt.get("wifi_signal", "")
+            if mdev:
                 CONSOLE.info(
-                    f"{'Wifi State':<{col1}}: {('Unknown' if online is None else 'Online' if online else 'Offline'):<{col2}} "
-                    f"{'Signal':<{col3}}: {m2 and c}{m2 or dev.get('wifi_signal') or '---':>4} %{co} ({dev.get('rssi') or '---'} dBm)"
+                    f"{'MQTT Device':<{col1}}: {cm}{('Connected' if mdev.is_connected() else 'Disconnected'):<{col2}}{co} "
+                    f"{'Subscription':<{col3}}: {cm}{('Active' if mdev.is_subscribed() else 'Inactive')}{co}"
                 )
-                if support := dev.get("is_support_wired"):
-                    online = dev.get("wired_connected")
+                if problems := (
+                    {
+                        key: v
+                        for key in [
+                            "over_temperature",
+                            "usba_undervoltage",
+                            "usba_fault",
+                        ]
+                        if (v := mqtt.get(key)) is not None
+                    }
+                    | {
+                        f"usbc_{port}_fault": v
+                        for port in range(1, 5)
+                        if (v := mqtt.get(f"usbc_{port}_fault")) is not None
+                    }
+                ):
+                    m1 = (c or cm) and [k for k, v in problems.items() if v]
                     CONSOLE.info(
-                        f"{'Wired state':<{col1}}: {('Unknown' if online is None else 'Connected' if online else 'Disconnected'):<{col2}} "
-                        f"{'Support Wired':<{col3}}: {('Unknown' if support is None else 'YES' if support else 'NO')}"
+                        f"{'Device Status':<{col1}}: {str(m1) and (c or cm)}{'Problem' if m1 else 'OK':<{col2}}{co} "
+                        f"{'Problems':<{col3}}: {str(m1) and (c or cm)}{str(m1).strip('[]').replace('_', ' ') or 'None'}{co}"
                     )
-                upgrade = dev.get("auto_upgrade")
-                ota = dev.get("is_ota_update")
-                m1 = c and mqtt.get("sw_version", "")
-                CONSOLE.info(
-                    f"{'SW Version':<{col1}}: {m1 and c}{(m1 or (dev.get('sw_version', 'Unknown')) + ' (' + ('Unknown' if ota is None else 'Updt' if ota else 'Ok') + ')'):<{col2}}{co} "
-                    f"{'Auto-Upgrade':<{col3}}: {'Unknown' if upgrade is None else 'Enabled' if upgrade else 'Disabled'} (OTA {dev.get('ota_version') or 'Unknown'})"
-                )
-                for item in dev.get("ota_children") or []:
-                    ota = item.get("need_update")
-                    forced = item.get("force_upgrade")
-                    CONSOLE.info(
-                        f"{' -Component':<{col1}}: {item.get('device_type', 'Unknown') + ' (' + ('Unknown' if ota is None else 'Updt' if ota else 'Ok') + ')':<{col2}} "
-                        f"{' -Version':<{col3}}: {item.get('rom_version_name') or 'Unknown'}{' (Forced)' if forced else ''}"
-                    )
-                if mdev:
-                    CONSOLE.info(
-                        f"{'MQTT Device':<{col1}}: {cm}{('Connected' if mdev.is_connected() else 'Disconnected'):<{col2}}{co} "
-                        f"{'Subscription':<{col3}}: {cm}{('Active' if mdev.is_subscribed() else 'Inactive')}{co}"
-                    )
-                    if problems := (
-                        {
-                            key: v
-                            for key in [
-                                "over_temperature",
-                                "usba_undervoltage",
-                                "usba_fault",
-                            ]
-                            if (v := mqtt.get(key)) is not None
-                        }
-                        | {
-                            f"usbc_{port}_fault": v
-                            for port in range(1, 5)
-                            if (v := mqtt.get(f"usbc_{port}_fault")) is not None
-                        }
-                    ):
-                        m1 = (c or cm) and [k for k, v in problems.items() if v]
-                        CONSOLE.info(
-                            f"{'Device Status':<{col1}}: {str(m1) and (c or cm)}{'Problem' if m1 else 'OK':<{col2}}{co} "
-                            f"{'Problems':<{col3}}: {str(m1) and (c or cm)}{str(m1).strip('[]').replace('_', ' ') or 'None'}{co}"
-                        )
 
             if devtype == SolixDeviceType.COMBINER_BOX.value:
                 CONSOLE.info(
@@ -2394,6 +2393,8 @@ class AnkerSolixApiMonitor:
                     "usbc_4",
                     "usba_1",
                     "usba_2",
+                    "usba_3",
+                    "usba_4",
                     "dc_12v_1",
                     "dc_12v_2",
                     "ac_1",

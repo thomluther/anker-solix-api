@@ -702,6 +702,7 @@ Model  Name                                     Platform
 A110A  26K Prime Power Bank                     Power Bank
 A110B  20K Prime Power Bank                     Power Bank
 A110G  20K Prime Power Bank                     Power Bank
+A1340  Prime Power Bank                         Power Bank
 A1722  SOLIX C300                               Portable Power Station
 A1723  SOLIX C300X                              Portable Power Station
 A1725  SOLIX C200(X)                            Portable Power Station
@@ -1271,9 +1272,10 @@ class SolixDeviceNames:
 class SolixDeviceCapacity:
     """Dataclass for Anker Solix device battery capacities in Wh by Part Number."""
 
-    A110A: int = 100  # Anker Prime Power Bank 300 W, 25Ah, 99,75 Wh
-    A110B: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
-    A110G: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72,4 Wh
+    A110A: int = 100  # Anker Prime Power Bank 300 W, 25Ah, 99.75 Wh
+    A110B: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72.4 Wh
+    A110G: int = 72  # Anker Prime Power Bank 220 W, 20Ah, 72.4 Wh
+    A1340: int = 100  # Anker Prime Power Bank 250 W, 27.65Ah, 99.54 Wh (BT only)
     A17C0: int = 1600  # SOLIX Solarbank E1600
     A17C1: int = 1600  # SOLIX Solarbank 2 E1600 Pro
     BP1600: int = 1600  # Solarbank 2 Expansion BP1600 (This has no SN or product code)
@@ -1514,6 +1516,9 @@ class SolixDeviceCategory:
     A110G: str = (
         SolixDeviceType.POWERBANK.value
     )  # Anker Prime Power Bank 220 W, 20Ah, 74 Wh
+    A1340: str = (
+        SolixDeviceType.POWERBANK.value
+    )  # Anker Prime Power Bank 250 W, 27.65Ah, 99.54 Wh
     # EV Charger
     A5191: str = SolixDeviceType.EV_CHARGER.value  # SOLIX EV Charger
     # Smart Generators
