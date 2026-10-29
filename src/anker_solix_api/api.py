@@ -182,11 +182,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             device.get("is_passive") or devData.get("is_passive")
                         ):
                             device["mqtt_supported"] = True
-                            # update customizable setting whether MQTT values should overlay Api values upon cache merge
+                            # init customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
                                 device.get("mqtt_overlay") or False
                             )
-                            # update customizable setting for desired MQTT status request interval
+                            # init customizable setting for desired MQTT status request interval
                             device["mqtt_status_interval"] = device.get(
                                 "mqtt_status_interval", 0
                             )
@@ -341,11 +341,17 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     ):
                         device[key] = str(value)
                     elif (
-                        key in ["mqtt_overlay", "mqtt_status_interval"]
+                        key
+                        in [
+                            "mqtt_overlay",
+                            "mqtt_status_interval",
+                            "exceed_legal_output_limit",
+                        ]
                         and value is not None
                     ):
-                        # keys that are customized
-                        custom = (device.get("customized") or {}).get(key)
+                        # keys that are customized if existing in cache
+                        customized = device.get("customized") or {}
+                        custom = customized.get(key)
                         device[key] = custom if custom is not None else value
                         # If mqtt_status_interval is 0, clear customization
                         if (
@@ -353,9 +359,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             and custom is not None
                             and float(custom) == 0
                         ):
-                            device.get("customized", {}).pop(
-                                "mqtt_status_interval", None
-                            )
+                            customized.pop("mqtt_status_interval", None)
                     elif key == "bt_ble_id" and value and not devData.get("bt_ble_mac"):
                         # Make sure that BT ID is added if mac not in data
                         device["bt_ble_mac"] = str(value).replace(":", "")
@@ -2203,16 +2207,38 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             )
         # update site details in sites dict, this info is also useful without power dock
         if data := resp.get("data") or {}:
+            # Legal limit, 0 if unlimited
+            legal = int(v) if str(v := data.get("legal_limit") or 0).isdigit() else 0
+            # Actual limit setting
+            actual = (
+                int(v) if str(v := data.get("legal_power_limit") or 0).isdigit() else 0
+            )
+            # limit options
+            options = data.get("power_limit_option")
+            exceed_option = isinstance(options, list) and any(
+                opt
+                for opt in options
+                if isinstance(opt, dict) and int(opt.get("limit") or 0) > legal
+            )
             self._update_site(
                 siteId,
                 {
-                    "legal_power_limit": data.get("legal_power_limit")
-                    or 0,  # Actual limit setting
-                    "legal_limit": data.get("legal_limit")
-                    or 0,  # Legal limit, 0 if unlimited
+                    "legal_power_limit": actual,
+                    "legal_limit": legal,
                     "parallel_type": data.get("parallel_type") or "",
-                    "power_limit_option": data.get("power_limit_option"),
-                },
+                    "power_limit_option": options,
+                    "unlock_default_power_type": data.get("unlock_default_power_type"),
+                    "unlock_pop_image": data.get("unlock_pop_image") or "",
+                    "unlock_pop_content": data.get("unlock_pop_content") or "",
+                }
+                | (
+                    # flag whether actual limit exceeds legal limit, No field means no user confirmation required
+                    {
+                        "exceed_legal_output_limit": bool(actual > legal),
+                    }
+                    if legal and exceed_option
+                    else {}
+                ),
             )
         # Add station settings if available in site details (should have updated with previous device param query in device details poll)
         site = self.sites.get(siteId) or {}
@@ -2265,6 +2291,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                     if "unlock_default_power_type" in data
                     else {}
                 )
+                | (
+                    {
+                        "exceed_legal_output_limit": site_details.get(
+                            "exceed_legal_output_limit"
+                        )
+                    }
+                    if "exceed_legal_output_limit" in site_details
+                    else {}
+                )
                 | station,
                 siteId=siteId,
                 isAdmin=True,
@@ -2304,6 +2339,15 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             )
                         }
                         if "unlock_default_power_type" in data and copy_limits
+                        else {}
+                    )
+                    | (
+                        {
+                            "exceed_legal_output_limit": site_details.get(
+                                "exceed_legal_output_limit"
+                            )
+                        }
+                        if "exceed_legal_output_limit" in site_details and copy_limits
                         else {}
                     )
                     | ({} if station_sn is None else {"station_sn": station_sn}),
