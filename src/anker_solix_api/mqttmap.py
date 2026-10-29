@@ -1469,6 +1469,12 @@ _A1783_0421 = {
     "fe": {NAME: "msg_timestamp"},
 }
 
+_A1783_0406 = {
+    # OTA update status
+    TOPIC: "param_info",
+    "a3": {NAME: "ota_progress"},  # 0-100%
+}
+
 _A1783_0503 = {
     TOPIC: "state_info",
     "a2": {
@@ -1745,6 +1751,10 @@ _A1782_0421 = (
                 },
                 "18": {
                     NAME: "light_mode",  # Off (0), Low (1), Mid (2), Bright (3)
+                    TYPE: DeviceHexDataTypes.ui.value,
+                },
+                "19": {
+                    NAME: "temp_unit_fahrenheit",  # Celsius (0) or Fahrenheit (1)
                     TYPE: DeviceHexDataTypes.ui.value,
                 },
                 "20": {
@@ -3617,6 +3627,13 @@ _A2345_0303 = (
         "fe": {NAME: "msg_timestamp"},
     }
 )
+
+_A2345_0306 = {
+    # 250W Prime Charger
+    TOPIC: "param_info",
+    "a2": {NAME: "ota_status"}, # None (0), Preparing(1)?, Ongoing(2)
+    "a3": {NAME: "ota_progress"},  # 0-100%
+}
 
 _A2345_0a00 = (
     {
@@ -6003,6 +6020,8 @@ SOLIXMQTTMAP: Final[dict] = {
             # ab = min_soc: 1, 5, 10, 15, 20 %
             SolixMqttCommands.outage_alert_switch: CMD_OUTAGE_ALERT_SWITCH_V2,
         },
+        # Interval: ~3 second during OTA upgrades
+        "0406": _A1783_0406,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1783_0421,
         # Event report, sent when backup window starts or ends and on AC grid loss
@@ -6039,6 +6058,13 @@ SOLIXMQTTMAP: Final[dict] = {
         "0503": _A1783_0503,
         # Interval: Irregular, triggered on app actions, no fixed interval
         "0830": _PPS_VERSIONS_0830,
+        # 0089 OTA status response
+        "0889": {
+            "a2": {NAME: "ota_allowed"},  # No (0), Yes (1)
+            "a3": {
+                NAME: "ota_block_reason"
+            },  # OK (0), SoC < 6% (2), BMS boot mode w/o AC (4)
+        },
         # Clock screen read reply (to 0092), sent when the app opens the device settings
         "0892": {
             "a2": _A1783_0421["da"],
@@ -6250,6 +6276,8 @@ SOLIXMQTTMAP: Final[dict] = {
             # ab = min_soc: 1, 5, 10, 15, 20 %
             SolixMqttCommands.outage_alert_switch: CMD_OUTAGE_ALERT_SWITCH_V2,
         },
+        # Interval: ~3 second during OTA upgrades
+        "0406": _A1783_0406,
         # Interval: ~3-5 seconds, but only with realtime trigger
         "0421": _A1783_0421,
         # Interval: Irregular, once every 11? hours
@@ -6668,6 +6696,7 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # Solarbank PPS F3000
     "A1782": {
+        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
         "0100": CMD_STATUS_REQUEST
         | {  # Device status request (one time status messages 0900)
@@ -7553,6 +7582,8 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~1 second, but only with realtime trigger. Consumption data, all data fields are also in 0a00 message
         "0303": _A2345_0303,
+        # Interval: ~1 second during OTA upgrades
+        "0306": _A2345_0306,
         # Interval: Upon change of the port timer
         "0307": {
             "a2": {NAME: "set_port_timer_select"},
@@ -7777,6 +7808,8 @@ SOLIXMQTTMAP: Final[dict] = {
         },
         # Interval: ~1 second with realtime trigger. USB port consumption data.
         "0303": _A91B2_0303,
+        # Interval: ~1 second during OTA upgrades
+        "0306": _A2345_0306,
         # Interval: Upon change of a port timer's switch, same port ids as 0207
         # The two u32 values are in the reverse order of the A2345 0307
         "0307": {

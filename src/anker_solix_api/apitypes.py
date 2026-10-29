@@ -375,7 +375,7 @@ related to power V2: 14 + 2 used => 16 total
     'power_service/v2/device/report_data'
     'power_service/v2/platform_get_user_region_param' # {"product_code": "A17C5", "identifier_id": deviceSn, "scenario_type": 1})) # if supported, CC, grid code, advanced params settings for grid options
     'power_service/v2/platform_set_user_region_param'
-    'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC
+    'power_service/v2/site/get_output_power_info' # {"device_sn": deviceSn})) # needs special owned device, maybe SB4, Max AC, E10?
     'power_service/v2/site/platform_get_site_savings' # may need special site? {"site_id": siteId, "type": "week", "data_type": 1, "start_time": "2026-08-01, "end_time": "2026-08-04"}))
 
 related to micro inverter without system: 1 + 6 used => 7 total
