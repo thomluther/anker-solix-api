@@ -2161,6 +2161,24 @@ async def set_sb2_home_load(  # noqa: C901
                 or [],
             }
         )
+    # Ensure active SOLARBANK_PPS manual backup via disaster endpoint is disabled when switching usage mode
+    if (
+        device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+        and not test_schedule
+        and (
+            (
+                disaster := (
+                    (self.sites.get(siteId) or {}).get("site_details") or {}
+                ).get("device_disaster")
+                or {}
+            ).get("manual_disaster_switch")
+            or disaster.get("_pending_disable")
+        )
+    ):
+        disaster.pop("_pending_disable", None)
+        await self.set_manual_backup(
+            identifier=siteId, id_type=2, enable=False, toFile=toFile
+        )
     # Make the Api call with the schedule subset to be applied and return result, the set call will also re-read full schedule and update api dict
     resp = await self.set_device_parm(
         siteId=siteId,
@@ -2277,10 +2295,35 @@ async def set_sb2_ac_charge(
         ).get("param_data") or {}
 
     rate_plan_name = SolarbankRatePlan.backup
+    pps_type = (
+        (self.devices.get(deviceSn) or {}).get("type")
+        == SolixDeviceType.SOLARBANK_PPS.value
+    )
     # Consider time zone shifts of device, timestamp conversion is absolute and timezone aware
     now = datetime.now().replace(second=0, microsecond=0).astimezone()
     # create new structure if none exists yet or get old times if not provided for validation
-    if not (new_rate_plan := schedule.get(rate_plan_name) or {}):
+    new_rate_plan = (
+        {
+            "ranges": [
+                {
+                    "start_time": int(d.get("start_time") or 0),
+                    "end_time": int(d.get("end_time") or 0),
+                }
+                for d in (disaster.get("disaster_details") or [])
+                if isinstance(d, dict)
+            ],
+            "switch": bool(disaster.get("manual_disaster_switch")),
+        }
+        if pps_type
+        and (
+            disaster := ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
+                "device_disaster"
+            )
+            or {}
+        )
+        else (schedule.get(rate_plan_name) or {})
+    )
+    if not new_rate_plan:
         new_rate_plan["ranges"] = []
         new_rate_plan["switch"] = False
     else:
@@ -2324,6 +2367,18 @@ async def set_sb2_ac_charge(
     )
     # return resulting schedule for test purposes without Api call
     if test_schedule:
+        if pps_type:
+            disaster = (
+                ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
+                    "device_disaster"
+                )
+                or {}
+            )
+            if disaster.get("manual_disaster_switch") and not backup_switch:
+                disaster["_pending_disable"] = True
+            disaster["manual_disaster_switch"] = bool(backup_switch)
+            disaster["disaster_details"] = new_rate_plan.get("ranges") or []
+            self._update_site(siteId, {"device_disaster": disaster})
         # ensure complete schedule is updated in cache for dependent fields
         await self.get_device_parm(
             siteId=siteId,
@@ -2332,6 +2387,25 @@ async def set_sb2_ac_charge(
             deviceSn=deviceSn,
         )
         return schedule
+    if pps_type:
+        rng = (new_rate_plan.get("ranges") or [{}])[0]
+        if not await self.set_manual_backup(
+            identifier=siteId,
+            id_type=2,
+            enable=bool(backup_switch),
+            start_time=rng.get("start_time") or 0,
+            end_time=rng.get("end_time") or 0,
+            toFile=toFile,
+        ):
+            return False
+        return (
+            await self.get_device_parm(
+                siteId=siteId,
+                paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
+                testSchedule=schedule,
+                deviceSn=deviceSn,
+            )
+        ).get("param_data") or {}
     # The applied schedule need to separate plans for AC model and common SB2 plans
     # The mode_type must always be contained
     # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan
