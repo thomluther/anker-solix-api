@@ -352,14 +352,22 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         # keys that are customized if existing in cache
                         customized = device.get("customized") or {}
                         custom = customized.get(key)
-                        device[key] = custom if custom is not None else value
-                        # If mqtt_status_interval is 0, clear customization
                         if (
                             key == "mqtt_status_interval"
                             and custom is not None
                             and float(custom) == 0
                         ):
+                            # If mqtt_status_interval is 0, clear customization
                             customized.pop("mqtt_status_interval", None)
+                        elif (
+                            key == "exceed_legal_output_limit"
+                            and not custom
+                            and value
+                        ):
+                            # If limit is exceeded already remove any lock customization
+                            custom = None
+                            customized.pop("exceed_legal_output_limit", None)
+                        device[key] = custom if custom is not None else value
                     elif key == "bt_ble_id" and value and not devData.get("bt_ble_mac"):
                         # Make sure that BT ID is added if mac not in data
                         device["bt_ble_mac"] = str(value).replace(":", "")
