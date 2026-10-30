@@ -178,6 +178,7 @@ API_ENDPOINTS: Final[dict] = {
     "get_dynamic_price_sites": "power_service/v1/dynamic_price/check_available",  # Get available site id_s for dynamic prices of account, works as member but list empty
     "get_dynamic_price_providers": "power_service/v1/dynamic_price/support_option",  # Get available provider list for device_pn and login country, works as member, {"device_pn": "A5102"}
     "get_dynamic_price_details": "power_service/v1/dynamic_price/price_detail",  # {"area": "GER", "company": "Nordpool", "date": "1748908800", "device_sn": ""})) # works for members, device_sn may be empty, date is int posix timestamp as string
+    # power_service/v1/dynamic_price/price_detail deprecated and non functional as of 29.10.2026 due to cloud memory issues
     # Power endpoints */v1/*
     "get_message_unread": "power_service/v1/get_message_unread",  # GET method to show if there are unread messages for account
     "get_message": "power_service/v1/get_message",  # GET method to list Messages from certain time, not explored or used (last_time format unknown)

@@ -360,9 +360,7 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                             # If mqtt_status_interval is 0, clear customization
                             customized.pop("mqtt_status_interval", None)
                         elif (
-                            key == "exceed_legal_output_limit"
-                            and not custom
-                            and value
+                            key == "exceed_legal_output_limit" and not custom and value
                         ):
                             # If limit is exceeded already remove any lock customization
                             custom = None
@@ -744,16 +742,10 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                         "preset_tariff": SolixTariffTypes.UNKNOWN.value,
                                         "preset_tariff_price": SolixDefaults.TARIFF_PRICE_DEF,
                                         "preset_tariff_currency": curr_def,
+                                        "preset_manual_backup_start": 0,
+                                        "preset_manual_backup_end": 0,
+                                        "preset_backup_option": False,
                                     }
-                                    | (
-                                        {
-                                            "preset_manual_backup_start": 0,
-                                            "preset_manual_backup_end": 0,
-                                            "preset_backup_option": False,
-                                        }
-                                        if not pps_type
-                                        else {}
-                                    )
                                 )
                         else:
                             # Solarbank 1 schedule
@@ -853,21 +845,29 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                                 or SolixDefaults.PRESET_TYPE
                                             )
                                         break
-                            if (
-                                ac_type
-                                and not pps_type
-                                and (
-                                    backup := value.get(SolarbankRatePlan.backup) or {}
+                            if ac_type and (
+                                backup := (
+                                    (mysite.get("site_details") or {}).get(
+                                        "device_disaster"
+                                    )
+                                    if pps_type
+                                    else value.get(SolarbankRatePlan.backup)
                                 )
+                                or {}
                             ):
                                 # check whether now in active backup interval to update usage mode info because active backup mode is not reflected in schedule object
-                                start = (backup.get("ranges") or [{}])[0].get(
-                                    "start_time"
-                                ) or 0
-                                end = (backup.get("ranges") or [{}])[0].get(
-                                    "end_time"
-                                ) or 0
-                                switch = backup.get("switch") or False
+                                ranges = (
+                                    backup.get("disaster_details")
+                                    if pps_type
+                                    else backup.get("ranges")
+                                ) or [{}]
+                                start = ranges[0].get("start_time") or 0
+                                end = ranges[0].get("end_time") or 0
+                                switch = bool(
+                                    backup.get("manual_disaster_switch")
+                                    if pps_type
+                                    else backup.get("switch")
+                                )
                                 # update valid backup list item data
                                 device.update(
                                     {
@@ -1581,10 +1581,11 @@ class AnkerSolixApi(AnkerSolixBaseApi):
             # Add smart plugs usage mode if smart plugs installed
             if (site.get("smart_plug_info") or {}).get("smartplug_list"):
                 options.add(SolarbankUsageMode.smartplugs.name)
-            # Add options introduced with SB2 AC for AC charging
-            # TODO(SB_PPS): Allow backup mode once required implementation for SB_PPS is known
-            if device.get("type") != SolixDeviceType.SOLARBANK_PPS.value and (
-                "grid_to_battery_power" in device or ac_devs
+            # Add options introduced with SB2 AC for AC charging (and SOLARBANK_PPS manual backup via site disaster endpoints)
+            if (
+                "grid_to_battery_power" in device
+                or ac_devs
+                or device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
             ):
                 options.add(SolarbankUsageMode.backup.name)
             # Add use time if plan is defined
