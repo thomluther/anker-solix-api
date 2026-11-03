@@ -1614,7 +1614,7 @@ async def set_sb2_home_load(  # noqa: C901
     delete_plan: bool = set_slot and (not set_slot.start_time or not set_slot.end_time)
 
     # update the usage mode in the overall schedule object or set it to the one used in the schedule
-    if usage_mode is None:
+    if not (mode_switch := usage_mode is not None):
         usage_mode = schedule.get("mode_type")
 
     # get validated rate plan name from optional plan_name parameter or use plan name for given/active user mode, default to custom rate plan name
@@ -2162,21 +2162,17 @@ async def set_sb2_home_load(  # noqa: C901
             }
         )
     # Ensure active SOLARBANK_PPS manual backup via disaster endpoint is disabled when switching usage mode
-    # TODO: Missing check whether the mode is being switched?
     if (
         device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+        and mode_switch
         and not test_schedule
         and (
-            (
-                disaster := (
-                    (self.sites.get(siteId) or {}).get("site_details") or {}
-                ).get("device_disaster")
-                or {}
-            ).get("manual_disaster_switch")
-            or disaster.get("_pending_disable")
-        )
+            ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
+                "device_disaster"
+            )
+            or {}
+        ).get("manual_disaster_switch")
     ):
-        disaster.pop("_pending_disable", None)
         await self.set_manual_backup(
             identifier=siteId, id_type=2, enable=False, toFile=toFile
         )
@@ -2367,13 +2363,10 @@ async def set_sb2_ac_charge(
     )
     # return resulting schedule for test purposes without Api call
     if test_schedule:
-        if pps_type:
+        if pps_type and (backup_start or backup_end or backup_duration):
             disaster = ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
                 "device_disaster"
             ) or {}
-            if disaster.get("manual_disaster_switch") and not backup_switch:
-                disaster["_pending_disable"] = True
-            disaster["manual_disaster_switch"] = bool(backup_switch)
             disaster["disaster_details"] = new_rate_plan.get("ranges") or []
             self._update_site(siteId, {"device_disaster": disaster})
         # ensure complete schedule is updated in cache for dependent fields
