@@ -6696,7 +6696,6 @@ SOLIXMQTTMAP: Final[dict] = {
     },
     # Solarbank PPS F3000
     "A1782": {
-        "0050": CMD_TEMP_UNIT,  # Temperature unit switch: Celsius (0) or Fahrenheit (1)
         "0057": CMD_REALTIME_TRIGGER,  # for regular status messages
         "0100": CMD_STATUS_REQUEST
         | {  # Device status request (one time status messages 0900)
@@ -6759,6 +6758,7 @@ SOLIXMQTTMAP: Final[dict] = {
                 SolixMqttCommands.display_switch,  # field a2
                 SolixMqttCommands.display_mode_select,  # field a3
                 SolixMqttCommands.display_timeout_seconds,  # field a4
+                SolixMqttCommands.temp_unit_switch,  # field a5
                 SolixMqttCommands.device_timeout_minutes,  # field a6
                 SolixMqttCommands.light_mode_select,  # field a7
                 SolixMqttCommands.port_memory_switch,  # field a8
@@ -6780,6 +6780,7 @@ SOLIXMQTTMAP: Final[dict] = {
                     VALUE_OPTIONS: [0, 10, 20, 30, 60, 300, 1800],
                 },
             },
+            SolixMqttCommands.temp_unit_switch: CMD_TEMP_UNIT_V2,  # Celsius (0) | Fahrenheit (1)
             SolixMqttCommands.device_timeout_minutes: CMD_COMMON_V2
             | {  # 0 (Never), 30, 60, 120, 240, 360, 720, 1440 minutes
                 "a6": CMD_DEVICE_TIMEOUT_MIN["a2"],
