@@ -21,7 +21,11 @@ from .apitypes import (
     SolixDeviceType,
     SolixSiteType,
 )
-from .helpers import convertToKwh, get_solix_product_code
+from .helpers import (
+    convertToKwh,
+    day_time_to_datetime as _day_time_to_datetime,
+    get_solix_product_code,
+)
 from .mqttcmdmap import COMMAND_LIST, COMMAND_NAME, SolixMqttCommands
 from .mqttmap import SOLIXMQTTMAP
 from .session import AnkerSolixClientSession
@@ -990,10 +994,8 @@ class AnkerSolixPowerpanelApi(AnkerSolixBaseApi):
                                 if (item.get("value") or "0") != "0"
                             ]
                         ) and soclist[-1].get("time"):
-                            last = datetime.strptime(
-                                checkdate.strftime("%Y-%m-%d")
-                                + soclist[-1].get("time"),
-                                "%Y-%m-%d%H:%M",
+                            last = _day_time_to_datetime(
+                                checkdate, soclist[-1].get("time"), "%H:%M"
                             ).astimezone()
                             future: datetime = last + timedelta(minutes=5)
                             validdata = data

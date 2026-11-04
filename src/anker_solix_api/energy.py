@@ -15,21 +15,7 @@ from .apitypes import (
     SolixDeviceType,
 )
 from .errors import AnkerSolixError
-from .helpers import convertToKwh
-
-
-def _day_time_to_datetime(day: datetime, timestr: str, fmt: str) -> datetime:
-    """Combine a day with a cloud time string, accepting '24:00' as end of day.
-
-    The cloud may report the last interval of a day as '24:00' or '24:00:00',
-    which datetime.strptime rejects. Treat it as 00:00 of the following day.
-    """
-    next_day = False
-    if timestr.startswith("24:"):
-        timestr = "00:" + timestr[3:]
-        next_day = True
-    result = datetime.strptime(day.strftime("%Y-%m-%d") + timestr, "%Y-%m-%d" + fmt)
-    return result + timedelta(days=1) if next_day else result
+from .helpers import convertToKwh, day_time_to_datetime as _day_time_to_datetime
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
