@@ -15,7 +15,10 @@ from .apitypes import (
     SolixDeviceType,
 )
 from .errors import AnkerSolixError
-from .helpers import convertToKwh
+from .helpers import (
+    convertToKwh,
+    day_time_to_datetime as _day_time_to_datetime,
+)
 
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
@@ -1571,9 +1574,8 @@ async def get_energy_offset(
                     if (item.get("value") or "0") != "0"
                 ]
             ) and soclist[-1].get("time"):
-                last = datetime.strptime(
-                    checkdate.strftime("%Y-%m-%d") + soclist[-1].get("time"),
-                    "%Y-%m-%d%H:%M",
+                last = _day_time_to_datetime(
+                    checkdate, soclist[-1].get("time"), "%H:%M"
                 ).astimezone()
                 future: datetime = last + timedelta(minutes=20)
                 break
@@ -1686,9 +1688,8 @@ async def get_device_energy_offset(
                     if item.get("power", "0") != "0"
                 ]
             ) and datalist[-1].get("time"):
-                last = datetime.strptime(
-                    checkdate.strftime("%Y-%m-%d") + datalist[-1].get("time"),
-                    "%Y-%m-%d%H:%M:%S",
+                last = _day_time_to_datetime(
+                    checkdate, datalist[-1].get("time"), "%H:%M:%S"
                 ).astimezone()
                 future = last + timedelta(minutes=20)
                 break
