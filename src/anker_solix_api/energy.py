@@ -17,6 +17,20 @@ from .apitypes import (
 from .errors import AnkerSolixError
 from .helpers import convertToKwh
 
+
+def _day_time_to_datetime(day: datetime, timestr: str, fmt: str) -> datetime:
+    """Combine a day with a cloud time string, accepting '24:00' as end of day.
+
+    The cloud may report the last interval of a day as '24:00' or '24:00:00',
+    which datetime.strptime rejects. Treat it as 00:00 of the following day.
+    """
+    next_day = False
+    if timestr.startswith("24:"):
+        timestr = "00:" + timestr[3:]
+        next_day = True
+    result = datetime.strptime(day.strftime("%Y-%m-%d") + timestr, "%Y-%m-%d" + fmt)
+    return result + timedelta(days=1) if next_day else result
+
 if TYPE_CHECKING:
     from .api import AnkerSolixApi
 
@@ -1571,9 +1585,8 @@ async def get_energy_offset(
                     if (item.get("value") or "0") != "0"
                 ]
             ) and soclist[-1].get("time"):
-                last = datetime.strptime(
-                    checkdate.strftime("%Y-%m-%d") + soclist[-1].get("time"),
-                    "%Y-%m-%d%H:%M",
+                last = _day_time_to_datetime(
+                    checkdate, soclist[-1].get("time"), "%H:%M"
                 ).astimezone()
                 future: datetime = last + timedelta(minutes=20)
                 break
@@ -1686,9 +1699,8 @@ async def get_device_energy_offset(
                     if item.get("power", "0") != "0"
                 ]
             ) and datalist[-1].get("time"):
-                last = datetime.strptime(
-                    checkdate.strftime("%Y-%m-%d") + datalist[-1].get("time"),
-                    "%Y-%m-%d%H:%M:%S",
+                last = _day_time_to_datetime(
+                    checkdate, datalist[-1].get("time"), "%H:%M:%S"
                 ).astimezone()
                 future = last + timedelta(minutes=20)
                 break
