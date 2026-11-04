@@ -6522,6 +6522,16 @@ SOLIXMQTTMAP: Final[dict] = {
         # Interval: irregular
         "0408": _A1772_0408,
     },
+    # PPS S5000 - 0421/0900 layout matches AS220 (S2000), validated against live AS510 data (fw 1.0.2.8):
+    # a5 temp/SOC/SOH, a6/a7 input & output power, a4 settings. 0502 (battery module) not mapped yet.
+    # Controls intentionally not mapped until validated; only realtime trigger / status request.
+    "AS510": {
+        "0057": CMD_REALTIME_TRIGGER,  # for regular status messages 0421
+        # Interval: ~3-5 seconds, but only with realtime trigger
+        "0421": _AS220_0421,
+        # Interval: Only as response to status request, same content as 0421
+        "0900": _AS220_0421,
+    },
     # PPS F2000
     "A1780": {
         "0044": CMD_AC_CHARGE_LIMIT  # in W; min: 100, max: 1440, step: 100
