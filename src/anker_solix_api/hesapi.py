@@ -1079,12 +1079,13 @@ class AnkerSolixHesApi(AnkerSolixBaseApi):
                                 startDay=checkdate,
                                 endDay=checkdate,
                             )
-                        # generate list of SOC timestamps different from 0 and pick last one
+                        # generate list of SOC timestamps different from 0 and pick last one, exclude 24:00 slots if any since duplicates of next day 00:00
                         if (
                             soclist := [
                                 item
                                 for item in (data.get("chargeLevel") or [])
                                 if (item.get("value") or "0") != "0"
+                                and not str(item.get("time")).startswith("24:")
                             ]
                         ) and soclist[-1].get("time"):
                             last = datetime.strptime(

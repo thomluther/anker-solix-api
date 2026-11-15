@@ -2866,6 +2866,20 @@ class AnkerSolixBaseApi:
             else:
                 # cache under site_details
                 self._update_site(identifier, {"device_disaster": result})
+                # update extracted data from backup schedule for sites with devices using device_disaster, like PPS
+                for dev in [
+                    d
+                    for d in self.devices.values()
+                    if d.get("site_id") == identifier
+                    and d.get("type") == SolixDeviceType.SOLARBANK_PPS.value
+                    and d.get("schedule")
+                ]:
+                    self._update_dev(
+                        {
+                            "device_sn": dev.get("device_sn"),
+                            "schedule": dev.get("schedule"),
+                        }
+                    )
         return result
 
     async def get_device_disaster_status(

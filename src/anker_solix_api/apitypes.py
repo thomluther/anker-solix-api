@@ -496,10 +496,10 @@ Home Energy System related (X1): 45 + 20 used => 65 total
     "charging_hes_svc/share_device/invite_installer_member",
     "charging_hes_svc/share_device/get_installer_invited_list",
 
-Home Energy System related (X1): 6 + 0 used => 6 total
+Dynamic Price related (X1 + Solarbank): 6 + 0 used => 6 total
     "charging_hes_dynamic_price_svc/get_area_by_code", # needs owner
     "charging_hes_dynamic_price_svc/get_price_company", # needs owner
-    "charging_hes_dynamic_price_svc/get_price", # needs owner
+    "charging_hes_dynamic_price_svc/get_price", # needs owner {"type": 2, "siteId": <site_id>}
     "charging_hes_dynamic_price_svc/save_time_of_use", # needs owner
     "charging_hes_dynamic_price_svc/save_dynamic_price", # needs owner
     "charging_hes_dynamic_price_svc/get_third_jump_url"
@@ -1320,7 +1320,7 @@ class SolixDeviceCapacity:
     A17A5: int = 288  # SOLIX EverFrost 2 Powered Cooler 58L
     AS100: int = 1024  # SOLIX C1000 Gen 2 LE Portable Power Station
     AS220: int = 2010  # SOLIX S2000 Portable Power Station
-    AS510: int = 5000  # SOLIX S5000 Portable Power Station
+    AS510: int = 5000  # SOLIX S5000 Portable Power Station with Smart Meter and power system support
     A1770: int = 1229  # Anker PowerHouse 757 Portable Power Station
     A1771: int = 1229  # SOLIX F1200 Portable Power Station
     A1772: int = 1536  # SOLIX F1500 Portable Power Station
