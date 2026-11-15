@@ -983,6 +983,9 @@ async def poll_site_details(
                         api.apisession.nickname,
                     )
                     await api.get_power_limit(siteId=site_id, fromFile=fromFile)
+                # Get disaster support once for site
+                if "disaster_support" not in site.get("site_details", {}):
+                    await api.get_disaster_support(identifier=site_id, fromFile=fromFile)
             # Fetch CO2 Ranking if not excluded
             if not ({f"{site_type}_energy"} & exclude):
                 api._logger.debug(
@@ -1041,10 +1044,6 @@ async def poll_site_details(
                             )
                         },
                     )
-            # fetch disaster status
-            # Get disaster support once for site
-            if "disaster_support" not in site.get("site_details", {}):
-                await api.get_disaster_support(identifier=site_id, fromFile=fromFile)
             # Fetch disaster settings if supported
             if site.get("site_details").get("disaster_support"):
                 await api.get_device_disaster(identifier=site_id, fromFile=fromFile)

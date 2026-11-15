@@ -2153,7 +2153,7 @@ async def set_sb2_home_load(  # noqa: C901
             }
         )
     else:
-        # AC unique plans to be separated for Api call
+        # AC unique plans to be separated for Api call, they are not supposed to change in this method
         new_schedule.update(
             {
                 SolarbankRatePlan.backup: schedule.get(SolarbankRatePlan.backup) or {},
@@ -2161,21 +2161,21 @@ async def set_sb2_home_load(  # noqa: C901
                 or [],
             }
         )
-    # Ensure active SOLARBANK_PPS manual backup via disaster endpoint is disabled
-    if (
-        device.get("type") == SolixDeviceType.SOLARBANK_PPS.value
-        and usage_mode != SolarbankUsageMode.backup.value
-        and not test_schedule
-        and (
-           ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
+    # Ensure ongoing manual backup is disabled if active but only usage mode is changed to other than backup
+    if usage_mode != SolarbankUsageMode.backup.value == device.get("preset_usage_mode") and not test_schedule:
+        if device.get("type") == SolixDeviceType.SOLARBANK_PPS.value and (
+            ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
                 "device_disaster"
             )
             or {}
-        ).get("manual_disaster_switch")
-    ):
-        await self.set_manual_backup(
-            identifier=siteId, id_type=2, enable=False, toFile=toFile
-        )
+        ).get("manual_disaster_switch"):
+            await self.set_manual_backup(
+                identifier=siteId, id_type=2, enable=False, toFile=toFile
+            )
+        elif device.get("preset_backup_option"):
+            await self.set_sb2_ac_charge(
+                siteId=siteId, deviceSn=deviceSn, backup_switch=False, toFile=toFile
+            )
     # Make the Api call with the schedule subset to be applied and return result, the set call will also re-read full schedule and update api dict
     resp = await self.set_device_parm(
         siteId=siteId,
