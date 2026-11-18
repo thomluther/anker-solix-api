@@ -6,7 +6,7 @@ from __future__ import annotations  # noqa: TID251
 import contextlib
 import copy
 from dataclasses import fields
-from datetime import UTC, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -2162,7 +2162,10 @@ async def set_sb2_home_load(  # noqa: C901
             }
         )
     # Ensure ongoing manual backup is disabled if active but only usage mode is changed to other than backup
-    if usage_mode != SolarbankUsageMode.backup.value == device.get("preset_usage_mode") and not test_schedule:
+    if (
+        usage_mode != SolarbankUsageMode.backup.value == device.get("preset_usage_mode")
+        and not test_schedule
+    ):
         if device.get("type") == SolixDeviceType.SOLARBANK_PPS.value and (
             ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
                 "device_disaster"
@@ -2298,25 +2301,15 @@ async def set_sb2_ac_charge(
     # Consider time zone shifts of device, timestamp conversion is absolute and timezone aware
     now = datetime.now().replace(second=0, microsecond=0).astimezone()
     # create new structure if none exists yet or get old times if not provided for validation
+    disaster = (self.sites.get(siteId, {}).get("site_details") or {}).get(
+        "device_disaster"
+    ) or {}
     new_rate_plan = (
         {
-            "ranges": [
-                {
-                    "start_time": int(d.get("start_time") or 0),
-                    "end_time": int(d.get("end_time") or 0),
-                }
-                for d in (disaster.get("disaster_details") or [])
-                if isinstance(d, dict)
-            ],
+            "ranges": disaster.get("disaster_details") or [],
             "switch": bool(disaster.get("manual_disaster_switch")),
         }
         if pps_type
-        and (
-            disaster := ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
-                "device_disaster"
-            )
-            or {}
-        )
         else (schedule.get(rate_plan_name) or {})
     )
     if not new_rate_plan:
@@ -2325,11 +2318,11 @@ async def set_sb2_ac_charge(
     else:
         if not backup_start:
             backup_start = datetime.fromtimestamp(
-                (new_rate_plan.get("ranges") or [{}])[0].get("start_time") or 0, UTC
+                (new_rate_plan.get("ranges") or [{}])[0].get("start_time") or 0
             ).astimezone()
         if not backup_end:
             backup_end = datetime.fromtimestamp(
-                (new_rate_plan.get("ranges") or [{}])[0].get("end_time") or 0, UTC
+                (new_rate_plan.get("ranges") or [{}])[0].get("end_time") or 0
             ).astimezone()
 
     if backup_switch is None:
@@ -2356,22 +2349,28 @@ async def set_sb2_ac_charge(
                 "end_time": int(backup_end.timestamp()),
             }
         ]
-
-    schedule.update({rate_plan_name: new_rate_plan})
-    self._logger.debug(
-        "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
-    )
-    # return resulting schedule for test purposes without Api call
+    # update cached schedule with new backup plan
+    if pps_type:
+        self._logger.debug(
+            "Api %s manual disaster details to be applied: %s", self.apisession.nickname, new_rate_plan
+        )
+    else:
+        schedule.update({rate_plan_name: new_rate_plan})
+        self._logger.debug(
+            "Api %s schedule to be applied: %s", self.apisession.nickname, schedule
+        )
     if test_schedule:
-        if pps_type and (backup_start or backup_end or backup_duration):
-            disaster = ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
-                "device_disaster"
-            ) or {}
-            if disaster.get("manual_disaster_switch") and not backup_switch:
-                disaster["_pending_disable"] = True
-            disaster["manual_disaster_switch"] = bool(backup_switch)
-            disaster["disaster_details"] = new_rate_plan.get("ranges") or []
-            self._update_site(siteId, {"device_disaster": disaster})
+        # update cache only and return resulting schedule for test purposes without Api call
+        if pps_type:
+            rng = (new_rate_plan.get("ranges") or [{}])[0]
+            return await self.set_manual_backup(
+                identifier=siteId,
+                id_type=2,
+                enable=bool(backup_switch),
+                start_time=rng.get("start_time"),
+                end_time=rng.get("end_time"),
+                cache_only=True,
+            )
         # ensure complete schedule is updated in cache for dependent fields
         await self.get_device_parm(
             siteId=siteId,
@@ -2382,23 +2381,14 @@ async def set_sb2_ac_charge(
         return schedule
     if pps_type:
         rng = (new_rate_plan.get("ranges") or [{}])[0]
-        if not await self.set_manual_backup(
+        return await self.set_manual_backup(
             identifier=siteId,
             id_type=2,
             enable=bool(backup_switch),
-            start_time=rng.get("start_time") or 0,
-            end_time=rng.get("end_time") or 0,
+            start_time=rng.get("start_time"),
+            end_time=rng.get("end_time"),
             toFile=toFile,
-        ):
-            return False
-        return (
-            await self.get_device_parm(
-                siteId=siteId,
-                paramType=SolixParmType.SOLARBANK_2_SCHEDULE.value,
-                testSchedule=schedule,
-                deviceSn=deviceSn,
-            )
-        ).get("param_data") or {}
+        )
     # The applied schedule need to separate plans for AC model and common SB2 plans
     # The mode_type must always be contained
     # TODO(SB3): This may need updates once plan names for SB3 are known and modification was tested, e.g. time_slot plan

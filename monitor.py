@@ -758,11 +758,21 @@ class AnkerSolixApiMonitor:
                         if site.get("site_type") in [
                             SolixDeviceType.HES.value,
                             SolixDeviceType.POWERPANEL.value,
+                            SolixDeviceType.SOLARBANK_PPS.value,
                         ]:
                             CONSOLE.info(
                                 f"{'Manual Backup':<{col1}}: {'Enabled' if settings.get('manual_disaster_switch') else 'Disabled':<{col2}} "
                                 f"{'Manual Status':<{col3}}: {get_enum_name(SolixDisasterStatus, m2, 'unknown' if m2 else '-----').title()} ({m2})"
                             )
+                            for rng in settings.get("disaster_details"):
+                                CONSOLE.info(
+                                    f"{'Backup Start':<{col1}}: {convert_isotimestamp(rng.get('start_time')) or '----.--.-- --:--'!s:<{col2}} "
+                                    f"{'Backup End':<{col3}}: {convert_isotimestamp(rng.get('end_time')) or '----.--.-- --:--'!s}"
+                                )
+                                CONSOLE.info(
+                                    f"{'Charge Time':<{col1}}: {str(rng.get('charging_time','')) or '----'!s:<{col2}} "
+                                    f"{'UUID':<{col3}}: {rng.get('uuid','')!s}"
+                                )
                         if disaster := status.get("current_disaster_detail"):
                             m1 = str(disaster.get("disaster_type", ""))
                             if str(
@@ -2648,19 +2658,25 @@ class AnkerSolixApiMonitor:
                         f"{'AC Out Toggle':<{col3}}: {str(m2) and (c or cm)}{get_enum_name(SolixSwitchMode, m2, str(m2) or '---').upper():>3} / "
                         f"{'Active' if m4 is True else 'Inactive' if m4 is False else '------'}{co}"
                     )
-                if schedule := (c or cm) and mqtt.get("custom_mode_schedule"):
+                if schedule := dev.get("schedule"):
+                    # print Api schedule
                     CONSOLE.info(f"{'-' * 80}")
-                    common.print_pps_schedule(
-                        {"custom_mode_schedule": schedule}, c or cm
-                    )
-                if schedule := dev.get("pps_use_time") or (
-                    (c or cm) and mqtt.get("tou_mode_schedule")
-                ):
-                    CONSOLE.info(f"{'-' * 80}")
-                    common.print_pps_schedule({"tou_mode_schedule": schedule}, c or cm)
-                if schedule := (c or cm) and mqtt.get("ac_output_schedule"):
-                    CONSOLE.info(f"{'-' * 80}")
-                    common.print_pps_schedule({"ac_output_schedule": schedule}, c or cm)
+                    common.print_schedule(schedule)
+                else:
+                    # print MQTT schedules
+                    if schedule := (c or cm) and mqtt.get("custom_mode_schedule"):
+                        CONSOLE.info(f"{'-' * 80}")
+                        common.print_pps_schedule(
+                            {"custom_mode_schedule": schedule}, c or cm
+                        )
+                    if schedule := dev.get("pps_use_time") or (
+                        (c or cm) and mqtt.get("tou_mode_schedule")
+                    ):
+                        CONSOLE.info(f"{'-' * 80}")
+                        common.print_pps_schedule({"tou_mode_schedule": schedule}, c or cm)
+                    if schedule := (c or cm) and mqtt.get("ac_output_schedule"):
+                        CONSOLE.info(f"{'-' * 80}")
+                        common.print_pps_schedule({"ac_output_schedule": schedule}, c or cm)
 
             else:
                 if "battery_capacity" in dev:

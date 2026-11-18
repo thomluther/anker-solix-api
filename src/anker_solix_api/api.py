@@ -175,36 +175,38 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 .get(device.get("device_code", ""), {})
                                 .get("custom_fields", {})
                             )
-                        # Flag device for supported mqtt trigger if admin and device not passive
+                        # Flag device for MQTT support
                         if (
                             device.get("is_admin") or device.get("owner_user_id")
-                        ) and not (
-                            device.get("is_passive") or devData.get("is_passive")
                         ):
                             device["mqtt_supported"] = True
                             # init customizable setting whether MQTT values should overlay Api values upon cache merge
                             device["mqtt_overlay"] = bool(
                                 device.get("mqtt_overlay") or False
                             )
-                            # init customizable setting for desired MQTT status request interval
-                            device["mqtt_status_interval"] = device.get(
-                                "mqtt_status_interval", 0
-                            )
-                            # check once if device supports status requests from description
-                            if "mqtt_status_request" not in device:
-                                device["mqtt_status_request"] = bool(
-                                    [
-                                        cmd
-                                        for cmd in SOLIXMQTTMAP.get(
-                                            str(value), {}
-                                        ).values()
-                                        if SolixMqttCommands.status_request
-                                        in [
-                                            cmd.get(COMMAND_NAME),
-                                            *cmd.get(COMMAND_LIST, []),
-                                        ]
-                                    ]
+                            # Flag device for MQTT subscription
+                            if not (
+                                device.get("is_passive") or devData.get("is_passive")
+                            ):
+                                # init customizable setting for desired MQTT status request interval
+                                device["mqtt_status_interval"] = device.get(
+                                    "mqtt_status_interval", 0
                                 )
+                                # check once if device has non default status request from description
+                                if "mqtt_status_request" not in device:
+                                    device["mqtt_status_request"] = bool(
+                                        [
+                                            cmd
+                                            for cmd in SOLIXMQTTMAP.get(
+                                                str(value), {}
+                                            ).values()
+                                            if SolixMqttCommands.status_request
+                                            in [
+                                                cmd.get(COMMAND_NAME),
+                                                *cmd.get(COMMAND_LIST, []),
+                                            ]
+                                        ]
+                                    )
                         # check if capacity should be calculated
                         if not device.get("battery_capacity") and hasattr(
                             SolixDeviceCapacity, str(value)
@@ -359,12 +361,6 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                         ):
                             # If mqtt_status_interval is 0, clear customization
                             customized.pop("mqtt_status_interval", None)
-                        elif (
-                            key == "exceed_legal_output_limit" and not custom and value
-                        ):
-                            # If limit is exceeded already remove any lock customization
-                            custom = None
-                            customized.pop("exceed_legal_output_limit", None)
                         device[key] = custom if custom is not None else value
                     elif key == "bt_ble_id" and value and not devData.get("bt_ble_mac"):
                         # Make sure that BT ID is added if mac not in data
@@ -872,7 +868,8 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 device.update(
                                     {
                                         "preset_usage_mode": SolarbankUsageMode.backup
-                                        if switch and start < now.timestamp() < end
+                                        if switch
+                                        and start < datetime.now().timestamp() < end
                                         else mode_type,
                                         "preset_manual_backup_start": start,
                                         "preset_manual_backup_end": end,
@@ -936,6 +933,9 @@ class AnkerSolixApi(AnkerSolixBaseApi):
                                 else None
                             )
                             dev_power = sys_power
+                            # remove preset load for pps types since manual mode not supported in system
+                            if pps_type and not sys_power:
+                                device.pop("preset_system_output_power", None)
                         else:
                             # Solarbank 1 schedule
                             for slot in value.get("ranges") or []:
