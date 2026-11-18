@@ -3,6 +3,7 @@
 
 from collections.abc import Callable
 import contextlib
+import copy
 from datetime import datetime, timedelta
 import json
 import logging
@@ -3018,43 +3019,55 @@ class AnkerSolixBaseApi:
             "type": id_type,
             "manual_disaster_switch": bool(enable),
         }
-        if end_time <= start_time:
-            self._logger.error(
-                "Api %s error for set_manual_backup: start_time %s must be before end_time %s",
-                self.apisession.nickname,
-                start_time,
-                end_time,
-            )
-            return {}
-        data["manual_disaster_detail"] = {
-            "disaster_type": disaster_type,
-            "start_time": start_time,
-            "end_time": end_time,
-        }
-        # change only relevant parts of existing disaster details
-        if id_type == 1:
-            filedata = self.devices.get(identifier, {}).get("device_disaster") or {}
-        else:
-            filedata = (
-                self.sites.get(identifier, {})
-                .get("site_details", {})
-                .get("device_disaster")
-                or {}
-            )
-        filedata["manual_disaster_switch"] = bool(enable)
-        if details := data.get("manual_disaster_detail"):
-            if (filedetails := filedata.get("disaster_details")) and isinstance(
-                filedetails, list
-            ):
-                filedetails[0].update(details)
+        # When disabled, the payload MUST omit manual_disaster_detail.
+        # Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
+        if enable:
+            if end_time <= start_time:
+                self._logger.error(
+                    "Api %s error for set_manual_backup: start_time %s must be before end_time %s",
+                    self.apisession.nickname,
+                    start_time,
+                    end_time,
+                )
+                return {}
+            data["manual_disaster_detail"] = {
+                "disaster_type": disaster_type,
+                "start_time": start_time,
+                "end_time": end_time,
+            }
+        filedata: dict = {}
+        if cache_only or toFile:
+            # change only relevant parts of existing disaster details without mutating live cache before API success
+            if id_type == 1:
+                filedata = copy.deepcopy(
+                    self.devices.get(identifier, {}).get("device_disaster") or {}
+                )
             else:
-                # Mock the details if it just got enabled without previous information
-                filedetails = [
-                    {"uuid": "00000000-0000-0000-0000-000000000001"}
-                    | details
-                    | {"charging_time": None, "event": "", "event_key": ""}
-                ]
-            filedata["disaster_details"] = filedetails
+                filedata = copy.deepcopy(
+                    self.sites.get(identifier, {})
+                    .get("site_details", {})
+                    .get("device_disaster")
+                    or {}
+                )
+            filedata["manual_disaster_switch"] = bool(enable)
+            if end_time > start_time:
+                details = {
+                    "disaster_type": disaster_type,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                }
+                if (filedetails := filedata.get("disaster_details")) and isinstance(
+                    filedetails, list
+                ):
+                    filedetails[0].update(details)
+                else:
+                    # Mock the details if it just got enabled without previous information
+                    filedetails = [
+                        {"uuid": "00000000-0000-0000-0000-000000000001"}
+                        | details
+                        | {"charging_time": None, "event": "", "event_key": ""}
+                    ]
+                filedata["disaster_details"] = filedetails
         if cache_only:
             # return refreshed config and update cache
             return await self.get_device_disaster(
@@ -3063,10 +3076,6 @@ class AnkerSolixBaseApi:
                 fromFile=toFile,
                 testSchedule=filedata,
             )
-        # When disabled, the payload MUST omit manual_disaster_detail.
-        # Sending manual_disaster_detail=None returns code:-1 'Failed to request.'.
-        if not enable:
-            data.pop("manual_disaster_detail", None)
         if toFile:
             if not await self.apisession.saveToFile(
                 Path(self.testDir())
