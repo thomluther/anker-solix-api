@@ -2089,11 +2089,11 @@ class AnkerSolixApiMonitor:
                     )
                 m1 = cm and str(mqtt.get("theme_id", ""))
                 m3 = cm and str(mqtt.get("theme_type", ""))
-                m2 = dev.get("display_theme", {}).get("theme_name", "")
+                m2 = cm and mqtt.get("display_theme", {}).get("theme_name", "")
                 if m1 or m2:
                     CONSOLE.info(
                         f"{'Clock Theme ID':<{col1}}: {m1 and (c or cm)}{(m1 or '----------') + (' (Type: ' + m3 + ')' if m3 else ''):<{col2}}{co} "
-                        f"{'Theme Name':<{col3}}: {m2 and c}{m2 or '----------'}{co}"
+                        f"{'Theme Name':<{col3}}: {m2 and (c or cm)}{m2 or '----------'}{co}"
                     )
                 m1 = cm and str(mqtt.get("clock_display_start_hour", ""))
                 m3 = cm and str(mqtt.get("clock_display_end_hour", ""))
@@ -2660,7 +2660,7 @@ class AnkerSolixApiMonitor:
                     )
                 if schedule := dev.get("schedule"):
                     # print Api schedule
-                    CONSOLE.info(f"{'-' * 80}")
+                    CONSOLE.info(f"{'.' * 80}")
                     common.print_schedule(schedule)
                 else:
                     # print MQTT schedules

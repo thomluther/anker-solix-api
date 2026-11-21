@@ -1015,7 +1015,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 0,
             "file_hash": "0x00000000",
             "image_url": "assets/img/shared/icl_a2345_theme1.png",
-            "id": None,
+            "id": "theme_1",
             "theme_name": "Embedded - Theme 1",
         },
         "theme_2": {
@@ -1024,7 +1024,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 1,
             "file_hash": "0x00000000",
             "image_url": "assets/img/a2345/icl_a2345_theme2.png",
-            "id": None,
+            "id": "theme_2",
             "theme_name": "Embedded - Theme 2",
         },
         "theme_3": {
@@ -1033,7 +1033,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 2,
             "file_hash": "0x00000000",
             "image_url": "assets/img/a2345/icl_a2345_theme3.png",
-            "id": None,
+            "id": "theme_3",
             "theme_name": "Embedded - Theme 3",
         },
     },
@@ -1044,7 +1044,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 0,
             "file_hash": "",
             "image_url": "",
-            "id": None,
+            "id": "theme_1",
             "theme_name": "Embedded - Theme 1",
         },
         "theme_2": {
@@ -1053,7 +1053,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 1,
             "file_hash": "",
             "image_url": "",
-            "id": None,
+            "id": "theme_2",
             "theme_name": "Embedded - Theme 2",
         },
         "theme_3": {
@@ -1062,7 +1062,7 @@ EMBEDDED_THEMES: Final[dict] = {
             "type": 2,
             "file_hash": "",
             "image_url": "",
-            "id": None,
+            "id": "theme_3",
             "theme_name": "Embedded - Theme 3",
         },
     }
@@ -2325,6 +2325,7 @@ class SolixPortPriority(StrEnum):
 class SolixCircuitPriority(StrEnum):
     """Str Enumeration for Solix Circuit Priority."""
 
+    fix = "0"
     must_have = "1"
     nice_to_have = "2"
     unknown = "unknown"
