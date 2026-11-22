@@ -269,7 +269,9 @@ class SolixMqttDevicePps(SolixMqttDevice):
         theme = {}
         # check if device supports display themes
         if (theme_type := int(cache.get("theme_type", -1))) >= 0:
+            theme = cache.get("display_theme", {})
             # lookup theme only if cached values different
+            display_id = theme.get("id", "")
             display_id = cache.get("display_theme", {}).get("id", "")
             # theme id only used for web themes, embedded themes use mocked id for cache management
             if (
@@ -931,6 +933,13 @@ class SolixMqttDevicePps(SolixMqttDevice):
             theme = self.get_active_display_theme(fromFile=True)
             category = theme.get("category_name", "")
             title = theme.get("title", "")
+        else:
+            self._logger.error(
+                "Device %s (%s) set_display_theme called without valid option",
+                self.sn,
+                self.pn,
+            )
+            return None
         if theme:
             self._logger.log(
                 logging.INFO if toFile else logging.DEBUG,

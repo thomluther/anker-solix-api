@@ -2978,7 +2978,8 @@ class AnkerSolixBaseApi:
     ) -> dict:
         """Disable or enable manual backup mode for a system or standalone device over a time window.
 
-        Notes: When disabled, the device ramps power down gradually rather than cutting off instantly.
+        Notes: This method currently supports only a single manual backup slot.
+        When disabled, the device ramps power down gradually rather than cutting off instantly.
         Disaster_type other than 1 is accepted but stored/returned as 1;
         start_time / end_time are unix epoch seconds; end_time must be after start_time.
         The server auto-generates the event uuid.
@@ -3046,7 +3047,7 @@ class AnkerSolixBaseApi:
                     start_time or filedetails.get("start_time") or 0
                 )
                 filedetails["end_time"] = end_time or filedetails.get("end_time") or 0
-                filedata["disaster_details"] = filedetails
+                filedata["disaster_details"] = [filedetails]
             if cache_only:
                 # return refreshed config and update cache
                 return await self.get_device_disaster(

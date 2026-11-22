@@ -1284,17 +1284,21 @@ async def poll_device_details(  # noqa: C901
                             deviceSn=sn,
                             fromFile=fromFile,
                         )
-                        # Fetch SB2+ station details and add to site details
-                        api._logger.debug(
-                            "Getting api %s station details for device",
-                            api.apisession.nickname,
-                        )
-                        await api.get_device_parm(
-                            siteId=site_id,
-                            paramType=SolixParmType.SOLARBANK_STATION.value,
-                            deviceSn=sn,
-                            fromFile=fromFile,
-                        )
+                        # Fetch SB3+ station details and add to site details, ensure Power Dock systems queried also
+                        # NOTE: SB2 systems may respond on stations parms, but do not full support their changes
+                        if (device.get("generation") or 0) > 2 or int(
+                            api.sites.get(site_id, {}).get("power_site_type", 0)
+                        ) > 11:
+                            api._logger.debug(
+                                "Getting api %s station details for device",
+                                api.apisession.nickname,
+                            )
+                            await api.get_device_parm(
+                                siteId=site_id,
+                                paramType=SolixParmType.SOLARBANK_STATION.value,
+                                deviceSn=sn,
+                                fromFile=fromFile,
+                            )
                     # Fetch solarbank power specific attributes for each device
                     api._logger.debug(
                         "Getting api %s device specific attributes",
@@ -1408,8 +1412,7 @@ async def poll_device_details(  # noqa: C901
                 if pn_themes.get("poll_time", "").split(" ")[
                     0
                 ] != datetime.now().astimezone().strftime("%Y-%m-%d") or (
-                    active_id
-                    and not display_theme
+                    active_id and not display_theme
                 ):
                     ids = {}
                     # Flatten the categories into a theme id dictionary per model for id lookups:
