@@ -1548,6 +1548,7 @@ async def set_sb2_home_load(  # noqa: C901
         and SolarbankUsageMode(usage_mode).name in usage_mode_options
         else None
     )
+    mode_switch = usage_mode is not None
     # fast quit if nothing to change
     if (
         preset is None
@@ -2166,15 +2167,16 @@ async def set_sb2_home_load(  # noqa: C901
         usage_mode != SolarbankUsageMode.backup.value == device.get("preset_usage_mode")
         and not test_schedule
     ):
-        if device.get("type") == SolixDeviceType.SOLARBANK_PPS.value and (
-            ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
-                "device_disaster"
-            )
-            or {}
-        ).get("manual_disaster_switch"):
-            await self.set_manual_backup(
-                identifier=siteId, id_type=2, enable=False, toFile=toFile
-            )
+        if device.get("type") == SolixDeviceType.SOLARBANK_PPS.value:
+            if mode_switch and (
+                ((self.sites.get(siteId) or {}).get("site_details") or {}).get(
+                    "device_disaster"
+                )
+                or {}
+            ).get("manual_disaster_switch"):
+                await self.set_manual_backup(
+                    identifier=siteId, id_type=2, enable=False, toFile=toFile
+                )
         elif device.get("preset_backup_option"):
             await self.set_sb2_ac_charge(
                 siteId=siteId, deviceSn=deviceSn, backup_switch=False, toFile=toFile
@@ -2298,6 +2300,7 @@ async def set_sb2_ac_charge(
     pps_type = (self.devices.get(deviceSn) or {}).get(
         "type"
     ) == SolixDeviceType.SOLARBANK_PPS.value
+    times_provided = bool(backup_start or backup_end or backup_duration)
     # Consider time zone shifts of device, timestamp conversion is absolute and timezone aware
     now = datetime.now().replace(second=0, microsecond=0).astimezone()
     # create new structure if none exists yet or get old times if not provided for validation
@@ -2362,15 +2365,19 @@ async def set_sb2_ac_charge(
     if test_schedule:
         # update cache only and return resulting schedule for test purposes without Api call
         if pps_type:
-            rng = (new_rate_plan.get("ranges") or [{}])[0]
-            return await self.set_manual_backup(
-                identifier=siteId,
-                id_type=2,
-                enable=bool(backup_switch),
-                start_time=rng.get("start_time"),
-                end_time=rng.get("end_time"),
-                cache_only=True,
-            )
+            if times_provided or backup_switch:
+                rng = (new_rate_plan.get("ranges") or [{}])[0]
+                return await self.set_manual_backup(
+                    identifier=siteId,
+                    id_type=2,
+                    enable=bool(backup_switch),
+                    start_time=rng.get("start_time"),
+                    end_time=rng.get("end_time"),
+                    cache_only=True,
+                )
+            # Keep manual_disaster_switch intact when disabling via test_schedule without time edits
+            # so a subsequent set_sb2_home_load() still sees active backup and disables it via API
+            return disaster
         # ensure complete schedule is updated in cache for dependent fields
         await self.get_device_parm(
             siteId=siteId,

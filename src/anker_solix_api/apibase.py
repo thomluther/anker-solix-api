@@ -3090,6 +3090,8 @@ class AnkerSolixBaseApi:
         self, devices: bool = False, fromFile: bool = False, exclude: set | None = None
     ) -> dict:
         """Update the manual and auto disaster status if supported by site or optional standalone devices."""
+        if not exclude or not isinstance(exclude, set):
+            exclude = set()
         # cycle through all sites
         for site_id, site in self.sites.items():
             if {site.get("site_type")} - exclude and site.get("site_details", {}).get(
