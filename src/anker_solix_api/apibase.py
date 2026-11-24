@@ -3084,14 +3084,14 @@ class AnkerSolixBaseApi:
                 if id_type == 1:
                     # cache under device_details
                     statusdata = (
-                        self.devices.get(identifier, {}).get("device_disaster") or {}
+                        self.devices.get(identifier, {}).get("device_disaster_status") or {}
                     )
                 else:
                     # cache under site_details
                     statusdata = (
                         self.sites.get(identifier, {})
                         .get("site_details", {})
-                        .get("device_disaster")
+                        .get("device_disaster_status")
                         or {}
                     )
                 status = (
