@@ -1613,7 +1613,7 @@ async def set_sb2_home_load(  # noqa: C901
     # set flag for plan deletion when set slot provided but any time field missing
     delete_plan: bool = set_slot and (not set_slot.start_time or not set_slot.end_time)
 
-    # init the usage mode for later overall schedule object update and track if mode switch will occur
+    # init the usage mode for overall schedule object update and track if valid mode was requested
     if usage_mode is None:
         usage_mode = schedule.get("mode_type")
         mode_set = False
