@@ -77,10 +77,22 @@ You can either install the requirements manually (e.g. via a package manager) or
 
 Follow the steps below to install the required python libraries as well as the anker_solix_api as local editable package.
 
+### Using the install shell script
+
+You can simply run the provided installation shell script in the anker-solix-api root folder. It will ensure pip is installed and updated to the latest version for your python runtime. Then it will install poetry and the library in an editable mode, so changes to source files will be effective immediately.
+
+```shell
+cd anker-solix-api
+sudo ./install_api.sh
+```
+
+### Using manual steps
+
 **Step 1:** Install `poetry` following the [official documentation](https://python-poetry.org/docs/#installation) or via your favorite package manager,
 for example:
 
 ```shell
+sudo python -m ensurepip --upgrade
 sudo pip install poetry
 ```
 
@@ -99,7 +111,7 @@ sudo pacman -S python-poetry
 poetry install
 ```
 
-The install will automatically be an editable install, so change to source files will be effective immediately.
+The install will automatically be an editable install, so changes to source files will be effective immediately.
 
 **Step 3:** Run programs in this repository with:
 
@@ -399,7 +411,7 @@ ANKERCOUNTRY="2_char_country_id"
 
 Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
-#### Main usage options
+#### Main usage options for export system tool
 
 * `--services {all,power,charging,hes,mqtt,discover}` / `-s`: Which services to use for export
 * `--endpoint-limit N` / `-l`: Api endpoint request limit
@@ -409,7 +421,7 @@ Optionally you can define those variables in an `.env` file, which is defining t
 * `--zip` / `--no-zip`: Zip the output folder
 * `--non-interactive` / `-n`: Avoid prompts and use defaults for missing options
 
-#### Command line argument usage examples
+#### Command line argument usage examples for export system tool
 
 ```bash
 # Quick monitoring with MQTT and real-time data
@@ -521,7 +533,7 @@ ANKERCOUNTRY="2_char_country_id"
 
 Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
-#### Main usage options
+#### Main usage options for monitor tool
 
 * `--help` / `-h`: Get usage information
 * `--live-cloud` / `-live`: Skip interactive mode, use live cloud data directly
@@ -531,19 +543,19 @@ Optionally you can define those variables in an `.env` file, which is defining t
 * `--realtime-trigger` / `-rt`: Enable real-time MQTT trigger after startup (requires --enable-mqtt)
 * `--mqtt-display`: Initially show pure MQTT data display instead of mixed API + MQTT display (requires --enable-mqtt)
 
-#### Configuration Options
+#### Configuration Options for monitor tool
 
 * `--interval` / `-i`: Modify default refresh interval (5-600 seconds, default: 30)
 * `--endpoint-limit`: Modify default API endpoint limit for request throttling (default: 10)
 * `--energy-stats` / `-energy`: Include daily site energy statistics, only shown with API display
 * `--no-vehicles` / `-no-ev`: Disable electric vehicle display for API display
 
-#### Debug & Logging
+#### Debug & Logging opptions for monitor tool
 
 * `--api-calls`: Show API call statistics and details
 * `--debug-http`: Control HTTP request/response debug logging (separated from API stats)
 
-#### Command line argument usage examples
+#### Command line argument usage examples for monitor tool
 
 ```bash
 # Quick monitoring with MQTT and real-time data
@@ -625,7 +637,7 @@ ANKERCOUNTRY="2_char_country_id"
 
 Optionally you can define those variables in an `.env` file, which is defining them at runtime, see [test_api.py](#test_apipy).
 
-#### Main usage options
+#### Main usage options for mqtt_monitor tool
 
 * `--help` / `-h`: Get usage information
 * `--device-sn`, `-dev` DEVICE_SN: Define device SN to be monitored (required to use monitor without prompting)
@@ -633,13 +645,13 @@ Optionally you can define those variables in an `.env` file, which is defining t
 * `--dump-prefix` / `-dp` DUMP_PREFIX: Define dump filename prefix
 * `--runtime` / `-r` MINUTES: Optional runtime in minutes [1-60] (default: Until cancelled)
 
-#### Configuration Options
+#### Configuration Options for mqtt_monitor tool
 
 * `--realtime-trigger` / `-rt`: Enable MQTT real-time data trigger at startup
 * `--status-request` / `-sr`: Issue immediate MQTT status request after startup
 * `--value-display` / `-vd`: Initially show MQTT value display instead of MQTT messages display
 
-#### Command line argument usage examples
+#### Command line argument usage examples for mqtt_monitor tool
 
 ```bash
 # start MQTT monitoring for 10 minutes with dump into file while running realtime trigger
